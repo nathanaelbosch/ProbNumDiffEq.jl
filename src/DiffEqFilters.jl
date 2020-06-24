@@ -6,7 +6,8 @@ using Measurements
 using Distributions
 using ForwardDiff
 using StructArrays
-using DiffEqBase
+using Reexport
+@reexport using DiffEqBase
 using UnPack
 using Plots
 
