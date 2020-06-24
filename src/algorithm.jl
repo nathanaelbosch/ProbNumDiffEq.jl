@@ -45,7 +45,7 @@ function predict_update(solver, cache)
     m, P = x.μ, x.Σ
     A, Q = dm.A(dt), dm.Q(dt)
     A = precond_P * A * precond_P_inv
-    Q = precond_P * Q * precond_P'
+    Q = Symmetric(precond_P * Q * precond_P')
 
     m_p = A * m
 
@@ -59,11 +59,11 @@ function predict_update(solver, cache)
     #     solver.sigma_estimator(;H=H, Q=Q, v=v)
     σ² = dynamic_sigma_estimation(solver.sigma_estimator; H=H, Q=Q, v=v)
 
-    P_p = A*P*A' + σ²*Q
-    S = H * P_p * H' + R
+    P_p = Symmetric(A*P*A') + σ²*Q
+    S = Symmetric(H * P_p * H' + R)
     K = P_p * H' * inv(S)
     m = m_p + K*v
-    P = P_p - K*S*K'
+    P = P_p - Symmetric(K*S*K')
 
     return (t=t,
             prediction=Gaussian(m_p, P_p),
@@ -109,7 +109,7 @@ function smooth(sol, solver, proposals)
         A = solver.dm.A(h)
         Q = solver.dm.Q(h)
         A = precond_P * A * precond_P_inv
-        Q = precond_P * Q * precond_P'
+        Q = Symmetric(precond_P * Q * precond_P')
         smoothed_solution[i] = StateBelief(
             sol[i].t,
             smooth(filter_estimate,
@@ -136,7 +136,7 @@ function ibm(q::Int, d::Int; σ::Int=1)
     # I_d = diagm(0 => ones(d))
     # L = kron(L̃, I_d)'  # In probnum the order is inverted
 
-    A(h) = exp(F*(h))
+    A(h) = UpperTriangular(exp(F*(h)))
 
     function Q(h)
         function _transdiff_ibm_element(row, col)
@@ -147,7 +147,7 @@ function ibm(q::Int, d::Int; σ::Int=1)
             return σ ^ 2 * (h ^ idx) / (idx * fact_rw * fact_cl)
         end
 
-        qh_1d = [_transdiff_ibm_element(row, col) for col in 0:q, row in 0:q]
+        qh_1d = Symmetric([_transdiff_ibm_element(row, col) for col in 0:q, row in 0:q])
         I_d = diagm(0 => ones(d))
         return kron(qh_1d, I_d)
     end
@@ -301,7 +301,7 @@ function prob_solve(ivp, dt;
                     reltol=1e-3,
                     maxiters=1e5,
                     sigma_running=0,
-                    smoothed=false,
+                    smoothed=true,
                     initialize_derivatives=nothing,
                     )
     # Initialize problem

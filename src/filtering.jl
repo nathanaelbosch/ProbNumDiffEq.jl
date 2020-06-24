@@ -13,7 +13,7 @@ end
 function kf_smooth(m_f_t, P_f_t, m_p_t1, P_p_t1, m_s_t1, P_s_t1, A, Q)
     G = P_f_t * A' * inv(P_p_t1)
     m = m_f_t + G * (m_s_t1 - m_p_t1)
-    P = P_f_t + G * (P_s_t1 - P_p_t1) * G'
+    P = P_f_t + Symmetric(G * (P_s_t1 - P_p_t1) * G')
     _min = minimum(diag(P))
     if _min < 0
         @assert abs(_min) < 1e-16
