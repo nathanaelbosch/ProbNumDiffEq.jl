@@ -47,14 +47,28 @@ function classic_steprule(abstol, reltol, scale=1; ρ=0.95)
         @unpack dt = cache
         @unpack measurement, σ², prediction = proposal
 
-        σ² = solver.sigma_estimator(solver, [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
+        σ² = static_sigma_estimation(
+            solver.sigma_estimator, solver,
+            [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
 
-        # f_cov = sigma * dm.Q(current_h)[1:d, 1:d]
+        # Predict step, assuming a correct current estimate (P=0)
+        # The prediction step therefore provides P_p=Q
+        # *NOTE*: This does not seem to make that much difference!
+        # @unpack H, R = proposal
+        # P_loc =
+        # P_loc = σ² * dm.Q(dt)
+        # S = H * P_loc * H' + R
+        # K = P_loc * H' * inv(S)
+        # P_loc = P_loc - K * S * K'
+        # f_cov = P_loc[1:d, 1:d]
+
         f_cov = σ² * dm.Q(dt)[1:d, 1:d]
-        @assert isdiag(f_cov)
+        # @assert isdiag(f_cov)
         f_err = sqrt.(diag(f_cov)) * scale
-        f_err_scaled = norm(f_err ./ (abstol .+ (reltol * abs.(prediction.μ[1:d]))))
+        tol = (abstol .+ (reltol * abs.(prediction.μ[1:d])))
+        f_err_scaled = norm(f_err ./ tol)
         # f_err_scaled /= current_h  # Error per unit, not per step
+
         accept = f_err_scaled <= 1
         if !accept
             # @info "Rejected h=$current_h with scaled error e=$f_err_scaled !"
@@ -74,26 +88,23 @@ end
 
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
-function measurement_error_steprule(scale=1; ρ=0.95)
+function measurement_error_steprule(scale=1; ρ=0.95, abstol=1e-2)
     function steprule(solver, cache, proposal, proposals)
         @unpack dm, d, q = solver
         @unpack dt = cache
         @unpack measurement, σ², prediction = proposal
         # S = previous_sigma .* measurement.Σ
 
-        accepted_proposals = [p for p in proposals if p.accept]
-        if length(accepted_proposals) == 0
-            _p= [(proposal..., accept=true, t=cache.t, dt=cache.dt)]
-            σ² = solver.sigma_estimator(solver, _p)
-        else
-            σ² = solver.sigma_estimator(solver, accepted_proposals)
-        end
+        σ² = static_sigma_estimation(
+            solver.sigma_estimator, solver,
+            [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
 
         # S = measurement.Σ
         S = σ² .* measurement.Σ
         # @assert isdiag(S)
         z_err = sqrt.(diag(S))
         z_err_scaled = norm(z_err) * scale
+        z_err_scaled /= abstol
         accept = z_err_scaled <= 1
         if !accept
             # @info "Rejected h=$current_h with scaled error e=$z_err_scaled !"
@@ -113,21 +124,25 @@ end
 
 """This is basically the steprule with I discussed with Filip"""
 function measurement_scaling_steprule(abstol=1, reltol=0; ρ=1, hmin=1e-5)
-    function steprule(;current_h, current_error, d, previous_sigma, sigma, q, argv...)
-        calibrated_error = current_error ./ previous_sigma
-        # calibrated_error = calibrated_error ./ 1
-        # @show "##########################"
-        # @show current_h, previous_sigma, sigma
-        # @show current_error, calibrated_error
-        accept = calibrated_error <= 1
-        if !accept
-            # @info "Rejected h=$current_h with scaled error e=$calibrated_error !"
-        end
+    function steprule(solver, cache, proposal, proposals)
+        @unpack dm, d, q = solver
+        @unpack dt = cache
+        @unpack measurement, σ², prediction = proposal
+
+        σ² = static_sigma_estimation(
+            solver.sigma_estimator, solver,
+            [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
+        residual = measurement.μ' * inv(measurement.Σ) * measurement.μ / σ²
+        @show residual
+        @show σ²
+
+        accept = residual <= 1
+        # !accept && @info "Rejected h=$current_h with scaled error e=$calibrated_error !"
 
         h_exp = 1
-        h_proposal = ρ * current_h * (1/calibrated_error)^(1/h_exp)
+        h_proposal = ρ * dt * (1/residual)^(1/h_exp)
         # @show h_proposal, h_proposal/current_h, accept
-        h_new = min(max(h_proposal, current_h*0.5), current_h*2)
+        h_new = min(max(h_proposal, dt*0.5), dt*2)
 
         if h_new <= hmin
             error("Step size too small")

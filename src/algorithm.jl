@@ -48,8 +48,9 @@ function predict_update(solver, cache)
     v = 0 .- mm.h(m_p, t)
 
     # Decide if constant sigma or variable sigma
-    σ² = solver.sigma_type == :fixed ? 1 :
-        solver.sigma_estimator(;H=H, Q=Q, v=v)
+    # σ² = solver.sigma_type == :fixed ? 1 :
+    #     solver.sigma_estimator(;H=H, Q=Q, v=v)
+    σ² = dynamic_sigma_estimation(solver.sigma_estimator; H=H, Q=Q, v=v)
 
     # @show P
     P_p = A*P*A' + σ²*Q
@@ -174,7 +175,6 @@ Base.@kwdef struct Solver
     q::Int                      # Order
     dm                          # Dynamics Model
     mm                          # Measurement Model
-    sigma_type
     sigma_estimator
 end
 
@@ -208,19 +208,18 @@ function initialize(;ivp, q, dt, σ, method, sigmarule)
     P_0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
     initial_state = Gaussian(m_0, P_0)
 
-    sigmarules = Dict(
-        :mle => sigma_mle,
-        :mle_weighted => sigma_mle_weighted,
-        :map => sigma_map,
-        :schober16 => schober16_sigma
-    )
-    sigma_estimator = sigmarules[sigmarule]
-    sigma_type = sigmarule in (:mle, :mle_weighted, :map) ? :fixed : :adaptive
+    # sigmarules = Dict(
+    #     :mle => sigma_mle,
+    #     :mle_weighted => sigma_mle_weighted,
+    #     :map => sigma_map,
+    #     :schober16 => schober16_sigma
+    # )
+    # sigma_estimator = sigmarules[sigmarule]
+    sigma_estimator = sigmarule
 
 
     return (Solver(;d=d, q=q, dm=dm, mm=mm,
                    sigma_estimator=sigma_estimator,
-                   sigma_type=sigma_type),
             SolverCache(;t=t_0, x=initial_state, dt=h))
 end
 
@@ -228,7 +227,7 @@ end
 
 function prob_solve(ivp, dt;
                     steprule=:constant,
-                    sigmarule=:mle,
+                    sigmarule=MLESigma(),
                     method=:ekf0,
                     q=1, σ=1,
                     progressbar=false,
@@ -237,11 +236,14 @@ function prob_solve(ivp, dt;
                     maxiters=1e5,
                     sigma_running=0,
                     smoothed=false,
+                    initialize_derivatives=nothing,
                     )
     # Initialize problem
     t_0, T = ivp.tspan
-    solver, cache = initialize(ivp=ivp, q=q, dt=dt, σ=σ, method=method,
-                               sigmarule=sigmarule)
+    solver, cache = initialize(ivp=ivp, q=q, dt=dt, σ=σ,
+                               method=method,
+                               sigmarule=sigmarule,
+                               initialize_derivatives=initialize_derivatives)
     sol = StructArray([StateBelief(cache.t, cache.x)])
     proposals = []
     retcode = :Default
@@ -290,8 +292,8 @@ function prob_solve(ivp, dt;
     end
 
     # Calibration
-    if solver.sigma_type == :fixed
-        σ² = solver.sigma_estimator(solver, proposals)
+    σ² = static_sigma_estimation(solver.sigma_estimator, solver, proposals)
+    if σ² != 1
         for s in sol
             s.x.Σ *= σ²
         end
