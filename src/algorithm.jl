@@ -184,10 +184,32 @@ Base.@kwdef mutable struct SolverCache
     x::Gaussian                 # Current state
 end
 
-function initialize(;ivp, q, dt, σ, method, sigmarule)
+
+"""Compute the derivative df/dt(y,t), making use of dy/dt=f(y,t)"""
+function get_derivative(f, d)
+    dfdy(y, t) = d == 1 ?
+        ForwardDiff.derivative((y) -> f(y, t), y) :
+        ForwardDiff.jacobian((y) -> f(y, t), y)
+    dfdt(y, t) = ForwardDiff.derivative((t) -> f(y, t), t)
+    df(y, t) = dfdy(y, t) * f(y, t) + dfdt(y, t)
+    return df
+end
+
+"""Compute q derivatives of f; Output includes f itself"""
+function get_derivatives(f, d, q)
+    out = Any[f]
+    if q > 1
+        for order in 2:q
+            push!(out, get_derivative(out[end], d))
+        end
+    end
+    return out
+end
+
+function initialize(;ivp, q, dt, σ, method, sigmarule, initialize_derivatives)
     h = dt
     d = length(ivp.u0)
-    f(x, t) = ivp.f(x, ivp.p, t)  # parameters are currently unuseda
+    f(x, t) = ivp.f(x, ivp.p, t)
 
 
     # Initialize SSM
@@ -204,7 +226,15 @@ function initialize(;ivp, q, dt, σ, method, sigmarule)
     # Initialize problem
     t_0, T = ivp.tspan
     x_0 = ivp.u0
-    m_0 = [x_0; f(x_0, t_0); zeros(d*(q-1))]  # Initializing with zeros is not great!
+
+    initialize_derivatives = isnothing(initialize_derivatives) ?
+        q <= 3 : initialize_derivatives
+    if initialize_derivatives
+        derivatives = get_derivatives(f, d, q)
+        m_0 = vcat(x_0, [_f(x_0, t_0) for _f in derivatives]...)
+    else
+        m_0 = [x_0; f(x_0, t_0); zeros(d*(q-1))]
+    end
     P_0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
     initial_state = Gaussian(m_0, P_0)
 
