@@ -145,7 +145,7 @@ It is not 100% faithful to the paper. For example, I do not use the specified
 weights, and I just norm over all dimensions instead of considering all of them
 separately.
 """
-function schober16_steprule(; ρ=0.95, ϵ=1e-1, hmin=1e-5)
+function schober16_steprule(; ρ=0.95, ϵ=1e-3, hmin=1e-6)
     function steprule(solver, cache, proposal, proposals)
         @unpack dm, mm, q, d = solver
         @unpack dt, t, dt = cache
@@ -155,7 +155,9 @@ function schober16_steprule(; ρ=0.95, ϵ=1e-1, hmin=1e-5)
         v = measurement.μ
         Q = dm.Q(dt)
         H = mm.H(prediction.μ, t)
-        σ² = v' * inv(H*Q*H') * v / length(v)
+        # σ² = v' * inv(H*Q*H') * v / length(v)
+        @assert typeof(solver.sigma_estimator) == Schober16Sigma
+        σ² = dynamic_sigma_estimation(solver.sigma_estimator; H=H, Q=Q, v=v)
 
         w = ones(d)
         D = sqrt.(diag(H * σ²*dm.Q(h) * H')) .* w
@@ -166,7 +168,7 @@ function schober16_steprule(; ρ=0.95, ϵ=1e-1, hmin=1e-5)
 
         accept = D <= ϵ_
         h_proposal = h * ρ * (ϵ_ / D)^(1/(q+1))
-        h_new = min(max(h_proposal, dt*0.5), dt*2)
+        h_new = min(max(h_proposal, dt*0.1), dt*5)
 
         if h_new <= hmin
             error("Step size too small")
