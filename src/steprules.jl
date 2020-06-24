@@ -7,7 +7,10 @@ function constant_steprule()
 end
 
 
-""" Accept/reject and increase/decrease depending on the p-value of the error """
+""" Accept/reject and increase/decrease depending on the p-value of the error
+
+DISCONTINUED FOR NOW!
+"""
 function pvalue_steprule(tol)
     counter = 0
     function steprule(solver, cache, proposal, proposals)
