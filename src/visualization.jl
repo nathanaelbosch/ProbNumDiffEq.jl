@@ -62,8 +62,8 @@ function plot_errors(sol, analytic=nothing)
                  yscale=:log10, marker=:x,
                  xlabel="t", label="Global Error", ylabel="function error")
 
-    local_errors = norm.([(diffs[i] - diffs[i-1]) for i in 2:length(diffs)], 2)
-    plot!(p_err, ts[2:end], local_errors, marker=:x, label="Local Error")
+    # local_errors = norm.([(diffs[i] - diffs[i-1]) for i in 2:length(diffs)], 2)
+    # plot!(p_err, ts[2:end], local_errors, marker=:x, label="Local Error")
 
     stds = [sqrt.(diag(P)[1:sol.solver.d]) for P in sol.u.Σ]
     plot!(p_err, ts[2:end], norm.(stds[2:end], 2), marker=:x, label="Output std")
@@ -111,23 +111,35 @@ function plot_residuals(sol)
 end
 
 
-function hairer_plot(sol; analytic=nothing, tol=nothing, f_ylims=nothing)
+
+function plot_sigmas!(p, sol)
+    # Plot Sigmas
+    accepted_proposals = [p for p in sol.proposals if p.accept]
+    ts = [p.t for p in accepted_proposals]
+    σ²_dynamic = [dynamic_sigma_estimation(sol.solver.sigma_estimator; p...)
+                  for p in accepted_proposals]
+    if !all(σ²_dynamic .== 1)
+        σ² = σ²_dynamic
+    else
+        σ²_static = [static_sigma_estimation(sol.solver.sigma_estimator, sol.solver, accepted_proposals[1:i])
+                     for i in 1:length(accepted_proposals)]
+        σ² = σ²_static
+    end
+    plot!(p, ts, σ²,
+          label="σ² (right)", ylabel="σ²", color=2,
+          marker=:x, yscale=:log10, legend=:bottomright)
+end
+
+
+function hairer_plot(sol; analytic=nothing, tol=nothing, f_ylims=nothing, title=nothing)
     analytic = isnothing(analytic) ? solve(sol.prob) : analytic
 
     p_f = plot_solution(sol)
+    plot!(p_f, title=title, ylabel="f(t)")
     plot_analytic_solution!(p_f, sol, analytic)
 
     p_h = plot_stepsizes(sol)
-    # Plot Sigmas
-    # accepted_proposals = [p for p in sol.proposals if p.accept]
-    # ts, sigmas = zip([(accepted_proposals[i].t,
-    #                    sol.solver.sigma_estimator(sol.solver, accepted_proposals[1:i]))
-    #                   for i in 1:length(accepted_proposals)]...)
-    # ts, sigmas = collect(ts), collect(sigmas)
-    # # σ² = [(sol.solver.sigma_estimator(accepted_proposals[1:i]) for i in 1:length(accepted_proposals)]
-    # plot!(twinx(p_h), ts, sigmas,
-    #       label="σ² (right)", ylabel="σ²", color=2,
-    #       marker=marker, yscale=:log10, legend=:bottomright)
+    plot_sigmas!(twinx(p_h), sol)
 
     # 3: Errors
     p_err = plot_errors(sol, analytic)
