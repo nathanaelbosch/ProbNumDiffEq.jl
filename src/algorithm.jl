@@ -69,6 +69,7 @@ function predict_update(solver, cache)
             prediction=Gaussian(m_p, P_p),
             filter_estimate=Gaussian(m, P),
             measurement=Gaussian(v, S),
+            H=H, Q=Q, v=v,
             σ²=σ²)
 end
 
@@ -273,18 +274,9 @@ function initialize(;ivp, q, dt, σ, method, sigmarule, initialize_derivatives)
     precond = preconditioner(h, d, q)
     apply_preconditioner!(precond, initial_state)
 
-    # sigmarules = Dict(
-    #     :mle => sigma_mle,
-    #     :mle_weighted => sigma_mle_weighted,
-    #     :map => sigma_map,
-    #     :schober16 => schober16_sigma
-    # )
-    # sigma_estimator = sigmarules[sigmarule]
-    sigma_estimator = sigmarule
-
 
     return (Solver(;d=d, q=q, dm=dm, mm=mm,
-                   sigma_estimator=sigma_estimator,
+                   sigma_estimator=sigmarule,
                    preconditioner=precond,),
             SolverCache(;t=t_0, x=initial_state, dt=h))
 end

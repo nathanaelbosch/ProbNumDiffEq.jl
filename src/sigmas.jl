@@ -46,6 +46,6 @@ function static_sigma_estimation(rule::MAPSigma, solver, proposals)
 end
 
 struct Schober16Sigma <: AbstractSigmaRule end
-function dynamic_sigma_estimation(rule::Schober16Sigma; H, Q, v)
+function dynamic_sigma_estimation(rule::Schober16Sigma; H, Q, v, argv...)
     return v' * inv(H*Q*H') * v / length(v)
 end
