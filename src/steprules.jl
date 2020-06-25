@@ -88,7 +88,7 @@ end
 
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
-function measurement_error_steprule(scale=1; ρ=0.95, abstol=1e-2)
+function measurement_error_steprule(scale=1; ρ=0.95, abstol=1e-5)
     function steprule(solver, cache, proposal, proposals)
         @unpack dm, d, q = solver
         @unpack dt = cache
@@ -160,7 +160,7 @@ It is not 100% faithful to the paper. For example, I do not use the specified
 weights, and I just norm over all dimensions instead of considering all of them
 separately.
 """
-function schober16_steprule(; ρ=0.95, ϵ=1e-3, hmin=1e-6)
+function schober16_steprule(; ρ=0.8, ϵ=1e-3, hmin=1e-6)
     function steprule(solver, cache, proposal, proposals)
         @unpack dm, mm, q, d = solver
         @unpack dt, t, dt = cache
