@@ -149,7 +149,8 @@ function plot_sigmas!(p, sol)
     # Plot Sigmas
     accepted_proposals = [p for p in sol.proposals if p.accept]
     ts = [p.t for p in accepted_proposals]
-    σ²_dynamic = [dynamic_sigma_estimation(sol.solver.sigma_estimator; p...)
+    σ²_dynamic = [p.σ²
+                  # dynamic_sigma_estimation(sol.solver.sigma_estimator; p...)
                   for p in accepted_proposals]
     if !all(σ²_dynamic .== 1)
         σ² = σ²_dynamic
