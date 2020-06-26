@@ -20,26 +20,29 @@ function plot_solution(sol, derivative=0; true_solution=nothing, stdfac=1.96)
 end
 
 
-function plot_stepsizes(sol)
+function plot_stepsizes!(p, sol; rejections=true, argv...)
     stepsizes = sol.t[2:end-1] - sol.t[1:end-2]
     if all([h ≈ stepsizes[1] for h in stepsizes])
         stepsizes .= stepsizes[1]
     end
-    p_h = plot(sol.t[2:end-1],
-               stepsizes,
-               yscale=:log10,
-               marker=:x, label="h (left)", ylabel="h",
-               legend=:bottomleft,
-               )
+    # @show argv
+    pargv = (yscale=:log10,
+             # marker=:x,
+             label="h (left)",
+             ylabel="h",
+             legend=:bottomleft,
+             argv...)
+    plot!(p, sol.t[2:end-1], stepsizes; pargv...)
     rejected = filter(p->!p.accept, sol.proposals)
-    if length(rejected) > 0
+    if rejections && length(rejected) > 0
         t = [p.t for p in rejected]
         dt = [p.dt for p in rejected]
-        scatter!(p_h, t, dt,
+        scatter!(p, t, dt,
                  marker=:x, color=:black, label="rejected")
     end
-    return p_h
+    return p
 end
+plot_stepsizes(sol; argv...) = plot_stepsizes!(plot(), sol; argv...)
 
 
 function plot_analytic_solution!(p, sol, analytic)
@@ -49,7 +52,7 @@ function plot_analytic_solution!(p, sol, analytic)
 end
 
 
-function plot_errors(sol, analytic=nothing)
+function plot_errors!(p, sol, analytic; c=1.96, argv...)
     ts = sol.t
 
     f_est = [m[1:sol.solver.d] for m in sol.u.μ]
@@ -58,17 +61,47 @@ function plot_errors(sol, analytic=nothing)
     end
     true_sol = analytic.(ts)
     diffs = true_sol .- f_est
-    p_err = plot(ts[2:end], norm.(diffs, 2)[2:end],
-                 yscale=:log10, marker=:x,
-                 xlabel="t", label="Global Error", ylabel="function error")
+
+    pargv = (yscale=:log10,
+             # marker=:x,
+             label="Global Error",
+             ylabel="function error",
+             argv...)
+    plot!(p, ts[2:end], norm.(diffs, 2)[2:end];
+          pargv...)
 
     # local_errors = norm.([(diffs[i] - diffs[i-1]) for i in 2:length(diffs)], 2)
     # plot!(p_err, ts[2:end], local_errors, marker=:x, label="Local Error")
 
-    stds = [sqrt.(diag(P)[1:sol.solver.d]) for P in sol.u.Σ]
-    plot!(p_err, ts[2:end], norm.(stds[2:end], 2), marker=:x, label="Output std")
+    # stds = [sqrt.(diag(P)[1:sol.solver.d]) for P in sol.u.Σ]
+    # plot!(p, ts[2:end], norm.(c.*stds[2:end], 2);
+    #       linestyle=:dash,
+    #       (argv..., labels="$c*std")...)
 
-    return p_err
+    return p
+end
+plot_errors(sol, analytic; argv...) = plot_errors!(plot(), sol, analytic; argv...)
+
+
+stack(x) = copy(reduce(hcat, x)')
+function plot_calibration!(p, sol, analytic; label="")
+    ts = sol.t
+    d = sol.solver.d
+
+    f_est = [m[1:d] for m in sol.u.μ]
+    f_covs = [u.Σ[1:d, 1:d] for u in sol.u]
+    if sol.solver.d == 1
+        f_est = stack(f_est)
+    end
+    true_sol = analytic.(ts)
+    diffs = true_sol .- f_est
+
+    sugg = [d' * inv(C) * d for (d, C) in zip(diffs, f_covs)]
+    plot!(p, ts[2:end], sugg[2:end],
+          label=label,
+          yscale=:log10,
+          )
+    return p
 end
 
 
