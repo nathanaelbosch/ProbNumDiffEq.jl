@@ -49,3 +49,26 @@ struct Schober16Sigma <: AbstractSigmaRule end
 function dynamic_sigma_estimation(rule::Schober16Sigma; H, Q, v, argv...)
     return v' * inv(H*Q*H') * v / length(v)
 end
+
+
+# using Optim
+# struct Schober16SigmaGlobal <: AbstractSigmaRule end
+# function dynamic_sigma_estimation(rule::Schober16SigmaGlobal; H, Q, v, P, A, R, argv...)
+
+#     """p(z|σ²)"""
+#     function sigma_to_pz(σ²)
+#         s = sum(σ²)
+#         P_p = Symmetric(A*P*A') + s*Q
+#         S = Symmetric(H * P_p * H' + R)
+#         return v' * inv(S) * v / length(v)
+#     end
+
+#     results = Optim.optimize(sigma_to_pz, [1.], Newton(); autodiff=:forward)
+
+#     @show sigma_to_pz(1)
+#     @show results.minimizer
+
+#     out = v' * inv(H*Q*H') * v / length(v)
+#     @show out
+#     return out
+# end

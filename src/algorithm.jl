@@ -57,7 +57,7 @@ function predict_update(solver, cache)
     # Decide if constant sigma or variable sigma
     # σ² = solver.sigma_type == :fixed ? 1 :
     #     solver.sigma_estimator(;H=H, Q=Q, v=v)
-    σ² = dynamic_sigma_estimation(solver.sigma_estimator; H=H, Q=Q, v=v)
+    σ² = dynamic_sigma_estimation(solver.sigma_estimator; H=H, Q=Q, v=v, P=P, A=A, R=R)
 
     P_p = Symmetric(A*P*A') + σ²*Q
     S = Symmetric(H * P_p * H' + R)
