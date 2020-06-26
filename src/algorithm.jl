@@ -259,8 +259,7 @@ function initialize(;ivp, q, dt, σ, method, sigmarule, initialize_derivatives)
     t_0, T = ivp.tspan
     x_0 = ivp.u0
 
-    initialize_derivatives = isnothing(initialize_derivatives) ?
-        q <= 3 : initialize_derivatives
+    initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false
     if initialize_derivatives
         derivatives = get_derivatives(f, d, q)
         m_0 = vcat(x_0, [_f(x_0, t_0) for _f in derivatives]...)
@@ -294,7 +293,7 @@ function prob_solve(ivp, dt;
                     maxiters=1e5,
                     sigma_running=0,
                     smoothed=true,
-                    initialize_derivatives=nothing,
+                    initialize_derivatives=:auto,
                     ρ=0.95,
                     )
     # Initialize problem
