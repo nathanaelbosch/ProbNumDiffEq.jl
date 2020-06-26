@@ -47,9 +47,11 @@ function classic_steprule(abstol, reltol, scale=1; ρ=0.95)
         @unpack dt = cache
         @unpack measurement, σ², prediction = proposal
 
-        σ² = static_sigma_estimation(
-            solver.sigma_estimator, solver,
-            [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
+        if σ² == 1
+            σ² = static_sigma_estimation(
+                solver.sigma_estimator, solver,
+                [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
+        end
 
         # Predict step, assuming a correct current estimate (P=0)
         # The prediction step therefore provides P_p=Q
@@ -88,7 +90,7 @@ end
 
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
-function measurement_error_steprule(scale=1; ρ=0.95, abstol=1e-5)
+function measurement_error_steprule(;ρ=0.95, abstol=1e-6, reltol=1e-3)
     function steprule(solver, cache, proposal, proposals)
         @unpack dm, d, q = solver
         @unpack dt = cache
@@ -99,22 +101,20 @@ function measurement_error_steprule(scale=1; ρ=0.95, abstol=1e-5)
             solver.sigma_estimator, solver,
             [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
 
-        # S = measurement.Σ
         S = σ² .* measurement.Σ
         # @assert isdiag(S)
         z_err = sqrt.(diag(S))
-        z_err_scaled = norm(z_err) * scale
-        z_err_scaled /= abstol
+        tol = (abstol .+ (reltol * abs.(prediction.μ[1:d])))
+
+        z_err_scaled = maximum(z_err ./ tol)
+
         accept = z_err_scaled <= 1
         if !accept
             # @info "Rejected h=$current_h with scaled error e=$z_err_scaled !"
         end
-        # @show dt, σ², accept
 
-        # z_err_scaled /= dt
         h_proposal = dt * ρ * (1/z_err_scaled)^(1/(2q-1))
         h_new = min(max(h_proposal, dt*0.1), dt*5)
-        # @show S[1], z_err_scaled, h_new, σ²
 
         return accept, h_new
     end
@@ -123,7 +123,7 @@ end
 
 
 """This is basically the steprule with I discussed with Filip"""
-function measurement_scaling_steprule(abstol=1, reltol=0; ρ=1, hmin=1e-5)
+function measurement_scaling_steprule(abstol=1, reltol=0; ρ=0.8, hmin=1e-5)
     function steprule(solver, cache, proposal, proposals)
         @unpack dm, d, q = solver
         @unpack dt = cache
@@ -160,7 +160,7 @@ It is not 100% faithful to the paper. For example, I do not use the specified
 weights, and I just norm over all dimensions instead of considering all of them
 separately.
 """
-function schober16_steprule(; ρ=0.8, ϵ=1e-3, hmin=1e-6)
+function schober16_steprule(; ρ=0.95, abstol=1e-6, reltol=1e-3, hmin=1e-6)
     function steprule(solver, cache, proposal, proposals)
         @unpack dm, mm, q, d = solver
         @unpack dt, t, dt = cache
@@ -176,13 +176,16 @@ function schober16_steprule(; ρ=0.8, ϵ=1e-3, hmin=1e-6)
 
         w = ones(d)
         D = sqrt.(diag(H * σ²*dm.Q(h) * H')) .* w
-        D = norm(D)
 
-        S = h
-        ϵ_ = ϵ * h / S
+        ϵ = (abstol .+ (reltol * abs.(prediction.μ[1:d])))
 
-        accept = D <= ϵ_
-        h_proposal = h * ρ * (ϵ_ / D)^(1/(q+1))
+        D = maximum(D ./ ϵ)
+
+        # S = h
+        # ϵ_ = ϵ * h / S
+        # accept = D <= ϵ_
+        accept = D <= 1
+        h_proposal = h * ρ * (1 / D)^(1/(2q-1))
         h_new = min(max(h_proposal, dt*0.1), dt*5)
 
         if h_new <= hmin

@@ -295,6 +295,7 @@ function prob_solve(ivp, dt;
                     sigma_running=0,
                     smoothed=true,
                     initialize_derivatives=nothing,
+                    ρ=0.95,
                     )
     # Initialize problem
     t_0, T = ivp.tspan
@@ -310,10 +311,10 @@ function prob_solve(ivp, dt;
     steprules = Dict(
         :constant => constant_steprule(),
         :pvalue => pvalue_steprule(0.05),
-        :baseline => classic_steprule(abstol, reltol),
-        :measurement_error => measurement_error_steprule(),
+        :baseline => classic_steprule(abstol, reltol; ρ=ρ),
+        :measurement_error => measurement_error_steprule(;abstol=abstol, reltol=reltol, ρ=ρ),
         :measurement_scaling => measurement_scaling_steprule(),
-        :schober16 => schober16_steprule(),
+        :schober16 => schober16_steprule(;ρ=ρ, abstol=abstol, reltol=reltol),
     )
     steprule = steprules[steprule]
 
