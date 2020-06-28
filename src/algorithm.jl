@@ -20,6 +20,7 @@ mutable struct Gaussian{T<:AbstractFloat}
 end
 Gaussian(μ::AbstractVector{T}, Σ::AbstractMatrix{T}) where {T<:AbstractFloat} =
     Gaussian{T}(μ, Σ)
+copy(g::Gaussian) = Gaussian(g.μ, g.Σ)
 
 
 struct StateBelief
