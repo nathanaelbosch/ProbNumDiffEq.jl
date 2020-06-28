@@ -130,7 +130,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
         accept, dt_proposal = integ.steprule(integ, proposal, proposals)
         push!(proposals, (proposal..., accept=accept, dt=integ.dt))
-        integ.dt = min(dt_proposal, T-integ.t)
+        integ.dt = min(dt_proposal, accept ? T-proposal.t : T-integ.t)
 
         if accept
             push!(sol, StateBelief(proposal.t, proposal.filter_estimate))
