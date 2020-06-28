@@ -1,9 +1,3 @@
-using UUIDs
-using ProgressLogging
-# using Logging: global_logger
-using TerminalLoggers: TerminalLogger
-
-
 function make_progressbar(progress_every)
     id = uuid4()
     @info ProgressLogging.Progress(id)

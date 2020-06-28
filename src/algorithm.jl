@@ -1,14 +1,3 @@
-using LinearAlgebra
-using Measurements
-using Distributions
-using ForwardDiff
-using StructArrays
-using DiffEqBase
-using ProgressLogging
-using UnPack
-import Base: copy
-
-
 # Everything is a Gaussian here
 mutable struct Gaussian{T<:AbstractFloat}
     μ::AbstractVector{T}

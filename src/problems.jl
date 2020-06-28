@@ -1,5 +1,3 @@
-using DiffEqBase
-
 function exponential_decay(;λ=-50, u0=1., tspan=(0.0, 1.0))
     f(u, p, t) = λ .* u
     exp_decay = ODEProblem(f, u0, tspan)

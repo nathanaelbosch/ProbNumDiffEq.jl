@@ -1,8 +1,3 @@
-using LinearAlgebra
-using Plots
-using DifferentialEquations  # Used to estimate the "correct" ODE solution
-pyplot()
-
 function plot_solution(sol, derivative=0; true_solution=nothing, stdfac=1.96)
     stds = hcat([sqrt.(diag(M)) for M in sol.u.Σ]...)'
     d = sol.solver.d
