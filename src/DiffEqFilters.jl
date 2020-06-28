@@ -12,7 +12,10 @@ using Reexport
 @reexport using DiffEqBase
 using UnPack
 using Plots
+using StaticArrays
 
+@inline _copy(a::SArray) = a
+@inline _copy(a) = copy(a)
 
 include("filtering.jl")
 include("steprules.jl")
