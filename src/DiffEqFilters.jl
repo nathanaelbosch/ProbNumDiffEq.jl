@@ -1,3 +1,5 @@
+__precompile__()
+
 module DiffEqFilters
 
 
@@ -24,5 +26,7 @@ export prob_solve
 
 include("problems.jl")
 export exponential_decay, logistic_equation, brusselator, fitzhugh_nagumo, lotka_volterra, van_der_pol
+
+include("diffeq.jl")
 
 end
