@@ -1,7 +1,6 @@
 __precompile__()
 
-module DiffEqFilters
-
+module ProbNumODE
 
 using LinearAlgebra
 using Measurements

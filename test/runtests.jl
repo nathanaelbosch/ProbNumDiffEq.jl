@@ -1,6 +1,6 @@
-using DiffEqFilters
+using ProbNumODE
 using Test
 
-@testset "DiffEqFilters.jl" begin
+@testset "ProbNumODE.jl" begin
     # Write your tests here.
 end

@@ -1,4 +1,4 @@
-name = "DiffEqFilters"
+name = "ProbNumODE"
 uuid = "1e2eedd4-8c36-44ca-9a66-8045cdbbfc08"
 authors = ["Nathanael Bosch"]
 version = "0.1.0"
