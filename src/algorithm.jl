@@ -23,11 +23,10 @@ Gaussian(μ::AbstractVector{T}, Σ::AbstractMatrix{T}) where {T<:AbstractFloat} 
 copy(g::Gaussian) = Gaussian(g.μ, g.Σ)
 
 
-struct StateBelief
+mutable struct StateBelief
     t::Real
     x::Gaussian
 end
-
 
 
 # Kalman Filter:
@@ -35,11 +34,10 @@ end
 No strict separation between prediction and update, since estimating σ at each step
 requires a different order of comutation of the update and predict steps.
 """
-function predict_update(solver, cache)
-    @unpack dm, mm = solver
-    @unpack t, x, dt = cache
-    precond_P = solver.preconditioner.P
-    precond_P_inv = solver.preconditioner.P_inv
+function predict_update(integ)
+    @unpack dm, mm, x, t, dt = integ
+    precond_P = integ.preconditioner.P
+    precond_P_inv = integ.preconditioner.P_inv
 
     t = t + dt
 
@@ -58,7 +56,8 @@ function predict_update(solver, cache)
     # Decide if constant sigma or variable sigma
     # σ² = solver.sigma_type == :fixed ? 1 :
     #     solver.sigma_estimator(;H=H, Q=Q, v=v)
-    σ² = dynamic_sigma_estimation(solver.sigma_estimator; H=H, Q=Q, v=v, P=P, A=A, R=R)
+    σ² = dynamic_sigma_estimation(integ.sigma_estimator;
+                                  H=H, Q=Q, v=v, P=P, A=A, R=R)
 
     P_p = Symmetric(A*P*A') + σ²*Q
     S = Symmetric(H * P_p * H' + R)
@@ -88,9 +87,9 @@ function smooth(filter_estimate::Gaussian,
     return Gaussian(m, P)
 end
 
-function smooth(sol, solver, proposals)
-    precond_P = solver.preconditioner.P
-    precond_P_inv = solver.preconditioner.P_inv
+function smooth!(sol, proposals, integ)
+    precond_P = integ.preconditioner.P
+    precond_P_inv = integ.preconditioner.P_inv
 
 
     smoothed_solution = StructArray{StateBelief}(undef, length(sol))
@@ -106,21 +105,18 @@ function smooth(sol, solver, proposals)
 
         prediction = accepted_proposals[i].prediction  # t+1
         filter_estimate = sol[i].x  # t
-        smoothed_estimate = smoothed_solution[i+1].x # t+1
+        smoothed_estimate = sol[i+1].x # t+1
 
-        A = solver.dm.A(h)
-        Q = solver.dm.Q(h)
+        A = integ.dm.A(h)
+        Q = integ.dm.Q(h)
         A = precond_P * A * precond_P_inv
         Q = Symmetric(precond_P * Q * precond_P')
-        smoothed_solution[i] = StateBelief(
-            sol[i].t,
-            smooth(filter_estimate,
-                   prediction,
-                   smoothed_estimate,
-                   (A=A, Q=Q))
-        )
+        sol[i].x = smooth(filter_estimate,
+                          prediction,
+                          smoothed_estimate,
+                          (A=A, Q=Q))
     end
-    return smoothed_solution
+    # return smoothed_solution
 end
 
 
@@ -196,32 +192,15 @@ function ekf1_measurement_model(d, q, f, p, kwargs)
     H_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     R = zeros(d, d)
 
-    Jf(x, p, t) = (:jac in keys(kwargs)) ?
-        kwargs[:jac](x, p, t) :
-        ForwardDiff.jacobian(_u -> f(_u, p, t), x)
+    Jf(u, p, t) = (:jac in keys(kwargs)) ?
+        kwargs[:jac](u, p, t) :
+        ForwardDiff.jacobian(_u -> f(_u, p, t), u)
     h(m, t) = H_1*m - f(H_0*m, p, t)
     H(m, t) = H_1 - Jf(H_0*m, p, t) * H_0
     return (h=h, H=H, R=R)
 end
-function ekf1_measurement_model(d, q, ivp)
-    return ekf1_measurement_model(d, q, ivp.f, ivp.p, ivp.kwargs)
-end
-
-
-Base.@kwdef struct Solver
-    d::Int                      # Dimension
-    q::Int                      # Order
-    dm                          # Dynamics Model
-    mm                          # Measurement Model
-    sigma_estimator
-    preconditioner
-end
-
-Base.@kwdef mutable struct SolverCache
-    t::Real                     # Current time
-    dt::Real                    # Current stepsize
-    x::Gaussian                 # Current state
-end
+ekf1_measurement_model(d, q, ivp) =
+    ekf1_measurement_model(d, q, ivp.f, ivp.p, ivp.kwargs)
 
 
 """Compute the derivative df/dt(y,t), making use of dy/dt=f(y,t)"""
@@ -245,119 +224,8 @@ function get_derivatives(f, d, q)
     return out
 end
 
-function initialize(;ivp, q, dt, σ, method, sigmarule, initialize_derivatives)
-    h = dt
-    d = length(ivp.u0)
-    f(x, t) = ivp.f(x, ivp.p, t)
-
-
-    # Initialize SSM
-    dm = ibm(q, d; σ=σ)
-    if method == :ekf0
-        mm = ekf0_measurement_model(d, q, ivp)
-    elseif method == :ekf1
-        mm = ekf1_measurement_model(d, q, ivp)
-    else
-        throw(Error("method argument not in [:ekf0, :ekf1]"))
-    end
-
-
-    # Initialize problem
-    t_0, T = ivp.tspan
-    x_0 = ivp.u0
-
-    initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false
-    if initialize_derivatives
-        derivatives = get_derivatives(f, d, q)
-        m_0 = vcat(x_0, [_f(x_0, t_0) for _f in derivatives]...)
-    else
-        m_0 = [x_0; f(x_0, t_0); zeros(d*(q-1))]
-    end
-    P_0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
-    initial_state = Gaussian(m_0, P_0)
-
-    # Precondition
-    precond = preconditioner(h, d, q)
-    apply_preconditioner!(precond, initial_state)
-
-
-    return (Solver(;d=d, q=q, dm=dm, mm=mm,
-                   sigma_estimator=sigmarule,
-                   preconditioner=precond,),
-            SolverCache(;t=t_0, x=initial_state, dt=h))
-end
-
-
-
-function prob_solve(ivp, dt;
-                    steprule=:constant,
-                    sigmarule=MLESigma(),
-                    method=:ekf0,
-                    q=1, σ=1,
-                    progressbar=false,
-                    abstol=1e-6,
-                    reltol=1e-3,
-                    maxiters=1e5,
-                    sigma_running=0,
-                    smoothed=true,
-                    initialize_derivatives=:auto,
-                    ρ=0.95,
-                    )
-    # Initialize problem
-    t_0, T = ivp.tspan
-    solver, cache = initialize(ivp=ivp, q=q, dt=dt, σ=σ,
-                               method=method,
-                               sigmarule=sigmarule,
-                               initialize_derivatives=initialize_derivatives)
-    sol = StructArray([StateBelief(cache.t, cache.x)])
-    proposals = []
-    retcode = :Default
-
-    # Filtering
-    steprules = Dict(
-        :constant => constant_steprule(),
-        :pvalue => pvalue_steprule(0.05),
-        :baseline => classic_steprule(abstol, reltol; ρ=ρ),
-        :measurement_error => measurement_error_steprule(;abstol=abstol, reltol=reltol, ρ=ρ),
-        :measurement_scaling => measurement_scaling_steprule(),
-        :schober16 => schober16_steprule(;ρ=ρ, abstol=abstol, reltol=reltol),
-    )
-    steprule = steprules[steprule]
-
-
-    if progressbar pbar_update, pbar_close = make_progressbar(0.1) end
-    iter = 0
-    while cache.t < T
-        if progressbar pbar_update(fraction=(cache.t-t_0)/(T-t_0)) end
-
-        # Here happens the main "work"
-        proposal = predict_update(solver, cache)
-
-        accept, dt_proposal = steprule(solver, cache, proposal, proposals)
-        push!(proposals, (proposal..., accept=accept, dt=cache.dt))
-        cache.dt = min(dt_proposal, T-cache.t)
-
-        if accept
-            push!(sol, StateBelief(proposal.t, proposal.filter_estimate))
-            cache.x = proposal.filter_estimate
-            cache.t = proposal.t
-        end
-
-        iter += 1
-        if iter >= maxiters
-            break
-            retcode = :MaxIters
-        end
-    end
-    if progressbar pbar_close() end
-
-    # Smoothing
-    if smoothed
-        sol = smooth(sol, solver, proposals)
-    end
-
-    # Calibration
-    σ² = static_sigma_estimation(solver.sigma_estimator, solver, proposals)
+function calibrate!(sol, proposals, integ)
+    σ² = static_sigma_estimation(integ.sigma_estimator, integ, proposals)
     if σ² != 1
         for s in sol
             s.x.Σ *= σ²
@@ -368,24 +236,14 @@ function prob_solve(ivp, dt;
             p.filter_estimate.Σ *= σ²
         end
     end
+end
 
-    # Undo preconditioning
+function undo_preconditioner!(sol, proposals, integ)
     for s in sol
-        undo_preconditioner!(solver.preconditioner, s.x)
+        undo_preconditioner!(integ.preconditioner, s.x)
     end
     for p in proposals
-        undo_preconditioner!(solver.preconditioner, p.prediction)
-        undo_preconditioner!(solver.preconditioner, p.filter_estimate)
+        undo_preconditioner!(integ.preconditioner, p.prediction)
+        undo_preconditioner!(integ.preconditioner, p.filter_estimate)
     end
-
-
-    return (
-        prob=ivp,
-        solver=solver,
-        t=sol.t,
-        u=StructArray(sol.x),
-        sol=sol,
-        proposals=proposals,
-        retcode=retcode,
-    )
 end

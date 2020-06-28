@@ -1,7 +1,7 @@
 """ Constant steps """
 function constant_steprule()
-    function steprule(solver, cache, proposal, proposals)
-        accept, h_new = true, cache.dt
+    function steprule(integ, proposal, proposals)
+        accept, h_new = true, integ.dt
         return accept, h_new
     end
 end
@@ -13,9 +13,8 @@ DISCONTINUED FOR NOW!
 """
 function pvalue_steprule(tol)
     counter = 0
-    function steprule(solver, cache, proposal, proposals)
-        @unpack dt = cache
-        @unpack d = solver
+    function steprule(integ, proposal, proposals)
+        @unpack d, dt = integ
         error("p-value steprule currently broken")
         # current_h, current_error, previous_sigma, d, argv...)
         pval = cdf(Chisq(d), current_error / previous_sigma)
@@ -42,15 +41,14 @@ end
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
 function classic_steprule(abstol, reltol, scale=1; ρ=0.95)
-    function steprule(solver, cache, proposal, proposals)
-        @unpack dm, d, q = solver
-        @unpack dt = cache
+    function steprule(integ, proposal, proposals)
+        @unpack dm, d, q, dt = integ
         @unpack measurement, σ², prediction = proposal
 
         if σ² == 1
             σ² = static_sigma_estimation(
-                solver.sigma_estimator, solver,
-                [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
+                integ.sigma_estimator, integ,
+                [proposals; (proposal..., accept=true, t=t, dt=dt)])
         end
 
         # Predict step, assuming a correct current estimate (P=0)
@@ -91,15 +89,14 @@ end
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
 function measurement_error_steprule(;ρ=0.95, abstol=1e-6, reltol=1e-3)
-    function steprule(solver, cache, proposal, proposals)
-        @unpack dm, d, q = solver
-        @unpack dt = cache
+    function steprule(integ, proposal, proposals)
+        @unpack dm, d, q, dt, t = integ
         @unpack measurement, σ², prediction = proposal
         # S = previous_sigma .* measurement.Σ
 
         σ² = static_sigma_estimation(
-            solver.sigma_estimator, solver,
-            [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
+            integ.sigma_estimator, integ,
+            [proposals; (proposal..., accept=true, t=t, dt=dt)])
 
         S = σ² .* measurement.Σ
         # @assert isdiag(S)
@@ -124,14 +121,13 @@ end
 
 """This is basically the steprule with I discussed with Filip"""
 function measurement_scaling_steprule(abstol=1, reltol=0; ρ=0.8, hmin=1e-5)
-    function steprule(solver, cache, proposal, proposals)
-        @unpack dm, d, q = solver
-        @unpack dt = cache
+    function steprule(integ, proposal, proposals)
+        @unpack dm, d, q, dt = integ
         @unpack measurement, σ², prediction = proposal
 
         σ² = static_sigma_estimation(
-            solver.sigma_estimator, solver,
-            [proposals; (proposal..., accept=true, t=cache.t, dt=cache.dt)])
+            integ.sigma_estimator, integ,
+            [proposals; (proposal..., accept=true, t=t, dt=dt)])
         residual = measurement.μ' * inv(measurement.Σ) * measurement.μ / σ²
         @show residual
         @show σ²
@@ -161,9 +157,8 @@ weights, and I just norm over all dimensions instead of considering all of them
 separately.
 """
 function schober16_steprule(; ρ=0.95, abstol=1e-6, reltol=1e-3, hmin=1e-6)
-    function steprule(solver, cache, proposal, proposals)
-        @unpack dm, mm, q, d = solver
-        @unpack dt, t, dt = cache
+    function steprule(integ, proposal, proposals)
+        @unpack dm, mm, q, d, dt, t = integ
         @unpack t, prediction, measurement = proposal
         h = dt
 
@@ -171,8 +166,8 @@ function schober16_steprule(; ρ=0.95, abstol=1e-6, reltol=1e-3, hmin=1e-6)
         Q = dm.Q(dt)
         H = mm.H(prediction.μ, t)
         # σ² = v' * inv(H*Q*H') * v / length(v)
-        @assert typeof(solver.sigma_estimator) == Schober16Sigma
-        σ² = dynamic_sigma_estimation(solver.sigma_estimator; H=H, Q=Q, v=v)
+        @assert typeof(integ.sigma_estimator) == Schober16Sigma
+        σ² = dynamic_sigma_estimation(integ.sigma_estimator; H=H, Q=Q, v=v)
 
         w = ones(d)
         D = sqrt.(diag(H * σ²*dm.Q(h) * H')) .* w

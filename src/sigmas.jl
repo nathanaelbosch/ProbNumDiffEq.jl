@@ -1,5 +1,5 @@
 abstract type AbstractSigmaRule end
-function static_sigma_estimation(rule::AbstractSigmaRule, solver, proposals)
+function static_sigma_estimation(rule::AbstractSigmaRule, integ, proposals)
     return 1
 end
 function dynamic_sigma_estimation(rule::AbstractSigmaRule; args...)
@@ -8,10 +8,10 @@ end
 
 
 struct MLESigma <: AbstractSigmaRule end
-function static_sigma_estimation(rule::MLESigma, solver, proposals)
+function static_sigma_estimation(rule::MLESigma, integ, proposals)
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
-    d = solver.d
+    d = integ.d
     residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
     σ² = mean(residuals)
     return σ²
@@ -19,9 +19,9 @@ end
 
 
 struct WeightedMLESigma <: AbstractSigmaRule end
-function static_sigma_estimation(rule::WeightedMLESigma, solver, proposals)
+function static_sigma_estimation(rule::WeightedMLESigma, integ, proposals)
     measurements = [p.measurement for p in accepted_proposals]
-    d = solver.d
+    d = integ.d
     residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
     stepsizes = [p.dt for p in accepted_proposals]
     σ² = mean(residuals .* stepsizes)
@@ -30,10 +30,10 @@ end
 
 
 struct MAPSigma <: AbstractSigmaRule end
-function static_sigma_estimation(rule::MAPSigma, solver, proposals)
+function static_sigma_estimation(rule::MAPSigma, integ, proposals)
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
-    d = solver.d
+    d = integ.d
     residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
     N = length(residuals)
 
