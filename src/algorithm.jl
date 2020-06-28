@@ -6,6 +6,7 @@ using StructArrays
 using DiffEqBase
 using ProgressLogging
 using UnPack
+import Base: copy
 
 
 # Everything is a Gaussian here
