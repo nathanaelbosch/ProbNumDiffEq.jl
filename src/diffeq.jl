@@ -109,7 +109,9 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             smoothed=true,
                             kwargs...)
     # Init
-    integ = odefilter_init(prob.f, DiffEqBase.isinplace(prob), prob.u0, prob.tspan[1], dt, prob.p, q, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs)
+    IIP = DiffEqBase.isinplace(prob)
+    f = IIP ? IIP_to_OOP(prob.f) : prob.f
+    integ = odefilter_init(f, false, prob.u0, prob.tspan[1], dt, prob.p, q, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs)
 
     # More Initialization
     t_0, T = prob.tspan
