@@ -161,28 +161,11 @@ end
 # Step
 ########################################################################################
 function DiffEqBase.step!(integ::ODEFilterIntegrator{false, S, X, T}) where {S, X, T}
-
-    # proposal = predict_update(solver, cache)
-    # accept, dt_proposal = steprule(solver, cache, proposal, proposals)
-    # push!(proposals, (proposal..., accept=accept, dt=cache.dt))
-    # cache.dt = min(dt_proposal, T-cache.t)
-
-    # if accept
-    #     push!(sol, StateBelief(proposal.t, proposal.filter_estimate))
-    #     cache.x = proposal.filter_estimate
-    #     cache.t = proposal.t
-    # end
-
-    # iter += 1
-    # if iter >= maxiters
-    #     break
-    #     retcode = :MaxIters
-    # end
 end
 
 
 ########################################################################################
-# Solution handling
+# Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
 struct ProbODESolution{T,N,uType,xType,tType,P,A,IType} <: AbstractProbODESolution{T,N,uType}
@@ -222,7 +205,9 @@ function DiffEqBase.build_solution(
 end
 
 
-# Plot recipe for the solution: Plot with ribbon
+########################################################################################
+# Plotting
+########################################################################################
 @recipe function f(sol::AbstractProbODESolution; c=1.96)
     stack(x) = collect(reduce(hcat, x)')
     values = map(u -> Measurements.value.(u), sol.u)
