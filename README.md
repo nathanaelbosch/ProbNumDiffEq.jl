@@ -1,4 +1,4 @@
-# ProbNumODE
+# ProbNumODE.jl
 
 [![Build Status](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl.svg?branch=master)](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/nathanaelbosch/ProbNumODE.jl?svg=true)](https://ci.appveyor.com/project/nathanaelbosch/ProbNumODE-jl)
@@ -20,6 +20,5 @@ prob = fitzhugh_nagumo()
 sol = solve(prob, ODEFilter())
 using Plots
 plot(sol)
-savefig
 ```
-![Fitzhugh-Nagumo Solution](files/fitzhugh_nagumo.png?raw=true "Fitzhugh-Nagumo Solution")
+![Fitzhugh-Nagumo Solution](./docs/src/figures/fitzhugh_nagumo.png?raw=true "Fitzhugh-Nagumo Solution")

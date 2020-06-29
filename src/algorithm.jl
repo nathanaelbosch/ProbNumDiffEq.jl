@@ -1,4 +1,11 @@
-# Everything is a Gaussian here
+"""
+    Gaussian(μ::AbstractVector, Σ::AbstractMatrix)
+
+Multivariate Gaussian distribution ``\\mathcal{N}(\\mu, \\Sigma)``.
+
+**Note:* There is currently no additional functionality implemented.
+In the future we might instead use Distributions.jl.
+"""
 mutable struct Gaussian{T<:AbstractFloat}
     μ::AbstractVector{T}
     Σ::AbstractMatrix{T}
