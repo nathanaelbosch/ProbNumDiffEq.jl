@@ -27,7 +27,17 @@ function DiffEqBase.build_solution(
     d = length(prob.u0)
     function make_Measurement(state)
         # @assert isdiag(state.Σ[1:d,1:d]) state.Σ[1:d,1:d]
-        return state.μ[1:d] .± sqrt.(diag(state.Σ)[1:d])
+        mean = state.μ[1:d]
+        var = diag(state.Σ)[1:d]
+
+        _min = minimum(var)
+        if _min < 0
+            @assert abs(_min) < 1e-16
+            var .+= - _min
+        end
+        @assert all(var .>= 0)
+
+        return mean .± sqrt.(var)
     end
     u = map(make_Measurement, x)
     # u = map(s -> s.μ[1:d], x)
