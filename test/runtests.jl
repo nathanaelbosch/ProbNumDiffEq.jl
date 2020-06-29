@@ -1,6 +1,23 @@
 using ProbNumODE
 using Test
+using DifferentialEquations
+using Measurements
 
-@testset "ProbNumODE.jl" begin
-    # Write your tests here.
+@testset "Solve Fitzhugh-Nagumo with constant steps" begin
+
+    prob = fitzhugh_nagumo()
+    sol = solve(prob, ODEFilter(), steprule=:constant, dt=0.01, method=:ekf1, q=3)
+
+    @test length(sol) > 2
+    @test length(sol.t) == length(sol.u)
+    @test length(prob.u0) == length(sol.u[end])
+
+    true_sol = solve(prob, abstol=1e-10, reltol=1e-10)
+    @test Measurements.values.(sol[end]) ≈ true_sol[end] atol=0.01
+end
+
+@testset "Gaussian" begin
+    @test typeof(ProbNumODE.Gaussian([1.; -1.], [1. 0.1; 0.1 1.])) <: ProbNumODE.Gaussian
+    # Non-symmetric covariance should throw an error
+    @test_throws Exception ProbNumODE.Gaussian([1.; -1.], [1. 0.; 0.1 1.])
 end
