@@ -12,6 +12,7 @@ using StructArrays
 using UnPack
 using StaticArrays
 using RecipesBase
+using Distributions
 
 using UUIDs, ProgressLogging
 
