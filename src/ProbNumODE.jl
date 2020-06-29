@@ -22,14 +22,15 @@ import Base: copy
 
 include("filtering.jl")
 include("steprules.jl")
-include("visualization.jl")
-export hairer_plot
+include("priors.jl")
 include("utils.jl")
 include("sigmas.jl")
 include("algorithm.jl")
 
-include("problems.jl")
+include("dev/problems.jl")
 export exponential_decay, logistic_equation, brusselator, fitzhugh_nagumo, lotka_volterra, van_der_pol
+include("dev/visualization.jl")
+export hairer_plot
 
 include("diffeq.jl")
 include("solution.jl")
