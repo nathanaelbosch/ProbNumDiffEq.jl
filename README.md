@@ -6,11 +6,20 @@
 [![Coverage](https://coveralls.io/repos/github/nathanaelbosch/ProbNumODE.jl/badge.svg?branch=master)](https://coveralls.io/github/nathanaelbosch/ProbNumODE.jl?branch=master)
 
 
+## Installation
+The package can be installed directly from github:
+```julia
+] add https://github.com/nathanaelbosch/ProbNumODE
+```
 
+
+## Example
 ```julia
 using ProbNumODE
 prob = fitzhugh_nagumo()
 sol = solve(prob, ODEFilter())
 using Plots
 plot(sol)
+savefig
 ```
+![Fitzhugh-Nagumo Solution](files/fitzhugh_nagumo.png?raw=true "Fitzhugh-Nagumo Solution")
