@@ -48,18 +48,18 @@ DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 ########################################################################################
 # Initialization
 ########################################################################################
-function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Int, sigmarule, steprule, abstol, reltol, ρ, prob_kwargs) where {F, P, T, S<:AbstractArray{T}}
+function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Int, method, sigmarule, steprule, abstol, reltol, ρ, prob_kwargs) where {F, P, T, S}
+    # if isinstance(u0, )
+
     d = length(u0)
     dm = ibm(q, d)
-    # if method == :ekf0
-    #     mm = ekf0_measurement_model(d, q, ivp)
-    # elseif method == :ekf1
-    #     mm = ekf1_measurement_model(d, q, ivp)
-    # else
-    #     throw(Error("method argument not in [:ekf0, :ekf1]"))
-    # end
-    mm = ekf1_measurement_model(d, q, f, p, prob_kwargs)
-    # mm = ekf0_measurement_model(d, q, f, p)
+    if method == :ekf0
+        mm = ekf0_measurement_model(d, q, f, p)
+    elseif method == :ekf1
+        mm = ekf1_measurement_model(d, q, f, p, prob_kwargs)
+    else
+        throw(Error("method argument not in [:ekf0, :ekf1]"))
+    end
 
     initialize_derivatives = false
     initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false
@@ -69,7 +69,13 @@ function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Int, sigm
     else
         m0 = [u0; f(u0, p, t0); zeros(d*(q-1))]
     end
-    P0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
+
+    if eltype(m0) <: Measurement
+        P0 = diagm(0 => Measurements.uncertainty.(m0) .^ 2)
+        m0 = Measurements.value.(m0)
+    else
+        P0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
+    end
     x0 = Gaussian(m0, P0)
     X = typeof(x0)
 
@@ -102,6 +108,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             saveat=nothing,
                             save_everystep=true,
                             abstol=1e-6, reltol=1e-3, ρ=0.95,
+                            method=:ekf1,
                             sigmarule=Schober16Sigma(),
                             steprule=:baseline,
                             progressbar=false,
@@ -111,7 +118,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     # Init
     IIP = DiffEqBase.isinplace(prob)
     f = IIP ? IIP_to_OOP(prob.f) : prob.f
-    integ = odefilter_init(f, false, prob.u0, prob.tspan[1], dt, prob.p, q, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs)
+    integ = odefilter_init(f, false, prob.u0, prob.tspan[1], dt, prob.p, q, method, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs)
 
     # More Initialization
     t_0, T = prob.tspan
