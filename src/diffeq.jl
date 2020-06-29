@@ -151,7 +151,9 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     undo_preconditioner!(sol, proposals, integ)
 
     # Format Solution
-    sol = DiffEqBase.build_solution(prob, alg, sol.t, StructArray(sol.x))
+    sol = DiffEqBase.build_solution(prob, alg, sol.t, StructArray(sol.x),
+                                    proposals, integ,
+                                    retcode=retcode)
 
     return sol
 end

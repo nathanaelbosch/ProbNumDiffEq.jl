@@ -2,12 +2,14 @@
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
-struct ProbODESolution{T,N,uType,xType,tType,P,A,IType} <: AbstractProbODESolution{T,N,uType}
+struct ProbODESolution{T,N,uType,xType,tType,pType,P,A,S,IType} <: AbstractProbODESolution{T,N,uType}
     u::uType
     x::xType
     t::tType
+    proposals::pType
     prob::P
     alg::A
+    solver::S
     dense::Bool
     interp::IType
     retcode::Symbol
@@ -16,7 +18,8 @@ end
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
     alg::ODEFilter,
-    t,x;
+    t, x,
+    proposals, solver;
     dense=false,
     retcode = :Default,
     kwargs...)
@@ -34,8 +37,9 @@ function DiffEqBase.build_solution(
     T = eltype(eltype(u))
     N = length((size(prob.u0)..., length(u)))
 
-    return ProbODESolution{T,N,typeof(u),typeof(x),typeof(t),typeof(prob),typeof(alg),typeof(interp)}(
-        u,x,t,prob,alg,dense,interp,retcode)
+    return ProbODESolution{T, N, typeof(u), typeof(x), typeof(t), typeof(proposals),
+                           typeof(prob), typeof(alg), typeof(solver), typeof(interp)}(
+        u, x, t, proposals, prob, alg, solver, dense, interp, retcode)
 end
 
 
