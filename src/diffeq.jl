@@ -117,7 +117,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     t_0, T = prob.tspan
     sol = StructArray([StateBelief(integ.t, integ.x)])
     proposals = []
-    retcode = :Default
+    retcode = :Success
 
     # Solve
     if progressbar pbar_update, pbar_close = make_progressbar(0.1) end
