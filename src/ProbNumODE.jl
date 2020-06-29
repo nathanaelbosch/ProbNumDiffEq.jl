@@ -20,11 +20,11 @@ import Base: copy
 
 @inline _copy(a::SArray) = a
 @inline _copy(a) = copy(a)
+stack(x) = copy(reduce(hcat, x)')
 
 include("filtering.jl")
 include("steprules.jl")
 include("priors.jl")
-include("utils.jl")
 include("sigmas.jl")
 include("algorithm.jl")
 
@@ -35,5 +35,8 @@ export hairer_plot
 
 include("diffeq.jl")
 include("solution.jl")
+
+include("utils/progressbar.jl")
+include("utils/iip_to_oop.jl")
 
 end
