@@ -9,7 +9,7 @@
 ## Installation
 The package can be installed directly from github:
 ```julia
-] add https://github.com/nathanaelbosch/ProbNumODE
+] add https://github.com/nathanaelbosch/ProbNumODE.jl
 ```
 
 
