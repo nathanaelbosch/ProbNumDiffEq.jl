@@ -1,21 +1,21 @@
 ########################################################################################
 # Basic Kalman Filtering
 ########################################################################################
-function kf_predict(m::Vector, P::Matrix, A::Matrix, Q::Matrix)
+function kf_predict(m::Vector, P::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix)
     return (m=(A*m), P=(A*P*A' + Q))
 end
 
-function kf_update(m::Vector, P::Matrix, A::Matrix, Q::Matrix, H::Matrix, R::Matrix, y::Vector)
+function kf_update(m::Vector, P::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix, H::AbstractMatrix, R::AbstractMatrix, y::Vector)
     v = y - H*m
     S = H * P * H' + R
     K = P * H' * inv(S)
     return (m=(m + K*v), P=(P - K*S*K'))
 end
 
-function kf_smooth(m_f_t::Vector, P_f_t::Matrix,
-                   m_p_t1::Vector, P_p_t1::Matrix,
-                   m_s_t1::Vector, P_s_t1::Matrix,
-                   A::Matrix, Q::Matrix)
+function kf_smooth(m_f_t::Vector, P_f_t::AbstractMatrix,
+                   m_p_t1::Vector, P_p_t1::AbstractMatrix,
+                   m_s_t1::Vector, P_s_t1::AbstractMatrix,
+                   A::AbstractMatrix, Q::AbstractMatrix)
     G = P_f_t * A' * inv(P_p_t1)
     m = m_f_t + G * (m_s_t1 - m_p_t1)
     P = P_f_t + Symmetric(G * (P_s_t1 - P_p_t1) * G')
@@ -32,11 +32,11 @@ function kf_smooth(m_f_t::Vector, P_f_t::Matrix,
 end
 
 
-function ekf_predict(m::Vector, P::Matrix, f::Function, F::Function, Q::Matrix)
+function ekf_predict(m::Vector, P::AbstractMatrix, f::Function, F::Function, Q::AbstractMatrix)
     return (m=f(m), P=(F(m)*P*F(m)' + Q))
 end
 
-function ekf_update(m::Vector, P::Matrix, h::Function, H::Function, R::Matrix, y::Vector)
+function ekf_update(m::Vector, P::AbstractMatrix, h::Function, H::Function, R::AbstractMatrix, y::Vector)
     v = y - h(m)
     S = H(m) * P * H(m)' + R
     K = P * H(m)' * inv(S)
@@ -44,10 +44,10 @@ function ekf_update(m::Vector, P::Matrix, h::Function, H::Function, R::Matrix, y
     return (m=(m + K*v), P=(P - K*S*K'))
 end
 
-function ekf_smooth(m_f_t::Vector, P_f_t::Matrix,
-                    m_p_t1::Vector, P_p_t1::Matrix,
-                    m_s_t1::Vector, P_s_t1::Matrix,
-                    F::Function, Q::Matrix)
+function ekf_smooth(m_f_t::Vector, P_f_t::AbstractMatrix,
+                    m_p_t1::Vector, P_p_t1::AbstractMatrix,
+                    m_s_t1::Vector, P_s_t1::AbstractMatrix,
+                    F::Function, Q::AbstractMatrix)
     G = P_f_t * F(m_f_t)' * inv(P_p_t1)
     m = m_f_t + G * (m_s_t1 - m_p_t1)
     P = P_f_t + G * (P_s_t1 - P_p_t1) * G'
