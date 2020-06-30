@@ -3,34 +3,37 @@
 
 ## Minimal Example
 Solving ODEs probabilistically is as simple as that:
-```julia
+```@example 1
 using ProbNumODE
 
 prob = fitzhugh_nagumo()
 sol = solve(prob, ODEFilter())
+nothing # hide
 ```
 
 
 ## Plotting Functionality
 Requires [Plots.jl](https://github.com/JuliaPlots/Plots.jl).
-```julia
+```@example 1
 using Plots
 plot(sol)
+savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
 ```
-![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.png?raw=true "Fitzhugh-Nagumo Solution")
+![](./figures/fitzhugh_nagumo.svg)
 
 
 ## Compatible with problems from DiffEqProblemLibrary.jl
 Requires [DiffEqProblemLibrary.jl](https://github.com/SciML/DiffEqProblemLibrary.jl)
-```julia
+```@example 2
 using DiffEqProblemLibrary
 DiffEqProblemLibrary.ODEProblemLibrary.importodeproblems()
 
 prob = DiffEqProblemLibrary.ODEProblemLibrary.prob_ode_rigidbody
 sol = solve(prob, ODEFilter())
 plot(sol)
+savefig("./figures/rigidbody.svg"); nothing # hide
 ```
-![Rigid Body Equations](./figures/rigidbody.png?raw=true "Rigid Body Equations Solution")
+![](./figures/rigidbody.svg)
 
 
 ## Symbolic problem definition
@@ -50,8 +53,9 @@ prob = ODEProblem(f,u0,tspan,p)
 
 sol = solve(prob, ODEFilter())
 plot(sol)
+savefig("./figures/lotka-volterra.svg"); nothing # hide
 ```
-![Lotka-Volterra Solution](./figures/lotka-volterra.png?raw=true "Lotka-Volterra Solution**)
+![](./figures/lotka-volterra.svg)
 
 
 ## Uncertain starting values
@@ -104,5 +108,6 @@ plot!(ts, stack(values), ribbon=1.96*stack(uncertainties),
       color=2, fillalpha=0.1, width=1, label="Measurements.jl")
 plot!(EnsembleSummary(ensemble_solution),
       color=3, fillalpha=0.1, label="Sampling", width=1)
+savefig("./figures/uncertain_init_comparison.svg"); nothing # hide
 ```
-![Uncertain Init Comparison](./figures/uncertain_init_comparison.png?raw=true "Uncertain Initial Value Comparison")
+![](./figures/uncertain_init_comparison.svg)

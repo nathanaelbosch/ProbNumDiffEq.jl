@@ -2,6 +2,9 @@ using ProbNumODE
 using Test
 using DifferentialEquations
 using Measurements
+using DiffEqDevTools
+
+
 
 @testset "Solve Fitzhugh-Nagumo with constant steps" begin
 
@@ -15,6 +18,8 @@ using Measurements
     true_sol = solve(prob, abstol=1e-10, reltol=1e-10)
     @test Measurements.values.(sol[end]) ≈ true_sol[end] atol=0.01
 end
+
+
 
 @testset "Gaussian" begin
     @test typeof(ProbNumODE.Gaussian([1.; -1.], [1. 0.1; 0.1 1.])) <: ProbNumODE.Gaussian
