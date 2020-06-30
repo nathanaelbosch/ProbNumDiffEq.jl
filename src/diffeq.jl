@@ -53,13 +53,7 @@ function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Int, meth
 
     d = length(u0)
     dm = ibm(q, d)
-    if method == :ekf0
-        mm = ekf0_measurement_model(d, q, f, p)
-    elseif method == :ekf1
-        mm = ekf1_measurement_model(d, q, f, p, prob_kwargs)
-    else
-        throw(Error("method argument not in [:ekf0, :ekf1]"))
-    end
+    mm = measurement_model(method, d, q, f, p)
 
     initialize_derivatives = false
     initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false

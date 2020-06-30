@@ -137,35 +137,25 @@ end
 
 
 # Measurement Model
-function ekf0_measurement_model(d, q, f, p)
+function measurement_model(kind, d, q, f, p)
+    @assert kind in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
+
     H_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     H_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     R = zeros(d, d)
 
     h(m, t) = H_1*m - f(H_0*m, p, t)
     H(m, t) = H_1
+
+    if kind == :ekf1
+        Jf = (!isnothing(f.jac)) ? f.jac :
+            (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u)
+        H(m, t) = H_1 - Jf(H_0*m, p, t) * H_0
+    end
+
     return (h=h, H=H, R=R)
 end
-function ekf0_measurement_model(d, q, ivp)
-    return ekf0_measurement_model(d, q, ivp.f, ivp.p)
-end
-
-
-# Measurement Model
-function ekf1_measurement_model(d, q, f, p, kwargs)
-    H_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    H_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    R = zeros(d, d)
-
-    Jf(u, p, t) = (:jac in keys(kwargs)) ?
-        kwargs[:jac](u, p, t) :
-        ForwardDiff.jacobian(_u -> f(_u, p, t), u)
-    h(m, t) = H_1*m - f(H_0*m, p, t)
-    H(m, t) = H_1 - Jf(H_0*m, p, t) * H_0
-    return (h=h, H=H, R=R)
-end
-ekf1_measurement_model(d, q, ivp) =
-    ekf1_measurement_model(d, q, ivp.f, ivp.p, ivp.kwargs)
+measurement_model(kind, d, q, ivp) = measurement_model(kind, d, q, ivp.f, ivp.p)
 
 
 """Compute the derivative df/dt(y,t), making use of dy/dt=f(y,t)"""
