@@ -1,4 +1,4 @@
-# ProbNumODE.jl
+# ProbNumODE.jl: Probabilistic Numerics for Ordinary Differential Equations
 
 [![Build Status](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl.svg?branch=master)](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl)
 [![Build Status](https://ci.appveyor.com/api/projects/status/github/nathanaelbosch/ProbNumODE.jl?svg=true)](https://ci.appveyor.com/project/nathanaelbosch/ProbNumODE-jl)
