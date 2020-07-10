@@ -1,31 +1,3 @@
-"""
-    Gaussian(μ::AbstractVector, Σ::AbstractMatrix)
-
-Multivariate Gaussian distribution ``\\mathcal{N}(\\mu, \\Sigma)``.
-
-**Note:* There is currently no additional functionality implemented.
-In the future we might instead use Distributions.jl.
-"""
-mutable struct Gaussian{T<:AbstractFloat}
-    μ::AbstractVector{T}
-    Σ::AbstractMatrix{T}
-    Gaussian{T}(μ::AbstractVector{T}, Σ::AbstractMatrix{T}) where {T<:AbstractFloat} =
-        (length(μ) == size(Σ,1)) ?
-        (Σ≈Σ' ? new(μ, Symmetric(Σ)) : error("Σ is not symmetric: $Σ")) :
-        # (Σ≈Σ' ? new(μ, Σ) : error("Σ is not symmetric: $Σ")) :
-        error("Wrong input dimensions: size(μ)=$(size(μ)), size(Σ)=$(size(Σ))")
-end
-Gaussian(μ::AbstractVector{T}, Σ::AbstractMatrix{T}) where {T<:AbstractFloat} =
-    Gaussian{T}(μ, Σ)
-copy(g::Gaussian) = Gaussian(g.μ, g.Σ)
-
-
-mutable struct StateBelief
-    t::Real
-    x::Gaussian
-end
-
-
 # Kalman Filter:
 """
 No strict separation between prediction and update, since estimating σ at each step
@@ -89,7 +61,7 @@ function smooth!(sol, proposals, integ)
     precond_P_inv = integ.preconditioner.P_inv
 
 
-    smoothed_solution = StructArray{StateBelief}(undef, length(sol))
+    smoothed_solution = _copy(sol)
     smoothed_solution[end] = sol[end]
     smoothed_solution[1] = sol[1]
     accepted_proposals = [p for p in proposals if p.accept]
@@ -108,10 +80,11 @@ function smooth!(sol, proposals, integ)
         Q = integ.dm.Q(h)
         A = precond_P * A * precond_P_inv
         Q = Symmetric(precond_P * Q * precond_P')
-        sol[i].x = smooth(filter_estimate,
-                          prediction,
-                          smoothed_estimate,
-                          (A=A, Q=Q))
+        sol[i] = (t=sol[i].t,
+                  x=smooth(filter_estimate,
+                           prediction,
+                           smoothed_estimate,
+                           (A=A, Q=Q)))
     end
     # return smoothed_solution
 end
@@ -134,41 +107,16 @@ function undo_preconditioner!(p, x::Gaussian)
     x.μ .= p.P_inv * x.μ
     x.Σ .= Symmetric(p.P_inv * x.Σ * p.P_inv')
 end
-
-
-# Measurement Model
-function measurement_model(kind, d, q, f, p)
-    @assert kind in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
-    if kind == :ekf0
-        return ekf0_measurement_model(d, q, f, p)
-    elseif kind == :ekf1
-        return ekf1_measurement_model(d, q, f, p)
+function undo_preconditioner!(sol, proposals, integ)
+    for s in sol
+        undo_preconditioner!(integ.preconditioner, s.x)
+    end
+    for p in proposals
+        undo_preconditioner!(integ.preconditioner, p.prediction)
+        undo_preconditioner!(integ.preconditioner, p.filter_estimate)
     end
 end
-measurement_model(kind, d, q, ivp) = measurement_model(kind, d, q, ivp.f, ivp.p)
 
-function ekf0_measurement_model(d, q, f, p)
-    H_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    H_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    R = zeros(d, d)
-
-    h(m, t) = H_1*m - f(H_0*m, p, t)
-    H(m, t) = H_1
-    return (h=h, H=H, R=R)
-end
-
-function ekf1_measurement_model(d, q, f, p)
-    H_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    H_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    R = zeros(d, d)
-
-    h(m, t) = H_1*m - f(H_0*m, p, t)
-    Jf = (hasfield(typeof(f), :jac) && !isnothing(f.jac)) ? f.jac :
-        (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u)
-    H(m, t) = H_1 - Jf(H_0*m, p, t) * H_0
-
-    return (h=h, H=H, R=R)
-end
 
 
 """Compute the derivative df/dt(y,t), making use of dy/dt=f(y,t)"""
@@ -203,15 +151,5 @@ function calibrate!(sol, proposals, integ)
             p.prediction.Σ *= σ²
             p.filter_estimate.Σ *= σ²
         end
-    end
-end
-
-function undo_preconditioner!(sol, proposals, integ)
-    for s in sol
-        undo_preconditioner!(integ.preconditioner, s.x)
-    end
-    for p in proposals
-        undo_preconditioner!(integ.preconditioner, p.prediction)
-        undo_preconditioner!(integ.preconditioner, p.filter_estimate)
     end
 end

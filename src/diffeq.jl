@@ -116,7 +116,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     # More Initialization
     t_0, T = prob.tspan
-    sol = StructArray([StateBelief(integ.t, integ.x)])
+    sol = StructArray([(t=integ.t, x=integ.x)])
     proposals = []
     retcode = :Success
 
@@ -134,7 +134,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         integ.dt = min(dt_proposal, accept ? T-proposal.t : T-integ.t)
 
         if accept
-            push!(sol, StateBelief(proposal.t, proposal.filter_estimate))
+            push!(sol, (t=proposal.t, x=proposal.filter_estimate))
             integ.x = proposal.filter_estimate
             integ.t = proposal.t
         end
