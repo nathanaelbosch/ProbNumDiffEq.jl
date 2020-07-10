@@ -15,7 +15,7 @@ function smooth(filter_estimate::Gaussian,
     return Gaussian(m, P)
 end
 
-function smooth!(sol, proposals, integ)
+function smooth!(sol, proposals, integ::ODEFilterIntegrator)
     precond_P = integ.preconditioner.P
     precond_P_inv = integ.preconditioner.P_inv
 
@@ -48,7 +48,7 @@ function smooth!(sol, proposals, integ)
     # return smoothed_solution
 end
 
-function calibrate!(sol, proposals, integ)
+function calibrate!(sol, proposals, integ::ODEFilterIntegrator)
     σ² = static_sigma_estimation(integ.sigma_estimator, integ, proposals)
     if σ² != 1
         for s in sol

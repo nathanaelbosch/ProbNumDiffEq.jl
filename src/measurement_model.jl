@@ -1,7 +1,7 @@
 ########################################################################################
 # Measurement Models
 ########################################################################################
-function measurement_model(kind, d, q, f, p)
+function measurement_model(kind::Symbol, d::Int, q::Int, f::Function, p)
     @assert kind in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
     if kind == :ekf0
         return ekf0_measurement_model(d, q, f, p)
@@ -11,7 +11,7 @@ function measurement_model(kind, d, q, f, p)
 end
 measurement_model(kind, d, q, ivp) = measurement_model(kind, d, q, ivp.f, ivp.p)
 
-function ekf0_measurement_model(d, q, f, p)
+function ekf0_measurement_model(d::Int, q::Int, f::Function, p)
     H_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     H_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     R = zeros(d, d)
@@ -21,7 +21,7 @@ function ekf0_measurement_model(d, q, f, p)
     return (h=h, H=H, R=R)
 end
 
-function ekf1_measurement_model(d, q, f, p)
+function ekf1_measurement_model(d::Int, q::Int, f::Function, p)
     H_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     H_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     R = zeros(d, d)

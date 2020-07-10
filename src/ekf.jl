@@ -177,7 +177,7 @@ end
 No strict separation between prediction and update, since estimating σ at each step
 requires a different order of comutation of the update and predict steps.
 """
-function predict_update(integ)
+function predict_update(integ::ODEFilterIntegrator)
     @unpack dm, mm, x, t, dt = integ
     precond_P = integ.preconditioner.P
     precond_P_inv = integ.preconditioner.P_inv
