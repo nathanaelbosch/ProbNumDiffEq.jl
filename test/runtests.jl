@@ -26,3 +26,10 @@ end
     # Non-symmetric covariance should throw an error
     @test_throws Exception ProbNumODE.Gaussian([1.; -1.], [1. 0.; 0.1 1.])
 end
+
+
+@testset "Priors" begin
+    prior = ProbNumODE.ibm(1, 2)
+    @test prior.A(0.1) <: Matrix
+    @test prior.Q(0.1) <: Matrix
+end
