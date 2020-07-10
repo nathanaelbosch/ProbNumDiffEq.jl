@@ -30,7 +30,7 @@ include("sigmas.jl")
 include("gaussian.jl")
 
 include("preconditioning.jl")
-include("algorithm.jl")
+include("postprocessing.jl")
 include("ekf.jl")
 export EKF0, EKF1
 include("solution.jl")

@@ -1,3 +1,6 @@
+########################################################################################
+# Post-Processing: Smoothing and uncertainty calibration
+########################################################################################
 
 function smooth(filter_estimate::Gaussian,
                 prediction::Gaussian,
