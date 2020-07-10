@@ -29,6 +29,7 @@ include("measurement_model.jl")
 include("sigmas.jl")
 include("gaussian.jl")
 
+include("preconditioning.jl")
 include("algorithm.jl")
 include("ekf.jl")
 export EKF0, EKF1
