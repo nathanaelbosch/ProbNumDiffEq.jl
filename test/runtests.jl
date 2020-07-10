@@ -1,6 +1,5 @@
 using ProbNumODE
 using Test
-using DifferentialEquations
 using Measurements
 using DiffEqDevTools
 
@@ -9,14 +8,16 @@ using DiffEqDevTools
 @testset "Solve Fitzhugh-Nagumo with constant steps" begin
 
     prob = fitzhugh_nagumo()
+    sol = solve(prob, EKF1(), smoothed=false)
     sol = solve(prob, EKF0(), steprule=:constant, dt=0.001, q=1)
 
     @test length(sol) > 2
     @test length(sol.t) == length(sol.u)
     @test length(prob.u0) == length(sol.u[end])
 
-    true_sol = solve(prob, abstol=1e-10, reltol=1e-10)
-    @test Measurements.values.(sol[end]) ≈ true_sol[end] atol=0.01
+    true_sol = [2.010422386552278; 0.6382569402421574]  # Computed with DifferentialEquations.jl
+    @test Measurements.values.(sol[end]) ≈ true_sol atol=0.01
+
 end
 
 
