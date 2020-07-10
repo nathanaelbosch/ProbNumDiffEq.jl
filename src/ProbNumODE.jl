@@ -39,6 +39,5 @@ include("diffeq.jl")
 include("solution.jl")
 
 include("utils/progressbar.jl")
-include("utils/iip_to_oop.jl")
 
 end
