@@ -28,16 +28,16 @@ include("priors.jl")
 include("measurement_model.jl")
 include("sigmas.jl")
 include("gaussian.jl")
+
 include("algorithm.jl")
+include("diffeq.jl")
+export EKF0, EKF1
+include("solution.jl")
 
 include("dev/problems.jl")
 export exponential_decay, logistic_equation, brusselator, fitzhugh_nagumo, lotka_volterra, van_der_pol
 include("dev/visualization.jl")
 export hairer_plot
-
-include("diffeq.jl")
-export EKF0, EKF1
-include("solution.jl")
 
 include("utils/progressbar.jl")
 
