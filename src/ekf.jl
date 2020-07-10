@@ -112,7 +112,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
-    f = IIP ? IIP_to_OOP(prob.f) : prob.f
+    IIP && error("in-place rhs definitions not yet supported")
     integ = odefilter_init(f, false, prob.u0, prob.tspan[1], dt, prob.p, q, method, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs)
 
     # More Initialization
