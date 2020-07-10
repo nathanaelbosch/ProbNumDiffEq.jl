@@ -7,9 +7,9 @@
 # Algorithm
 ########################################################################################
 abstract type AbstractODEFilter <: DiffEqBase.AbstractODEAlgorithm end
-mutable struct ODEFilter <: AbstractODEFilter
-end
-export ODEFilter
+mutable struct ODEFilter <: AbstractODEFilter end
+mutable struct EKF0 <: AbstractODEFilter end
+mutable struct EKF1 <: AbstractODEFilter end
 
 
 ########################################################################################
@@ -159,6 +159,11 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     return sol
 end
+DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::EKF0; kwargs...) =
+    DiffEqBase.__solve(prob, ODEFilter(); method=:ekf0, kwargs...)
+DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::EKF1; kwargs...) =
+    DiffEqBase.__solve(prob, ODEFilter(); method=:ekf1, kwargs...)
+
 
 
 ########################################################################################

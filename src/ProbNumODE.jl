@@ -36,6 +36,7 @@ include("dev/visualization.jl")
 export hairer_plot
 
 include("diffeq.jl")
+export EKF0, EKF1
 include("solution.jl")
 
 include("utils/progressbar.jl")
