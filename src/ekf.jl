@@ -171,3 +171,46 @@ DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::EKF1; kwargs...) =
 ########################################################################################
 function DiffEqBase.step!(integ::ODEFilterIntegrator{false, S, X, T}) where {S, X, T}
 end
+
+"""
+No strict separation between prediction and update, since estimating σ at each step
+requires a different order of comutation of the update and predict steps.
+"""
+function predict_update(integ)
+    @unpack dm, mm, x, t, dt = integ
+    precond_P = integ.preconditioner.P
+    precond_P_inv = integ.preconditioner.P_inv
+
+    t = t + dt
+
+    m, P = x.μ, x.Σ
+    A, Q = dm.A(dt), dm.Q(dt)
+    A = precond_P * A * precond_P_inv
+    Q = Symmetric(precond_P * Q * precond_P')
+
+    m_p = A * m
+
+    # H, R = mm.H(m_p, t), mm.R
+    H, R = mm.H(m_p, t) * precond_P_inv, mm.R
+    # v = 0 .- mm.h(m_p, t)
+    v = 0 .- mm.h(precond_P_inv * m_p, t)
+
+    # Decide if constant sigma or variable sigma
+    # σ² = solver.sigma_type == :fixed ? 1 :
+    #     solver.sigma_estimator(;H=H, Q=Q, v=v)
+    σ² = dynamic_sigma_estimation(integ.sigma_estimator;
+                                  H=H, Q=Q, v=v, P=P, A=A, R=R)
+
+    P_p = Symmetric(A*P*A') + σ²*Q
+    S = Symmetric(H * P_p * H' + R)
+    K = P_p * H' * inv(S)
+    m = m_p + K*v
+    P = P_p - Symmetric(K*S*K')
+
+    return (t=t,
+            prediction=Gaussian(m_p, P_p),
+            filter_estimate=Gaussian(m, P),
+            measurement=Gaussian(v, S),
+            H=H, Q=Q, v=v,
+            σ²=σ²)
+end
