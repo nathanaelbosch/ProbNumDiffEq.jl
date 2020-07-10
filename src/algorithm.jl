@@ -94,8 +94,8 @@ end
 function preconditioner(expected_stepsize, d, q)
     h = expected_stepsize
     I_d = diagm(0 => ones(d))
-    P = Diagonal(kron(Diagonal(h .^ 0:(q+1)), I_d))
-    P_inv = Diagonal(kron(Diagonal(1 ./ (h .^ 0:(q+1))), I_d))
+    P = Diagonal(kron(Diagonal(h .^ (0:q)), I_d))
+    P_inv = Diagonal(kron(Diagonal(1 ./ (h .^ (0:q))), I_d))
     return (P=P, P_inv=P_inv)
     # return (P=I, P_inv=I)
 end
