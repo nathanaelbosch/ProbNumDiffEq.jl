@@ -40,5 +40,6 @@ include("dev/visualization.jl")
 export hairer_plot
 
 include("utils/progressbar.jl")
+include("utils/rhs_derivatives.jl")
 
 end
