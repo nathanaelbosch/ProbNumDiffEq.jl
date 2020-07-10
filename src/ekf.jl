@@ -49,7 +49,7 @@ DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 ########################################################################################
 # Initialization
 ########################################################################################
-function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Int, method, sigmarule, steprule, abstol, reltol, ρ, prob_kwargs, precondition=true) where {F, P, T, S}
+function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Int, method, sigmarule, steprule, abstol, reltol, ρ, prob_kwargs, precondition) where {F, P, T, S}
     # if isinstance(u0, )
 
     d = length(u0)
@@ -109,11 +109,12 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             progressbar=false,
                             maxiters=1e5,
                             smoothed=true,
+                            precondition=true,
                             kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
     IIP && error("in-place rhs definitions not yet supported")
-    integ = odefilter_init(f, false, prob.u0, prob.tspan[1], dt, prob.p, q, method, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs)
+    integ = odefilter_init(prob.f, false, prob.u0, prob.tspan[1], dt, prob.p, q, method, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs, precondition)
 
     # More Initialization
     t_0, T = prob.tspan
