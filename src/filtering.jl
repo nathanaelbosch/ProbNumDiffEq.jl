@@ -1,5 +1,5 @@
 ########################################################################################
-# Basic Kalman Filtering
+# (Extended) Kalman Filtering and Smoothing
 ########################################################################################
 function kf_predict(m::Vector, P::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix)
     return (m=(A*m), P=(A*P*A' + Q))
