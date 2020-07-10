@@ -29,10 +29,10 @@ include("measurement_model.jl")
 include("sigmas.jl")
 include("gaussian.jl")
 
-include("preconditioning.jl")
-include("postprocessing.jl")
 include("ekf.jl")
 export EKF0, EKF1
+include("preconditioning.jl")
+include("postprocessing.jl")
 include("solution.jl")
 
 include("dev/problems.jl")
