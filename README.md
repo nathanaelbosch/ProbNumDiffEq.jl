@@ -17,7 +17,7 @@ The package can be installed directly from github:
 ```julia
 using ProbNumODE
 prob = fitzhugh_nagumo()
-sol = solve(prob, ODEFilter())
+sol = solve(prob, EKF0())
 using Plots
 plot(sol)
 ```

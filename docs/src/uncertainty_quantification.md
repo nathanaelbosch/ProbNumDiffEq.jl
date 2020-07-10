@@ -1,5 +1,8 @@
 ## Uncertainty calibration: Ours vs probints
 Comparison with the ProbInts approach as implemented in DiffEqUncertainty.
+
+**THIS COMPARISON IS STILL WIP!**
+
 ```@example probints
 using DifferentialEquations
 using ProbNumODE

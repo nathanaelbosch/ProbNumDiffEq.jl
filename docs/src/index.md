@@ -1,6 +1,5 @@
 # ProbNumODE.jl Documentation
 
-<!-- A short description -->
 ProbNumODE.jl is a library for probabilistic numerical methods for solving ordinary differential equations.
 It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/).
 
@@ -25,7 +24,7 @@ savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
 
 
 ## Research References
-- Filip Tronarp, Simo Särkkä, Philipp Hennig: "Bayesian Ode Solvers: the Maximum a Posteriori Estimate"
-- Filip Tronarp, Hans Kersting, Simo Särkkä, Philipp Hennig: "Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective"
-- Michael Schober, Simo Särkkä, Philipp Hennig: "A Probabilistic Model for the Numerical Solution of Initial Value Problems"
-- Hans Kersting, T.J. Sullivan, Philipp Hennig: "Convergence Rates of Gaussian Ode Filters"
+- Filip Tronarp, Simo Särkkä, Philipp Hennig: **Bayesian Ode Solvers: the Maximum a Posteriori Estimate**
+- Filip Tronarp, Hans Kersting, Simo Särkkä, Philipp Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**
+- Michael Schober, Simo Särkkä, Philipp Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems**
+- Hans Kersting, T.J. Sullivan, Philipp Hennig: **Convergence Rates of Gaussian Ode Filters**
