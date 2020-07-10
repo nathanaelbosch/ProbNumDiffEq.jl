@@ -9,7 +9,7 @@ using DiffEqDevTools
 @testset "Solve Fitzhugh-Nagumo with constant steps" begin
 
     prob = fitzhugh_nagumo()
-    sol = solve(prob, ODEFilter(), steprule=:constant, dt=0.01, method=:ekf1, q=3)
+    sol = solve(prob, ODEFilter(), steprule=:constant, dt=0.001, method=:ekf1, q=1)
 
     @test length(sol) > 2
     @test length(sol.t) == length(sol.u)
