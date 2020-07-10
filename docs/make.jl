@@ -20,5 +20,5 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/nathanaelbosch/ProbNumODE.jl"
+    repo = "github.com/nathanaelbosch/ProbNumODE.jl.git"
 )
