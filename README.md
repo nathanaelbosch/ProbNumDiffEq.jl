@@ -9,6 +9,10 @@
 <!-- [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac) -->
 
 
+ProbNumODE.jl is a library for probabilistic numerical methods for solving ordinary differential equations.
+It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/).
+
+
 ## Installation
 The package can be installed directly from github:
 ```julia
@@ -17,11 +21,28 @@ The package can be installed directly from github:
 
 
 ## Example
+Solving ODEs with probabilistic numerical methods is as simple as that!
 ```julia
 using ProbNumODE
-prob = fitzhugh_nagumo()
+
+# Fitzhugh-Nagumo model
+function f(u, p, t)
+    V, R = u
+    a, b, c = p
+    return [
+        c*(V - V^3/3 + R)
+        -(1/c)*(V -  a - b*R)
+    ]
+end
+
+u0 = [-1.0; 1.0]
+tspan = (0., 20.)
+p = (0.2,0.2,3.0)
+prob = ODEProblem(f, u0, tspan, p)
+
 sol = solve(prob, EKF0())
+
 using Plots
 plot(sol)
 ```
-![Fitzhugh-Nagumo Solution](./docs/src/figures/fitzhugh_nagumo.png?raw=true "Fitzhugh-Nagumo Solution")
+![Fitzhugh-Nagumo Solution](./docs/src/figures/fitzhugh_nagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
