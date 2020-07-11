@@ -1,6 +1,7 @@
 using ProbNumODE
 using Test
 using Measurements
+using Plots
 
 
 @testset "ProbNumODE" begin
@@ -12,9 +13,17 @@ end
 @testset "Solve Fitzhugh-Nagumo with constant steps" begin
 
     prob = fitzhugh_nagumo()
+    # Multiple different methods
     sol = solve(prob, EKF1(), smoothed=false)
-    sol = solve(prob, EKF0(), steprule=:constant, dt=0.001, q=1)
+    sol = solve(prob, EKF0(), steprule=:schober16, sigmarule=ProbNumODE.Schober16Sigma(),
+                abstol=1e-3, reltol=1e-3, q=2)
+    sol = solve(prob, EKF0(), steprule=:constant, sigmarule=ProbNumODE.MLESigma(),
+                abstol=1e-1, reltol=1e-1, q=2)
+    sol = solve(prob, EKF0(), steprule=:constant, sigmarule=ProbNumODE.MAPSigma(),
+                abstol=1e-1, reltol=1e-1, q=2)
 
+    sol = solve(prob, EKF0(), steprule=:constant, dt=0.001, q=1)
+    plot(sol)
     @test length(sol) > 2
     @test length(sol.t) == length(sol.u)
     @test length(prob.u0) == length(sol.u[end])
