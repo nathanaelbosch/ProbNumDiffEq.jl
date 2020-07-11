@@ -20,6 +20,7 @@ end
 
 struct WeightedMLESigma <: AbstractSigmaRule end
 function static_sigma_estimation(rule::WeightedMLESigma, integ, proposals)
+    accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
     d = integ.d
     residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
