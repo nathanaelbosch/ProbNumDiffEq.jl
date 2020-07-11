@@ -49,7 +49,9 @@ DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 ########################################################################################
 # Initialization
 ########################################################################################
-function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Integer, method, sigmarule, steprule, abstol, reltol, ρ, prob_kwargs, precondition) where {F, P, T, S}
+function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Integer, method,
+                        sigmarule, steprule, abstol, reltol, ρ, prob_kwargs, precondition
+                        ) where {F, P, T, S}
     # if isinstance(u0, )
 
     d = length(u0)
