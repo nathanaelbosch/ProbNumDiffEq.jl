@@ -4,7 +4,7 @@
 """Generate the discrete dynamics for a q-IBM model
 
 Careful: Dimensions are ordered differently than in `probnum`!"""
-function ibm(q::Int, d::Int; σ::Int=1)
+function ibm(q::Integer, d::Integer; σ::Integer=1)
     F̃ = diagm(1 => ones(q))
     I_d = diagm(0 => ones(d))
     F = kron(F̃, I_d)  # In probnum the order is inverted
