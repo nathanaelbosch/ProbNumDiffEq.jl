@@ -3,6 +3,11 @@ using Test
 using Measurements
 
 
+@testset "ProbNumODE" begin
+    # Use this in the future to `include` tests from other files to replace the testsets
+    # below
+end
+
 
 @testset "Solve Fitzhugh-Nagumo with constant steps" begin
 
