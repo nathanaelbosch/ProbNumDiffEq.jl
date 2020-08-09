@@ -36,7 +36,7 @@ include("postprocessing.jl")
 include("solution.jl")
 
 include("dev/problems.jl")
-export exponential_decay, logistic_equation, brusselator, fitzhugh_nagumo, lotka_volterra, van_der_pol
+export exponential_decay, logistic_equation, brusselator, fitzhugh_nagumo, lotka_volterra, van_der_pol, fitzhugh_nagumo_iip
 include("dev/visualization.jl")
 export hairer_plot
 

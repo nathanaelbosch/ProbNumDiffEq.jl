@@ -31,6 +31,16 @@ function fitzhugh_nagumo(; u0=[-1.0; 1.0], tspan=(0., 20.), p=(0.2,0.2,3.0))
     return ODEProblem(fitz,u0,tspan,p)
 end
 
+function fitzhugh_nagumo_iip(; u0=[-1.0; 1.0], tspan=(0., 20.), p=(0.2,0.2,3.0))
+    function fitz!(du,u,p,t)
+        V,R = u
+        a,b,c = p
+        du[1] = c*(V - V^3/3 + R)
+        du[2] = -(1/c)*(V -  a - b*R)
+    end
+    return ODEProblem(fitz!,u0,tspan,p)
+end
+
 
 function lotka_volterra(;
                         u0=[1.0;1.0],
