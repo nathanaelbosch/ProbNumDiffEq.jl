@@ -31,7 +31,7 @@ include("gaussian.jl")
 
 include("ekf.jl")
 export EKF0, EKF1
-include("preconditioning.jl")
+# include("preconditioning.jl")
 include("postprocessing.jl")
 include("solution.jl")
 

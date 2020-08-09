@@ -15,11 +15,8 @@ function smooth(filter_estimate::Gaussian,
     return Gaussian(m, P)
 end
 
-function smooth!(sol, proposals, integ::ODEFilterIntegrator)
-    precond_P = integ.preconditioner.P
-    precond_P_inv = integ.preconditioner.P_inv
-
-
+function smooth!(sol, integ::ODEFilterIntegrator)
+    proposals = integ.proposals
     smoothed_solution = _copy(sol)
     smoothed_solution[end] = sol[end]
     smoothed_solution[1] = sol[1]
@@ -37,8 +34,6 @@ function smooth!(sol, proposals, integ::ODEFilterIntegrator)
 
         A = integ.dm.A(h)
         Q = integ.dm.Q(h)
-        A = precond_P * A * precond_P_inv
-        Q = Symmetric(precond_P * Q * precond_P')
         sol[i] = (t=sol[i].t,
                   x=smooth(filter_estimate,
                            prediction,
@@ -48,7 +43,8 @@ function smooth!(sol, proposals, integ::ODEFilterIntegrator)
     # return smoothed_solution
 end
 
-function calibrate!(sol, proposals, integ::ODEFilterIntegrator)
+function calibrate!(sol, integ::ODEFilterIntegrator)
+    proposals = integ.proposals
     σ² = static_sigma_estimation(integ.sigma_estimator, integ, proposals)
     if σ² != 1
         for s in sol

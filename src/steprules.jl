@@ -1,6 +1,6 @@
 """ Constant steps """
 function constant_steprule()
-    function steprule(integ, proposal, proposals)
+    function steprule(integ)
         accept, h_new = true, integ.dt
         return accept, h_new
     end
@@ -13,7 +13,8 @@ DISCONTINUED FOR NOW!
 """
 function pvalue_steprule(tol)
     counter = 0
-    function steprule(integ, proposal, proposals)
+    function steprule(integ)
+        @unpack proposal, proposals = integ
         @unpack d, dt = integ
         error("p-value steprule currently broken")
         # current_h, current_error, previous_sigma, d, argv...)
@@ -41,7 +42,8 @@ end
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
 function classic_steprule(abstol, reltol, scale=1; ρ=0.95)
-    function steprule(integ, proposal, proposals)
+    function steprule(integ)
+        @unpack proposal, proposals = integ
         @unpack dm, d, q, dt = integ
         @unpack measurement, σ², prediction = proposal
 
@@ -89,7 +91,8 @@ end
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
 function measurement_error_steprule(;ρ=0.95, abstol=1e-6, reltol=1e-3)
-    function steprule(integ, proposal, proposals)
+    function steprule(integ)
+        @unpack proposal, proposals = integ
         @unpack dm, d, q, dt, t = integ
         @unpack measurement, σ², prediction = proposal
         # S = previous_sigma .* measurement.Σ
@@ -121,7 +124,8 @@ end
 
 """This is basically the steprule with I discussed with Filip"""
 function measurement_scaling_steprule(abstol=1, reltol=0; ρ=0.8, hmin=1e-5)
-    function steprule(integ, proposal, proposals)
+    function steprule(integ)
+        @unpack proposal, proposals = integ
         @unpack dm, d, q, dt = integ
         @unpack measurement, σ², prediction = proposal
 
@@ -157,7 +161,8 @@ weights, and I just norm over all dimensions instead of considering all of them
 separately.
 """
 function schober16_steprule(; ρ=0.95, abstol=1e-6, reltol=1e-3, hmin=1e-6)
-    function steprule(integ, proposal, proposals)
+    function steprule(integ)
+        @unpack proposal, proposals = integ
         @unpack dm, mm, q, d, dt, t = integ
         @unpack t, prediction, measurement = proposal
         h = dt

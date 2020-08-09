@@ -39,9 +39,9 @@ mutable struct ODEFilterIntegrator{IIP, S, X, T, P, F} <: DiffEqBase.AbstractODE
     dm
     mm
     sigma_estimator
-    precondition::Bool
-    preconditioner
     steprule
+    proposal
+    proposals
 end
 DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 
@@ -50,10 +50,7 @@ DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 # Initialization
 ########################################################################################
 function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Integer, method,
-                        sigmarule, steprule, abstol, reltol, ρ, prob_kwargs, precondition
-                        ) where {F, P, T, S}
-    # if isinstance(u0, )
-
+                        sigmarule, steprule, abstol, reltol, ρ, prob_kwargs) where {F, P, T, S}
     d = length(u0)
     dm = ibm(q, d)
     mm = measurement_model(method, d, q, f, p, IIP)
@@ -82,9 +79,6 @@ function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Integer, 
     x0 = Gaussian(m0, P0)
     X = typeof(x0)
 
-    precond = preconditioner(dt, d, q)
-    precondition && apply_preconditioner!(precond, x0)
-
     steprules = Dict(
         :constant => constant_steprule(),
         :pvalue => pvalue_steprule(0.05),
@@ -95,9 +89,12 @@ function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Integer, 
     )
     steprule = steprules[steprule]
 
+    empty_proposal = ()
+    empty_proposals = []
+
     return ODEFilterIntegrator{IIP, S, X, T, P, F}(
-        f, u0, _copy(x0), _copy(x0), _copy(x0), t0, t0, t0, dt, sign(dt), p, true,
-        d, q, dm, mm, sigmarule, precondition, precond, steprule
+        f, u0, _copy(x0), _copy(x0), t0, t0, t0, dt, sign(dt), p, true,
+        d, q, dm, mm, sigmarule, steprule, empty_proposal, empty_proposals, 0
     )
 end
 
@@ -117,7 +114,6 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             progressbar=false,
                             maxiters=1e5,
                             smoothed=true,
-                            precondition=true,
                             kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
@@ -155,9 +151,8 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     end
     if progressbar pbar_close() end
 
-    smoothed && smooth!(sol, proposals, integ)
-    calibrate!(sol, proposals, integ)
-    integ.precondition && undo_preconditioner!(sol, proposals, integ)
+    smoothed && smooth!(sol, integ)
+    calibrate!(sol, integ)
 
     # Format Solution
     sol = DiffEqBase.build_solution(prob, alg, sol.t, StructArray(sol.x),
