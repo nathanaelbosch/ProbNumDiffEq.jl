@@ -7,6 +7,7 @@ makedocs(
     modules = [ProbNumODE],
     pages = [
         "Home" => "index.md",
+        "Solvers and Options" => "manual.md",
         "Examples" => [
             # "DifferentialEquations.jl Compatibility" => "diffeq_compatibility.md",
             # "Uncertainty Propagation" => "uncertain_startingvalues.md",
