@@ -20,7 +20,6 @@ mutable struct ODEFilterIntegrator{IIP, S, X, T, P, F} <: DiffEqBase.AbstractODE
     u::S                  # current functionvalue
     x::X                  # current state
     xprev::X              # previous state
-    tmp::X                # dummy, same as state
     tprev::T              # previous time
     t::T                  # current time
     t0::T                 # initial time, only for reinit
@@ -42,6 +41,7 @@ mutable struct ODEFilterIntegrator{IIP, S, X, T, P, F} <: DiffEqBase.AbstractODE
     steprule
     proposal
     proposals
+    iter::UInt
 end
 DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 
@@ -130,23 +130,12 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     while integ.t < T
         if progressbar pbar_update(fraction=(integ.t-t_0)/(T-t_0)) end
 
-        # Here happens the main "work"
-        proposal = predict_update(integ)
+        step!(integ)
+        push!(sol, (t=integ.t, x=integ.x))
 
-        accept, dt_proposal = integ.steprule(integ, proposal, proposals)
-        push!(proposals, (proposal..., accept=accept, dt=integ.dt))
-        integ.dt = min(dt_proposal, accept ? T-proposal.t : T-integ.t)
-
-        if accept
-            push!(sol, (t=proposal.t, x=proposal.filter_estimate))
-            integ.x = proposal.filter_estimate
-            integ.t = proposal.t
-        end
-
-        iter += 1
-        if iter >= maxiters
-            break
+        if integ.iter >= maxiters
             retcode = :MaxIters
+            break
         end
     end
     if progressbar pbar_close() end
@@ -156,8 +145,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     # Format Solution
     sol = DiffEqBase.build_solution(prob, alg, sol.t, StructArray(sol.x),
-                                    proposals, integ,
-                                    retcode=retcode)
+                                    proposals, integ, retcode=retcode)
 
     return sol
 end
@@ -172,47 +160,70 @@ DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::EKF1; kwargs...) =
 # Step
 ########################################################################################
 function DiffEqBase.step!(integ::ODEFilterIntegrator{IIP, S, X, T}) where {IIP, S, X, T}
+    accept = false
+    while !accept
+        integ.iter += 1
+        t = integ.t + integ.dt
+        prediction, A, Q = predict(integ)
+        h, H = measure(integ, prediction, t)
+
+        σ_sq = dynamic_sigma_estimation(
+            integ.sigma_estimator; integ, prediction=prediction, v=h, H=H, Q=Q)
+        prediction = Gaussian(prediction.μ, prediction.Σ + (σ_sq - 1) * Q)
+
+        filter_estimate, measurement = update(integ, prediction, h, H)
+
+        proposal = (t=t,
+                prediction=prediction,
+                filter_estimate=filter_estimate,
+                measurement=measurement,
+                H=H, Q=Q, v=h,
+                σ²=σ_sq)
+
+        integ.proposal = proposal
+
+        accept, dt_proposal = integ.steprule(integ)
+        push!(integ.proposals, (proposal..., accept=accept, dt=integ.dt))
+        integ.dt = dt_proposal
+
+        if accept
+            integ.x = proposal.filter_estimate
+            integ.t = proposal.t
+            # integ.dt = min(integ.dt, T-integ.t)
+        end
+    end
 end
 
-"""
-No strict separation between prediction and update, since estimating σ at each step
-requires a different order of comutation of the update and predict steps.
-"""
-function predict_update(integ::ODEFilterIntegrator)
-    @unpack dm, mm, x, t, dt = integ
-    precond_P = integ.preconditioner.P
-    precond_P_inv = integ.preconditioner.P_inv
 
-    t = t + dt
+function predict(integ)
+    @unpack dm, mm, x, t, dt = integ
 
     m, P = x.μ, x.Σ
     A, Q = dm.A(dt), dm.Q(dt)
-    A = precond_P * A * precond_P_inv
-    Q = Symmetric(precond_P * Q * precond_P')
-
     m_p = A * m
+    P_p = Symmetric(A*P*A') + Q
+    prediction=Gaussian(m_p, P_p)
+    return prediction, A, Q
+end
 
-    # H, R = mm.H(m_p, t), mm.R
-    H, R = mm.H(m_p, t) * precond_P_inv, mm.R
-    # v = 0 .- mm.h(m_p, t)
-    v = 0 .- mm.h(precond_P_inv * m_p, t)
 
-    # Decide if constant sigma or variable sigma
-    # σ² = solver.sigma_type == :fixed ? 1 :
-    #     solver.sigma_estimator(;H=H, Q=Q, v=v)
-    σ² = dynamic_sigma_estimation(integ.sigma_estimator;
-                                  H=H, Q=Q, v=v, P=P, A=A, R=R)
+function measure(integ, prediction, t)
+    @unpack mm = integ
+    m_p = prediction.μ
+    h = mm.h(m_p, t)
+    H = mm.H(m_p, t)
+    return h, H
+end
 
-    P_p = Symmetric(A*P*A') + σ²*Q
+
+function update(integ, prediction, h, H)
+    R = integ.mm.R
+    v = 0 .- h
+
+    m_p, P_p = prediction.μ, prediction.Σ
     S = Symmetric(H * P_p * H' + R)
     K = P_p * H' * inv(S)
     m = m_p + K*v
     P = P_p - Symmetric(K*S*K')
-
-    return (t=t,
-            prediction=Gaussian(m_p, P_p),
-            filter_estimate=Gaussian(m, P),
-            measurement=Gaussian(v, S),
-            H=H, Q=Q, v=v,
-            σ²=σ²)
+    return Gaussian(m, P), Gaussian(v, S)
 end
