@@ -56,15 +56,21 @@ function odefilter_init(f::F, IIP::Bool, u0::S, t0::T, dt::T, p::P, q::Integer, 
 
     d = length(u0)
     dm = ibm(q, d)
-    mm = measurement_model(method, d, q, f, p)
+    mm = measurement_model(method, d, q, f, p, IIP)
 
     initialize_derivatives = false
     initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false
+    m0 = zeros(d*(q+1))
     if initialize_derivatives
         derivatives = get_derivatives((x, t) -> f(x, p, t), d, q)
         m0 = vcat(u0, [_f(u0, t0) for _f in derivatives]...)
     else
-        m0 = [u0; f(u0, p, t0); zeros(d*(q-1))]
+        m0[1:d] = u0
+        if !IIP
+            m0[d+1:2d] = f(u0, p, t0)
+        else
+            f(m0[d+1:2d], u0, p, t0)
+        end
     end
 
     if eltype(m0) <: Measurement
@@ -115,9 +121,7 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
-    IIP && error("in-place rhs definitions not yet supported")
-    integ = odefilter_init(prob.f, false, prob.u0, prob.tspan[1], dt, prob.p, q, method, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs, precondition)
-
+    integ = odefilter_init(prob.f, IIP, prob.u0, prob.tspan[1], dt, prob.p, q, method, sigmarule, steprule, abstol, reltol, ρ, prob.kwargs)
     # More Initialization
     t_0, T = prob.tspan
     sol = StructArray([(t=integ.t, x=integ.x)])
@@ -172,7 +176,7 @@ DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem, alg::EKF1; kwargs...) =
 ########################################################################################
 # Step
 ########################################################################################
-function DiffEqBase.step!(integ::ODEFilterIntegrator{false, S, X, T}) where {S, X, T}
+function DiffEqBase.step!(integ::ODEFilterIntegrator{IIP, S, X, T}) where {IIP, S, X, T}
 end
 
 """
