@@ -30,7 +30,11 @@ include("sigmas.jl")
 include("gaussian.jl")
 
 include("ekf.jl")
-export EKF0, EKF1
+export EKF0, EKF1, ODEFilter
+include("integrator_interface.jl")
+include("integrator_utils.jl")
+include("perform_step.jl")
+include("solve.jl")
 # include("preconditioning.jl")
 include("postprocessing.jl")
 include("solution.jl")

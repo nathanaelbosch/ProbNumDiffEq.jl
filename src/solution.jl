@@ -2,7 +2,7 @@
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
-struct ProbODESolution{T,N,uType,xType,tType,pType,P,A,S,IType} <: AbstractProbODESolution{T,N,uType}
+struct ProbODESolution{T,N,uType,xType,tType,pType,P,A,S,IType,DE} <: AbstractProbODESolution{T,N,uType}
     u::uType
     x::xType
     t::tType
@@ -13,6 +13,7 @@ struct ProbODESolution{T,N,uType,xType,tType,pType,P,A,S,IType} <: AbstractProbO
     dense::Bool
     interp::IType
     retcode::Symbol
+    destats::DE
 end
 
 function make_Measurement(state, d)
@@ -37,6 +38,7 @@ function DiffEqBase.build_solution(
     proposals, solver;
     dense=false,
     retcode = :Default,
+    destats = nothing,
     kwargs...)
 
     d = length(prob.u0)
@@ -49,8 +51,8 @@ function DiffEqBase.build_solution(
     N = length((size(prob.u0)..., length(u)))
 
     return ProbODESolution{T, N, typeof(u), typeof(x), typeof(t), typeof(proposals),
-                           typeof(prob), typeof(alg), typeof(solver), typeof(interp)}(
-        u, x, t, proposals, prob, alg, solver, dense, interp, retcode)
+                           typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
+        u, x, t, proposals, prob, alg, solver, dense, interp, retcode, destats)
 end
 
 ########################################################################################
