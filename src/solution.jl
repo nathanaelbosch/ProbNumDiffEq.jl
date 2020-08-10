@@ -59,30 +59,42 @@ end
 # Dense Output
 ########################################################################################
 struct FilteringPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
-DiffEqBase.interp_summary(::FilteringPosterior) = "Filtering Posterior" 
+DiffEqBase.interp_summary(::FilteringPosterior) = "Filtering Posterior"
 
 """Just extrapolates with PREDICT so far"""
 function (sol::ProbODESolution)(t::T) where T
     if t < sol.t[1]
-        error("Invalid t")
-    end 
+        error("Invalid t<t0")
+    end
     if t in sol.t
         idx = sum(sol.t .<= t)
         @assert sol.t[idx] == t
         return sol.u[idx]
     end
-    
+
     # Extrapolate
     prev_idx = sum(sol.t .<= t)
     prev_rv = sol.x[prev_idx]
     m, P = prev_rv.μ, prev_rv.Σ
     h = t - sol.t[prev_idx]
-    A, Q = sol.solver.dm.A(h), sol.solver.dm.Q(h)
-    m_pred, P_pred = kf_predict(m, P, A, Q)
+    A, Q = sol.solver.dm.A, sol.solver.dm.Q
+    m_pred, P_pred = kf_predict(m, P, A(h), Q(h))
 
     pred_rv = Gaussian(m_pred, P_pred)
     d = sol.solver.d
-    return make_Measurement(pred_rv, d)
+
+    if !sol.solver.smooth || t > sol.t[end]
+        return make_Measurement(pred_rv, d)
+    end
+
+    # Smooth
+    next_rv = sol.x[prev_idx+1]
+    h = sol.t[prev_idx+1] - t
+    m_pred_next, P_pred_next = kf_predict(m, P, A(h), Q(h))
+    m_smoothed, P_smoothed = kf_smooth(
+        m_pred, P_pred, m_pred_next, P_pred_next, next_rv.μ, next_rv.Σ, A(h), Q(h))
+    smoothed_rv = Gaussian(m_smoothed, P_smoothed)
+    return make_Measurement(smoothed_rv, d)
 end
 
 
