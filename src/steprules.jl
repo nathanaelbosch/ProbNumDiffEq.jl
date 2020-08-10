@@ -185,7 +185,7 @@ function schober16_steprule(; ρ=0.95, abstol=1e-6, reltol=1e-3, hmin=1e-6)
         # ϵ_ = ϵ * h / S
         # accept = D <= ϵ_
         accept = D <= 1
-        h_proposal = h * ρ * (1 / D)^(1/(2q-1))
+        h_proposal = h * ρ * (1 / D)^(1/(q+1))
         h_new = min(max(h_proposal, dt*0.1), dt*5)
 
         if h_new <= hmin
