@@ -29,7 +29,7 @@ include("measurement_model.jl")
 include("sigmas.jl")
 include("gaussian.jl")
 
-include("ekf.jl")
+include("integrator_type.jl")
 export EKF0, EKF1, ODEFilter
 include("integrator_interface.jl")
 include("integrator_utils.jl")

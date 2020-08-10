@@ -15,6 +15,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             saveat=nothing,
                             save_everystep=true,
                             abstol=1e-6, reltol=1e-3, ρ=0.95,
+                            qmin=0.1, qmax=5.0,
                             method=:ekf1,
                             sigmarule=Schober16Sigma(),
                             steprule=:baseline,
@@ -60,6 +61,8 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     x0 = Gaussian(m0, P0)
     X = typeof(x0)
 
+    adaptive = steprule != :constant
+    gamma = ρ
     steprules = Dict(
         :constant => constant_steprule(),
         :baseline => classic_steprule(abstol, reltol; ρ=ρ),
@@ -76,10 +79,13 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     accept_step = false
     retcode = :Default
 
+    opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax)
+
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(x0), typeof(t0), typeof(p), typeof(f)}(
-        f, u0, _copy(x0), _copy(x0), t0, t0, t0, tmax, dt, sign(dt), p, true,
-        d, q, dm, mm, sigmarule, steprule, empty_proposal, empty_proposals, 0,
-        state_estimates, accept_step, retcode, prob, alg, destats, smooth
+        f, u0, _copy(x0), t0, t0, tmax, dt, p,
+        d, q, dm, mm, sigmarule, steprule,
+        empty_proposal, empty_proposals, 0,
+        state_estimates, accept_step, retcode, prob, alg, smooth, destats, opts
     )
 end
 
@@ -90,8 +96,8 @@ function DiffEqBase.solve!(integ::ODEFilterIntegrator)
     end
     postamble!(integ)
     sol = DiffEqBase.build_solution(
-        integ.prob, integ.alg, 
-        integ.state_estimates.t, 
+        integ.prob, integ.alg,
+        integ.state_estimates.t,
         StructArray(integ.state_estimates.x),
         integ.proposals, integ;
         destats=integ.destats)
