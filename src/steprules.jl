@@ -6,6 +6,40 @@ function constant_steprule()
     end
 end
 
+function constant_stepsize_controller!(integrator)
+    return one(integrator.dt)
+end
+
+function standard_stepsize_controller!(integrator)
+    # Standard stepsize controller
+    @unpack EEst = integrator
+    @unpack gamma, qmin, qmax = integrator.opts
+    if iszero(EEst)
+        q = inv(qmax)
+    else
+        localconvrate = get_current_adaptive_order(integrator.alg,integrator.cache)+1
+        qtmp = DiffEqBase.fastpow(EEst, 1/localconvrate) / gamma
+        @fastmath q = DiffEqBase.value(max(inv(qmax),min(inv(qmin),qtmp)))
+        integrator.qold = integrator.dt/q
+    end
+    return q
+end
+
+function PI_stepsize_controller!(integrator)
+    # PI-controller
+    @unpack EEst, qold, q11 = integrator
+    @unpack beta1, beta2, qmin, qmax = integrator.opts
+    if iszero(EEst)
+        q = inv(qmax)
+    else
+        q11 = DiffEqBase.value(DiffEqBase.fastpow(EEst, beta1))
+        q = q11 / DiffEqBase.fastpow(qold, beta2) / gamma
+        integrator.q11 = q11
+        @fastmath q = DiffEqBase.value(max(inv(qmax),min(inv(qmin), q)))
+    end
+    q
+end
+
 """Limit the function error to provided tolerances
 
 This is a /local/ approximation; At each step we assume, that the
