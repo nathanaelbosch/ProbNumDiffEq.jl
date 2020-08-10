@@ -16,41 +16,36 @@ function ekf0_measurement_model(d::Integer, q::Integer, f::Function, p, IIP::Boo
     E_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     R = zeros(d, d)
 
-    if !IIP
-        h_oop(m, t) = E_1*m - f(E_0*m, p, t)
-        H_oop(m, t) = E_1
-        return (h=h_oop, H=H_oop, R=R)
-    else
-        function h_iip(m, t) 
-            du = E_1*m
-            f(du, E_0*m, p, t)
-            return E_1*m - du
-        end
-        H_iip(m, t) = E_1 
-        return (h=h_iip, H=H_iip, R=R)
-    end
+    h = IIP ? h_iip(f, p, d, q) : h_oop(f, p, d, q)
+    H(m, t) = E_1
+    return (h=h, H=H, R=R)
 end
-
 function ekf1_measurement_model(d::Integer, q::Integer, f::Function, p, IIP::Bool)
     E_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     E_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     R = zeros(d, d)
 
-    if !IIP
-        h_oop(m, t) = E_1*m - f(E_0*m, p, t)
-        Jf = (hasfield(typeof(f), :jac) && !isnothing(f.jac)) ? f.jac :
-            (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u)
-        H_oop(m, t) = E_1 - Jf(E_0*m, p, t) * E_0
-        return (h=h_oop, H=H_oop, R=R)
-    else
-        function h_iip(m, t) 
-            du = E_1*m
-            f(du, E_0*m, p, t)
-            return E_1*m - du
-        end
-        Jf = (hasfield(typeof(f), :jac) && !isnothing(f.jac)) ? f.jac :
-            (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u)
-        H_iip(m, t) = E_1 - Jf(E_0*m, p, t) * E_0
-        return (h=h_iip, H=H_iip, R=R)
-    end
+    h = IIP ? h_iip(f, p, d, q) : h_oop(f, p, d, q)
+    Jf = (hasfield(typeof(f), :jac) && !isnothing(f.jac)) ? f.jac :
+        (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u)
+    H(m, t) = E_1 - Jf(E_0*m, p, t) * E_0
+    return (h=h, H=H, R=R)
 end
+
+function h_oop(f, p, d, q) 
+    E_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    E_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    return h(m, t) = E_1*m - f(E_0*m, p, t)
+end
+
+function h_iip(f, p, d, q)
+    E_0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    E_1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    function h(m, t)
+        du = E_1*m
+        f(du, E_0*m, p, t)
+        return E_1*m - du
+    end
+    return h
+end
+
