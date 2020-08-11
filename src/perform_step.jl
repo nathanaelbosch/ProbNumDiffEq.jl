@@ -9,7 +9,7 @@ function perform_step!(integ::ODEFilterIntegrator)
     h, H = measure(integ, prediction, t)
 
     σ_sq = dynamic_sigma_estimation(
-        integ.sigma_estimator; integ, prediction=prediction, v=h, H=H, Q=Q)
+        integ.sigma_estimator; prediction=prediction, v=h, H=H, Q=Q)
     prediction = Gaussian(prediction.μ, prediction.Σ + (σ_sq - 1) * Q)
 
     filter_estimate, measurement = update(integ, prediction, h, H)
