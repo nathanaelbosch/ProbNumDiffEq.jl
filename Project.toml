@@ -19,16 +19,17 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
-julia = "1"
 DiffEqBase = "6.42"
 Distributions = "0.23"
 ForwardDiff = "0.10"
 Measurements = "2.2"
 ProgressLogging = "0.1"
+RecipesBase = "1.0"
 StaticArrays = "0.12"
 StructArrays = "0.4"
 TerminalLoggers = "0.1"
 UnPack = "1.0"
+julia = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
