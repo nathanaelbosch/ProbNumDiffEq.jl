@@ -14,7 +14,7 @@ function ibm(d::Integer, q::Integer; σ::Real=1.0)
     # I_d = diagm(0 => ones(d))
     # L = kron(L̃, I_d)'  # In probnum the order is inverted
 
-    function A!(A::AbstractMatrix, h::Real)
+    @fastmath function A!(A::AbstractMatrix, h::Real)
         # Assumes that A comes from a previous computation => zeros and one-diag
         val = one(h)
         for i in 1:q
@@ -28,7 +28,7 @@ function ibm(d::Integer, q::Integer; σ::Real=1.0)
 
 
     function Q!(Q, h)
-        function _transdiff_ibm_element(row, col)
+        @fastmath function _transdiff_ibm_element(row, col)
             idx = 2 * q + 1 - row - col
             fact_rw = factorial(q - row)
             fact_cl = factorial(q - col)
@@ -39,7 +39,7 @@ function ibm(d::Integer, q::Integer; σ::Real=1.0)
         qh_1d = [_transdiff_ibm_element(row, col) for col in 0:q, row in 0:q]
         I_d = diagm(0 => ones(d))
         _Q = kron(qh_1d, I_d)
-        Q .= _Q
+        @inbounds Q .= _Q
     end
 
     return A!, Q!
