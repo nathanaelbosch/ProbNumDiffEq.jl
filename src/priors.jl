@@ -4,7 +4,7 @@
 """Generate the discrete dynamics for a q-IBM model
 
 Careful: Dimensions are ordered differently than in `probnum`!"""
-function ibm(q::Integer, d::Integer; σ::Integer=1)
+function ibm(d::Integer, q::Integer; σ::Real=1.0)
     F̃ = diagm(1 => ones(q))
     I_d = diagm(0 => ones(d))
     F = kron(F̃, I_d)  # In probnum the order is inverted
@@ -14,9 +14,20 @@ function ibm(q::Integer, d::Integer; σ::Integer=1)
     # I_d = diagm(0 => ones(d))
     # L = kron(L̃, I_d)'  # In probnum the order is inverted
 
-    A(h) = UpperTriangular(exp(F*(h)))
+    function A!(A::AbstractMatrix, h::Real)
+        # Assumes that A comes from a previous computation => zeros and one-diag
+        val = one(h)
+        for i in 1:q
+            val = val * h / (i)
+            for j in 1:d*(q+1-i)
+                @inbounds A[j,j+(d*i)] = val
+            end
+        end
+    end
 
-    function Q(h)
+
+
+    function Q!(Q, h)
         function _transdiff_ibm_element(row, col)
             idx = 2 * q + 1 - row - col
             fact_rw = factorial(q - row)
@@ -27,8 +38,9 @@ function ibm(q::Integer, d::Integer; σ::Integer=1)
 
         qh_1d = [_transdiff_ibm_element(row, col) for col in 0:q, row in 0:q]
         I_d = diagm(0 => ones(d))
-        return kron(qh_1d, I_d)
+        _Q = kron(qh_1d, I_d)
+        Q .= _Q
     end
 
-    return (A=A, Q=Q, q=q, d=d)
+    return A!, Q!
 end

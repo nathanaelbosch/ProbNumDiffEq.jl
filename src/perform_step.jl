@@ -5,57 +5,83 @@ This is the actual interestin part of the algorithm
 function perform_step!(integ::ODEFilterIntegrator)
     integ.iter += 1
     t = integ.t + integ.dt
-    prediction, A, Q = predict(integ)
-    h, H = measure(integ, prediction, t)
+    integ.t_new = t
 
-    σ_sq = dynamic_sigma_estimation(
-        integ.sigma_estimator; prediction=prediction, v=h, H=H, Q=Q)
-    prediction = Gaussian(prediction.μ, prediction.Σ + (σ_sq - 1) * Q)
+    x_pred = predict!(integ)
 
-    filter_estimate, measurement = update(integ, prediction, h, H)
+    h = measure_h!(integ, x_pred, t)
+    H = measure_H!(integ, x_pred, t)
 
-    proposal = (t=t,
-            prediction=prediction,
-            filter_estimate=filter_estimate,
-            measurement=measurement,
-            H=H, Q=Q, v=h,
-            σ²=σ_sq)
+    σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
+    x_pred.Σ .+= (σ_sq - 1) * integ.cache.Qh
 
-    integ.proposal = proposal
+    x_filt = update!(integ, x_pred)
 
     # integ.EEst = 0
 end
 
 
-function predict(integ)
-    @unpack dm, mm, x, t, dt = integ
+function predict!(integ)
+    @unpack dt = integ
+    @unpack A!, Q! = integ.constants
+    @unpack x, Ah, Qh, x_pred = integ.cache
 
-    m, P = x.μ, x.Σ
-    A, Q = dm.A(dt), dm.Q(dt)
-    m_p = A * m
-    P_p = A*P*A' + Q
-    prediction=Gaussian(m_p, P_p)
-    return prediction, A, Q
+    A!(Ah, dt)
+    Q!(Qh, dt)
+
+    x_pred.μ .= Ah * x.μ
+    x_pred.Σ .= Ah * x.Σ * Ah' + Qh
+    return x_pred
 end
 
 
-function measure(integ, prediction, t)
-    @unpack mm = integ
-    m_p = prediction.μ
-    h = mm.h(m_p, t)
-    H = mm.H(m_p, t)
-    return h, H
+function measure_h!(integ, x_pred, t)
+    @unpack t_new, p, f = integ
+    @unpack E0, h! = integ.constants
+    @unpack du, h = integ.cache
+
+    IIP = isinplace(integ)
+    if IIP
+        f(du, E0*x_pred.μ, p, t_new)
+    else
+        du .= f(E0*x_pred.μ, p, t_new)
+    end
+
+    h!(h, du, x_pred.μ)
+
+    return h
 end
 
+function measure_H!(integ, x_pred, t)
+    @unpack p, t_new = integ
+    @unpack E0, jac, H! = integ.constants
+    @unpack ddu, H = integ.cache
 
-function update(integ, prediction, h, H)
-    R = integ.mm.R
-    v = 0 .- h
+    IIP = isinplace(integ)
+    if IIP
+        jac(ddu, E0*x_pred.μ, p, t_new)
+    else
+        ddu .= jac(E0*x_pred.μ, p, t_new)
+    end
+
+    H!(H, ddu)
+
+    return H
+end
+
+function update!(integ, prediction)
+    @unpack R = integ.constants
+    @unpack measurement, h, H, K, x_filt = integ.cache
+    v, S = measurement.μ, measurement.Σ
+    v .= 0 .- h
 
     m_p, P_p = prediction.μ, prediction.Σ
-    S = H * P_p * H' + R
-    K = P_p * H' * inv(S)
-    m = m_p + K*v
-    P = P_p - K*S*K'
-    return Gaussian(m, P), Gaussian(v, S)
+    S .= H * P_p * H' + R
+    S_inv = inv(S)
+    K .= P_p * H' * S_inv
+
+    x_filt.μ .= m_p + K*v
+    x_filt.Σ .= P_p - K*S*K'
+
+    return x_filt, measurement
 end

@@ -16,12 +16,14 @@ function smooth(filter_estimate::Gaussian,
 end
 
 function smooth!(integ::ODEFilterIntegrator)
+    @warn "Smoothing does not work right now!"
+    return
     @unpack state_estimates, times = integ
     proposals = integ.proposals
     accepted_proposals = [p for p in proposals if p.accept]
     for i in length(state_estimates)-1:-1:2
         h = accepted_proposals[i].dt  # step t -> t+1
-        h2 = times[i+1] - times[i]
+        h = times[i+1] - times[i]
         @assert h ≈ h2
 
         @assert accepted_proposals[i].t == times[i+1]
@@ -44,10 +46,10 @@ function calibrate!(integ::ODEFilterIntegrator)
         for s in state_estimates
             s.Σ .*= σ²
         end
-        for p in proposals
-            p.measurement.Σ .*= σ²
-            p.prediction.Σ .*= σ²
-            p.filter_estimate.Σ .*= σ²
-        end
+        # for p in proposals
+        #     p.measurement.Σ .*= σ²
+        #     p.prediction.Σ .*= σ²
+        #     p.filter_estimate.Σ .*= σ²
+        # end
     end
 end

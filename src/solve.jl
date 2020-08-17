@@ -22,6 +22,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             progressbar=false,
                             maxiters=1e5,
                             smooth=true,
+                            prior=:ibm,
                             kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
@@ -33,34 +34,12 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     d = length(u0)
 
     # Model
-    dm = ibm(q, d)
-    mm = measurement_model(method, d, q, f, p, IIP)
+    constants = GaussianODEFilterConstantCache(d, q, prior, method)
 
-    # Initial states
-    initialize_derivatives = false
-    initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false
-    m0 = zeros(d*(q+1))
-    if initialize_derivatives
-        derivatives = get_derivatives((x, t) -> f(x, p, t), d, q)
-        m0 = vcat(u0, [_f(u0, t0) for _f in derivatives]...)
-    else
-        m0[1:d] = u0
-        if !IIP
-            m0[d+1:2d] = f(u0, p, t0)
-        else
-            f(m0[d+1:2d], u0, p, t0)
-        end
-    end
+    # Cache
+    cache = GaussianODEFilterCache(d, q, f, p, u0, t0, IIP)
 
-    if eltype(m0) <: Measurement
-        P0 = diagm(0 => Measurements.uncertainty.(m0) .^ 2)
-        m0 = Measurements.value.(m0)
-    else
-        P0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
-    end
-    x0 = Gaussian(m0, P0)
-    X = typeof(x0)
-
+    # Solver Options
     adaptive = steprule != :constant
     gamma = ρ
     steprules = Dict(
@@ -75,18 +54,22 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     destats = DiffEqBase.DEStats(0)
 
-    state_estimates = StructArray([x0])
+    state_estimates = StructArray([cache.x])
     times = [t0]
     accept_step = false
     retcode = :Default
 
     opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax)
 
-    return ODEFilterIntegrator{IIP, typeof(u0), typeof(x0), typeof(t0), typeof(p), typeof(f)}(
-        f, u0, _copy(x0), t0, t0, tmax, dt, p,
-        d, q, dm, mm, sigmarule, steprule,
-        empty_proposal, empty_proposals, 0,
-        state_estimates, times, accept_step, retcode, prob, alg, smooth, destats, opts
+    return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f)}(
+        f, u0, t0, t0, t0, tmax, dt, p,
+        constants, cache,
+        # d, q, dm, mm, sigmarule, steprule,
+        opts, sigmarule, steprule, smooth,
+        #
+        empty_proposal, empty_proposals, state_estimates, times,
+        #
+        0, accept_step, retcode, prob, alg, destats,
     )
 end
 

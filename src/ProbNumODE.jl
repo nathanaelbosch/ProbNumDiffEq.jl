@@ -30,7 +30,7 @@ stack(x) = copy(reduce(hcat, x)')
 include("filtering.jl")
 include("steprules.jl")
 include("priors.jl")
-include("measurement_model.jl")
+# include("measurement_model.jl")
 include("sigmas.jl")
 
 include("integrator_type.jl")
