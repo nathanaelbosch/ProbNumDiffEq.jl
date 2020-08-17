@@ -14,6 +14,7 @@ function perform_step!(integ::ODEFilterIntegrator)
 
     σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
     x_pred.Σ .+= (σ_sq - 1) * integ.cache.Qh
+    integ.cache.σ_sq = σ_sq
 
     x_filt = update!(integ, x_pred)
 

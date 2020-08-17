@@ -20,7 +20,7 @@ function loopfooter!(integ)
     integ.dt = dt_proposal
 
     if integ.accept_step
-        integ.cache.x = integ.cache.x_filt
+        integ.cache.x = copy(integ.cache.x_filt)
         integ.u = integ.constants.E0 * integ.cache.x.μ
         integ.t = integ.t_new
 

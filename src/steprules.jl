@@ -40,18 +40,20 @@ function PI_stepsize_controller!(integrator)
     q
 end
 
+
 """Limit the function error to provided tolerances
 
 This is a /local/ approximation; At each step we assume, that the
 previous step had correct results"""
 function classic_steprule(abstol, reltol, scale=1; ρ=0.95)
     function steprule(integ)
-        @unpack proposal, proposals = integ
-        @unpack dm, d, q, dt = integ
-        @unpack measurement, σ², prediction = proposal
+        @unpack dt = integ
+        @unpack d, q, E0 = integ.constants
+        @unpack σ_sq, Qh, x_pred = integ.cache
+        u_pred = E0 * x_pred.μ
 
-        if σ² == 1
-            σ² = static_sigma_estimation(
+        if σ_sq == 1
+            σ_sq = static_sigma_estimation(
                 integ.sigma_estimator, integ,
                 [proposals; (proposal..., accept=true, t=t, dt=dt)])
         end
@@ -67,10 +69,10 @@ function classic_steprule(abstol, reltol, scale=1; ρ=0.95)
         # P_loc = P_loc - K * S * K'
         # f_cov = P_loc[1:d, 1:d]
 
-        f_cov = σ² * dm.Q(dt)[1:d, 1:d]
+        f_cov = σ_sq * E0 * Qh * E0'
         # @assert isdiag(f_cov)
         f_err = sqrt.(diag(f_cov)) * scale
-        tol = (abstol .+ (reltol * abs.(prediction.μ[1:d])))
+        tol = (abstol .+ (reltol * abs.(u_pred)))
         f_err_scaled = norm(f_err ./ tol)
         # f_err_scaled /= current_h  # Error per unit, not per step
 
@@ -94,24 +96,23 @@ It is not 100% faithful to the paper. For example, I do not use the specified
 weights, and I just norm over all dimensions instead of considering all of them
 separately.
 """
-function schober16_steprule(; ρ=0.95, abstol=1e-6, reltol=1e-3, hmin=1e-6)
+function schober16_steprule(; ρ=0.95, abstol=1e-3, reltol=1e-2, hmin=1e-6)
     function steprule(integ)
-        @unpack proposal, proposals = integ
-        @unpack dm, mm, q, d, dt, t = integ
-        @unpack t, prediction, measurement = proposal
+        @unpack dt = integ
+        @unpack d, q, E0 = integ.constants
+        @unpack σ_sq, Qh, x_pred, h, H = integ.cache
+        u_pred = E0 * x_pred.μ
+
         h = dt
 
-        v = measurement.μ
-        Q = dm.Q(dt)
-        H = mm.H(prediction.μ, t)
-        # σ² = v' * inv(H*Q*H') * v / length(v)
+        v = h
         @assert typeof(integ.sigma_estimator) == Schober16Sigma
-        σ² = dynamic_sigma_estimation(integ.sigma_estimator; H=H, Q=Q, v=v)
+        # σ_sq = dynamic_sigma_estimation(integ.sigma_estimator; H=H, Q=Q, v=v)
 
         w = ones(d)
-        D = sqrt.(diag(H * σ²*dm.Q(h) * H')) .* w
+        D = sqrt.(diag(H * σ_sq*Qh * H')) .* w
 
-        ϵ = (abstol .+ (reltol * abs.(prediction.μ[1:d])))
+        ϵ = (abstol .+ (reltol * abs.(u_pred)))
 
         D = maximum(D ./ ϵ)
 
