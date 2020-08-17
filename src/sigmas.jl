@@ -2,7 +2,7 @@ abstract type AbstractSigmaRule end
 function static_sigma_estimation(rule::AbstractSigmaRule, integ, proposals)
     return 1
 end
-function dynamic_sigma_estimation(rule::AbstractSigmaRule; args...)
+function dynamic_sigma_estimation(rule::AbstractSigmaRule, integ)
     return 1
 end
 
