@@ -10,21 +10,25 @@ DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF1; kwargs...) =
     DiffEqBase.__init(prob, ODEFilter(); method=:ekf1, kwargs...)
 
 function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
-                            dt=0.1,
-                            q=1,
-                            saveat=nothing,
-                            save_everystep=true,
-                            abstol=1e-6, reltol=1e-3, ρ=0.95,
-                            qmin=0.1, qmax=5.0,
-                            method=:ekf1,
-                            sigmarule=Schober16Sigma(),
-                            steprule=:baseline,
-                            progressbar=false,
-                            maxiters=1e5,
-                            smooth=true,
-                            prior=:ibm,
+
+                           method=:ekf1,
+                           prior=:ibm,
+                           q=1,
+                           smooth=true,
                            initialize_derivatives=true,
-                            kwargs...)
+
+                           steprule=:baseline,
+                           dt=0.1,
+                           abstol=1e-6, reltol=1e-3, ρ=0.95,
+                           qmin=0.1, qmax=5.0,
+
+                           sigmarule=Schober16Sigma(),
+
+                           progressbar=false,
+                           maxiters=1e5,
+                           saveat=nothing,
+                           save_everystep=true,
+                           kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
 
