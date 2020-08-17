@@ -17,17 +17,21 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            smooth=true,
                            initialize_derivatives=true,
 
-                           steprule=:baseline,
-                           dt=0.1,
-                           abstol=1e-6, reltol=1e-3, ρ=0.95,
+                           steprule=:standard,
+                           dt=eltype(prob.tspan)(0),
+                           abstol=1e-6, reltol=1e-3, gamma=9//10,
                            qmin=0.1, qmax=5.0,
+                           dtmin=nothing,
+                           dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
 
-                           sigmarule=Schober16Sigma(),
+                           sigmarule=:schober,
+                           local_errors=:schober,
 
                            progressbar=false,
                            maxiters=1e5,
                            saveat=nothing,
                            save_everystep=true,
+                           internalnorm = DiffEqBase.ODE_DEFAULT_NORM,
                            kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
@@ -45,14 +49,31 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     cache = GaussianODEFilterCache(d, q, prob, initialize_derivatives)
 
     # Solver Options
+    tType = eltype(prob.tspan)
     adaptive = steprule != :constant
-    gamma = ρ
+    if !adaptive && dt == tType(0)
+        error("Fixed timestep methods require a choice of dt")
+    end
     steprules = Dict(
-        :constant => constant_steprule(),
-        :baseline => classic_steprule(abstol, reltol; ρ=ρ),
-        :schober16 => schober16_steprule(;ρ=ρ, abstol=abstol, reltol=reltol),
+        :constant => ConstantSteps(),
+        :standard => StandardSteps(),
+        :pi => PISteps(),
     )
     steprule = steprules[steprule]
+
+    error_estimators = Dict(
+        :schober => SchoberErrors(),
+        :prediction => PredictionErrors(),
+        :filtering => FilterErrors(),
+    )
+    error_estimator = error_estimators[local_errors]
+
+    sigmarules = Dict(
+        :schober => SchoberSigma(),
+        :fixedMLE => MLESigma(),
+        :fixedMAP => MAPSigma(),
+    )
+    sigmarule = sigmarules[sigmarule]
 
     empty_proposal = ()
     empty_proposals = []
@@ -64,13 +85,14 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     accept_step = false
     retcode = :Default
 
-    opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax)
+    isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
+    opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax, internalnorm, dtmin, dtmax)
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f)}(
-        f, u0, t0, t0, t0, tmax, dt, p,
+        f, u0, t0, t0, t0, tmax, dt, p, one(eltype(prob.tspan)),
         constants, cache,
         # d, q, dm, mm, sigmarule, steprule,
-        opts, sigmarule, steprule, smooth,
+        opts, sigmarule, error_estimator, steprule, smooth,
         #
         empty_proposal, empty_proposals, state_estimates, times,
         #

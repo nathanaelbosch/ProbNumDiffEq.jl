@@ -3,13 +3,17 @@
 This is the actual interestin part of the algorithm
 """
 function perform_step!(integ::ODEFilterIntegrator)
+    @unpack t, dt = integ
+    @unpack E0 = integ.constants
 
     integ.iter += 1
-    t = integ.t + integ.dt
+
+
+    t = t + dt
     integ.t_new = t
 
     x_pred = predict!(integ)
-    integ.cache.u_pred .= integ.constants.E0 * x_pred.μ
+    integ.cache.u_pred .= E0 * x_pred.μ
 
     h = measure_h!(integ, x_pred, t)
     H = measure_H!(integ, x_pred, t)
@@ -18,9 +22,15 @@ function perform_step!(integ::ODEFilterIntegrator)
     x_pred.Σ .+= (σ_sq - 1) .* integ.cache.Qh
     integ.cache.σ_sq = σ_sq
 
-    x_filt = update!(integ, x_pred)
+    x_filt, measurement = update!(integ, x_pred)
+    u_filt = E0 * x_filt.μ
 
-    # integ.EEst = 0
+    err_est_unscaled = estimate_errors(integ.error_estimator, integ)
+    err_est_scaled = DiffEqBase.calculate_residuals(
+        integ.dt * err_est_unscaled, u_filt, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+    err_est_combined = integ.opts.internalnorm(err_est_scaled, t)
+    integ.EEst = err_est_combined
+
 end
 
 

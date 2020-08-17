@@ -11,33 +11,9 @@ function constant_stepsize_controller!(integrator)
 end
 
 function standard_stepsize_controller!(integrator)
-    # Standard stepsize controller
-    @unpack EEst = integrator
-    @unpack gamma, qmin, qmax = integrator.opts
-    if iszero(EEst)
-        q = inv(qmax)
-    else
-        localconvrate = get_current_adaptive_order(integrator.alg,integrator.cache)+1
-        qtmp = DiffEqBase.fastpow(EEst, 1/localconvrate) / gamma
-        @fastmath q = DiffEqBase.value(max(inv(qmax),min(inv(qmin),qtmp)))
-        integrator.qold = integrator.dt/q
-    end
-    return q
 end
 
 function PI_stepsize_controller!(integrator)
-    # PI-controller
-    @unpack EEst, qold, q11 = integrator
-    @unpack beta1, beta2, qmin, qmax = integrator.opts
-    if iszero(EEst)
-        q = inv(qmax)
-    else
-        q11 = DiffEqBase.value(DiffEqBase.fastpow(EEst, beta1))
-        q = q11 / DiffEqBase.fastpow(qold, beta2) / gamma
-        integrator.q11 = q11
-        @fastmath q = DiffEqBase.value(max(inv(qmax),min(inv(qmin), q)))
-    end
-    q
 end
 
 
@@ -129,4 +105,49 @@ function schober16_steprule(; ρ=0.95, abstol=1e-3, reltol=1e-2, hmin=1e-6)
         return accept, h_new
     end
     return steprule
+end
+
+
+
+abstract type StepController end
+struct ConstantSteps <: StepController end
+function propose_step(::ConstantSteps, integ)
+    return integ.dt
+end
+
+
+struct StandardSteps <: StepController end
+function propose_step(::StandardSteps, integ)
+
+    @unpack dt, EEst = integ
+    @unpack q = integ.constants
+    @unpack gamma, qmin, qmax = integ.opts
+
+    if iszero(EEst)
+        q = inv(qmax)
+    else
+        localconvrate = q+1
+        qtmp = DiffEqBase.fastpow(EEst, 1/localconvrate) / gamma
+        @fastmath q = DiffEqBase.value(max(inv(qmax), min(inv(qmin), qtmp)))
+    end
+    dt /= q
+    return dt
+end
+
+struct PISteps <: StepController end
+function propose_step(::PISteps, integ)
+    # PI-controller
+    @unpack dt, EEst, qold, q11 = integ
+    @unpack beta1, beta2, qmin, qmax = integ.opts
+
+    if iszero(EEst)
+        q = inv(qmax)
+    else
+        q11 = DiffEqBase.value(DiffEqBase.fastpow(EEst, beta1))
+        q = q11 / DiffEqBase.fastpow(qold, beta2) / gamma
+        integrator.q11 = q11
+        @fastmath q = DiffEqBase.value(max(inv(qmax),min(inv(qmin), q)))
+    end
+    dt /= q
+    return dt
 end

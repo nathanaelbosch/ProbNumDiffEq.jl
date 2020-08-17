@@ -1,9 +1,9 @@
 abstract type AbstractSigmaRule end
 function static_sigma_estimation(rule::AbstractSigmaRule, integ, proposals)
-    return 1
+    return one(integ.cache.σ_sq)
 end
 function dynamic_sigma_estimation(rule::AbstractSigmaRule, integ)
-    return 1
+    return one(integ.cache.σ_sq)
 end
 
 
@@ -46,32 +46,10 @@ function static_sigma_estimation(rule::MAPSigma, integ, proposals)
     return sigma
 end
 
-struct Schober16Sigma <: AbstractSigmaRule end
-function dynamic_sigma_estimation(rule::Schober16Sigma, integ)
+
+struct SchoberSigma <: AbstractSigmaRule end
+function dynamic_sigma_estimation(kind::SchoberSigma, integ)
     @unpack d = integ.constants
     @unpack h, H, Qh = integ.cache
     return h' * inv(H*Qh*H') * h / d
 end
-
-
-# using Optim
-# struct Schober16SigmaGlobal <: AbstractSigmaRule end
-# function dynamic_sigma_estimation(rule::Schober16SigmaGlobal; H, Q, v, P, A, R, argv...)
-
-#     """p(z|σ²)"""
-#     function sigma_to_pz(σ²)
-#         s = sum(σ²)
-#         P_p = A*P*A' + s*Q
-#         S = H * P_p * H' + R
-#         return v' * inv(S) * v / length(v)
-#     end
-
-#     results = Optim.optimize(sigma_to_pz, [1.], Newton(); autodiff=:forward)
-
-#     @show sigma_to_pz(1)
-#     @show results.minimizer
-
-#     out = v' * inv(H*Q*H') * v / length(v)
-#     @show out
-#     return out
-# end

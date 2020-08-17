@@ -25,6 +25,9 @@ mutable struct DEOptions
     qmax
     # beta1
     # beta2
+    internalnorm
+    dtmin
+    dtmax
 end
 
 
@@ -43,6 +46,7 @@ mutable struct ODEFilterIntegrator{IIP, S, T, P, F} <: DiffEqBase.AbstractODEInt
     tmax::T               # end of the interval
     dt::T                 # step size
     p::P                  # parameter container
+    EEst                  # (Scaled) error estimate
 
     constants
     cache
@@ -50,6 +54,7 @@ mutable struct ODEFilterIntegrator{IIP, S, T, P, F} <: DiffEqBase.AbstractODEInt
     # Options
     opts::DEOptions       # General (not PN-specific) solver options
     sigma_estimator
+    error_estimator
     steprule
     smooth::Bool          # Smooth the solution or not
 
@@ -139,6 +144,7 @@ mutable struct GaussianODEFilterCache <: ProbNumODEMutableCache
     σ_sq
     σ_sq_prev
     P_tmp
+    err_tmp
 end
 function GaussianODEFilterCache(d, q, prob, initialize_derivatives=true)
     u0 = prob.u0
@@ -166,6 +172,7 @@ function GaussianODEFilterCache(d, q, prob, initialize_derivatives=true)
         measurement,
         Ah, Qh, h, H, du, ddu, K, sigma, sigma,
         copy(P0),
+        copy(u0),
     )
 
 end
