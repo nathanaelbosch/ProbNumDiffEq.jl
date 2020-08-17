@@ -40,7 +40,7 @@ function get_init_derivatives(prob, order)
 
     out[1:d] .= u0
 
-    @btime val = substitute.(rhs, (substitutions,))
+    val = substitute.(rhs, (substitutions,))
 
     out[d+1:2d] .= [v.value for v in val]
     u = D.(u)
