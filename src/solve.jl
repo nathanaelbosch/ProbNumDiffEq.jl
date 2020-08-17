@@ -10,19 +10,29 @@ DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF1; kwargs...) =
     DiffEqBase.__init(prob, ODEFilter(); method=:ekf1, kwargs...)
 
 function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
-                            dt=0.1,
-                            q=1,
-                            saveat=nothing,
-                            save_everystep=true,
-                            abstol=1e-6, reltol=1e-3, ρ=0.95,
-                            qmin=0.1, qmax=5.0,
-                            method=:ekf1,
-                            sigmarule=Schober16Sigma(),
-                            steprule=:baseline,
-                            progressbar=false,
-                            maxiters=1e5,
-                            smooth=true,
-                            kwargs...)
+
+                           method=:ekf1,
+                           prior=:ibm,
+                           q=1,
+                           smooth=true,
+                           initialize_derivatives=true,
+
+                           steprule=:standard,
+                           dt=eltype(prob.tspan)(0),
+                           abstol=1e-6, reltol=1e-3, gamma=9//10,
+                           qmin=0.1, qmax=5.0,
+                           dtmin=nothing,
+                           dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
+
+                           sigmarule=:schober,
+                           local_errors=:schober,
+
+                           progressbar=false,
+                           maxiters=1e5,
+                           saveat=nothing,
+                           save_everystep=true,
+                           internalnorm = DiffEqBase.ODE_DEFAULT_NORM,
+                           kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
 
@@ -33,59 +43,60 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     d = length(u0)
 
     # Model
-    dm = ibm(q, d)
-    mm = measurement_model(method, d, q, f, p, IIP)
+    constants = GaussianODEFilterConstantCache(d, q, f, prior, method)
 
-    # Initial states
-    initialize_derivatives = false
-    initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false
-    m0 = zeros(d*(q+1))
-    if initialize_derivatives
-        derivatives = get_derivatives((x, t) -> f(x, p, t), d, q)
-        m0 = vcat(u0, [_f(u0, t0) for _f in derivatives]...)
-    else
-        m0[1:d] = u0
-        if !IIP
-            m0[d+1:2d] = f(u0, p, t0)
-        else
-            f(m0[d+1:2d], u0, p, t0)
-        end
-    end
+    # Cache
+    cache = GaussianODEFilterCache(d, q, prob, initialize_derivatives)
 
-    if eltype(m0) <: Measurement
-        P0 = diagm(0 => Measurements.uncertainty.(m0) .^ 2)
-        m0 = Measurements.value.(m0)
-    else
-        P0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
-    end
-    x0 = Gaussian(m0, P0)
-    X = typeof(x0)
-
+    # Solver Options
+    tType = eltype(prob.tspan)
     adaptive = steprule != :constant
-    gamma = ρ
+    if !adaptive && dt == tType(0)
+        error("Fixed timestep methods require a choice of dt")
+    end
     steprules = Dict(
-        :constant => constant_steprule(),
-        :baseline => classic_steprule(abstol, reltol; ρ=ρ),
-        :schober16 => schober16_steprule(;ρ=ρ, abstol=abstol, reltol=reltol),
+        :constant => ConstantSteps(),
+        :standard => StandardSteps(),
+        :pi => PISteps(),
     )
     steprule = steprules[steprule]
+
+    error_estimators = Dict(
+        :schober => SchoberErrors(),
+        :prediction => PredictionErrors(),
+        :filtering => FilterErrors(),
+    )
+    error_estimator = error_estimators[local_errors]
+
+    sigmarules = Dict(
+        :schober => SchoberSigma(),
+        :fixedMLE => MLESigma(),
+        :fixedMAP => MAPSigma(),
+    )
+    sigmarule = sigmarules[sigmarule]
 
     empty_proposal = ()
     empty_proposals = []
 
     destats = DiffEqBase.DEStats(0)
 
-    state_estimates = StructArray([(t=t0, x=x0)])
+    state_estimates = StructArray([cache.x])
+    times = [t0]
     accept_step = false
     retcode = :Default
 
-    opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax)
+    isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
+    opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax, internalnorm, dtmin, dtmax)
 
-    return ODEFilterIntegrator{IIP, typeof(u0), typeof(x0), typeof(t0), typeof(p), typeof(f)}(
-        f, u0, _copy(x0), t0, t0, tmax, dt, p,
-        d, q, dm, mm, sigmarule, steprule,
-        empty_proposal, empty_proposals, 0,
-        state_estimates, accept_step, retcode, prob, alg, smooth, destats, opts
+    return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f)}(
+        f, u0, t0, t0, t0, tmax, dt, p, one(eltype(prob.tspan)),
+        constants, cache,
+        # d, q, dm, mm, sigmarule, steprule,
+        opts, sigmarule, error_estimator, steprule, smooth,
+        #
+        empty_proposal, empty_proposals, state_estimates, times,
+        #
+        0, accept_step, retcode, prob, alg, destats,
     )
 end
 
@@ -97,8 +108,8 @@ function DiffEqBase.solve!(integ::ODEFilterIntegrator)
     postamble!(integ)
     sol = DiffEqBase.build_solution(
         integ.prob, integ.alg,
-        integ.state_estimates.t,
-        StructArray(integ.state_estimates.x),
+        integ.times,
+        integ.state_estimates,
         integ.proposals, integ;
         destats=integ.destats)
 end

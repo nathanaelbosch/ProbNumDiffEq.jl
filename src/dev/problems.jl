@@ -19,7 +19,7 @@ function brusselator(; u0=[1.5; 3], tspan=(0., 20.))
 end
 
 
-function fitzhugh_nagumo(; u0=[-1.0; 1.0], tspan=(0., 20.), p=(0.2,0.2,3.0))
+function fitzhugh_nagumo(; u0=[-1.0; 1.0], tspan=(0., 20.), p=[0.2,0.2,3.0])
     function fitz(u,p,t)
         V,R = u
         a,b,c = p
@@ -31,7 +31,7 @@ function fitzhugh_nagumo(; u0=[-1.0; 1.0], tspan=(0., 20.), p=(0.2,0.2,3.0))
     return ODEProblem(fitz,u0,tspan,p)
 end
 
-function fitzhugh_nagumo_iip(; u0=[-1.0; 1.0], tspan=(0., 20.), p=(0.2,0.2,3.0))
+function fitzhugh_nagumo_iip(; u0=[-1.0; 1.0], tspan=(0., 20.), p=[0.2,0.2,3.0])
     function fitz!(du,u,p,t)
         V,R = u
         a,b,c = p

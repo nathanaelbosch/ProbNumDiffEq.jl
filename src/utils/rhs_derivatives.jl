@@ -1,5 +1,5 @@
 """Compute the derivative df/dt(y,t), making use of dy/dt=f(y,t)"""
-function get_derivative(f, d)
+function _get_derivative(f, d)
     dfdy(y, t) = d == 1 ?
         ForwardDiff.derivative((y) -> f(y, t), y) :
         ForwardDiff.jacobian((y) -> f(y, t), y)
@@ -9,24 +9,40 @@ function get_derivative(f, d)
 end
 
 """Compute q derivatives of f; Output includes f itself"""
-function get_derivatives(f, d, q)
+function _get_derivatives(f, d, q)
     out = Any[f]
     if q > 1
         for order in 2:q
-            push!(out, get_derivative(out[end], d))
+            push!(out, _get_derivative(out[end], d))
         end
     end
     return out
 end
 
 
-
-
-function get_init_derivatives(prob, order)
-    # Output of size order+1
-    d = length(prob.u0)
+"""Compute the q derivatives of the rhs function for a given ODE problem"""
+function get_initial_derivatives(prob, order)
+    u0 = prob.u0
+    d = length(u0)
     q = order
-    out = fill(zero(prob.u0[1]), d*(q+1))
+    f = prob.f
+    t0 = prob.tspan[1]
+    p = prob.p
+
+    derivatives = _get_derivatives((x, t) -> f(x, p, t), d, q)
+    m0 = vcat(u0, [_f(u0, t0) for _f in derivatives]...)
+    return m0
+end
+
+
+
+"""Nice, but slower than the ForwardDiff approach"""
+function _get_init_derivatives_mtk(prob, order)
+    # Output of size order+1
+    u0 = prob.u0
+    d = length(u0)
+    q = order
+    out = fill(zero(u0[1]), d*(q+1))
 
     sys = modelingtoolkitize(prob)
     t = sys.iv()
@@ -36,11 +52,11 @@ function get_init_derivatives(prob, order)
 
     rhs = ModelingToolkit.rhss(sys.eqs)
 
-    substitutions = [u .=> prob.u0; p .=> prob.p; t .=> prob.tspan[1]]
+    substitutions = [u .=> u0; p .=> prob.p; t .=> prob.tspan[1]]
 
     out[1:d] .= u0
 
-    @btime val = substitute.(rhs, (substitutions,))
+    val = substitute.(rhs, (substitutions,))
 
     out[d+1:2d] .= [v.value for v in val]
     u = D.(u)

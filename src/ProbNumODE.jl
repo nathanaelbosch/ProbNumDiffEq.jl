@@ -5,6 +5,8 @@ module ProbNumODE
 using Reexport
 @reexport using DiffEqBase
 
+import Base: copy
+
 using LinearAlgebra
 using Measurements
 using ForwardDiff
@@ -13,6 +15,9 @@ using UnPack
 using StaticArrays
 using RecipesBase
 using Distributions
+using GaussianDistributions
+copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
+using ModelingToolkit
 
 using UUIDs, ProgressLogging
 
@@ -25,9 +30,9 @@ stack(x) = copy(reduce(hcat, x)')
 include("filtering.jl")
 include("steprules.jl")
 include("priors.jl")
-include("measurement_model.jl")
+# include("measurement_model.jl")
 include("sigmas.jl")
-include("gaussian.jl")
+include("error_estimation.jl")
 
 include("integrator_type.jl")
 export EKF0, EKF1, ODEFilter

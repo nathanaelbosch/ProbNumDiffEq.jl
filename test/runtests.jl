@@ -36,30 +36,32 @@ end
 @testset "Sigmas" begin
     prob = fitzhugh_nagumo()
     # Multiple different methods
-    sol = solve(prob, EKF0(), steprule=:schober16, sigmarule=ProbNumODE.Schober16Sigma(),
+    sol = solve(prob, EKF0(), steprule=:standard, sigmarule=:schober,
                 abstol=1e-3, reltol=1e-3, q=2)
-    sol = solve(prob, EKF0(), steprule=:constant, sigmarule=ProbNumODE.MLESigma(),
+    sol = solve(prob, EKF0(), steprule=:constant, sigmarule=:fixedMLE,
                 abstol=1e-1, reltol=1e-1, q=2)
-    sol = solve(prob, EKF0(), steprule=:constant, sigmarule=ProbNumODE.MAPSigma(),
+    sol = solve(prob, EKF0(), steprule=:constant, sigmarule=:fixedMAP,
                 abstol=1e-1, reltol=1e-1, q=2)
-    sol = solve(prob, EKF0(), steprule=:constant, sigmarule=ProbNumODE.WeightedMLESigma(),
-                abstol=1e-1, reltol=1e-1, q=2)
+    # sol = solve(prob, EKF0(), steprule=:constant, sigmarule=ProbNumODE.WeightedMLESigma(),
+    #             abstol=1e-1, reltol=1e-1, q=2)
 end
 
-@testset "Steprules" begin
+@testset "Error Estimations" begin
     prob = fitzhugh_nagumo()
     # Multiple different methods
-    sol = solve(prob, EKF0(), steprule=:schober16, sigmarule=ProbNumODE.Schober16Sigma(),
+    sol = solve(prob, EKF0(), steprule=:standard, local_errors=:schober,
                 abstol=1e-3, reltol=1e-3, q=2)
-    sol = solve(prob, EKF0(), steprule=:baseline, sigmarule=ProbNumODE.Schober16Sigma(),
+    sol = solve(prob, EKF0(), steprule=:standard, local_errors=:prediction,
+                abstol=1e-3, reltol=1e-3, q=2)
+    sol = solve(prob, EKF0(), steprule=:standard, local_errors=:filtering,
                 abstol=1e-3, reltol=1e-3, q=2)
 end
 
-@testset "Gaussian" begin
-    @test typeof(ProbNumODE.Gaussian([1.; -1.], [1. 0.1; 0.1 1.])) <: ProbNumODE.Gaussian
-    # Non-symmetric covariance should throw an error
-    @test_throws Exception ProbNumODE.Gaussian([1.; -1.], [1. 0.; 0.1 1.])
-end
+# @testset "Gaussian" begin
+#     @test typeof(ProbNumODE.Gaussian([1.; -1.], [1. 0.1; 0.1 1.])) <: ProbNumODE.Gaussian
+#     # Non-symmetric covariance should throw an error
+#     @test_throws Exception ProbNumODE.Gaussian([1.; -1.], [1. 0.; 0.1 1.])
+# end
 
 
 @testset "Priors" begin
