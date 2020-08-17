@@ -115,7 +115,7 @@ end
 
 mutable struct GaussianODEFilterCache <: ProbNumODEMutableCache
     u
-    uprev
+    u_pred
     # tmp
     # utilde
     x
@@ -131,6 +131,7 @@ mutable struct GaussianODEFilterCache <: ProbNumODEMutableCache
     K
     σ_sq
     σ_sq_prev
+    P_tmp
 end
 function GaussianODEFilterCache(d, q, f, p, u0, t0, IIP)
     # Initial states
@@ -174,7 +175,8 @@ function GaussianODEFilterCache(d, q, f, p, u0, t0, IIP)
         copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0),
         measurement,
-        Ah, Qh, h, H, du, ddu, K, sigma, sigma
+        Ah, Qh, h, H, du, ddu, K, sigma, sigma,
+        copy(P0),
     )
 
 end

@@ -49,8 +49,7 @@ function classic_steprule(abstol, reltol, scale=1; ρ=0.95)
     function steprule(integ)
         @unpack dt = integ
         @unpack d, q, E0 = integ.constants
-        @unpack σ_sq, Qh, x_pred = integ.cache
-        u_pred = E0 * x_pred.μ
+        @unpack σ_sq, Qh, x_pred, u_pred = integ.cache
 
         if σ_sq == 1
             σ_sq = static_sigma_estimation(
