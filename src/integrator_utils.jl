@@ -29,6 +29,10 @@ function loopfooter!(integ)
         # For the solution
         push!(integ.state_estimates, integ.cache.x)
         push!(integ.times, integ.t)
+
+        integ.destats.naccept += 1
+    else
+        integ.destats.nreject += 1
     end
 
     # TODO: Add check for maxiters back in again

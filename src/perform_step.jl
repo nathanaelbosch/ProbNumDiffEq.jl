@@ -52,6 +52,7 @@ function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
     else
         du .= f(u_pred, p, t_new)
     end
+    integ.destats.nf += 1
 
     h!(h, du, x_pred.μ)
 
@@ -60,18 +61,22 @@ end
 
 function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
 
-    @unpack p, t_new = integ
+    @unpack p, t_new, f = integ
     @unpack jac, H! = integ.constants
     @unpack u_pred, ddu, H = integ.cache
 
-    IIP = isinplace(integ)
-    if IIP
-        jac(ddu, u_pred, p, t_new)
+    if !isnothing(jac)
+        if isinplace(integ)
+            jac(ddu, u_pred, p, t_new)
+        else
+            ddu .= jac(u_pred, p, t_new)
+        end
+        H!(H, ddu)
+        integ.destats.njacs += 1
     else
-        ddu .= jac(u_pred, p, t_new)
+        H!(H, ddu)
     end
 
-    H!(H, ddu)
 
     return H
 end

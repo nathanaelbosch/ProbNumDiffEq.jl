@@ -102,9 +102,16 @@ function GaussianODEFilterConstantCache(d, q, f, prior, method)
     E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
 
     @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
-    jac = method == :ekf0 ? (args...) -> 0. :
-        ((hasfield(typeof(f), :jac) && !isnothing(f.jac)) ? f.jac :
-         (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u))
+    jac = nothing
+    if method == :ekf1
+        if !isnothing(f.jac)
+            jac = f.jac
+        else
+            @warn """EKF1 requires the Jacobian, but it has not been explicitly passed to
+                  the ODEProblem. We'll use ForwardDiff to compute it."""
+            jac = (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u)
+        end
+    end
     h!(h, du, m) = h .= E1*m - du
     H!(H, ddu) = H .= E1 - ddu * E0
     R = zeros(d, d)
