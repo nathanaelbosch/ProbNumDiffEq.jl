@@ -55,11 +55,11 @@ end
                 abstol=1e-3, reltol=1e-3, q=2)
 end
 
-@testset "Gaussian" begin
-    @test typeof(ProbNumODE.Gaussian([1.; -1.], [1. 0.1; 0.1 1.])) <: ProbNumODE.Gaussian
-    # Non-symmetric covariance should throw an error
-    @test_throws Exception ProbNumODE.Gaussian([1.; -1.], [1. 0.; 0.1 1.])
-end
+# @testset "Gaussian" begin
+#     @test typeof(ProbNumODE.Gaussian([1.; -1.], [1. 0.1; 0.1 1.])) <: ProbNumODE.Gaussian
+#     # Non-symmetric covariance should throw an error
+#     @test_throws Exception ProbNumODE.Gaussian([1.; -1.], [1. 0.; 0.1 1.])
+# end
 
 
 @testset "Priors" begin

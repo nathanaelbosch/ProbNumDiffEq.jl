@@ -33,7 +33,7 @@ function predict(integ)
     m, P = x.μ, x.Σ
     A, Q = dm.A(dt), dm.Q(dt)
     m_p = A * m
-    P_p = Symmetric(A*P*A') + Q
+    P_p = A*P*A' + Q
     prediction=Gaussian(m_p, P_p)
     return prediction, A, Q
 end
@@ -53,9 +53,9 @@ function update(integ, prediction, h, H)
     v = 0 .- h
 
     m_p, P_p = prediction.μ, prediction.Σ
-    S = Symmetric(H * P_p * H' + R)
+    S = H * P_p * H' + R
     K = P_p * H' * inv(S)
     m = m_p + K*v
-    P = P_p - Symmetric(K*S*K')
+    P = P_p - K*S*K'
     return Gaussian(m, P), Gaussian(v, S)
 end

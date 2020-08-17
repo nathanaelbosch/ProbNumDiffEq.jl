@@ -15,45 +15,39 @@ function smooth(filter_estimate::Gaussian,
     return Gaussian(m, P)
 end
 
-function smooth!(sol, integ::ODEFilterIntegrator)
+function smooth!(integ::ODEFilterIntegrator)
+    @unpack state_estimates, times = integ
     proposals = integ.proposals
-    smoothed_solution = _copy(sol)
-    smoothed_solution[end] = sol[end]
-    smoothed_solution[1] = sol[1]
     accepted_proposals = [p for p in proposals if p.accept]
-    for i in length(smoothed_solution)-1:-1:2
+    for i in length(state_estimates)-1:-1:2
         h = accepted_proposals[i].dt  # step t -> t+1
-        h2 = sol[i+1].t - sol[i].t
+        h2 = times[i+1] - times[i]
         @assert h ≈ h2
 
-        @assert accepted_proposals[i].t == sol[i+1].t
+        @assert accepted_proposals[i].t == times[i+1]
 
         prediction = accepted_proposals[i].prediction  # t+1
-        filter_estimate = sol[i].x  # t
-        smoothed_estimate = sol[i+1].x # t+1
+        filter_estimate = state_estimates[i]  # t
+        smoothed_estimate = state_estimates[i+1] # t+1
 
         A = integ.dm.A(h)
         Q = integ.dm.Q(h)
-        sol[i] = (t=sol[i].t,
-                  x=smooth(filter_estimate,
-                           prediction,
-                           smoothed_estimate,
-                           (A=A, Q=Q)))
+        state_estimates[i] = smooth(filter_estimate, prediction, smoothed_estimate, (A=A, Q=Q))
     end
-    # return smoothed_solution
 end
 
-function calibrate!(sol, integ::ODEFilterIntegrator)
+function calibrate!(integ::ODEFilterIntegrator)
+    @unpack state_estimates = integ
     proposals = integ.proposals
     σ² = static_sigma_estimation(integ.sigma_estimator, integ, proposals)
     if σ² != 1
-        for s in sol
-            s.x.Σ *= σ²
+        for s in state_estimates
+            s.Σ .*= σ²
         end
         for p in proposals
-            p.measurement.Σ *= σ²
-            p.prediction.Σ *= σ²
-            p.filter_estimate.Σ *= σ²
+            p.measurement.Σ .*= σ²
+            p.prediction.Σ .*= σ²
+            p.filter_estimate.Σ .*= σ²
         end
     end
 end

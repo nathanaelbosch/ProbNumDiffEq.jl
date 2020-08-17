@@ -25,7 +25,7 @@ function ibm(q::Integer, d::Integer; σ::Integer=1)
             return σ ^ 2 * (h ^ idx) / (idx * fact_rw * fact_cl)
         end
 
-        qh_1d = Symmetric([_transdiff_ibm_element(row, col) for col in 0:q, row in 0:q])
+        qh_1d = [_transdiff_ibm_element(row, col) for col in 0:q, row in 0:q]
         I_d = diagm(0 => ones(d))
         return kron(qh_1d, I_d)
     end

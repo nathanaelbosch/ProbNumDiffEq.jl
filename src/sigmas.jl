@@ -59,8 +59,8 @@ end
 #     """p(z|σ²)"""
 #     function sigma_to_pz(σ²)
 #         s = sum(σ²)
-#         P_p = Symmetric(A*P*A') + s*Q
-#         S = Symmetric(H * P_p * H' + R)
+#         P_p = A*P*A' + s*Q
+#         S = H * P_p * H' + R
 #         return v' * inv(S) * v / length(v)
 #     end
 

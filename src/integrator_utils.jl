@@ -11,10 +11,11 @@ function loopfooter!(integ)
     push!(integ.proposals, (integ.proposal..., accept=integ.accept_step, dt=integ.dt))
     integ.dt = dt_proposal
 
-    if integ.accept_step 
+    if integ.accept_step
         integ.x = integ.proposal.filter_estimate
         integ.t = integ.proposal.t
-        push!(integ.state_estimates, (t=integ.t, x=integ.x))
+        push!(integ.state_estimates, integ.x)
+        push!(integ.times, integ.t)
     end
 
     # TODO: Add check for maxiters back in again
@@ -23,6 +24,6 @@ end
 
 """This could handle smoothing and uncertainty-calibration"""
 function postamble!(integ)
-    integ.smooth && smooth!(integ.state_estimates, integ)
-    calibrate!(integ.state_estimates, integ)
+    integ.smooth && smooth!(integ)
+    calibrate!(integ)
 end

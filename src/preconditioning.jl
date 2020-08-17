@@ -8,11 +8,11 @@ function preconditioner(expected_stepsize, d, q)
 end
 function apply_preconditioner!(p, x::Gaussian)
     x.μ .= p.P * x.μ
-    x.Σ .= Symmetric(p.P * x.Σ * p.P')
+    x.Σ .= p.P * x.Σ * p.P'
 end
 function undo_preconditioner!(p, x::Gaussian)
     x.μ .= p.P_inv * x.μ
-    x.Σ .= Symmetric(p.P_inv * x.Σ * p.P_inv')
+    x.Σ .= p.P_inv * x.Σ * p.P_inv'
 end
 function undo_preconditioner!(sol, proposals, integ)
     for s in sol

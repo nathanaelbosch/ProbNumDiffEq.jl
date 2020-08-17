@@ -54,6 +54,7 @@ mutable struct ODEFilterIntegrator{IIP, S, X, T, P, F} <: DiffEqBase.AbstractODE
     proposals             # List of proposals
     iter::UInt            # Current iteration count
     state_estimates       # List of state estimates, used to build the solution
+    times
     accept_step::Bool     # If the current step is accepted
     retcode::Symbol       # Current return code, used to build the solution
     prob                  # Only used to build the solution
