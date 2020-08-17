@@ -94,7 +94,7 @@ struct GaussianODEFilterConstantCache <: ProbNumODEMutableCache
     E1
     jac
 end
-function GaussianODEFilterConstantCache(d, q, prior, method)
+function GaussianODEFilterConstantCache(d, q, f, prior, method)
     @assert prior == :ibm
     A!, Q! = ibm(d, q)
 
@@ -102,7 +102,9 @@ function GaussianODEFilterConstantCache(d, q, prior, method)
     E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
 
     @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
-    jac = method == :ekf0 ? (args...) -> 0. : f.jac
+    jac = method == :ekf0 ? (args...) -> 0. :
+        ((hasfield(typeof(f), :jac) && !isnothing(f.jac)) ? f.jac :
+         (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u))
     h!(h, du, m) = h .= E1*m - du
     H!(H, ddu) = H .= E1 - ddu * E0
     R = zeros(d, d)

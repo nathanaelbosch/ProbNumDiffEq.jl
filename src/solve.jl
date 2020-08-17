@@ -34,7 +34,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     d = length(u0)
 
     # Model
-    constants = GaussianODEFilterConstantCache(d, q, prior, method)
+    constants = GaussianODEFilterConstantCache(d, q, f, prior, method)
 
     # Cache
     cache = GaussianODEFilterCache(d, q, f, p, u0, t0, IIP)
