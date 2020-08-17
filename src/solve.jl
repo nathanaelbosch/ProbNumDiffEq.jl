@@ -23,6 +23,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                             maxiters=1e5,
                             smooth=true,
                             prior=:ibm,
+                           initialize_derivatives=true,
                             kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
@@ -37,7 +38,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     constants = GaussianODEFilterConstantCache(d, q, f, prior, method)
 
     # Cache
-    cache = GaussianODEFilterCache(d, q, f, p, u0, t0, IIP)
+    cache = GaussianODEFilterCache(d, q, prob, initialize_derivatives)
 
     # Solver Options
     adaptive = steprule != :constant

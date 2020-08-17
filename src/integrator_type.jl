@@ -133,32 +133,14 @@ mutable struct GaussianODEFilterCache <: ProbNumODEMutableCache
     σ_sq_prev
     P_tmp
 end
-function GaussianODEFilterCache(d, q, f, p, u0, t0, IIP)
+function GaussianODEFilterCache(d, q, prob, initialize_derivatives=true)
+    u0 = prob.u0
+    t0 = prob.tspan[1]
     # Initial states
-    initialize_derivatives = false
-    initialize_derivatives = initialize_derivatives == :auto ? q <= 3 : false
-    m0 = zeros(d*(q+1))
-    if initialize_derivatives
-        derivatives = get_derivatives((x, t) -> f(x, p, t), d, q)
-        m0 = vcat(u0, [_f(u0, t0) for _f in derivatives]...)
-    else
-        m0[1:d] = u0
-        if !IIP
-            m0[d+1:2d] = f(u0, p, t0)
-        else
-            f(m0[d+1:2d], u0, p, t0)
-        end
-    end
-
-    # if eltype(m0) <: Measurement
-    #     P0 = diagm(0 => Measurements.uncertainty.(m0) .^ 2)
-    #     m0 = Measurements.value.(m0)
-    # else
-    #     P0 = diagm(0 => [zeros(d); ones(d*q)] .+ 1e-16)
-    # end
-    P0 = zeros(d*(q+1), d*(q+1))
+    m0, P0 = initialize_derivatives ?
+        initialize_with_derivatives(prob, q) :
+        initialize_without_derivatives(prob, q)
     x0 = Gaussian(m0, P0)
-    # X = typeof(x0)
 
     Ah = diagm(0=>ones(d*(q+1)))
     Qh = zeros(d*(q+1), d*(q+1))
@@ -179,4 +161,32 @@ function GaussianODEFilterCache(d, q, f, p, u0, t0, IIP)
         copy(P0),
     )
 
+end
+
+
+function initialize_with_derivatives(prob, order)
+    q = order
+    d = length(prob.u0)
+    m0 = get_initial_derivatives(prob, q)
+    P0 = zeros(d*(q+1), d*(q+1))
+    return m0, P0
+end
+
+function initialize_without_derivatives(prob, order, var=1e-3)
+    q = order
+    u0 = prob.u0
+    d = length(u0)
+    p = prob.p
+    t0 = prob.tspan[1]
+
+    m0 = zeros(d*(q+1))
+    m0[1:d] = u0
+    if !isinplace(prob)
+        m0[d+1:2d] = prob.f(u0, p, t0)
+    else
+        prob.f(m0[d+1:2d], u0, p, t0)
+    end
+    P0 = [zeros(d, d) zeros(d, d*q);
+          zeros(d*q, d) diagm(0 => var .* ones(d*q))]
+    return m0, P0
 end
