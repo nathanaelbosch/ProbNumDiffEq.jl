@@ -86,10 +86,11 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     retcode = :Default
 
     isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
+    dt_init = 1e-3
     opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax, internalnorm, dtmin, dtmax)
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f)}(
-        f, u0, t0, t0, t0, tmax, dt, p, one(eltype(prob.tspan)),
+        f, u0, t0, t0, t0, tmax, dt_init, p, one(eltype(prob.tspan)),
         constants, cache,
         # d, q, dm, mm, sigmarule, steprule,
         opts, sigmarule, error_estimator, steprule, smooth,
