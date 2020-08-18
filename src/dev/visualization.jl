@@ -3,7 +3,7 @@
     sol = ps.args[1]
 
     stds = hcat([sqrt.(diag(M)) for M in sol.x.Σ]...)'
-    d = sol.solver.d
+    d = sol.solver.constants.d
 
     # Plot the results
     means = hcat(sol.x.μ...)'
@@ -35,11 +35,11 @@ end
 
     yscale --> :log10,
     # marker --> :x
-    label --> "h (left)"
-    yguide --> "h"
     legend --> :bottomleft
+    yguide --> "h"
 
     @series begin
+        label --> "h"
         return sol.t[2:end-1], stepsizes
     end
 
@@ -73,28 +73,32 @@ end
 @recipe function f(pe::Plot_Errors; c=1.96)
     sol, analytic = pe.args[1], pe.args[2]
     ts = sol.t
+    d = sol.solver.constants.d
 
-    f_est = [m[1:sol.solver.d] for m in sol.x.μ]
-    if sol.solver.d == 1
+    f_est = map(u -> Measurements.value.(u), sol.u)
+    if d == 1
         f_est = hcat(f_est...)'
     end
     true_sol = analytic.(ts)
     diffs = true_sol .- f_est
 
-    yscale --> :log10
-    # marker --> :x
-    label --> "Global Error"
-    yguide --> "function error"
+    @series begin
+        yscale --> :log10
+        # marker --> :x
+        label --> "Global Error"
+        yguide --> "function error"
+        return ts[2:end], norm.(diffs, 2)[2:end]
+    end
 
     # local_errors = norm.([(diffs[i] - diffs[i-1]) for i in 2:length(diffs)], 2)
     # plot!(p_err, ts[2:end], local_errors, marker=:x, label="Local Error")
 
-    # stds = [sqrt.(diag(P)[1:sol.solver.d]) for P in sol.u.Σ]
-    # plot!(p, ts[2:end], norm.(c.*stds[2:end], 2);
-    #       linestyle=:dash,
-    #       (argv..., labels="$c*std")...)
-
-    return ts[2:end], norm.(diffs, 2)[2:end]
+    stds = map(u -> Measurements.value.(u), sol.u)
+    @series begin
+        label --> "$c * std"
+        linestyle := :dash
+        return ts[2:end], norm.(c.*stds[2:end], 2)
+    end
 end
 
 
@@ -102,14 +106,17 @@ end
 @recipe function f(pc::Plot_Calibration; interval=0.95)
     sol, analytic = pc.args[1], pc.args[2]
     ts = sol.t
-    d = sol.solver.d
+    d = sol.solver.constants.d
 
-    f_est = [m[1:d] for m in sol.x.μ]
-    f_covs = [u.Σ[1:d, 1:d] for u in sol.x]
-    if sol.solver.d == 1
+    accepted_proposals = [p for p in sol.proposals if p.accept]
+    filter_estimates = [p.filter_estimate for p in accepted_proposals]
+    E0 = sol.solver.constants.E0
+    f_est = [E0 * f.μ for f in filter_estimates]
+    f_covs = [E0 * f.Σ * E0' for f in filter_estimates]
+    if d == 1
         f_est = stack(f_est)
     end
-    true_sol = analytic.(ts)
+    true_sol = analytic.(ts[2:end])
     diffs = true_sol .- f_est
 
     sugg = [d' * inv(C) * d for (d, C) in zip(diffs, f_covs)]
@@ -117,7 +124,7 @@ end
     @series begin
         label --> ""
         yscale --> :log10
-        return ts[2:end], sugg[2:end]
+        return ts[2:end], sugg
     end
     if !isnothing(interval)
         @series begin
@@ -126,7 +133,7 @@ end
             linestyle := :dash
             label := "$(interval*100)% Interval"
             p = 1-interval
-            return [quantile(Chisq(sol.solver.d), 1-(p/2)), quantile(Chisq(sol.solver.d), p/2)]
+            return [quantile(Chisq(d), 1-(p/2)), quantile(Chisq(d), p/2)]
         end
     end
 end
@@ -135,11 +142,12 @@ end
 @userplot Plot_Residuals
 @recipe function f(pr::Plot_Residuals)
     sol = pr.args[1]
+    d = sol.solver.constants.d
 
     accepted_proposals = [p for p in sol.proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
     times = [p.t for p in accepted_proposals]
-    res = [z.μ' * z.Σ^(-1) * z.μ for z in measurements] ./ sol.solver.d
+    res = [z.μ' * z.Σ^(-1) * z.μ for z in measurements] ./ d
 
     yscale = all(res .> 0) ? :log10 : :identity
     yscale --> yscale
@@ -152,6 +160,7 @@ end
     end
     @series begin
         seriestype := :hline
+        linestyle := :dash
         seriescolor := 3
         label := nothing
         return [1]
@@ -171,7 +180,7 @@ end
     if length(rejected_proposals) > 0
         times = [p.t for p in rejected_proposals]
         measurements = [p.measurement for p in rejected_proposals]
-        res = [z.μ' * z.Σ^(-1) * z.μ for z in measurements] ./ sol.solver.d
+        res = [z.μ' * z.Σ^(-1) * z.μ for z in measurements] ./ d
         steps = [p.dt for p in rejected_proposals]
         # rejected_t, rejected_h, rejected_errors = collect(zip(sol.rejected...))
         @series begin
@@ -204,7 +213,7 @@ end
         σ² = σ²_static
     end
 
-    label --> "σ² (right)"
+    label --> "σ²"
     yguide --> "σ²"
     # marker --> :x
     yscale --> :log10

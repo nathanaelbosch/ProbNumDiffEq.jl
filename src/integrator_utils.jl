@@ -10,20 +10,21 @@ end
 """Calculate new timesteps, save, apply the callbacks"""
 function loopfooter!(integ)
 
-    # proposal = (t=integ.t_new,
-    #             prediction=integ.cache.x_pred,
-    #             filter_estimate=integ.cache.x_filt,
-    #             measurement=integ.cache.measurement,
-    #             H=integ.H, Q=integ.Qh, v=h,
-    #             σ²=σ_sq)
-    # push!(integ.proposals, (integ.proposal..., accept=integ.accept_step, dt=integ.dt))
+    integ.accept_step = integ.opts.adaptive ? integ.EEst < 1 : true
 
-    if integ.opts.adaptive
-        integ.dt = propose_step(integ.steprule, integ)
-        integ.accept_step = integ.EEst < 1
-    else
-        integ.accept_step = true
-    end
+
+    push!(integ.proposals, (
+        t=integ.t_new,
+        prediction=copy(integ.cache.x_pred),
+        filter_estimate=copy(integ.cache.x_filt),
+        measurement=copy(integ.cache.measurement),
+        H=copy(integ.cache.H), Q=copy(integ.cache.Qh), v=copy(integ.cache.h),
+        σ²=copy(integ.cache.σ_sq),
+        accept=integ.accept_step,
+        dt=integ.dt
+    ))
+
+    integ.opts.adaptive && (integ.dt = propose_step(integ.steprule, integ))
 
     if integ.accept_step
         integ.destats.naccept += 1
