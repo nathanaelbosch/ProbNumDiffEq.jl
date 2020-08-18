@@ -25,21 +25,23 @@ function ibm(d::Integer, q::Integer; σ::Real=1.0)
         end
     end
 
-
-
-    function Q!(Q, h)
-        @fastmath function _transdiff_ibm_element(row, col)
-            idx = 2 * q + 1 - row - col
-            fact_rw = factorial(q - row)
-            fact_cl = factorial(q - col)
-
-            return σ ^ 2 * (h ^ idx) / (idx * fact_rw * fact_cl)
+    @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::AbstractFloat)
+        idx = 2 * q + 1 - row - col
+        fact_rw = factorial(q - row)
+        fact_cl = factorial(q - col)
+        return (h^idx) / (idx * fact_rw * fact_cl)
+    end
+    @fastmath function Q!(Q::AbstractMatrix, h::AbstractFloat, σ²::AbstractFloat=1.0)
+        val = one(h)
+        @simd for col in 0:q
+            @simd for row in col:q
+                val = _transdiff_ibm_element(row, col, h)
+                @simd for i in 0:d-1
+                    @inbounds Q[1 + col*d + i,1 + row*d + i] = val * σ²
+                    @inbounds Q[1 + row*d + i,1 + col*d + i] = val * σ²
+                end
+            end
         end
-
-        qh_1d = [_transdiff_ibm_element(row, col) for col in 0:q, row in 0:q]
-        I_d = diagm(0 => ones(d))
-        _Q = kron(qh_1d, I_d)
-        @inbounds Q .= _Q
     end
 
     return A!, Q!
