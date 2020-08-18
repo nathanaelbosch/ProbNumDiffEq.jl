@@ -181,7 +181,9 @@ end
 function initialize_with_derivatives(prob, order)
     q = order
     d = length(prob.u0)
-    m0 = get_initial_derivatives(prob, q)
+    m0 = isinplace(prob) ?
+        _get_init_derivatives_mtk(prob, order) :
+        get_initial_derivatives(prob, q)
     P0 = zeros(d*(q+1), d*(q+1))
     return m0, P0
 end

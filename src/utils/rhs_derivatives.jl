@@ -20,7 +20,10 @@ function _get_derivatives(f, d, q)
 end
 
 
-"""Compute the q derivatives of the rhs function for a given ODE problem"""
+"""Compute the q derivatives of the rhs function for a given ODE problem
+
+Can not handle in-place problems!
+"""
 function get_initial_derivatives(prob, order)
     u0 = prob.u0
     d = length(u0)
