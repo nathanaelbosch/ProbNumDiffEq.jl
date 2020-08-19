@@ -98,13 +98,18 @@ struct GaussianODEFilterConstantCache <: ProbNumODEMutableCache
     E0
     E1
     jac
+    Precond
+    InvPrecond
 end
-function GaussianODEFilterConstantCache(d, q, f, prior, method)
+function GaussianODEFilterConstantCache(d, q, f, prior, method, precond_dt=0.5)
     @assert prior == :ibm
-    A!, Q! = ibm(d, q)
+    Precond, InvPrecond = preconditioner(precond_dt, d, q)
+    A!, Q! = ibm(d, q; precond_dt=precond_dt)
 
     E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    E0 = E0 * InvPrecond
     E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    E1 = E1 * InvPrecond
 
     @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
     jac = nothing
@@ -121,7 +126,7 @@ function GaussianODEFilterConstantCache(d, q, f, prior, method)
     H!(H, ddu) = H .= E1 - ddu * E0
     R = zeros(d, d)
 
-    return GaussianODEFilterConstantCache(d, q, A!, Q!, h!, H!, R, E0, E1, jac)
+    return GaussianODEFilterConstantCache(d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond)
 end
 
 
@@ -146,23 +151,24 @@ mutable struct GaussianODEFilterCache <: ProbNumODEMutableCache
     P_tmp
     err_tmp
 end
-function GaussianODEFilterCache(d, q, prob, initialize_derivatives=true)
+function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=true)
+    @unpack Precond, InvPrecond, E0, E1 = constants
     u0 = prob.u0
     t0 = prob.tspan[1]
     # Initial states
     m0, P0 = initialize_derivatives ?
         initialize_with_derivatives(prob, q) :
         initialize_without_derivatives(prob, q)
-    x0 = Gaussian(m0, P0)
+    x0 = Precond * Gaussian(m0, P0)
 
-    Ah = diagm(0=>ones(d*(q+1)))
-    Qh = zeros(d*(q+1), d*(q+1))
-    h = zeros(d)
+    Ah_empty = diagm(0=>ones(d*(q+1)))
+    Qh_empty = zeros(d*(q+1), d*(q+1))
+    h = E1 * x0.μ
     H = zeros(d, d*(q+1))
-    du = zeros(d)
+    du = copy(h)
     ddu = zeros(d, d)
     sigma = 1.0
-    v, S = zeros(d), zeros(d,d)
+    v, S = copy(h), zeros(d,d)
     measurement = Gaussian(v, S)
     K = zeros(d*(q+1),d)
 
@@ -170,7 +176,7 @@ function GaussianODEFilterCache(d, q, prob, initialize_derivatives=true)
         copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0),
         measurement,
-        Ah, Qh, h, H, du, ddu, K, sigma, sigma,
+        Ah_empty, Qh_empty, h, H, du, ddu, K, sigma, sigma,
         copy(P0),
         copy(u0),
     )

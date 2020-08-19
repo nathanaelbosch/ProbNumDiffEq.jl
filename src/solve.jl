@@ -24,6 +24,8 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            dtmin=nothing,
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
 
+                           precond_dt = dt == 0 ? 1e-2 : dt,
+
                            sigmarule=:schober,
                            local_errors=:schober,
 
@@ -43,10 +45,10 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     d = length(u0)
 
     # Model
-    constants = GaussianODEFilterConstantCache(d, q, f, prior, method)
+    constants = GaussianODEFilterConstantCache(d, q, f, prior, method, precond_dt)
 
     # Cache
-    cache = GaussianODEFilterCache(d, q, prob, initialize_derivatives)
+    cache = GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives)
 
     # Solver Options
     tType = eltype(prob.tspan)
@@ -86,7 +88,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     retcode = :Default
 
     isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
-    dt_init = 1e-3
+    dt_init = dt != 0 ? dt : 1e-3
     opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax, internalnorm, dtmin, dtmax)
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f)}(

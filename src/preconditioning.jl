@@ -1,10 +1,17 @@
 function preconditioner(expected_stepsize, d, q)
     h = expected_stepsize
+
+    smallval = h ^ q
+    if smallval < eps(h)
+        @warn "Preconditioner contains values below machine precision ($smallval)"
+        h = eps(h) ^ (1 / self.ordint)
+    end
+
+    diags = h .^ (0:q)
     I_d = diagm(0 => ones(d))
-    P = Diagonal(kron(Diagonal(h .^ (0:q)), I_d))
-    P_inv = Diagonal(kron(Diagonal(1 ./ (h .^ (0:q))), I_d))
+    P = Diagonal(kron(Diagonal(diags), I_d))
+    P_inv = Diagonal(kron(Diagonal(1 ./ diags), I_d))
     return (P=P, P_inv=P_inv)
-    # return (P=I, P_inv=I)
 end
 function apply_preconditioner!(p, x::Gaussian)
     x.μ .= p.P * x.μ
