@@ -1,20 +1,19 @@
+using Test
+using OrdinaryDiffEq
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+using ModelingToolkit
 
 
 
-
-@testset "Sigmas" begin
-    prob = fitzhugh_nagumo()
-    # Multiple different methods
-    sol = solve(prob, EKF0(), steprule=:standard,
-                sigmarule=:schober,
-                abstol=1e-3, reltol=1e-3, q=2)
-    @test_broken begin
-        sol = solve(prob, EKF0(), steprule=:constant,
-                    sigmarule=:fixedMLE,
-                    abstol=1e-1, reltol=1e-1, q=2)
-    end
-    # sol = solve(prob, EKF0(), steprule=:constant, sigmarule=:fixedMAP,
-    #             abstol=1e-1, reltol=1e-1, q=2)
-    # sol = solve(prob, EKF0(), steprule=:constant, sigmarule=ProbNumODE.WeightedMLESigma(),
-    #             abstol=1e-1, reltol=1e-1, q=2)
+@testset "Correctness for different sigmas" begin
+    test_prob_solution_correctness(
+        prob_ode_fitzhughnagumo, EKF0(), steprule=:constant, dt=1e-4,
+        sigmarule=:schober)
+    test_prob_solution_correctness(
+        prob_ode_fitzhughnagumo, EKF0(), steprule=:constant, dt=1e-4,
+        sigmarule=:fixedMLE)
+    test_prob_solution_correctness(
+        prob_ode_fitzhughnagumo, EKF0(), steprule=:constant, dt=1e-4,
+        sigmarule=:fixedMAP)
 end
