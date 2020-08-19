@@ -1,5 +1,4 @@
 using Test
-using Plots
 
 
 @testset "ProbNumODE" begin
