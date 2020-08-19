@@ -8,7 +8,7 @@ using ModelingToolkit
 
 
 
-function test_prob_solution_correctness(prob, args...; kwargs...)
+function test_prob_solution_correctness(prob, atol=1e-6, args...; kwargs...)
 
     prob = remake(prob, p=collect(prob.p))
 
@@ -18,8 +18,8 @@ function test_prob_solution_correctness(prob, args...; kwargs...)
     our_u = sol.u.μ
     true_u = true_sol.(sol.t)
 
-    @test our_u[end] ≈ true_u[end] atol=1e-6
-    @test our_u ≈ true_u atol=1e-6
+    @test our_u[end] ≈ true_u[end] atol=atol
+    @test our_u ≈ true_u atol=atol
 end
 
 
