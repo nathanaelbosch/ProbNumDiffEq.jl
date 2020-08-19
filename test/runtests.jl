@@ -5,8 +5,7 @@ using Plots
 
 
 @testset "ProbNumODE" begin
-    # Use this in the future to `include` tests from other files to replace the testsets
-    # below
+    @testset "Priors" begin include("priors.jl") end
 end
 
 
@@ -57,9 +56,4 @@ end
     #             abstol=1e-3, reltol=1e-3, q=2)
     # sol = solve(prob, EKF0(), steprule=:standard, local_errors=:filtering,
     #             abstol=1e-3, reltol=1e-3, q=2)
-end
-
-
-@testset "Priors" begin
-    include("priors.jl")
 end
