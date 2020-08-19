@@ -16,21 +16,6 @@ struct ProbODESolution{T,N,uType,xType,tType,pType,P,A,S,IType,DE} <: AbstractPr
     destats::DE
 end
 
-function make_Measurement(state, d)
-    # @assert isdiag(state.Σ[1:d,1:d]) state.Σ[1:d,1:d]
-    mean = state.μ[1:d]
-    var = diag(state.Σ)[1:d]
-
-    _min = minimum(var)
-    if _min < 0
-        @assert abs(_min) < 1e-16
-        var .+= - _min
-    end
-    @assert all(var .>= 0)
-
-    return mean .± sqrt.(var)
-end
-
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
     alg::ODEFilter,
@@ -40,10 +25,9 @@ function DiffEqBase.build_solution(
     retcode = :Default,
     destats = nothing,
     kwargs...)
+    @unpack d, q, E0 = solver.constants
 
-    d = length(prob.u0)
-    u = map(x -> make_Measurement(x, d), x)
-    # u = map(s -> s.μ[1:d], x)
+    u = StructArray(map(x -> E0 * x, x))
 
     interp = FilteringPosterior()
 
@@ -63,6 +47,9 @@ DiffEqBase.interp_summary(::FilteringPosterior) = "Filtering Posterior"
 
 """Just extrapolates with PREDICT so far"""
 function (sol::ProbODESolution)(t::T) where T
+    @unpack A!, Q!, d, q, E0 = sol.solver.constants
+    @unpack Ah, Qh = sol.solver.cache
+
     if t < sol.t[1]
         error("Invalid t<t0")
     end
@@ -77,24 +64,24 @@ function (sol::ProbODESolution)(t::T) where T
     prev_rv = sol.x[prev_idx]
     m, P = prev_rv.μ, prev_rv.Σ
     h = t - sol.t[prev_idx]
-    A, Q = sol.solver.dm.A, sol.solver.dm.Q
-    m_pred, P_pred = kf_predict(m, P, A(h), Q(h))
+    A!(Ah, h)
+    Q!(Qh, h)
+    m_pred, P_pred = kf_predict(m, P, Ah, Qh)
 
     pred_rv = Gaussian(m_pred, P_pred)
-    d = sol.solver.d
 
     if !sol.solver.smooth || t > sol.t[end]
-        return make_Measurement(pred_rv, d)
+        return E0 * pred_rv
     end
 
     # Smooth
     next_rv = sol.x[prev_idx+1]
     h = sol.t[prev_idx+1] - t
-    m_pred_next, P_pred_next = kf_predict(m, P, A(h), Q(h))
+    m_pred_next, P_pred_next = kf_predict(m, P, Ah, Qh)
     m_smoothed, P_smoothed = kf_smooth(
-        m_pred, P_pred, m_pred_next, P_pred_next, next_rv.μ, next_rv.Σ, A(h), Q(h))
+        m_pred, P_pred, m_pred_next, P_pred_next, next_rv.μ, next_rv.Σ, Ah, Qh)
     smoothed_rv = Gaussian(m_smoothed, P_smoothed)
-    return make_Measurement(smoothed_rv, d)
+    return E0 * smoothed_rv
 end
 
 
@@ -103,8 +90,8 @@ end
 ########################################################################################
 @recipe function f(sol::AbstractProbODESolution; c=1.96)
     stack(x) = collect(reduce(hcat, x)')
-    values = map(u -> Measurements.value.(u), sol.u)
-    uncertainties = map(u -> Measurements.uncertainty.(u), sol.u)
-    ribbon := stack(uncertainties) * c
-    return sol.t, stack(values)
+    values = stack(sol.u.μ)
+    stds = stack([sqrt.(diag(cov)) for cov in sol.u.Σ])
+    ribbon := c * stds
+    return sol.t, values
 end
