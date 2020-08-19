@@ -28,11 +28,11 @@ function estimate_errors(::FilterErrors, integ)
     @unpack E0, R = integ.constants
     @unpack σ_sq, Qh, H = integ.cache
 
-    P_loc = σ_sq .* Qh
+    P_pred_loc = σ_sq .* Qh
 
     S_loc = H * P_pred_loc * H' .+ R
     K_loc = P_pred_loc * H' * inv(S_loc)
-    P_filt_loc = P_pred_loc .- K_loc * S_loc * K_loc
+    P_filt_loc = P_pred_loc .- K_loc * S_loc * K_loc'
 
     f_filt_cov = E0 * P_filt_loc * E0'
     error_estimate = sqrt.(diag(f_filt_cov))

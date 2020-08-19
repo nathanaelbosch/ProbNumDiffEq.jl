@@ -1,13 +1,65 @@
 
 
 
-@testset "Error Estimations" begin
-    prob = fitzhugh_nagumo()
-    # Multiple different methods
-    sol = solve(prob, EKF0(), steprule=:standard, local_errors=:schober,
-                abstol=1e-3, reltol=1e-3, q=2)
-    # sol = solve(prob, EKF0(), steprule=:standard, local_errors=:prediction,
-    #             abstol=1e-3, reltol=1e-3, q=2)
-    # sol = solve(prob, EKF0(), steprule=:standard, local_errors=:filtering,
-    #             abstol=1e-3, reltol=1e-3, q=2)
+@testset "Correctness with Schober Errors" begin
+    correctness_atol = 1e-8
+    alg_abstol, alg_reltol = 1e-10, 1e-10
+
+    prob = remake_prob_with_jac(prob_ode_lotkavoltera)
+    setup = (
+        steprule=:standard,
+        abstol=alg_abstol,
+        reltol=alg_reltol,
+        local_errors=:schober,
+        sigmarule=:schober,
+        setprule=:standard,
+    )
+    for q in 1:2
+        test_prob_solution_correctness(
+            prob, correctness_atol, EKF0();
+            q=q, setup...)
+    end
+end
+
+
+@testset "Correctness with Prediction Errors" begin
+    correctness_atol = 1e-5
+    alg_abstol, alg_reltol = 1e-10, 1e-10
+
+    prob = remake_prob_with_jac(prob_ode_lotkavoltera)
+    setup = (
+        steprule=:standard,
+        abstol=alg_abstol,
+        reltol=alg_reltol,
+        local_errors=:prediction,
+        sigmarule=:schober,
+        setprule=:standard,
+    )
+    for q in 1:2
+        test_prob_solution_correctness(
+            prob, correctness_atol, EKF0();
+            q=q, setup...)
+    end
+end
+
+
+
+@testset "Correctness with Filtering Errors" begin
+    correctness_atol = 1e-5
+    alg_abstol, alg_reltol = 1e-10, 1e-10
+
+    prob = remake_prob_with_jac(prob_ode_lotkavoltera)
+    setup = (
+        steprule=:standard,
+        abstol=alg_abstol,
+        reltol=alg_reltol,
+        local_errors=:filtering,
+        sigmarule=:schober,
+        setprule=:standard,
+    )
+    for q in 1:2
+        test_prob_solution_correctness(
+            prob, correctness_atol, EKF0();
+            q=q, setup...)
+    end
 end
