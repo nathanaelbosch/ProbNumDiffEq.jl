@@ -65,7 +65,5 @@ end
 
 
 @testset "Priors" begin
-    prior = ProbNumODE.ibm(1, 2)
-    @test typeof(prior.A(0.1)) <: AbstractMatrix
-    @test typeof(prior.Q(0.1)) <: AbstractMatrix
+    include("priors.jl")
 end
