@@ -75,7 +75,7 @@ end
     ts = sol.t
     d = sol.solver.constants.d
 
-    f_est = map(u -> Measurements.value.(u), sol.u)
+    f_est = sol.u.μ
     if d == 1
         f_est = hcat(f_est...)'
     end
@@ -93,7 +93,7 @@ end
     # local_errors = norm.([(diffs[i] - diffs[i-1]) for i in 2:length(diffs)], 2)
     # plot!(p_err, ts[2:end], local_errors, marker=:x, label="Local Error")
 
-    stds = map(u -> Measurements.value.(u), sol.u)
+    stds = [sqrt.(diag(cov)) for cov in sol.u.Σ]
     @series begin
         label --> "$c * std"
         linestyle := :dash
@@ -110,9 +110,8 @@ end
 
     accepted_proposals = [p for p in sol.proposals if p.accept]
     filter_estimates = [p.filter_estimate for p in accepted_proposals]
-    E0 = sol.solver.constants.E0
-    f_est = [E0 * f.μ for f in filter_estimates]
-    f_covs = [E0 * f.Σ * E0' for f in filter_estimates]
+    f_est = sol.u.μ[2:end]
+    f_covs = sol.u.Σ[2:end]
     if d == 1
         f_est = stack(f_est)
     end

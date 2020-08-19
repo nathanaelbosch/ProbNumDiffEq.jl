@@ -8,11 +8,6 @@ using Plots
     @testset "Solution" begin include("solution.jl") end
 
 
-@testset "Plotting" begin
-    prob = fitzhugh_nagumo()
-    sol = solve(prob, EKF0(), smooth=false)
-    plot(sol)
-end
 
 @testset "Sigmas" begin
     prob = fitzhugh_nagumo()

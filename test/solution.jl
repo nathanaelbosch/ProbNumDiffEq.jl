@@ -35,4 +35,15 @@ using ModelingToolkit
         @test norm.(u0.μ - u1.μ) < norm.(u0.μ - u2.μ)
         @test all(diag(u1.Σ) .< diag(u2.Σ))
     end
+
+    @testset "Plotting" begin
+        @test plot(sol) isa Plots.Plot
+        @test plot_stepsizes(sol) isa Plots.Plot
+        @test plot_sigmas(sol) isa Plots.Plot
+        @test plot_residuals(sol) isa Plots.Plot
+
+        sol2 = solve(prob, Tsit5(), abstol=1e-10, reltol=1e-10)
+        @test plot_errors(sol, sol2) isa Plots.Plot
+        @test plot_calibration(sol, sol2) isa Plots.Plot
+    end
 end
