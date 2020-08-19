@@ -1,12 +1,11 @@
-using ProbNumODE
 using Test
-using Measurements
 using Plots
 
 
 @testset "ProbNumODE" begin
     @testset "Priors" begin include("priors.jl") end
     @testset "Correctness" begin include("correctness.jl") end
+    @testset "Solution" begin include("solution.jl") end
 
 
 @testset "Plotting" begin
