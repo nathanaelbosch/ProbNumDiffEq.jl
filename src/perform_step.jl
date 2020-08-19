@@ -27,7 +27,7 @@ function perform_step!(integ::ODEFilterIntegrator)
 
     err_est_unscaled = estimate_errors(integ.error_estimator, integ)
     err_est_scaled = DiffEqBase.calculate_residuals(
-        integ.dt * err_est_unscaled, u_filt, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        dt * err_est_unscaled, integ.u, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
     err_est_combined = integ.opts.internalnorm(err_est_scaled, t)
     integ.EEst = err_est_combined
 
