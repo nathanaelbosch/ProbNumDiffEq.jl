@@ -5,6 +5,8 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 using Measurements
 using ModelingToolkit
 
+import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plot_calibration
+
 
 @testset "Solution" begin
     prob = prob_ode_lotkavoltera

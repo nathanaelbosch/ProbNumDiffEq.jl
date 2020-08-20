@@ -5,7 +5,7 @@
     correctness_atol = 1e-8
     alg_abstol, alg_reltol = 1e-10, 1e-10
 
-    prob = remake_prob_with_jac(prob_ode_lotkavoltera)
+    prob = ProbNumODE.remake_prob_with_jac(prob_ode_lotkavoltera)
     setup = (
         steprule=:standard,
         abstol=alg_abstol,
@@ -26,7 +26,7 @@ end
     correctness_atol = 1e-5
     alg_abstol, alg_reltol = 1e-10, 1e-10
 
-    prob = remake_prob_with_jac(prob_ode_lotkavoltera)
+    prob = ProbNumODE.remake_prob_with_jac(prob_ode_lotkavoltera)
     setup = (
         steprule=:standard,
         abstol=alg_abstol,
@@ -48,7 +48,7 @@ end
     correctness_atol = 1e-5
     alg_abstol, alg_reltol = 1e-10, 1e-10
 
-    prob = remake_prob_with_jac(prob_ode_lotkavoltera)
+    prob = ProbNumODE.remake_prob_with_jac(prob_ode_lotkavoltera)
     setup = (
         steprule=:standard,
         abstol=alg_abstol,
