@@ -77,3 +77,12 @@ function iip_to_oop(f!)
     end
     return f
 end
+
+
+function remake_prob_with_jac(prob)
+    prob = remake(prob, p=collect(prob.p))
+    sys = modelingtoolkitize(prob)
+    jac = eval(ModelingToolkit.generate_jacobian(sys)[2])
+    f = ODEFunction(prob.f.f, jac=jac)
+    return remake(prob, f=f)
+end

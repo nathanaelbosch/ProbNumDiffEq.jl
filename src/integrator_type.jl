@@ -101,7 +101,8 @@ struct GaussianODEFilterConstantCache <: ProbNumODEMutableCache
     Precond
     InvPrecond
 end
-function GaussianODEFilterConstantCache(d, q, f, prior, method, precond_dt=0.5)
+function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
+    d, f = length(prob.u0), prob.f
     @assert prior == :ibm
     Precond, InvPrecond = preconditioner(precond_dt, d, q)
     A!, Q! = ibm(d, q; precond_dt=precond_dt)
@@ -112,16 +113,7 @@ function GaussianODEFilterConstantCache(d, q, f, prior, method, precond_dt=0.5)
     E1 = E1 * InvPrecond
 
     @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
-    jac = nothing
-    if method == :ekf1
-        if !isnothing(f.jac)
-            jac = f.jac
-        else
-            @warn """EKF1 requires the Jacobian, but it has not been explicitly passed to
-                  the ODEProblem. We'll use ForwardDiff to compute it."""
-            jac = (u, p, t) -> ForwardDiff.jacobian(_u -> f(_u, p, t), u)
-        end
-    end
+    jac = method == :ekf1 ? f.jac : nothing
     h!(h, du, m) = h .= E1*m - du
     H!(H, ddu) = H .= E1 - ddu * E0
     R = zeros(d, d)

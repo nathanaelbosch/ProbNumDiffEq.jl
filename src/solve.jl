@@ -38,6 +38,11 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     # Init
     IIP = DiffEqBase.isinplace(prob)
 
+    if method == :ekf1 && isnothing(prob.f.jac)
+        error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl
+               use ProbNumoDE.remake_prob_with_jac(prob).""")
+    end
+
     f = prob.f
     u0 = prob.u0
     t0, tmax = prob.tspan
@@ -45,7 +50,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     d = length(u0)
 
     # Model
-    constants = GaussianODEFilterConstantCache(d, q, f, prior, method, precond_dt)
+    constants = GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt)
 
     # Cache
     cache = GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives)

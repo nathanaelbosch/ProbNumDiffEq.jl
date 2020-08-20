@@ -36,7 +36,7 @@ end
 function remake_prob_with_jac(prob)
     prob = remake(prob, p=collect(prob.p))
     sys = modelingtoolkitize(prob)
-    jac = eval(ModelingToolkit.generate_jacobian(sys)[2])
+    jac = eval(ModelingToolkit.generate_jacobian(sys)[isinplace(prob) ? 2 : 1])
     f = ODEFunction(prob.f.f, jac=jac)
     return remake(prob, f=f)
 end
