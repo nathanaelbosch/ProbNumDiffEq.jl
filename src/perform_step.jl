@@ -15,8 +15,8 @@ function perform_step!(integ::ODEFilterIntegrator)
     x_pred = predict!(integ)
     integ.cache.u_pred .= E0 * x_pred.μ
 
-    h = measure_h!(integ, x_pred, t)
-    H = measure_H!(integ, x_pred, t)
+    measure_h!(integ, x_pred, t)
+    measure_H!(integ, x_pred, t)
 
     σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
     x_pred.Σ .+= (σ_sq - 1) .* integ.cache.Qh
@@ -52,43 +52,36 @@ end
 
 function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
 
-    @unpack t_new, p, f = integ
+    @unpack p, f = integ
     @unpack E0, h! = integ.constants
     @unpack du, h, u_pred = integ.cache
 
     IIP = isinplace(integ)
     if IIP
-        f(du, u_pred, p, t_new)
+        f(du, u_pred, p, t)
     else
-        du .= f(u_pred, p, t_new)
+        du .= f(u_pred, p, t)
     end
     integ.destats.nf += 1
 
     h!(h, du, x_pred.μ)
-
-    return h
 end
 
 function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
 
-    @unpack p, t_new, f = integ
+    @unpack p, f = integ
     @unpack jac, H! = integ.constants
     @unpack u_pred, ddu, H = integ.cache
 
     if !isnothing(jac)
         if isinplace(integ)
-            jac(ddu, u_pred, p, t_new)
+            jac(ddu, u_pred, p, t)
         else
-            ddu .= jac(u_pred, p, t_new)
+            ddu .= jac(u_pred, p, t)
         end
-        H!(H, ddu)
         integ.destats.njacs += 1
-    else
-        H!(H, ddu)
     end
-
-
-    return H
+    H!(H, ddu)
 end
 
 function update!(integ::ODEFilterIntegrator, prediction)
