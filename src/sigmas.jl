@@ -20,10 +20,11 @@ end
 
 
 struct WeightedMLESigma <: AbstractSigmaRule end
-function static_sigma_estimation(rule::WeightedMLESigma, integ, proposals)
+function static_sigma_estimation(rule::WeightedMLESigma, integ)
+    @unpack proposals = integ.cache
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
-    d = integ.d
+    d = integ.constants.d
     residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
     stepsizes = [p.dt for p in accepted_proposals]
     σ² = mean(residuals .* stepsizes)
@@ -32,10 +33,11 @@ end
 
 
 struct MAPSigma <: AbstractSigmaRule end
-function static_sigma_estimation(rule::MAPSigma, integ, proposals)
+function static_sigma_estimation(rule::MAPSigma, integ)
+    @unpack proposals = integ.cache
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
-    d = integ.d
+    d = integ.constants.d
     residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
     N = length(residuals)
 
