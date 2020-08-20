@@ -52,3 +52,28 @@ end
     @test cond(Qh) > cond(Qh_p)
     @test cond(Qh) > cond(Qh_p)^2
 end
+
+
+@testset "Compare internals during solve" begin
+    integ1 = init(prob, EKF1(), q=2, steprule=:constant, dt=0.1, smooth=false,
+                  precond_dt=1.0)
+    integ2 = init(prob, EKF1(), q=2, steprule=:constant, dt=0.1, smooth=false)
+    PI = integ2.constants.InvPrecond
+
+    for i in 1:20
+        if i>1 step!(integ1) end
+        if i>1 step!(integ2) end
+
+        @test !(integ1.cache.x ≈ integ2.cache.x)
+        @test integ1.cache.x ≈ PI * integ2.cache.x
+
+        @test integ1.cache.du ≈ integ2.cache.du
+        @test integ1.cache.ddu ≈ integ2.cache.ddu
+
+        @test integ1.constants.E0 * integ1.cache.x ≈ integ2.constants.E0 * integ2.cache.x
+        @test integ1.constants.E1 * integ1.cache.x ≈ integ2.constants.E1 * integ2.cache.x
+        @test integ1.cache.h ≈ integ2.cache.h
+        @test integ1.cache.H * integ1.cache.x ≈ integ2.cache.H * integ2.cache.x
+        @test integ1.cache.measurement ≈ integ2.cache.measurement
+    end
+end
