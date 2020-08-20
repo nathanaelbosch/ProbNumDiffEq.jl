@@ -7,5 +7,5 @@ using Test
     @testset "Solution" begin include("solution.jl") end
     @testset "Sigmas" begin include("sigmas.jl") end
     @testset "Error Estimates" begin include("error_estimates.jl") end
-
+    @testset "State Initialization" begin include("state_init.jl") end
 end

@@ -1,44 +1,3 @@
-"""Compute the derivative df/dt(y,t), making use of dy/dt=f(y,t)"""
-function _get_derivative(f, d)
-    dfdy(y, t) = d == 1 ?
-        ForwardDiff.derivative((y) -> f(y, t), y) :
-        ForwardDiff.jacobian((y) -> f(y, t), y)
-    dfdt(y, t) = ForwardDiff.derivative((t) -> f(y, t), t)
-    df(y, t) = dfdy(y, t) * f(y, t) + dfdt(y, t)
-    return df
-end
-
-"""Compute q derivatives of f; Output includes f itself"""
-function _get_derivatives(f, d, q)
-    out = Any[f]
-    if q > 1
-        for order in 2:q
-            push!(out, _get_derivative(out[end], d))
-        end
-    end
-    return out
-end
-
-
-"""Compute the q derivatives of the rhs function for a given ODE problem
-
-Can not handle in-place problems!
-"""
-function get_initial_derivatives(prob, order)
-    u0 = prob.u0
-    d = length(u0)
-    q = order
-    f = prob.f
-    t0 = prob.tspan[1]
-    p = prob.p
-
-    derivatives = _get_derivatives((x, t) -> f(x, p, t), d, q)
-    m0 = vcat(u0, [_f(u0, t0) for _f in derivatives]...)
-    return m0
-end
-
-
-
 """Nice, but slower than the ForwardDiff approach"""
 function _get_init_derivatives_mtk(prob, order)
     # Output of size order+1
@@ -55,7 +14,10 @@ function _get_init_derivatives_mtk(prob, order)
 
     rhs = ModelingToolkit.rhss(sys.eqs)
 
-    substitutions = [u .=> u0; p .=> prob.p; t .=> prob.tspan[1]]
+    substitutions = [u .=> u0; t .=> prob.tspan[1]]
+    if length(p) > 0
+        substitutions = [substitutions; p .=> prob.p]
+    end
 
     out[1:d] .= u0
 
@@ -73,4 +35,45 @@ function _get_init_derivatives_mtk(prob, order)
         substitutions = [u .=> val; substitutions]
     end
     return out
+end
+
+
+
+function get_initial_states_forwarddiff(prob::ODEProblem, order::Int)
+    f = isinplace(prob) ? iip_to_oop(prob.f) : prob.f
+
+    u0 = prob.u0
+    t0 = prob.tspan[1]
+    p = prob.p
+
+    d = length(u0)
+    q = order
+
+    m0 = zeros(d*(q+1))
+    P0 = zeros(d*(q+1), d*(q+1))
+
+    m0[1:d] .= u0
+    m0[d+1:2d] .= f(u0, p, t0)
+
+    f_derivatives = Function[f]
+    for o in 2:q
+        _curr_f_deriv = f_derivatives[end]
+        dfdu(u, p, t) = ProbNumODE.ForwardDiff.jacobian(u -> _curr_f_deriv(u, p, t), u)
+        dfdt(u, p, t) = ProbNumODE.ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
+        df(u, p, t) = dfdu(u, p, t) * f(u, p, t) + dfdt(u, p, t)
+        push!(f_derivatives, df)
+        m0[o*d+1:(o+1)*d] = df(u0, p, t0)
+    end
+
+    return m0, P0
+end
+
+
+function iip_to_oop(f!)
+    function f(u, p, t)
+        du = copy(u)
+        f!(du, u, p, t)
+        return du
+    end
+    return f
 end

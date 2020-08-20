@@ -157,7 +157,7 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
     t0 = prob.tspan[1]
     # Initial states
     m0, P0 = initialize_derivatives ?
-        initialize_with_derivatives(prob, q) :
+        get_initial_states_forwarddiff(prob, q) :
         initialize_without_derivatives(prob, q)
     x0 = Precond * Gaussian(m0, P0)
 
@@ -183,16 +183,6 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
 
 end
 
-
-function initialize_with_derivatives(prob, order)
-    q = order
-    d = length(prob.u0)
-    m0 = isinplace(prob) ?
-        _get_init_derivatives_mtk(prob, order) :
-        get_initial_derivatives(prob, q)
-    P0 = zeros(d*(q+1), d*(q+1))
-    return m0, P0
-end
 
 function initialize_without_derivatives(prob, order, var=1e-3)
     q = order
