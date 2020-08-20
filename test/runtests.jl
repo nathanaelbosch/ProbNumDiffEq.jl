@@ -8,4 +8,5 @@ using Test
     @testset "Sigmas" begin include("sigmas.jl") end
     @testset "Error Estimates" begin include("error_estimates.jl") end
     @testset "State Initialization" begin include("state_init.jl") end
+    @testset "Preconditioning" begin include("preconditioning.jl") end
 end

@@ -1,4 +1,5 @@
 # Goal: Test the correctness of state initialization
+using Test
 
 
 a, b = 1.1, -0.5
