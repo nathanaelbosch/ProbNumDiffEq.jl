@@ -45,7 +45,7 @@ function predict!(integ::ODEFilterIntegrator)
 
     # x_pred.μ .= Ah * x.μ
     mul!(x_pred.μ, Ah, x.μ)
-    x_pred.Σ .= Ah * x.Σ * Ah' .+ Qh
+    x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
     return x_pred
 end
 
@@ -99,12 +99,12 @@ function update!(integ::ODEFilterIntegrator, prediction)
     v .= 0 .- h
 
     m_p, P_p = prediction.μ, prediction.Σ
-    S .= H * P_p * H' .+ R
+    S .= Symmetric(H * P_p * H' .+ R)
     S_inv = inv(S)
     K .= P_p * H' * S_inv
 
     x_filt.μ .= m_p .+ K*v
-    x_filt.Σ .= P_p .- K*S*K'
+    x_filt.Σ .= P_p .- Symmetric(K*S*K')
 
     return x_filt, measurement
 end

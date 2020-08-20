@@ -116,7 +116,7 @@ function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
     jac = method == :ekf1 ? f.jac : nothing
     h!(h, du, m) = h .= E1*m - du
     H!(H, ddu) = H .= E1 - ddu * E0
-    R = zeros(d, d)
+    R = diagm(0 => 1e-10 .* ones(d))
 
     return GaussianODEFilterConstantCache(d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond)
 end
