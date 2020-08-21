@@ -26,8 +26,8 @@ prob = ODEProblem(f,u0,tspan,p)
 #1. Ours
 dt = 0.01
 abstol, reltol = 1e-2, 1e-2
-sol = solve(prob, EKF1(), q=3, steprule=:constant, dt=dt)
-#sol = solve(prob, EKF1(), q=3, abstol=abstol, reltol=reltol)
+sol = solve(prob, EKF0(), q=3, steprule=:constant, dt=dt)
+#sol = solve(prob, EKF0(), q=3, abstol=abstol, reltol=reltol)
 plot(sol)
 
 cb = AdaptiveProbIntsUncertainty(5)
@@ -68,6 +68,6 @@ savefig("./figures/uncertainty_calibration.svg"); nothing # hide
 
 **Bonus:**Benchmarking
 ```@repl probints
-@benchmark sol = solve(prob, EKF1(), q=3, steprule=:constant, dt=dt)
+@benchmark sol = solve(prob, EKF0(), q=3, steprule=:constant, dt=dt)
 @benchmark sim = solve(ensemble_prob, Tsit5(), adaptive=false, dt=dt, trajectories=100, callback=cb)
 ```
