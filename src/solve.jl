@@ -1,13 +1,13 @@
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem,
                             alg::AbstractODEFilter, args...; kwargs...)
-  integrator = DiffEqBase.__init(prob, alg, args...; kwargs...)
-  sol = DiffEqBase.solve!(integrator)
-  return sol
+    integrator = DiffEqBase.__init(prob, alg; args..., kwargs...)
+    sol = DiffEqBase.solve!(integrator)
+    return sol
 end
-DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF0; kwargs...) =
-    DiffEqBase.__init(prob, ODEFilter(); method=:ekf0, kwargs...)
-DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF1; kwargs...) =
-    DiffEqBase.__init(prob, ODEFilter(); method=:ekf1, kwargs...)
+DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF0, args...; kwargs...) =
+    DiffEqBase.__init(prob, ODEFilter(), args...; method=:ekf0, kwargs...)
+DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF1, args...; kwargs...) =
+    DiffEqBase.__init(prob, ODEFilter(), args...; method=:ekf1, kwargs...)
 
 function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
