@@ -58,8 +58,8 @@ function get_initial_states_forwarddiff(prob::ODEProblem, order::Int)
     f_derivatives = Function[f]
     for o in 2:q
         _curr_f_deriv = f_derivatives[end]
-        dfdu(u, p, t) = ProbNumODE.ForwardDiff.jacobian(u -> _curr_f_deriv(u, p, t), u)
-        dfdt(u, p, t) = ProbNumODE.ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
+        dfdu(u, p, t) = ForwardDiff.jacobian(u -> _curr_f_deriv(u, p, t), u)
+        dfdt(u, p, t) = ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
         df(u, p, t) = dfdu(u, p, t) * f(u, p, t) + dfdt(u, p, t)
         push!(f_derivatives, df)
         m0[o*d+1:(o+1)*d] = df(u0, p, t0)
