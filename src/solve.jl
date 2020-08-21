@@ -34,14 +34,28 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            saveat=nothing,
                            save_everystep=true,
                            internalnorm = DiffEqBase.ODE_DEFAULT_NORM,
+
+                           timeseries_errors=false,
+                           dense_errors=false,
+
                            kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
+    # @info "Called init" method steprule dt q
 
     if method == :ekf1 && isnothing(prob.f.jac)
         error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl
                use ProbNumoDE.remake_prob_with_jac(prob).""")
     end
+
+    if length(prob.u0) == 1 && size(prob.u0) == ()
+        @warn "prob.u0 is a scalar; In order to run, we remake the problem with u0 = [u0]."
+        prob = remake(prob, u0=[prob.u0])
+    end
+
+    (timeseries_errors != false) && @warn("`timeseries_errors` currently not supported")
+    (dense_errors != false) && @warn("`dense_errors` currently not supported")
+
 
     f = prob.f
     u0 = prob.u0
