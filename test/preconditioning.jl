@@ -16,8 +16,8 @@ prob = ProbNumODE.remake_prob_with_jac(prob)
 
     # Same solutions
     @test sol1.t ≈ sol2.t
-    @test sol1.u.μ ≈ sol2.u.μ
-    @test sol1.u.Σ ≈ sol2.u.Σ atol=1e-10
+    @test sol1.pu.μ ≈ sol2.pu.μ
+    @test sol1.pu.Σ ≈ sol2.pu.Σ atol=1e-10
 
     # Different states
     @test sol1.x != sol2.x

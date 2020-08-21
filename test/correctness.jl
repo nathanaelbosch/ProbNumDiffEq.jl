@@ -32,7 +32,7 @@ import ProbNumODE: remake_prob_with_jac
                     local_errors=error,
                     smooth=false,
                     )
-        diffs = [u.μ for u in sol.(t_eval)] .- true_sol
+        diffs = sol.(t_eval) .- true_sol
         maxdiff = maximum(abs.(ProbNumODE.stack(diffs)))
         mse = sum(norm.(diffs, 2)) / length(t_eval)
 
@@ -71,7 +71,7 @@ end
                     local_errors=error,
                     smooth=false,
                     )
-        diffs = [u.μ for u in sol.(t_eval)] .- true_sol
+        diffs = sol.(t_eval) .- true_sol
         maxdiff = maximum(abs.(ProbNumODE.stack(diffs)))
         mse = sum(norm.(diffs, 2)) / length(t_eval)
 
