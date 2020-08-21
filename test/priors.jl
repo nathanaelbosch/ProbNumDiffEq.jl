@@ -2,6 +2,9 @@ using ProbNumODE
 using Test
 using LinearAlgebra
 
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
+
 
 h = rand()
 σ = rand()
@@ -55,4 +58,18 @@ end
 
     @test AH_21_PRE ≈ Ah
     @test QH_21_PRE ≈ Qh
+end
+
+
+
+@testset "Verify correct prior dim" begin
+    prob = prob_ode_lotkavoltera
+    d = length(prob.u0)
+    for q in 1:5
+        integ = init(prob, EKF0(), q=q, initialize_derivatives=false, smooth=false)
+        @test length(integ.cache.x.μ) == d*(q+1)
+        sol = solve!(integ)
+        @test length(integ.cache.x.μ) == d*(q+1)
+        @test length(sol.x[end].μ) == d*(q+1)
+    end
 end
