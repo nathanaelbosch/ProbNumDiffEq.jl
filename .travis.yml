@@ -3,13 +3,13 @@ language: julia
 notifications:
   email: false
 julia:
-  # - 1.0
-  # - 1.4
+  - 1.0
+  - 1.4
   - 1.5
   # - nightly
 os:
   - linux
-  # - osx
+  - osx
 arch:
   - x64
 cache:
