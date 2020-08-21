@@ -1,10 +1,28 @@
 using Test
+using ProbNumODE
 
 
-@testset "Priors" begin include("priors.jl") end
-@testset "Correctness" begin include("correctness.jl") end
-@testset "Solution" begin include("solution.jl") end
-@testset "Sigmas" begin include("sigmas.jl") end
-@testset "State Initialization" begin include("state_init.jl") end
-@testset "Preconditioning" begin include("preconditioning.jl") end
-@testset "Step Control" begin include("step_controller.jl") end
+@testset "ProbNumODE" begin
+
+    println("Correctness")
+    @testset "Correctness" begin include("correctness.jl") end
+
+    println("Priors")
+    @testset "Priors" begin include("priors.jl") end
+
+    println("Solution")
+    @testset "Solution" begin include("solution.jl") end
+
+    println("Sigmas")
+    @testset "Sigmas" begin include("sigmas.jl") end
+
+    println("State Initialization")
+    @testset "State Initialization" begin include("state_init.jl") end
+
+    println("Preconditioning")
+    @testset "Preconditioning" begin include("preconditioning.jl") end
+
+    println("Step Control")
+    @testset "Step Control" begin include("step_controller.jl") end
+
+end
