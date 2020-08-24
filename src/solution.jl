@@ -65,7 +65,7 @@ struct GaussianFilteringPosterior <: AbstractFilteringPosterior
     x
     solver
 end
-function (posterior::GaussianFilteringPosterior)(tval)
+function (posterior::GaussianFilteringPosterior)(tval::Real)
     @unpack t, x, solver = posterior
 
     @unpack A!, Q!, d, q, E0 = solver.constants
@@ -105,6 +105,7 @@ function (posterior::GaussianFilteringPosterior)(tval)
     return smoothed_rv
 
 end
+(posterior::GaussianFilteringPosterior)(tvals::AbstractVector) = StructArray(posterior.(tvals))
 Base.getindex(post::GaussianFilteringPosterior, key) = post.x[key]
 
 
@@ -122,8 +123,12 @@ end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 Base.getindex(post::GaussianODEFilterPosterior, key) = post.proj * post.filtering_posterior[key]
 
-function (ode_posterior::GaussianODEFilterPosterior)(t)
+function (ode_posterior::GaussianODEFilterPosterior)(t::Real)
     return ode_posterior.proj * ode_posterior.filtering_posterior(t)
+end
+function (ode_posterior::GaussianODEFilterPosterior)(tvec::AbstractVector)
+    return StructArray([ode_posterior.proj * ode_posterior.filtering_posterior(t)
+                        for t in tvec])
 end
 
 (sol::ProbODESolution)(t::Real) = sol.p(t).μ
