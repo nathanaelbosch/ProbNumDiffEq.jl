@@ -14,7 +14,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            method=:ekf1,
                            prior=:ibm,
                            q=1,
-                           smooth=true,
+                           smooth=false,
                            initialize_derivatives=true,
 
                            steprule=:standard,
