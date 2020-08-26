@@ -21,12 +21,11 @@ function ibm(d::Integer, q::Integer; precond_dt=1.0)
         # Assumes that A comes from a previous computation => zeros and one-diag
         val = one(h)
         for i in 1:q
-            val = val * h / (i)
+            val = val * h / precond_dt / i
             for j in 1:d*(q+1-i)
                 @inbounds A[j,j+(d*i)] = val
             end
         end
-        A .= P * A * P_inv
     end
 
     @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::AbstractFloat)
@@ -39,14 +38,13 @@ function ibm(d::Integer, q::Integer; precond_dt=1.0)
         val = one(h)
         @simd for col in 0:q
             @simd for row in col:q
-                val = _transdiff_ibm_element(row, col, h)
+                val = _transdiff_ibm_element(row, col, h) * σ² / precond_dt^(2q-col-row)
                 @simd for i in 0:d-1
-                    @inbounds Q[1 + col*d + i,1 + row*d + i] = val * σ²
-                    @inbounds Q[1 + row*d + i,1 + col*d + i] = val * σ²
+                    @inbounds Q[1 + col*d + i,1 + row*d + i] = val
+                    @inbounds Q[1 + row*d + i,1 + col*d + i] = val
                 end
             end
         end
-        Q .= P * Q * P'
     end
 
     return A!, Q!
