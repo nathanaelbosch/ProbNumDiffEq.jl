@@ -11,9 +11,11 @@ function logistic_equation(; r=3, u0=1e-1, tspan=(0.0, 2.5))
 end
 
 
-function brusselator(; u0=[1.5; 3], tspan=(0., 20.))
-    f(u, p, t) = [1 + u[1]^2*u[2] - 4 * u[1];
-                  3 * u[1] - u[1]^2 * u[2]]
+function brusselator(; u0=[1.5; 3], tspan=(0., 10.))
+    function f(du, u, p, t)
+        du[1] = 1 + u[1]^2*u[2] - 4 * u[1]
+        du[2] = 3 * u[1] - u[1]^2 * u[2]
+    end
     brusselator = ODEProblem(f, u0, tspan)
     return brusselator
 end
