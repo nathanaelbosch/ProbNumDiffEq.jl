@@ -80,9 +80,11 @@ end
 
 
 function remake_prob_with_jac(prob)
-    prob = remake(prob, p=collect(prob.p))
+    p = prob.p isa DiffEqBase.NullParameters ? [] : collect(prob.p)
+    prob = remake(prob, p=p)
     sys = modelingtoolkitize(prob)
     jac = eval(ModelingToolkit.generate_jacobian(sys)[2])
-    f = ODEFunction(prob.f.f, jac=jac)
+    IIP = isinplace(prob.f)
+    f = ODEFunction{IIP}(prob.f.f, jac=jac)
     return remake(prob, f=f)
 end
