@@ -5,6 +5,7 @@ version = "0.1.0"
 
 [deps]
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
+DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 GaussianDistributions = "43dcc890-d446-5863-8d1a-14597580bb8d"
