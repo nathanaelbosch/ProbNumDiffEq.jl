@@ -97,8 +97,13 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     )
     sigmarule = sigmarules[sigmarule]
 
-    empty_proposal = ()
-    empty_proposals = []
+    xType = typeof(cache.x)
+    sigmaType = typeof(cache.σ_sq)
+    measType = typeof(cache.measurement)
+    proposalType = NamedTuple{(:t, :prediction, :filter_estimate, :measurement, :H, :Q, :v, :σ², :accept, :dt),
+                              Tuple{tType, xType, xType, measType, typeof(cache.H), typeof(cache.Qh),
+                                    typeof(cache.h), sigmaType, Bool, tType}}
+    empty_proposals = proposalType[]
 
     destats = DiffEqBase.DEStats(0)
 
@@ -110,15 +115,19 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
     dt_init = dt != 0 ? dt : 1e-3
-    opts = DEOptions(maxiters, adaptive, abstol, reltol, gamma, qmin, qmax, internalnorm, dtmin, dtmax)
+    QT = typeof(dtmin)
+    opts = DEOptions{typeof(maxiters), typeof(abstol), typeof(reltol), QT, typeof(internalnorm), tType}(
+        maxiters, adaptive, abstol, reltol, QT(gamma), qmin, qmax, internalnorm, dtmin, dtmax)
 
-    return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f)}(
+    return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), typeof(opts), typeof(constants), typeof(cache),
+                               typeof(sigmarule), typeof(error_estimator), typeof(steprule), typeof(empty_proposals),
+                               xType, sigmaType, typeof(prob), typeof(alg)}(
         f, u0, t0, t0, t0, tmax, dt_init, p, one(eltype(prob.tspan)),
         constants, cache,
         # d, q, dm, mm, sigmarule, steprule,
         opts, sigmarule, error_estimator, steprule, smooth,
         #
-        empty_proposal, empty_proposals, state_estimates, times, sigmas,
+        empty_proposals, state_estimates, times, sigmas,
         #
         0, accept_step, retcode, prob, alg, destats,
     )

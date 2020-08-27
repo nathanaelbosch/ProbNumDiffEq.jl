@@ -36,42 +36,44 @@ end
 ########################################################################################
 # Integrator
 ########################################################################################
-mutable struct ODEFilterIntegrator{IIP, S, T, P, F, O, cacheType} <: DiffEqBase.AbstractODEIntegrator{ODEFilter, IIP, S, T}
-    f::F                  # eom
-    u::S                  # current functionvalue
-    # x::X                  # current state
-    t::T                  # current time
-    t_new::T                  # next time
-    t0::T                 # initial time, only for reinit
-    tmax::T               # end of the interval
-    dt::T                 # step size
-    p::P                  # parameter container
-    EEst                  # (Scaled) error estimate
+mutable struct ODEFilterIntegrator{
+    IIP, S, T, P, F, O, constantsType, cacheType,
+    sigmaestType, errorestType, stepruleType, proposalsType,
+    xType, sigmaType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
+    f::F                               # eom
+    u::S                               # current functionvalue
+    # x::X                             # current state
+    t::T                               # current time
+    t_new::T                           # next time
+    t0::T                              # initial time, only for reinit
+    tmax::T                            # end of the interval
+    dt::T                              # step size
+    p::P                               # parameter container
+    EEst                               # (Scaled) error estimate
 
-    constants
+    constants::constantsType
     cache::cacheType
 
     # Options
-    opts::O       # General (not PN-specific) solver options
-    sigma_estimator
-    error_estimator
-    steprule
-    smooth::Bool          # Smooth the solution or not
+    opts::O                            # General (not PN-specific) solver options
+    sigma_estimator::sigmaestType
+    error_estimator::errorestType
+    steprule::stepruleType
+    smooth::Bool                       # Smooth the solution or not
 
     # Save into
-    proposal              # Current proposal
-    proposals             # List of proposals
-    state_estimates       # List of state estimates, used to build the solution
+    proposals::proposalsType           # List of proposals
+    state_estimates::Vector{xType}     # List of state estimates, used to build the solution
     times::Vector{T}
-    sigmas
+    sigmas::Vector{sigmaType}
 
     # Misc
-    iter::UInt            # Current iteration count
-    accept_step::Bool     # If the current step is accepted
-    retcode::Symbol       # Current return code, used to build the solution
-    prob                  # Only used to build the solution
-    alg                   # Only used to build the solution
-    destats::DiffEqBase.DEStats   # To track stats like the number of f evals
+    iter::UInt                         # Current iteration count
+    accept_step::Bool                  # If the current step is accepted
+    retcode::Symbol                    # Current return code, used to build the solution
+    prob::probType                     # Only used to build the solution
+    alg::algType                       # Only used to build the solution
+    destats::DiffEqBase.DEStats        # To track stats like the number of f evals
 end
 DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 
@@ -84,23 +86,23 @@ DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 abstract type ProbNumODECache <: DiffEqBase.DECache end
 abstract type ProbNumODEConstantCache <: ProbNumODECache end
 abstract type ProbNumODEMutableCache <: ProbNumODECache end
-struct GaussianODEFilterConstantCache <: ProbNumODEMutableCache
-    d::Int                # Dimension of the problem
-    q::Int                # Order of the prior
+struct GaussianODEFilterConstantCache{RType, EType, PrecondType} <: ProbNumODEMutableCache
+    d::Int                  # Dimension of the problem
+    q::Int                  # Order of the prior
     # dm                    # Dynamics Model
     # mm                    # Measurement Model
     A!
     Q!
     h!
     H!
-    R
+    R::RType
     # Precond
     # Precond_inv
-    E0
-    E1
+    E0::EType
+    E1::EType
     jac
-    Precond
-    InvPrecond
+    Precond::PrecondType
+    InvPrecond::PrecondType
 end
 function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
     d, f = length(prob.u0), prob.f
@@ -119,7 +121,8 @@ function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
     H!(H, ddu) = H .= E1 - ddu * E0
     R = diagm(0 => 1e-10 .* ones(d))
 
-    return GaussianODEFilterConstantCache(d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond)
+    return GaussianODEFilterConstantCache{typeof(R), typeof(E0), typeof(Precond)}(
+        d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond)
 end
 
 
