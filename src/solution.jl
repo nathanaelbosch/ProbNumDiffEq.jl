@@ -80,13 +80,16 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
         return x[idx]
     end
 
+    idx = sum(t .<= tval)
+    prev_rv, next_rv = x[idx:idx+1]
+    prev_t, next_t = t[idx:idx+1]
+    σ² = 1.0
+
     # Extrapolate
-    prev_idx = sum(t .<= tval)
-    prev_rv = x[prev_idx]
     m, P = prev_rv.μ, prev_rv.Σ
-    h = tval - t[prev_idx]
-    A!(Ah, h)
-    Q!(Qh, h)
+    h1 = tval - prev_t
+    A!(Ah, h1)
+    Q!(Qh, h1, σ²)
     m_pred, P_pred = kf_predict(m, P, Ah, Qh)
 
     pred_rv = Gaussian(m_pred, P_pred)
@@ -96,12 +99,15 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     end
 
     # Smooth
-    next_rv = x[prev_idx+1]
-    h = t[prev_idx+1] - tval
-    m_pred_next, P_pred_next = kf_predict(m, P, Ah, Qh)
+    h2 = next_t - tval
+    A!(Ah, h2)
+    Q!(Qh, h2, σ²)
+    m_pred_next, P_pred_next = kf_predict(m_pred, P_pred, Ah, Qh)
+
     m_smoothed, P_smoothed = kf_smooth(
         m_pred, P_pred, m_pred_next, P_pred_next, next_rv.μ, next_rv.Σ, Ah, Qh)
     smoothed_rv = Gaussian(m_smoothed, P_smoothed)
+
     return smoothed_rv
 
 end
