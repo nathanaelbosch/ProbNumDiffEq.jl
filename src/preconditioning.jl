@@ -1,13 +1,5 @@
 function preconditioner(expected_stepsize, d, q)
     h = expected_stepsize
-
-    smallval = h ^ q
-    if smallval < eps(h)
-        @warn "Preconditioner contains values below machine precision ($smallval)"
-        h = eps(h) ^ (1 / self.ordint)
-    end
-
-    # diags = h .^ (0:q)
     diags = h .^ (-q : 0)
     I_d = diagm(0 => ones(d))
     P = Diagonal(kron(Diagonal(diags), I_d))
