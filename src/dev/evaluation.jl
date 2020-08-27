@@ -1,9 +1,21 @@
-function add_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEqBase.AbstractODESolution)
+function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEqBase.AbstractODESolution)
+
     @assert sol2.dense
     densetimes = collect(range(sol.t[1],stop=sol.t[end],length=100))
 
     interp_pu = sol.p(densetimes)[2:end]
     interp_analytic = sol2(densetimes)[2:end]
+
+    diffs = interp_pu.μ - interp_analytic.u
+    xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
+    sol.errors[:Χ²] = mean(xi2_stats)
+    return nothing
+end
+
+function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEqBase.AbstractODESolution)
+
+    interp_pu = sol.pu[2:end]
+    interp_analytic = sol2(sol.t)[2:end]
 
     diffs = interp_pu.μ - interp_analytic.u
     xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
@@ -21,6 +33,38 @@ mutable struct MyWorkPrecision
     name::String
 end
 
+
+function compute_costs_errors(prob, alg, abstol, reltol, appxsol, dt=nothing;
+                              numruns=20, seconds=2, kwargs...)
+    if dt === nothing
+        sol_fun = () -> solve(prob, alg; abstol=abstol, reltol=reltol,
+                              kwargs...)
+    else
+        sol_fun = () -> solve(prob, alg; abstol=abstol, reltol=reltol, dt=dt,
+                              kwargs...)
+    end
+
+    sol = sol_fun()
+    sol = appxtrue(sol, appxsol)
+    add_dense_chi2_statistic!(sol, appxsol)
+    add_discrete_chi2_statistic!(sol, appxsol)
+
+    benchmark_f = () -> @elapsed sol_fun()
+    time = benchmark_f()
+    if time < seconds
+        time = mapreduce(j -> benchmark_f(), min, 2:numruns; init = time)
+    end
+    nf = sol.destats.nf
+    nf_and_jac = sol.destats.nf + sol.destats.njacs
+    costs = Dict(
+        :nf => nf,
+        :num_evals => nf_and_jac,
+        :time => time,
+    )
+    return costs, sol.errors
+end
+
+
 function MyWorkPrecision(prob, alg::AbstractODEFilter, abstols, reltols, name, appxsol, dts=nothing;
                          print_tols=true, numruns=20, seconds=2, kwargs...)
     N = length(abstols)
@@ -30,36 +74,17 @@ function MyWorkPrecision(prob, alg::AbstractODEFilter, abstols, reltols, name, a
     for i in 1:N
         if dts === nothing
             print_tols && println("$i: alg=$alg; abstol=$(abstols[i]); reltol=$(reltols[i])")
-            sol_fun = () -> solve(prob, alg, abstol=abstols[i], reltol=reltols[i],
-                                  kwargs...)
+            c, e = compute_costs_errors(prob, alg, abstols[i], reltols[i], appxsol;
+                                        numruns=numruns, seconds=seconds, kwargs...)
         else
-            @assert length(dts) == length(abstols)
             print_tols && println("$i: alg=$alg; abstol=$(abstols[i]); reltol=$(reltols[i]); dt=$(dts[i])")
-            sol_fun = () -> solve(prob, alg, abstol=abstols[i], reltol=reltols[i], dt=dts[i],
-                                  kwargs...)
+            c, e = compute_costs_errors(prob, alg, abstols[i], reltols[i], appxsol, dts[i];
+                                        numruns=numruns, seconds=seconds, kwargs...)
         end
 
-        sol = sol_fun()
-        sol = appxtrue(sol, appxsol)
-        add_chi2_statistic!(sol, appxsol)
-        push!(errors, sol.errors)
-
-        benchmark_f = () -> @elapsed sol_fun()
-        time = benchmark_f()
-        if time < seconds
-            time = mapreduce(j -> benchmark_f(), min, 2:numruns; init = time)
-        end
-        nf = sol.destats.nf
-        nf_and_jac = sol.destats.nf + sol.destats.njacs
-        push!(costs, Dict(
-            :nf => nf,
-            :num_evals => nf_and_jac,
-            :time => time,
-        ))
+        push!(errors, e)
+        push!(costs, c)
     end
-    # dict_to_namedtuple(d::Dict) = NamedTuple{Tuple(keys(d))}(values(d))
-    # costs = StructArray(map(dict_to_namedtuple, costs))
-    # errors = StructArray(map(dict_to_namedtuple, errors))
 
     return MyWorkPrecision(prob, abstols, reltols, errors, costs, name)
 end
