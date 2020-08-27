@@ -1,6 +1,7 @@
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem,
                             alg::AbstractODEFilter, args...; kwargs...)
-    integrator = DiffEqBase.__init(prob, alg; args..., kwargs...)
+    @debug "Called solve with" args kwargs
+    integrator = DiffEqBase.__init(prob, alg, args...; kwargs...)
     sol = DiffEqBase.solve!(integrator)
     return sol
 end
@@ -41,7 +42,6 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            kwargs...)
     # Init
     IIP = DiffEqBase.isinplace(prob)
-    # @info "Called init" method steprule dt q
 
     if method == :ekf1 && isnothing(prob.f.jac)
         error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl
