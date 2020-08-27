@@ -19,7 +19,7 @@ end
 
 function smooth!(integ::ODEFilterIntegrator)
 
-    @unpack state_estimates, times = integ
+    @unpack state_estimates, times, sigmas = integ
     @unpack A!, Q! = integ.constants
     @unpack Ah, Qh, x_pred = integ.cache
 
@@ -29,7 +29,7 @@ function smooth!(integ::ODEFilterIntegrator)
         filter_estimate = state_estimates[i]  # t
 
         A!(Ah, h)
-        Q!(Qh, h)
+        Q!(Qh, h, sigmas[i])
         mul!(x_pred.μ, Ah, filter_estimate.μ)
         x_pred.Σ .= Ah * filter_estimate.Σ * Ah' .+ Qh
 
@@ -45,9 +45,11 @@ function calibrate!(integ::ODEFilterIntegrator)
     proposals = integ.proposals
     σ² = static_sigma_estimation(integ.sigma_estimator, integ, proposals)
     if σ² != 1
+        @assert all(integ.sigmas .== 1) "Currently, sigma has to bei EITHER dynamics OR fixed, but this seems like a mix of both!"
         for s in state_estimates
             s.Σ .*= σ²
         end
+        integ.sigmas .= σ²
         # for p in proposals
         #     p.measurement.Σ .*= σ²
         #     p.prediction.Σ .*= σ²

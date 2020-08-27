@@ -104,6 +104,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     state_estimates = StructArray([cache.x])
     times = [t0]
+    sigmas = []
     accept_step = false
     retcode = :Default
 
@@ -117,7 +118,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         # d, q, dm, mm, sigmarule, steprule,
         opts, sigmarule, error_estimator, steprule, smooth,
         #
-        empty_proposal, empty_proposals, state_estimates, times,
+        empty_proposal, empty_proposals, state_estimates, times, sigmas,
         #
         0, accept_step, retcode, prob, alg, destats,
     )
@@ -133,6 +134,7 @@ function DiffEqBase.solve!(integ::ODEFilterIntegrator)
         integ.prob, integ.alg,
         integ.times,
         integ.state_estimates,
+        integ.sigmas,
         integ.proposals, integ;
         destats=integ.destats)
 end

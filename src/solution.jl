@@ -2,7 +2,7 @@
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
-struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,pType,P,A,S,IType,DE} <: AbstractProbODESolution{T,N,uType}
+struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,pType,P,A,S,IType,DE} <: AbstractProbODESolution{T,N,uType}
     u::uType                # array of non-probabilistic function values
     pu::puType              # array of Gaussians
     p::probType             # ODE posterior
@@ -10,6 +10,7 @@ struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,pType,
     errors::DType
     x::xType
     t::tType
+    sigmas::sType
     proposals::pType
     prob::P
     alg::A
@@ -23,7 +24,7 @@ end
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
     alg::ODEFilter,
-    t, x,
+    t, x, sigmas,
     proposals, solver;
     dense=false,
     retcode = :Default,
@@ -31,9 +32,11 @@ function DiffEqBase.build_solution(
     kwargs...)
     @unpack d, q, E0 = solver.constants
 
+    @assert length(t) == length(x) == (length(sigmas)+1)
+
     pu = StructArray(map(x -> E0 * x, x))
     u = pu.μ
-    p = GaussianODEFilterPosterior(t, x, solver)
+    p = GaussianODEFilterPosterior(t, x, sigmas, solver)
     interp = p
 
     T = eltype(eltype(u))
@@ -44,16 +47,16 @@ function DiffEqBase.build_solution(
     # errors[:final] = 0.0
 
     return ProbODESolution{T, N, typeof(u), typeof(pu), typeof(p), typeof(u_analytic), typeof(errors),
-                           typeof(x), typeof(t), typeof(proposals),
+                           typeof(x), typeof(t), typeof(sigmas), typeof(proposals),
                            typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-        u, pu, p, u_analytic, errors, x, t, proposals, prob, alg, solver, dense, interp, retcode, destats)
+        u, pu, p, u_analytic, errors, x, t, sigmas, proposals, prob, alg, solver, dense, interp, retcode, destats)
 end
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
     return ProbODESolution{
         T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p), typeof(u_analytic), typeof(errors),
-        typeof(sol.x), typeof(sol.t), typeof(sol.proposals),
+        typeof(sol.x), typeof(sol.t), typeof(sol.sigmas), typeof(sol.proposals),
         typeof(sol.prob), typeof(sol.alg), typeof(sol.solver), typeof(sol.interp), typeof(sol.destats)}(
-            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.proposals, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
+            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.sigmas, sol.proposals, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
 end
 
 ########################################################################################
@@ -63,14 +66,14 @@ abstract type AbstractFilteringPosterior end
 struct GaussianFilteringPosterior <: AbstractFilteringPosterior
     t
     x
+    sigmas
     solver
 end
 function (posterior::GaussianFilteringPosterior)(tval::Real)
-    @unpack t, x, solver = posterior
+    @unpack t, x, sigmas, solver = posterior
 
     @unpack A!, Q!, d, q, E0 = solver.constants
     @unpack Ah, Qh = solver.cache
-
     if tval < t[1]
         error("Invalid t<t0")
     end
@@ -83,7 +86,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     idx = sum(t .<= tval)
     prev_rv, next_rv = x[idx:idx+1]
     prev_t, next_t = t[idx:idx+1]
-    σ² = 1.0
+    σ² = sigmas[idx]
 
     # Extrapolate
     m, P = prev_rv.μ, prev_rv.Σ
@@ -121,9 +124,9 @@ struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
     proj
 end
 
-function GaussianODEFilterPosterior(t, x, solver)
+function GaussianODEFilterPosterior(t, x, sigmas, solver)
     GaussianODEFilterPosterior(
-        GaussianFilteringPosterior(t, x, solver),
+        GaussianFilteringPosterior(t, x, sigmas, solver),
         solver.constants.E0)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"

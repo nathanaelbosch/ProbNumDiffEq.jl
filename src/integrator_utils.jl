@@ -58,4 +58,5 @@ function apply_step!(integ)
     # For the solution
     push!(integ.state_estimates, integ.cache.x)
     push!(integ.times, integ.t)
+    push!(integ.sigmas, integ.cache.σ_sq)
 end

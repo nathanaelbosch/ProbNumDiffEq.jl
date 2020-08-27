@@ -63,6 +63,7 @@ mutable struct ODEFilterIntegrator{IIP, S, T, P, F} <: DiffEqBase.AbstractODEInt
     proposals             # List of proposals
     state_estimates       # List of state estimates, used to build the solution
     times
+    sigmas
 
     # Misc
     iter::UInt            # Current iteration count
