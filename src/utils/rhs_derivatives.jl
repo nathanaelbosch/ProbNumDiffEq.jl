@@ -49,8 +49,9 @@ function get_initial_states_forwarddiff(prob::ODEProblem, order::Int)
     d = length(u0)
     q = order
 
-    m0 = zeros(d*(q+1))
-    P0 = zeros(d*(q+1), d*(q+1))
+    uElType = eltype(u0)
+    m0 = zeros(uElType, d*(q+1))
+    P0 = zeros(uElType, d*(q+1), d*(q+1))
 
     m0[1:d] .= u0
     m0[d+1:2d] .= f(u0, p, t0)

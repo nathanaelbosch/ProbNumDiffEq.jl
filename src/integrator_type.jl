@@ -15,19 +15,19 @@ mutable struct EKF1 <: AbstractODEFilter end
 ########################################################################################
 # Options
 ########################################################################################
-mutable struct DEOptions
-    maxiters
-    adaptive
-    abstol
-    reltol
-    gamma
-    qmin
-    qmax
+mutable struct DEOptions{MI, absType, relType, QT, F1, tType}
+    maxiters::MI
+    adaptive::Bool
+    abstol::absType
+    reltol::relType
+    gamma::QT
+    qmin::QT
+    qmax::QT
     # beta1
     # beta2
-    internalnorm
-    dtmin
-    dtmax
+    internalnorm::F1
+    dtmin::tType
+    dtmax::tType
 end
 
 
@@ -36,7 +36,7 @@ end
 ########################################################################################
 # Integrator
 ########################################################################################
-mutable struct ODEFilterIntegrator{IIP, S, T, P, F} <: DiffEqBase.AbstractODEIntegrator{ODEFilter, IIP, S, T}
+mutable struct ODEFilterIntegrator{IIP, S, T, P, F, O, cacheType} <: DiffEqBase.AbstractODEIntegrator{ODEFilter, IIP, S, T}
     f::F                  # eom
     u::S                  # current functionvalue
     # x::X                  # current state
@@ -49,10 +49,10 @@ mutable struct ODEFilterIntegrator{IIP, S, T, P, F} <: DiffEqBase.AbstractODEInt
     EEst                  # (Scaled) error estimate
 
     constants
-    cache
+    cache::cacheType
 
     # Options
-    opts::DEOptions       # General (not PN-specific) solver options
+    opts::O       # General (not PN-specific) solver options
     sigma_estimator
     error_estimator
     steprule
@@ -62,7 +62,7 @@ mutable struct ODEFilterIntegrator{IIP, S, T, P, F} <: DiffEqBase.AbstractODEInt
     proposal              # Current proposal
     proposals             # List of proposals
     state_estimates       # List of state estimates, used to build the solution
-    times
+    times::Vector{T}
     sigmas
 
     # Misc
@@ -85,8 +85,8 @@ abstract type ProbNumODECache <: DiffEqBase.DECache end
 abstract type ProbNumODEConstantCache <: ProbNumODECache end
 abstract type ProbNumODEMutableCache <: ProbNumODECache end
 struct GaussianODEFilterConstantCache <: ProbNumODEMutableCache
-    d                # Dimension of the problem
-    q                # Order of the prior
+    d::Int                # Dimension of the problem
+    q::Int                # Order of the prior
     # dm                    # Dynamics Model
     # mm                    # Measurement Model
     A!
@@ -123,30 +123,35 @@ function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
 end
 
 
-mutable struct GaussianODEFilterCache <: ProbNumODEMutableCache
-    u
-    u_pred
+mutable struct GaussianODEFilterCache{uType, xType, matType, sigmaType} <: ProbNumODEMutableCache
+    u::uType
+    u_pred::uType
     # tmp
     # utilde
-    x
-    x_pred
-    x_filt
+    x::xType
+    x_pred::xType
+    x_filt::xType
     measurement
-    Ah
-    Qh
-    h
-    H
-    du
-    ddu
-    K
-    σ_sq
-    σ_sq_prev
-    P_tmp
-    err_tmp
+    Ah::matType
+    Qh::matType
+    h::uType
+    H::matType
+    du::uType
+    ddu::matType
+    K::matType
+    σ_sq::sigmaType
+    σ_sq_prev::sigmaType
+    P_tmp::matType
+    err_tmp::uType
 end
 function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=true)
     @unpack Precond, InvPrecond, E0, E1 = constants
     u0 = prob.u0
+
+    uType = typeof(u0)
+    uElType = eltype(u0)
+    matType = Matrix{uElType}
+
     t0 = prob.tspan[1]
     # Initial states
     m0, P0 = initialize_derivatives ?
@@ -154,8 +159,8 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
         initialize_without_derivatives(prob, q)
     x0 = Precond * Gaussian(m0, P0)
 
-    Ah_empty = diagm(0=>ones(d*(q+1)))
-    Qh_empty = zeros(d*(q+1), d*(q+1))
+    Ah_empty = diagm(0=>ones(uElType, d*(q+1)))
+    Qh_empty = zeros(uElType, d*(q+1), d*(q+1))
     h = E1 * x0.μ
     H = zeros(d, d*(q+1))
     du = copy(h)
@@ -165,7 +170,7 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
     measurement = Gaussian(v, S)
     K = zeros(d*(q+1),d)
 
-    GaussianODEFilterCache(
+    GaussianODEFilterCache{uType, typeof(x0), matType, typeof(sigma)}(
         copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0),
         measurement,
