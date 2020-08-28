@@ -27,4 +27,7 @@ using ProbNumODE
 
     println("Smoothing")
     @testset "Smoothing" begin include("smoothing.jl") end
+
+    println("Errors")
+    @testset "Errors" begin include("errors.jl") end
 end
