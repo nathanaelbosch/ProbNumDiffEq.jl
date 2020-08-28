@@ -25,4 +25,6 @@ using ProbNumODE
     println("Step Control")
     @testset "Step Control" begin include("step_controller.jl") end
 
+    println("Smoothing")
+    @testset "Smoothing" begin include("smoothing.jl") end
 end
