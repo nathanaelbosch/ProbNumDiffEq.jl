@@ -1,5 +1,5 @@
 # Internals
 
-```@autodocs
-Modules = [ProbNumODE]
-```
+<!-- ```@autodocs -->
+<!-- Modules = [ProbNumODE] -->
+<!-- ``` -->
