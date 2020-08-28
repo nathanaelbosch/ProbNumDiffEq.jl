@@ -1,25 +1,40 @@
 abstract type AbstractSigmaRule end
-function static_sigma_estimation(rule::AbstractSigmaRule, integ)
-    return one(integ.cache.σ_sq)
-end
-function dynamic_sigma_estimation(rule::AbstractSigmaRule, integ)
-    return one(integ.cache.σ_sq)
-end
+abstract type AbstractStaticSigmaRule <: AbstractSigmaRule end
+abstract type AbstractDynamicSigmaRule <: AbstractSigmaRule end
+# function static_sigma_estimation(rule::AbstractDynamicSigmaRule, integ)
+#     return one(integ.cache.σ_sq)
+# end
+# function dynamic_sigma_estimation(rule::AbstractStaticSigmaRule, integ)
+#     return one(integ.cache.σ_sq)
+# end
+isstatic(sigmarule::AbstractStaticSigmaRule) = true
+isdynamic(sigmarule::AbstractStaticSigmaRule) = false
+isstatic(sigmarule::AbstractDynamicSigmaRule) = false
+isdynamic(sigmarule::AbstractDynamicSigmaRule) = true
 
 
-struct MLESigma <: AbstractSigmaRule end
+struct MLESigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MLESigma, integ)
     @unpack proposals = integ
-    accepted_proposals = [p for p in proposals if p.accept]
-    measurements = [p.measurement for p in accepted_proposals]
-    d = integ.constants.d
-    residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
-    σ² = mean(residuals)
-    return σ²
+    @unpack d = integ.constants
+    @unpack measurement = integ.cache
+
+    v, S = measurement.μ, measurement.Σ
+    sigma_t = v' * inv(S) * v / d
+
+    if integ.iter == 1
+        @assert length(integ.sigmas) == 0
+        return sigma_t
+    else
+        @assert length(integ.sigmas)+1 == integ.iter
+        sigma_prev = integ.sigmas[end]
+        sigma = sigma_prev + (sigma_t - sigma_prev) / integ.iter
+        return sigma
+    end
 end
 
 
-struct WeightedMLESigma <: AbstractSigmaRule end
+struct WeightedMLESigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::WeightedMLESigma, integ)
     @unpack proposals = integ
     accepted_proposals = [p for p in proposals if p.accept]
@@ -32,7 +47,7 @@ function static_sigma_estimation(rule::WeightedMLESigma, integ)
 end
 
 
-struct MAPSigma <: AbstractSigmaRule end
+struct MAPSigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MAPSigma, integ)
     @unpack proposals = integ
     accepted_proposals = [p for p in proposals if p.accept]
@@ -50,7 +65,7 @@ function static_sigma_estimation(rule::MAPSigma, integ)
 end
 
 
-struct SchoberSigma <: AbstractSigmaRule end
+struct SchoberSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::SchoberSigma, integ)
     @unpack d = integ.constants
     @unpack h, H, Qh = integ.cache
@@ -66,7 +81,7 @@ Basically, compute the arg-max of the evidence through an actual optimization ro
 Nice to know: The output "looks" very similar to the schober estimation!
 But, my current benchmark shows that it's much much slower: ~300ms vs 13ms!
 """
-struct OptimSigma <: AbstractSigmaRule end
+struct OptimSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::OptimSigma, integ)
     @unpack d, q, R = integ.constants
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
@@ -94,7 +109,7 @@ I compared this single loop approach with one with `i in 1:1000`, and could not 
 => This seems cool!
 It does not seem to behave too different from the schober sigmas, but I mean the theory is wayy nicer!
 """
-struct EMSigma <: AbstractSigmaRule end
+struct EMSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::EMSigma, integ)
     @unpack d, q = integ.constants
     @unpack h, H, Qh, x_pred, x, Ah, σ_sq = integ.cache

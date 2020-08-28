@@ -43,8 +43,11 @@ end
 
 """This could handle smoothing and uncertainty-calibration"""
 function postamble!(integ)
+    if isstatic(integ.sigma_estimator)
+        calibrate!(integ)
+        integ.sigmas .= integ.sigmas[end]
+    end
     integ.smooth && smooth!(integ)
-    calibrate!(integ)
 end
 
 

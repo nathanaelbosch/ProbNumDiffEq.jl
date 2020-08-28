@@ -6,9 +6,6 @@ function perform_step!(integ::ODEFilterIntegrator)
     @unpack t, dt = integ
     @unpack E0 = integ.constants
 
-    integ.iter += 1
-
-
     t = t + dt
     integ.t_new = t
 
@@ -18,12 +15,20 @@ function perform_step!(integ::ODEFilterIntegrator)
     measure_h!(integ, x_pred, t)
     measure_H!(integ, x_pred, t)
 
-    σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
-    x_pred.Σ .+= (σ_sq - 1) .* integ.cache.Qh
-    integ.cache.σ_sq = σ_sq
+    if isdynamic(integ.sigma_estimator)
+        σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
+        x_pred.Σ .+= (σ_sq - 1) .* integ.cache.Qh
+        integ.cache.σ_sq = σ_sq
+    end
 
     x_filt, measurement = update!(integ, x_pred)
     u_filt = E0 * x_filt.μ
+
+    if isstatic(integ.sigma_estimator)
+        # E.g. estimate the /current/ MLE sigma
+        σ_sq = static_sigma_estimation(integ.sigma_estimator, integ)
+        integ.cache.σ_sq = σ_sq
+    end
 
     err_est_unscaled = estimate_errors(integ.error_estimator, integ)
     err_est_scaled = DiffEqBase.calculate_residuals(

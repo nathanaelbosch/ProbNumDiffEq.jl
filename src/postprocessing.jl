@@ -41,19 +41,8 @@ end
 
 function calibrate!(integ::ODEFilterIntegrator)
 
-    @unpack state_estimates = integ
-    proposals = integ.proposals
-    σ² = static_sigma_estimation(integ.sigma_estimator, integ)
-    if σ² != 1
-        @assert all(integ.sigmas .== 1) "Currently, sigma has to bei EITHER dynamics OR fixed, but this seems like a mix of both!"
-        for s in state_estimates
-            s.Σ .*= σ²
-        end
-        integ.sigmas .= σ²
-        # for p in proposals
-        #     p.measurement.Σ .*= σ²
-        #     p.prediction.Σ .*= σ²
-        #     p.filter_estimate.Σ .*= σ²
-        # end
+    @unpack state_estimates, sigmas = integ
+    for s in state_estimates
+        s.Σ .*= sigmas[end]
     end
 end
