@@ -15,12 +15,8 @@ import ProbNumODE: remake_prob_with_jac
     prob = prob_ode_lotkavoltera
     prob = remake_prob_with_jac(prob)
 
-    t_eval = prob.tspan[1]:0.01:prob.tspan[end]
-    sol = solve(prob, Tsit5(), abstol=1e-12, reltol=1e-12)
-    true_sol = sol.(t_eval)
+    true_sol = solve(prob, Tsit5(), abstol=1e-15, reltol=1e-15)
 
-
-    # abstol, reltol = 1e-3, 1e-3
     for method in (EKF0(), EKF1()),
         sigma in (:fixedMLE, :schober),
         error in (:schober, :prediction, :filtering),
@@ -32,19 +28,12 @@ import ProbNumODE: remake_prob_with_jac
                     local_errors=error,
                     smooth=false,
                     )
-        diffs = sol.(t_eval) .- true_sol
+        diffs = sol.u .- true_sol.(sol.t)
         maxdiff = maximum(abs.(ProbNumODE.stack(diffs)))
-        mse = sum(norm.(diffs, 2)) / length(t_eval)
+        mse = sum(norm.(diffs, 2)) / length(sol.t)
 
-
-        @test mse < 1e-8
+        @test mse < 1e-7
         @test maxdiff < 1e-7
-
-        # @info "Acc" method sigma error q mse maxdiff
-
-        if mse > 1e-8 || maxdiff > 1e-7
-            @info "Acc" method sigma error q mse maxdiff
-        end
     end
 end
 
@@ -58,10 +47,9 @@ end
     sol = solve(prob, Tsit5(), abstol=1e-12, reltol=1e-12)
     true_sol = sol.(t_eval)
 
-
-    # abstol, reltol = 1e-3, 1e-3
     for method in (EKF0(), EKF1()),
-        sigma in (:fixedMLE, :schober),
+        # sigma in (:fixedMLE, :schober),
+        sigma in [:schober],
         error in (:schober, :prediction, :filtering),
         q in 1:3
 
@@ -75,14 +63,7 @@ end
         maxdiff = maximum(abs.(ProbNumODE.stack(diffs)))
         mse = sum(norm.(diffs, 2)) / length(t_eval)
 
-
         @test mse < 1e-5
         @test maxdiff < 1e-5
-
-        # @info "Acc" method sigma error q mse maxdiff
-
-        if mse > 1e-5 || maxdiff > 1e-5
-            @info "Acc" method sigma error q mse maxdiff
-        end
     end
 end
