@@ -27,7 +27,7 @@ function kf_smooth(m_f_t::Vector, P_f_t::AbstractMatrix,
         @assert abs(_min) < 1e-16
         P += - _min*I
     end
-    @assert all(diag(P) .>= 0)
+    @assert all(diag(P) .>= 0) "The covariance `P` might be NaN! Make sure that the covariances during the solve make sense."
 
     return m, P
 end
