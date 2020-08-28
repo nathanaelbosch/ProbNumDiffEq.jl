@@ -24,8 +24,6 @@ using UUIDs, ProgressLogging
 
 import Base: copy
 
-@inline _copy(a::SArray) = a
-@inline _copy(a) = copy(a)
 stack(x) = copy(reduce(hcat, x)')
 
 include("filtering.jl")
