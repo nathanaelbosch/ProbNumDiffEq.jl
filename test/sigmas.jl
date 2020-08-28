@@ -29,4 +29,9 @@ using ModelingToolkit
         sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedWeightedMLE)
         @test sol.u ≈ true_sol.(sol.t)
     end
+
+    @testset "Dynamic one-step EM" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:EM)
+        @test sol.u ≈ true_sol.(sol.t)
+    end
 end

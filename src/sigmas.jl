@@ -58,3 +58,42 @@ function dynamic_sigma_estimation(kind::SchoberSigma, integ)
     σ² = h' * inv(H*Qh*H' + jitter*I) * h / d
     return σ²
 end
+
+
+"""Filip's proposition: Estimate sigma through a one-step EM
+
+This seems pretty stable! One iteration indeed feels like it is enough.
+I compared this single loop approach with one with `i in 1:1000`, and could not notice a difference.
+=> This seems cool!
+It does not seem to behave too different from the schober sigmas, but I mean the theory is wayy nicer!
+"""
+struct EMSigma <: AbstractSigmaRule end
+function dynamic_sigma_estimation(kind::EMSigma, integ)
+    @unpack d, q = integ.constants
+    @unpack h, H, Qh, x_pred, x, Ah, σ_sq = integ.cache
+    @unpack R = integ.constants
+
+    sigma = σ_sq
+
+    x_prev = x
+
+    for i in 1:1
+        x_n_pred = Gaussian(Ah * x_prev.μ, Ah * x_prev.Σ * Ah' + sigma*Qh)
+
+        _m, _P = x_n_pred.μ, x_n_pred.Σ
+        S = H * _P * H' + R
+        K = _P * H' * inv(S)
+        x_n_filt = Gaussian(_m + K*h, _P - K*S*K')
+
+        # x_prev = integ.state_estimates[end]
+
+        _m, _P = kf_smooth(x_prev.μ, x_prev.Σ, x_n_pred.μ, x_n_pred.Σ, x_n_filt.μ, x_n_filt.Σ, Ah, sigma*Qh)
+        x_prev_smoothed = Gaussian(_m, _P)
+
+        # Compute σ² in closed form:
+        diff = x_n_filt.μ - Ah*x_prev_smoothed.μ
+        sigma = diff' * inv(Qh) * diff / (d*(q+1))
+    end
+
+    return sigma
+end
