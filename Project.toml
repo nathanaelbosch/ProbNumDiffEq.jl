@@ -22,17 +22,17 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
-DiffEqBase = "6.42"
-Distributions = "0.23"
+DiffEqBase = "6"
+Distributions = "0.19, 0.20, 0.21, 0.22, 0.23"
 ForwardDiff = "0.10"
-Measurements = "2.2"
+Measurements = "2"
 ProgressLogging = "0.1"
-RecipesBase = "1.0"
+RecipesBase = "1"
 Reexport = "0.2"
 StaticArrays = "0.12"
 StructArrays = "0.4"
 TerminalLoggers = "0.1"
-UnPack = "1.0"
+UnPack = "1"
 julia = "1"
 
 [extras]
