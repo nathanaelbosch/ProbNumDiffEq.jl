@@ -18,7 +18,7 @@ import ProbNumODE: remake_prob_with_jac
     true_sol = solve(prob, Tsit5(), abstol=1e-15, reltol=1e-15)
 
     for method in (EKF0(), EKF1()),
-        sigma in (:fixedMLE, :schober),
+        sigma in (:fixedMLE, :schober, :fixedMAP, :fixedWeightedMLE),
         error in (:schober, :prediction, :filtering),
         q in 1:3
 
