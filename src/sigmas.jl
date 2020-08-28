@@ -1,5 +1,5 @@
 abstract type AbstractSigmaRule end
-function static_sigma_estimation(rule::AbstractSigmaRule, integ, proposals)
+function static_sigma_estimation(rule::AbstractSigmaRule, integ)
     return one(integ.cache.σ_sq)
 end
 function dynamic_sigma_estimation(rule::AbstractSigmaRule, integ)
@@ -9,7 +9,7 @@ end
 
 struct MLESigma <: AbstractSigmaRule end
 function static_sigma_estimation(rule::MLESigma, integ)
-    @unpack proposals = integ.cache
+    @unpack proposals = integ
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
     d = integ.constants.d
@@ -21,7 +21,7 @@ end
 
 struct WeightedMLESigma <: AbstractSigmaRule end
 function static_sigma_estimation(rule::WeightedMLESigma, integ)
-    @unpack proposals = integ.cache
+    @unpack proposals = integ
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
     d = integ.constants.d
@@ -34,7 +34,7 @@ end
 
 struct MAPSigma <: AbstractSigmaRule end
 function static_sigma_estimation(rule::MAPSigma, integ)
-    @unpack proposals = integ.cache
+    @unpack proposals = integ
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
     d = integ.constants.d
