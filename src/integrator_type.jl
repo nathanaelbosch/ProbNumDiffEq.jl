@@ -37,7 +37,7 @@ end
 # Integrator
 ########################################################################################
 mutable struct ODEFilterIntegrator{
-    IIP, S, T, P, F, O, constantsType, cacheType,
+    IIP, S, T, P, F, QT, O, constantsType, cacheType,
     sigmaestType, errorestType, stepruleType, proposalsType,
     xType, sigmaType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
     f::F                               # eom
@@ -49,7 +49,7 @@ mutable struct ODEFilterIntegrator{
     tmax::T                            # end of the interval
     dt::T                              # step size
     p::P                               # parameter container
-    EEst                               # (Scaled) error estimate
+    EEst::QT                           # (Scaled) error estimate
 
     constants::constantsType
     cache::cacheType
@@ -129,8 +129,9 @@ end
 mutable struct GaussianODEFilterCache{uType, xType, matType, sigmaType} <: ProbNumODEMutableCache
     u::uType
     u_pred::uType
+    u_filt::uType
+    u_tmp::uType
     # tmp
-    # utilde
     x::xType
     x_pred::xType
     x_filt::xType
@@ -174,7 +175,7 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
     K = zeros(d*(q+1),d)
 
     GaussianODEFilterCache{uType, typeof(x0), matType, typeof(sigma)}(
-        copy(u0), copy(u0),
+        copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0),
         measurement,
         Ah_empty, Qh_empty, h, H, du, ddu, K, sigma, sigma,

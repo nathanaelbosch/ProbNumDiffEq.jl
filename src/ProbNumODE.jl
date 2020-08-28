@@ -5,7 +5,7 @@ module ProbNumODE
 using Reexport
 @reexport using DiffEqBase
 
-import Base: copy
+import Base: copy, copy!
 
 using LinearAlgebra
 using Measurements
@@ -17,6 +17,7 @@ using RecipesBase
 using Distributions
 using GaussianDistributions
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
+copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.Σ); nothing)
 using ModelingToolkit
 using DiffEqDevTools
 using Optim

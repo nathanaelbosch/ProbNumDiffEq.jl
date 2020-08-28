@@ -52,14 +52,14 @@ end
 
 
 function apply_step!(integ)
-    integ.cache.x = copy(integ.cache.x_filt)
-    integ.u = integ.constants.E0 * integ.cache.x.μ
+    copy!(integ.cache.x, integ.cache.x_filt)
+    mul!(integ.u, integ.constants.E0, integ.cache.x.μ)
     integ.t = integ.t_new
 
     integ.cache.σ_sq_prev = integ.cache.σ_sq
 
     # For the solution
-    push!(integ.state_estimates, integ.cache.x)
+    push!(integ.state_estimates, copy(integ.cache.x))
     push!(integ.times, integ.t)
     push!(integ.sigmas, integ.cache.σ_sq)
 end

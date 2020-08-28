@@ -5,12 +5,13 @@ This is the actual interestin part of the algorithm
 function perform_step!(integ::ODEFilterIntegrator)
     @unpack t, dt = integ
     @unpack E0 = integ.constants
+    @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
 
     t = t + dt
     integ.t_new = t
 
     x_pred = predict!(integ)
-    integ.cache.u_pred .= E0 * x_pred.μ
+    mul!(u_pred, E0, x_pred.μ)
 
     measure_h!(integ, x_pred, t)
     measure_H!(integ, x_pred, t)
@@ -21,8 +22,8 @@ function perform_step!(integ::ODEFilterIntegrator)
         integ.cache.σ_sq = σ_sq
     end
 
-    x_filt, measurement = update!(integ, x_pred)
-    u_filt = E0 * x_filt.μ
+    x_filt = update!(integ, x_pred)
+    mul!(u_filt, E0, x_filt.μ)
 
     if isstatic(integ.sigma_estimator)
         # E.g. estimate the /current/ MLE sigma
@@ -31,9 +32,10 @@ function perform_step!(integ::ODEFilterIntegrator)
     end
 
     err_est_unscaled = estimate_errors(integ.error_estimator, integ)
-    err_est_scaled = DiffEqBase.calculate_residuals(
+    DiffEqBase.calculate_residuals!(
+        err_tmp,
         dt * err_est_unscaled, integ.u, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
-    err_est_combined = integ.opts.internalnorm(err_est_scaled, t)
+    err_est_combined = integ.opts.internalnorm(err_tmp, t)
     integ.EEst = err_est_combined
 
 end
@@ -104,5 +106,5 @@ function update!(integ::ODEFilterIntegrator, prediction)
     x_filt.μ .= m_p .+ K*v
     x_filt.Σ .= P_p .- Symmetric(K*S*K')
 
-    return x_filt, measurement
+    return x_filt
 end
