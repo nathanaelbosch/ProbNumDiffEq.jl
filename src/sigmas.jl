@@ -54,5 +54,7 @@ struct SchoberSigma <: AbstractSigmaRule end
 function dynamic_sigma_estimation(kind::SchoberSigma, integ)
     @unpack d = integ.constants
     @unpack h, H, Qh = integ.cache
-    return h' * inv(H*Qh*H') * h / d
+    jitter = 1e-12
+    σ² = h' * inv(H*Qh*H' + jitter*I) * h / d
+    return σ²
 end

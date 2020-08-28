@@ -15,8 +15,9 @@ end
 function kf_smooth(m_f_t::Vector, P_f_t::AbstractMatrix,
                    m_p_t1::Vector, P_p_t1::AbstractMatrix,
                    m_s_t1::Vector, P_s_t1::AbstractMatrix,
-                   A::AbstractMatrix, Q::AbstractMatrix)
-    G = P_f_t * A' * inv(P_p_t1)
+                   A::AbstractMatrix, Q::AbstractMatrix,
+                   jitter=1e-12)
+    G = P_f_t * A' * inv(P_p_t1 + jitter*I)
     m = m_f_t + G * (m_s_t1 - m_p_t1)
     P = P_f_t + G * (P_s_t1 - P_p_t1) * G'
 

@@ -1,4 +1,5 @@
 function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEqBase.AbstractODESolution)
+    jitter = 1e-12
 
     @assert sol2.dense
     densetimes = collect(range(sol.t[1],stop=sol.t[end],length=100))
@@ -7,18 +8,19 @@ function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEq
     interp_analytic = sol2(densetimes)[2:end]
 
     diffs = interp_pu.μ - interp_analytic.u
-    xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
+    xi2_stats = [r' * inv(cov + jitter*I) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
     sol.errors[:Χ²] = mean(xi2_stats)
     return nothing
 end
 
 function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEqBase.AbstractODESolution)
+    jitter = 1e-12
 
     interp_pu = sol.pu[2:end]
     interp_analytic = sol2(sol.t)[2:end]
 
     diffs = interp_pu.μ - interp_analytic.u
-    xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
+    xi2_stats = [r' * inv(cov + jitter*I) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
     sol.errors[:χ²] = mean(xi2_stats)
     return nothing
 end
