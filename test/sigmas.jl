@@ -32,6 +32,11 @@ using ModelingToolkit
 
     @testset "Dynamic one-step EM" begin
         sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:EM)
+        @test sol.u ≈ true_sol.(sol.t) atol=1e-4
+    end
+
+    @testset "Optim-based" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:optim)
         @test sol.u ≈ true_sol.(sol.t)
     end
 end

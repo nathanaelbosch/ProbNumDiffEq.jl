@@ -92,6 +92,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     sigmarules = Dict(
         :schober => SchoberSigma(),
         :EM => EMSigma(),
+        :optim => OptimSigma(),
         :fixedMLE => MLESigma(),
         :fixedMAP => MAPSigma(),
         :fixedWeightedMLE => WeightedMLESigma(),

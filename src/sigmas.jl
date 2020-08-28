@@ -60,6 +60,33 @@ function dynamic_sigma_estimation(kind::SchoberSigma, integ)
 end
 
 
+"""Optimization-based sigma estimation
+
+Basically, compute the arg-max of the evidence through an actual optimization routine!
+Nice to know: The output "looks" very similar to the schober estimation!
+But, my current benchmark shows that it's much much slower: ~300ms vs 13ms!
+"""
+struct OptimSigma <: AbstractSigmaRule end
+function dynamic_sigma_estimation(kind::OptimSigma, integ)
+    @unpack d, q, R = integ.constants
+    @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
+
+    z = h
+    P = x.Σ
+
+    function negloglikelihood(σ_log)
+        S = H*(Ah*P*Ah' + exp.(σ_log).* Qh)*H' + R
+        S_inv = inv(S + 1e-12I)
+        return logdet(S) + z' * S_inv * z
+    end
+    # g!(x, storage) = (storage[1] = ForwardDiff.gradient(s -> negloglikelihood(s), x)[1])
+    res = optimize(negloglikelihood, [σ_sq], Newton())
+
+    σ² = exp(res.minimizer[1])
+    return σ²
+end
+
+
 """Filip's proposition: Estimate sigma through a one-step EM
 
 This seems pretty stable! One iteration indeed feels like it is enough.

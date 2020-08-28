@@ -19,6 +19,7 @@ using GaussianDistributions
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 using ModelingToolkit
 using DiffEqDevTools
+using Optim
 
 using UUIDs, ProgressLogging
 
