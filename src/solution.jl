@@ -34,6 +34,7 @@ function DiffEqBase.build_solution(
 
     @assert length(t) == length(x) == (length(sigmas)+1)
 
+    x = StructArray(x)
     pu = StructArray(map(x -> E0 * x, x))
     u = pu.μ
     p = GaussianODEFilterPosterior(t, x, sigmas, solver)
