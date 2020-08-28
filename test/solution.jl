@@ -1,5 +1,6 @@
 using Test
 using Plots
+using GaussianDistributions
 using LinearAlgebra
 using OrdinaryDiffEq
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
@@ -9,8 +10,8 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
 
 
 @testset "Solution" begin
-    prob = prob_ode_lotkavoltera
-    sol = solve(prob, EKF0(), steprule=:constant, dt=1e-2)
+    prob = ProbNumODE.remake_prob_with_jac(prob_ode_lotkavoltera)
+    sol = solve(prob, EKF1(), steprule=:constant, dt=1e-2)
 
     @test length(sol) > 2
     @test length(sol.t) == length(sol.u)
@@ -45,6 +46,8 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
 
         pu1, pu2 = sol.p(t0), sol.p(t1)
         @test all(diag(pu1.Σ) .< diag(pu2.Σ))
+
+        @test sol(t0:1e-3:t1) isa DiffEqBase.DiffEqArray
     end
 
     @testset "Plotting" begin
@@ -56,5 +59,20 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
         sol2 = solve(prob, Tsit5(), abstol=1e-10, reltol=1e-10)
         @test_broken plot_errors(sol, sol2) isa Plots.Plot
         @test_broken plot_calibration(sol, sol2) isa Plots.Plot
+    end
+
+    @testset "GaussianODEFilterPosterior" begin
+        t = prob.tspan[1] + 1e-2
+        @test sol.p(t) isa Gaussian
+        @test sol.p[1] == sol.pu[1]
+        @test sol.p[length(sol.pu)] == sol.pu[end]
+    end
+
+    @testset "GaussianFilteringPosterior" begin
+        filtpost = sol.p.filtering_posterior
+        t = prob.tspan[1] + 1e-2
+        @test filtpost(t) isa Gaussian
+        @test filtpost[1] == sol.x[1]
+        @test filtpost[length(sol.x)] == sol.x[end]
     end
 end
