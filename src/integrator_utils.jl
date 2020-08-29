@@ -6,6 +6,7 @@ function loopheader!(integ)
 
     # Accept or reject the step
     if integ.iter > 0 && integ.accept_step
+        integ.success_iter += 1
         apply_step!(integ)
     end
 

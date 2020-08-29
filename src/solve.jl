@@ -131,7 +131,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         #
         empty_proposals, state_estimates, times, sigmas,
         #
-        0, accept_step, retcode, prob, alg, destats,
+        0, 0, accept_step, retcode, prob, alg, destats,
     )
 end
 

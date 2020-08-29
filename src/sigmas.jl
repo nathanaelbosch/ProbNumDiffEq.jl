@@ -15,18 +15,17 @@ isdynamic(sigmarule::AbstractDynamicSigmaRule) = true
 
 struct MLESigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MLESigma, integ)
-    @unpack proposals = integ
     @unpack d = integ.constants
     @unpack measurement = integ.cache
 
     v, S = measurement.μ, measurement.Σ
     sigma_t = v' * inv(S) * v / d
 
-    if integ.iter == 1
+    if integ.success_iter == 0
         @assert length(integ.sigmas) == 0
         return sigma_t
     else
-        @assert length(integ.sigmas)+1 == integ.iter
+        @assert length(integ.sigmas) == integ.success_iter
         sigma_prev = integ.sigmas[end]
         sigma = sigma_prev + (sigma_t - sigma_prev) / integ.iter
         return sigma

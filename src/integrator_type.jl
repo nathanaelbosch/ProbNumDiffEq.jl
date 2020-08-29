@@ -69,6 +69,7 @@ mutable struct ODEFilterIntegrator{
 
     # Misc
     iter::UInt                         # Current iteration count
+    success_iter::UInt                 # Number of successful steps
     accept_step::Bool                  # If the current step is accepted
     retcode::Symbol                    # Current return code, used to build the solution
     prob::probType                     # Only used to build the solution

@@ -52,7 +52,7 @@ end
 
     for method in (EKF0(), EKF1()),
         # sigma in (:fixedMLE, :schober),
-        sigma in [:schober],
+        sigma in [:schober, :fixedMLE],
         error in (:schober, :prediction, :filtering),
         q in 1:3
 
