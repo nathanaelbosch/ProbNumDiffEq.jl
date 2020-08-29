@@ -36,6 +36,7 @@ end
 
 struct WeightedMLESigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::WeightedMLESigma, integ)
+    @warn "WeightedMLESigma is implemented VERY inefficiently right now"
     @unpack proposals = integ
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
@@ -49,6 +50,7 @@ end
 
 struct MAPSigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MAPSigma, integ)
+    @warn "MAPSigma is implemented VERY inefficiently right now"
     @unpack proposals = integ
     accepted_proposals = [p for p in proposals if p.accept]
     measurements = [p.measurement for p in accepted_proposals]
