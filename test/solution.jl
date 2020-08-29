@@ -1,3 +1,4 @@
+using ProbNumODE
 using Test
 using Plots
 using GaussianDistributions

@@ -1,6 +1,7 @@
 # Goal: Make sure that our solvers are "correct" for small steps or tolerances
 # Verify this for many (ideally all) combinations
 # Compare with an algorithm from OrdinaryDiffEq.jl with high precision
+using ProbNumODE
 using Test
 using OrdinaryDiffEq
 using LinearAlgebra
