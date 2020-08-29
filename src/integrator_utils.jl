@@ -60,6 +60,6 @@ function apply_step!(integ)
 
     # For the solution
     push!(integ.state_estimates, copy(integ.cache.x))
-    push!(integ.times, integ.t)
-    push!(integ.sigmas, integ.cache.σ_sq)
+    push!(integ.times, copy(integ.t))
+    push!(integ.sigmas, copy(integ.cache.σ_sq))
 end

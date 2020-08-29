@@ -58,7 +58,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
 
     f = prob.f
-    u0 = prob.u0
+    u0 = copy(prob.u0)
     t0, tmax = prob.tspan
     p = prob.p
     d = length(u0)
@@ -109,7 +109,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     destats = DiffEqBase.DEStats(0)
 
-    state_estimates = StructArray([cache.x])
+    state_estimates = StructArray([copy(cache.x)])
     times = [t0]
     sigmas = []
     accept_step = false
