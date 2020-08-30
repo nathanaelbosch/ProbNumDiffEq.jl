@@ -27,7 +27,7 @@ function static_sigma_estimation(rule::MLESigma, integ)
     else
         @assert length(integ.sigmas) == integ.success_iter
         sigma_prev = integ.sigmas[end]
-        sigma = sigma_prev + (sigma_t - sigma_prev) / integ.iter
+        sigma = sigma_prev + (sigma_t - sigma_prev) / integ.success_iter
         return sigma
     end
 end
