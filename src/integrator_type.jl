@@ -162,6 +162,7 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
     m0, P0 = initialize_derivatives ?
         get_initial_states_forwarddiff(prob, q) :
         initialize_without_derivatives(prob, q)
+    P0 += eps(eltype(P0)) * I
     x0 = Precond * Gaussian(m0, P0)
 
     Ah_empty = diagm(0=>ones(uElType, d*(q+1)))
