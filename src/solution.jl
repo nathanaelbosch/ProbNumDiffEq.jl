@@ -109,7 +109,8 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     m_pred_next, P_pred_next = kf_predict(m_pred, P_pred, Ah, Qh)
 
     m_smoothed, P_smoothed = kf_smooth(
-        m_pred, P_pred, m_pred_next, P_pred_next, next_rv.μ, next_rv.Σ, Ah, Qh)
+        m_pred, P_pred, m_pred_next, P_pred_next, next_rv.μ, next_rv.Σ, Ah, Qh,
+        solver.constants.Precond)
     smoothed_rv = Gaussian(m_smoothed, P_smoothed)
 
     return smoothed_rv
