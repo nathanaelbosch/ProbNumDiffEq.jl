@@ -53,22 +53,35 @@ function static_sigma_estimation(rule::WeightedMLESigma, integ)
 end
 
 
+"""Maximum a-posteriori sigma estimate when using an InverseGamma(1/2,1/2) prior
+
+The mode of an InverseGamma(α,β) distribution is given by β/(α+1)
+To compute this in an on-line basis from the previous sigma, we reverse the computation to
+get the previous sum of residuals from sigma, and then modify that sum and compute the new
+sigma.
+"""
 struct MAPSigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MAPSigma, integ)
-    @warn "MAPSigma is implemented VERY inefficiently right now"
-    @unpack proposals = integ
-    accepted_proposals = [p for p in proposals if p.accept]
-    measurements = [p.measurement for p in accepted_proposals]
-    d = integ.constants.d
-    residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
-    N = length(residuals)
+    @unpack d = integ.constants
+    @unpack measurement = integ.cache
+
+    N = integ.success_iter + 1
+    v, S = measurement.μ, measurement.Σ
+    res_t = v' * inv(S) * v / d
 
     α, β = 1/2, 1/2
-    # prior = InverseGamma(α, β)
-    α2, β2 = α + N*d/2, β + 1/2 * (sum(residuals))
-    posterior = InverseGamma(α2, β2)
-    sigma = mode(posterior)
-    return sigma
+    if integ.success_iter == 0
+        @assert length(integ.sigmas) == 0
+        sigma_t = (β + 1/2 * res_t) / (α + N*d/2 + 1)
+        return sigma_t
+    else
+        @assert length(integ.sigmas) == integ.success_iter
+        sigma_prev = integ.sigmas[end]
+        res_prev = (sigma_prev * (α + (N-1)*d/2 + 1) - β) * 2
+        res_sum_t = res_prev + res_t
+        sigma = (β + 1/2 * res_sum_t) / (α + N*d/2 + 1)
+        return sigma
+    end
 end
 
 
