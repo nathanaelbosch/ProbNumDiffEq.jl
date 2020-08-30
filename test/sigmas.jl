@@ -25,10 +25,10 @@ using ModelingToolkit
     #     @test sol.u ≈ true_sol.(sol.t)
     # end
 
-    # @testset "Fixed weighted MLE" begin
-    #     sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedWeightedMLE)
-    #     @test sol.u ≈ true_sol.(sol.t)
-    # end
+    @testset "Fixed weighted MLE" begin
+        sol = solve(prob, EKF0(), sigmarule=:fixedWeightedMLE)
+        @test sol.u ≈ true_sol.(sol.t)
+    end
 
     @testset "Dynamic one-step EM" begin
         sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:EM)

@@ -35,15 +35,21 @@ end
 
 struct WeightedMLESigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::WeightedMLESigma, integ)
-    @warn "WeightedMLESigma is implemented VERY inefficiently right now"
-    @unpack proposals = integ
-    accepted_proposals = [p for p in proposals if p.accept]
-    measurements = [p.measurement for p in accepted_proposals]
-    d = integ.constants.d
-    residuals = [v.μ' * inv(v.Σ) * v.μ for v in measurements] ./ d
-    stepsizes = [p.dt for p in accepted_proposals]
-    σ² = mean(residuals .* stepsizes)
-    return σ²
+    @unpack d = integ.constants
+    @unpack measurement = integ.cache
+
+    v, S = measurement.μ, measurement.Σ
+    sigma_t = v' * inv(S) * v / d
+
+    if integ.success_iter == 0
+        @assert length(integ.sigmas) == 0
+        return sigma_t
+    else
+        @assert length(integ.sigmas) == integ.success_iter
+        sigma_prev = integ.sigmas[end]
+        sigma = (sigma_prev * integ.t + sigma_t * integ.dt) / integ.t_new
+        return sigma
+    end
 end
 
 
