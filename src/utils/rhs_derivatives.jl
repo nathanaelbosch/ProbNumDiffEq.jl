@@ -87,7 +87,11 @@ function remake_prob_with_jac(prob)
         sys = modelingtoolkitize(prob)
         jac = eval(ModelingToolkit.generate_jacobian(sys)[2])
         IIP = isinplace(prob.f)
-        f = ODEFunction{IIP}(prob.f.f, jac=jac)
+        f = ODEFunction{IIP}(
+            prob.f.f,
+            jac=jac;
+            analytic=prob.f.analytic,
+        )
         return remake(prob, f=f)
     catch
         error("Could not generate a jacobian for the problem")
