@@ -84,11 +84,9 @@ function compute_costs_errors(prob, alg, abstol, reltol, appxsol, dt=nothing;
 
     sol = sol_fun()
     if DiffEqBase.has_analytic(sol.prob.f)
-        @info "All errors should be computed already!"
         @assert :l2 in keys(sol.errors)
         @assert :χ² in keys(sol.errors)
     else
-        @info "compute_costs_errors: Using the approximate solution"
         sol = appxtrue(sol, appxsol)
         add_dense_chi2_statistic!(sol, appxsol)
         add_discrete_chi2_statistic!(sol, appxsol)
