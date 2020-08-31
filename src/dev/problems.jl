@@ -4,9 +4,18 @@ function exponential_decay(;λ=-50, u0=1., tspan=(0.0, 1.0))
     return exp_decay
 end
 
-function logistic_equation(; r=3, u0=1e-1, tspan=(0.0, 2.5))
-    f(u, p, t) = r .* u .* (1 .- u)
-    log_reg = ODEProblem(f, u0, tspan)
+function logistic_equation(; u0=[1e-1], tspan=(0.0, 2.5), p=[3.0])
+    function logistic!(du, u, p, t)
+        r = p[1]
+        du[1] = r * u[1] .* (1 .- u[1])
+    end
+    function analytic(u0, p, t)
+        r = p[1]
+        return [exp(r*t) / (1/u0[1] - 1 + exp(r*t))]
+    end
+    log_reg = ODEProblem(
+        ODEFunction(logistic!, analytic=analytic),
+        u0, tspan, p)
     return log_reg
 end
 
