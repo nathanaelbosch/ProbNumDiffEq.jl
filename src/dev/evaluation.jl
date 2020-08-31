@@ -1,27 +1,63 @@
-function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEqBase.AbstractODESolution)
-    jitter = 1e-12
+function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution,
+                                   sol2::DiffEqBase.AbstractODESolution)
+    :Χ² in keys(sol.errors) && error("χ² error is already computed!")
+    jitter = 0
+
+    densetimes = collect(range(sol.t[1],stop=sol.t[end],length=100))
+    interp_pu = sol.p(densetimes)[2:end]
 
     @assert sol2.dense
-    densetimes = collect(range(sol.t[1],stop=sol.t[end],length=100))
-
-    interp_pu = sol.p(densetimes)[2:end]
     interp_analytic = sol2(densetimes)[2:end]
-
     diffs = interp_pu.μ - interp_analytic.u
     xi2_stats = [r' * inv(cov + jitter*I) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
     sol.errors[:Χ²] = mean(xi2_stats)
+
     return nothing
 end
 
-function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution, sol2::DiffEqBase.AbstractODESolution)
-    jitter = 1e-12
+function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution)
+    :Χ² in keys(sol.errors) && error("χ² error is already computed!")
+    jitter = 0
+
+    densetimes = collect(range(sol.t[1],stop=sol.t[end],length=100))
+    interp_pu = sol.p(densetimes)[2:end]
+
+    @assert DiffEqBase.has_analytic(sol.prob.f)
+    f_analytic(t) = sol.prob.f.analytic(sol.prob.u0, sol.prob.p, t)
+    diffs = interp_pu.μ - f_analytic.(densetimes)[2:end]
+    xi2_stats = [r' * inv(cov + jitter*I) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
+    sol.errors[:Χ²] = mean(xi2_stats)
+end
+
+function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution,
+                                      sol2::DiffEqBase.AbstractODESolution)
+    :χ² in keys(sol.errors) && error("Χ² error is already computed! $(keys(sol.errors))")
+
+    jitter = 0
 
     interp_pu = sol.pu[2:end]
-    interp_analytic = sol2(sol.t)[2:end]
 
+    interp_analytic = sol2(sol.t)[2:end]
     diffs = interp_pu.μ - interp_analytic.u
     xi2_stats = [r' * inv(cov + jitter*I) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
     sol.errors[:χ²] = mean(xi2_stats)
+
+    return nothing
+end
+
+function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution)
+    :χ² in keys(sol.errors) && error("Χ² error is already computed! $(keys(sol.errors))")
+
+    jitter = 0
+
+    interp_pu = sol.pu[2:end]
+
+    @assert DiffEqBase.has_analytic(sol.prob.f)
+    f_analytic(t) = sol.prob.f.analytic(sol.prob.u0, sol.prob.p, t)
+    diffs = interp_pu.μ - f_analytic.(sol.t)[2:end]
+    xi2_stats = [r' * inv(cov + jitter*I) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
+    sol.errors[:χ²] = mean(xi2_stats)
+
     return nothing
 end
 
@@ -47,9 +83,16 @@ function compute_costs_errors(prob, alg, abstol, reltol, appxsol, dt=nothing;
     end
 
     sol = sol_fun()
-    sol = appxtrue(sol, appxsol)
-    add_dense_chi2_statistic!(sol, appxsol)
-    add_discrete_chi2_statistic!(sol, appxsol)
+    if DiffEqBase.has_analytic(sol.prob.f)
+        @info "All errors should be computed already!"
+        @assert :l2 in keys(sol.errors)
+        @assert :χ² in keys(sol.errors)
+    else
+        @info "compute_costs_errors: Using the approximate solution"
+        sol = appxtrue(sol, appxsol)
+        add_dense_chi2_statistic!(sol, appxsol)
+        add_discrete_chi2_statistic!(sol, appxsol)
+    end
 
     benchmark_f = () -> @elapsed sol_fun()
     time = benchmark_f()
