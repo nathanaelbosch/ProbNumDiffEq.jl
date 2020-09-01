@@ -109,9 +109,9 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     end
 
     idx = sum(t .<= tval)
-    prev_rv, next_rv = x[idx:idx+1]
-    prev_t, next_t = t[idx:idx+1]
-    σ² = sigmas[idx]
+    prev_t = t[idx]
+    prev_rv = x[idx]
+    σ² = sigmas[minimum((idx, end))]
 
     # Extrapolate
     m, P = prev_rv.μ, prev_rv.Σ
@@ -122,9 +122,12 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
 
     pred_rv = Gaussian(m_pred, P_pred)
 
-    if !solver.smooth || tval > t[end]
+    if !solver.smooth || tval >= t[end]
         return pred_rv
     end
+
+    next_t = t[idx+1]
+    next_rv = x[idx+1]
 
     # Smooth
     h2 = next_t - tval
