@@ -10,10 +10,15 @@ function loopheader!(integ)
         apply_step!(integ)
     end
 
-    integ.dt = min(integ.opts.dtmax, integ.dt)
-    integ.dt = max(integ.opts.dtmin, integ.dt)
 
     integ.iter += 1
+
+    fix_dt_at_bounds!(integ)
+end
+
+function fix_dt_at_bounds!(integ)
+    integ.dt = min(integ.opts.dtmax, integ.dt)
+    integ.dt = max(integ.opts.dtmin, integ.dt)
 end
 
 
