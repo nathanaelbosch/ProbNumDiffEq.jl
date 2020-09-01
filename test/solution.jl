@@ -34,7 +34,7 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
         @test prob.u0 == u0
 
         pu0 = sol.p(prob.tspan[1])
-        @test all(pu0.Σ .== 0)
+        @test pu0.Σ ≈ eps(eltype(pu0.Σ))*I
     end
 
     # Interpolation
