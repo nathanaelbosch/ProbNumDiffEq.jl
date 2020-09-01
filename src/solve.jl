@@ -137,7 +137,7 @@ end
 
 
 function DiffEqBase.solve!(integ::ODEFilterIntegrator)
-    while integ.t < integ.tmax
+    while integ.t < integ.tmax && integ.iter < integ.opts.maxiters
         step!(integ)
     end
     postamble!(integ)
