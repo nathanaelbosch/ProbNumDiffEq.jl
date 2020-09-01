@@ -32,10 +32,11 @@ function perform_step!(integ::ODEFilterIntegrator)
     end
 
     err_est_unscaled = estimate_errors(integ.error_estimator, integ)
+    # Scale the error with old u-values and tolerances
     DiffEqBase.calculate_residuals!(
         err_tmp,
-        dt * err_est_unscaled, integ.u, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
-    err_est_combined = integ.opts.internalnorm(err_tmp, t)
+        err_est_unscaled, integ.u, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+    err_est_combined = integ.opts.internalnorm(err_tmp, t)  # Norm over the dimensions
     integ.EEst = err_est_combined
 
 end
