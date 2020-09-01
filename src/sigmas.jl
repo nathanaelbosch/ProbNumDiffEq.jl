@@ -131,11 +131,11 @@ It does not seem to behave too different from the schober sigmas, but I mean the
 """
 struct EMSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::EMSigma, integ)
-    @unpack d, q = integ.constants
+    @unpack d, q, R = integ.constants
+    @unpack sigmas = integ
     @unpack h, H, Qh, x_pred, x, Ah, σ_sq = integ.cache
-    @unpack R = integ.constants
 
-    sigma = σ_sq
+    sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
     x_prev = x
 
