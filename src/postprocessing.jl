@@ -38,11 +38,44 @@ function smooth!(integ::ODEFilterIntegrator)
         x_pred.Σ .= Ah * filter_estimate.Σ * Ah' .+ Qh
 
         smoothed_estimate = state_estimates[i+1] # t+1
-        state_estimates[i] = smooth(filter_estimate, x_pred, smoothed_estimate,
-                                    (A=Ah, Q=Qh),
-                                    integ.constants.Precond)
+        smooth!(filter_estimate, x_pred, smoothed_estimate, integ)
     end
 end
+
+function smooth!(x_filt, x_pred, x_smooth, integ)
+    @unpack Ah = integ.cache
+    @unpack d, q, Precond = integ.constants
+
+    P = copy(x_filt.Σ)
+    G = x_filt.Σ * Ah' * inv(x_pred.Σ)
+    x_filt.μ .+= G * (x_smooth.μ .- x_pred.μ)
+    x_filt.Σ .+= G * (x_smooth.Σ .- x_pred.Σ) * G'
+
+    # Sanity: Make sure that the diagonal of P is non-negative
+    minval = minimum(diag(x_filt.Σ))
+    if abs(minval) < eps(eltype(x_filt.Σ))
+    # if abs(minval) < 1e-12
+        for i in 1:(d*(q+1))
+            x_filt.Σ[i,i] -= minval
+        end
+    end
+    minval = minimum(diag(x_filt.Σ))
+    if minval < 0
+        @info "Error while smoothing: negative variances!" x_filt x_pred x_smooth minval eps(eltype(x_filt.Σ))
+        display(P)
+        display(x_pred.Σ)
+        display(x_smooth.Σ)
+        display(x_filt.Σ)
+        display(G)
+        @info "Solver used" integ.constants.q integ.sigma_estimator integ.steprule integ.smooth
+        error("Encountered negative variances during smoothing")
+    end
+    @assert all(diag(x_filt.Σ) .>= 0) "The covariance `P` might be NaN! Make sure that the covariances during the solve make sense."
+
+    return nothing
+end
+
+
 
 function calibrate!(integ::ODEFilterIntegrator)
 
