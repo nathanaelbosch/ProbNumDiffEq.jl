@@ -45,7 +45,7 @@ function loopfooter!(integ)
 
     # TODO: Add check for maxiters back in again
     isnan(integ.cache.σ_sq) && error("Estimated sigma is NaN")
-    isnan(integ.EEst) && error("Error estimate is NaN")
+    integ.opts.adaptive && isnan(integ.EEst) && error("Error estimate is NaN")
     isnan(integ.dt) && error("Step size is NaN")
 end
 

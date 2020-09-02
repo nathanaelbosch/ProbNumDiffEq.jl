@@ -89,8 +89,7 @@ struct SchoberSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::SchoberSigma, integ)
     @unpack d = integ.constants
     @unpack h, H, Qh = integ.cache
-    jitter = 1e-12
-    σ² = h' * inv(H*Qh*H' + jitter*I) * h / d
+    σ² = h' * inv(H*Qh*H') * h / d
     return σ²
 end
 
@@ -149,8 +148,12 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
 
         # x_prev = integ.state_estimates[end]
 
-        _m, _P = kf_smooth(x_prev.μ, x_prev.Σ, x_n_pred.μ, x_n_pred.Σ, x_n_filt.μ,
-        x_n_filt.Σ, Ah, sigma*Qh, integ.constants.Precond)
+        _m, _P = kf_smooth(
+            x_prev.μ, x_prev.Σ,
+            x_n_pred.μ, x_n_pred.Σ,
+            x_n_filt.μ, x_n_filt.Σ,
+            Ah, sigma*Qh,
+            integ.constants.Precond)
         x_prev_smoothed = Gaussian(_m, _P)
 
         # Compute σ² in closed form:

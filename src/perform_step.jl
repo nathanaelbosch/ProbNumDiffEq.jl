@@ -100,6 +100,14 @@ function update!(integ::ODEFilterIntegrator, prediction)
     v .= 0 .- h
 
     m_p, P_p = prediction.μ, prediction.Σ
+
+    if all(P_p .== 0)
+        # If the predicted covariance is zero, the prediction will not be adjusted!
+        x_filt.μ .= m_p
+        x_filt.Σ .= P_p
+        return x_filt
+    end
+
     S .= Symmetric(H * P_p * H' .+ R)
     S_inv = inv(S)
     K .= P_p * H' * S_inv

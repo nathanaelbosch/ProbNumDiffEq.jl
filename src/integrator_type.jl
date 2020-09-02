@@ -120,7 +120,8 @@ function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
     jac = method == :ekf1 ? f.jac : nothing
     h!(h, du, m) = h .= E1*m - du
     H!(H, ddu) = H .= E1 - ddu * E0
-    R = diagm(0 => 1e-10 .* ones(d))
+    # R = diagm(0 => 1e-10 .* ones(d))
+    R = zeros(d, d)
 
     return GaussianODEFilterConstantCache{typeof(R), typeof(E0), typeof(Precond)}(
         d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond)
@@ -162,7 +163,7 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
     m0, P0 = initialize_derivatives ?
         get_initial_states_forwarddiff(prob, q) :
         initialize_without_derivatives(prob, q)
-    P0 += eps(eltype(P0)) * I
+    # P0 += eps(eltype(P0)) * I
     x0 = Precond * Gaussian(m0, P0)
 
     Ah_empty = diagm(0=>ones(uElType, d*(q+1)))
