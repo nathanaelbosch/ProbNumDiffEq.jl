@@ -98,7 +98,7 @@ end
 
 function update!(integ::ODEFilterIntegrator, prediction)
 
-    @unpack R = integ.constants
+    @unpack R, q, d = integ.constants
     @unpack measurement, h, H, K, x_filt = integ.cache
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
@@ -117,7 +117,23 @@ function update!(integ::ODEFilterIntegrator, prediction)
     K .= P_p * H' * S_inv
 
     x_filt.μ .= m_p .+ K*v
-    x_filt.Σ .= P_p .- Symmetric(K*S*K')
+    D = K*S*K'
+    x_filt.Σ .= P_p .- D
+
+    # Special rule to make sure nothing weird happens in the filter covariance
+    if all(diag(P_p)[d+1:2d] .≈ D[d+1:2d])
+        for i in d+1:2d
+            x_filt.Σ[i,i] = 0
+        end
+    end
+
+    # Even stronger rule: For any entry where both are approximately the same, just set to zero
+    for i in 1:d*(q+1), j in 1:d*(q+1)
+        if P_p[i,j] ≈ D[i,j]
+            x_filt.Σ[i,j] = 0
+        end
+    end
+
     # Check to make sure that nothing weird happened in the filter covariance
     if !all(diag(x_filt.Σ) .>= 0)
 
