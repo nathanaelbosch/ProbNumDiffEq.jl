@@ -9,14 +9,6 @@ function ibm(d::Integer, q::Integer; precond_dt=1.0)
     I_d = diagm(0 => ones(d))
     F = kron(F̃, I_d)  # In probnum the order is inverted
 
-    # L̃ = zeros(q+1)
-    # L̃[end] = σ^2
-    # I_d = diagm(0 => ones(d))
-    # L = kron(L̃, I_d)'  # In probnum the order is inverted
-
-    P, P_inv = preconditioner(precond_dt, d, q)
-
-
     @fastmath function A!(A::AbstractMatrix, h::Real)
         # Assumes that A comes from a previous computation => zeros and one-diag
         val = one(h)
