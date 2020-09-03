@@ -56,7 +56,7 @@ function postamble!(integ)
         calibrate!(integ)
         integ.sigmas .= integ.sigmas[end]
     end
-    integ.smooth && smooth!(integ)
+    integ.smooth && smooth_all!(integ)
 end
 
 
