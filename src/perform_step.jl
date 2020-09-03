@@ -19,6 +19,7 @@ function perform_step!(integ::ODEFilterIntegrator)
     if isdynamic(integ.sigma_estimator)
         σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
         x_pred.Σ .+= (σ_sq - 1) .* integ.cache.Qh
+        @assert all(diag(x_pred.Σ) .>= 0) "Negative values on the prediction variance!"
         integ.cache.σ_sq = σ_sq
     end
 
@@ -54,6 +55,9 @@ function predict!(integ::ODEFilterIntegrator)
     # x_pred.μ .= Ah * x.μ
     mul!(x_pred.μ, Ah, x.μ)
     x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
+
+    @assert all(diag(x_pred.Σ) .>= 0) "Negative values on the prediction variance!"
+
     return x_pred
 end
 
@@ -114,6 +118,13 @@ function update!(integ::ODEFilterIntegrator, prediction)
 
     x_filt.μ .= m_p .+ K*v
     x_filt.Σ .= P_p .- Symmetric(K*S*K')
+    # Check to make sure that nothing weird happened in the filter covariance
+    if !all(diag(x_filt.Σ) .>= 0)
+
+        @warn "Negative values on the filtering variance!" P_p K*S*K' x_filt.Σ
+        @info "Are the (1,1) entries approximately the same?" diag(P_p)[d+1:2d] diag(K*S*K')[d+1,2d] isapprox(diag(P_p)[d+1:2d], diag(K*S*K')[d+1,2d])
+        error("Negative values on the filtering variance!")
+    end
 
     return x_filt
 end
