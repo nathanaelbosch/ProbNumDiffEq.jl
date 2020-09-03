@@ -140,25 +140,19 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
     x_prev = x
 
     for i in 1:1
-        x_n_pred = Gaussian(Ah * x_prev.μ, Ah * x_prev.Σ * Ah' + sigma*Qh)
 
-        _m, _P = x_n_pred.μ, x_n_pred.Σ
+
+        x_next_pred = Gaussian(Ah * x_prev.μ, Ah * x_prev.Σ * Ah' + sigma*Qh)
+
+        _m, _P = x_next_pred.μ, x_next_pred.Σ
         S = H * _P * H' + R
         K = _P * H' * inv(S)
-        x_n_filt = Gaussian(_m + K*h, _P - K*S*K')
+        x_next_filt = Gaussian(_m + K*h, _P - K*S*K')
 
-        # x_prev = integ.state_estimates[end]
-
-        _m, _P = kf_smooth(
-            x_prev.μ, x_prev.Σ,
-            x_n_pred.μ, x_n_pred.Σ,
-            x_n_filt.μ, x_n_filt.Σ,
-            Ah, sigma*Qh,
-            integ.constants.Precond)
-        x_prev_smoothed = Gaussian(_m, _P)
+        x_smoothed = smooth(x, x_next_filt, Ah, sigma*Qh, integ)
 
         # Compute σ² in closed form:
-        diff = x_n_filt.μ - Ah*x_prev_smoothed.μ
+        diff = x_next_filt.μ - Ah*x_smoothed.μ
         sigma = diff' * inv(Qh) * diff / (d*(q+1))
     end
 
