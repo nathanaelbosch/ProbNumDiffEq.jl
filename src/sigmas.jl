@@ -87,8 +87,9 @@ end
 
 struct SchoberSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::SchoberSigma, integ)
-    @unpack d = integ.constants
+    @unpack d, R = integ.constants
     @unpack h, H, Qh = integ.cache
+    @assert all(R .== 0) "The schober-sigma assumes R==0!"
     σ² = h' * inv(H*Qh*H') * h / d
     return σ²
 end
