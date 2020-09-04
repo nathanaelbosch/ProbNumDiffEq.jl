@@ -29,13 +29,13 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         @test sol.u ≈ true_sol.(sol.t)
     end
 
-    @testset "Dynamic one-step EM" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:EM)
-        @test sol.u ≈ true_sol.(sol.t) atol=1e-5
-    end
+    # @testset "Dynamic one-step EM" begin
+    #     sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:EM)
+    #     @test sol.u ≈ true_sol.(sol.t) atol=1e-5
+    # end
 
-    @testset "Optim-based" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:optim)
-        @test sol.u ≈ true_sol.(sol.t)
-    end
+    # @testset "Optim-based" begin
+    #     sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:optim)
+    #     @test sol.u ≈ true_sol.(sol.t)
+    # end
 end
