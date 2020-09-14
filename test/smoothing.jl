@@ -11,8 +11,8 @@ prob = ProbNumODE.remake_prob_with_jac(prob)
 
 
 @testset "Smoothing for small dt and large q" begin
-    dt = 1e-5
-    q = 4
+    dt = 1e-4
+    q = 5
     @test solve(
         prob, EKF0(), q=q, smooth=true,
         sigmarule=:schober,
