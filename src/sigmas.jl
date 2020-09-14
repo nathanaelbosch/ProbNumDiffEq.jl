@@ -135,26 +135,28 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
     @unpack sigmas = integ
     @unpack h, H, Qh, x_pred, x, Ah, σ_sq = integ.cache
 
-    sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
+    sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
     x_prev = x
 
     for i in 1:1
 
-
-        x_next_pred = Gaussian(Ah * x_prev.μ, Ah * x_prev.Σ * Ah' + sigma*Qh)
-
-        _m, _P = x_next_pred.μ, x_next_pred.Σ
+        # Prediction if we use the "current best" sigma estimate
+        _m, _P = x_pred.μ, x_pred.Σ + (sigma-1)*Qh
+        v = 0 .- h
         S = H * _P * H' + R
         K = _P * H' * inv(S)
-        x_next_filt = Gaussian(_m + K*h, _P - K*S*K')
+        x_filt_sigma_adjusted = Gaussian(_m + K*v, _P - K*S*K')
 
-        x_smoothed = smooth(x, x_next_filt, Ah, sigma*Qh, integ)
+        x_prev_smoothed = smooth(x_prev, x_filt_sigma_adjusted, Ah, sigma*Qh, integ)
 
         # Compute σ² in closed form:
-        diff = x_next_filt.μ - Ah*x_smoothed.μ
+        diff = x_filt_sigma_adjusted.μ - Ah*x_prev_smoothed.μ
+        # @info "In the EM sigma computation" x_smoothed.μ Ah*x_smoothed.μ x_filt_sigma_adjusted.μ diff Qh inv(Qh)
+        # diff = rand(x_filt_sigma_adjusted) - Ah * rand(x_smoothed)
         sigma = diff' * inv(Qh) * diff / (d*(q+1))
     end
+    # sigma = min(sigma_prev*5, max(sigma_prev*0.1, sigma))
 
     return sigma
 end
