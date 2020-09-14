@@ -39,7 +39,8 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
 
     @unpack d, q = integ.constants
-    @unpack x_pred = integ.cache
+    @unpack x_tmp = integ.cache
+    x_pred = x_tmp
 
 
     # Prediction: t -> t+1
@@ -83,7 +84,6 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     if minval < 0
         @info "Error while smoothing: negative variances!" P x_pred.Σ x_next.Σ x_curr.Σ Ah Qh G
         @info "Solver used" integ.constants.q integ.sigma_estimator integ.steprule integ.smooth
-
 
         display(P)
         # display((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)')

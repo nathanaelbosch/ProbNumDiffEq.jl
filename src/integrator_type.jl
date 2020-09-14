@@ -137,6 +137,7 @@ mutable struct GaussianODEFilterCache{uType, xType, matType, sigmaType} <: ProbN
     x::xType
     x_pred::xType
     x_filt::xType
+    x_tmp::xType
     measurement
     Ah::matType
     Qh::matType
@@ -179,7 +180,7 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
 
     GaussianODEFilterCache{uType, typeof(x0), matType, typeof(sigma)}(
         copy(u0), copy(u0), copy(u0), copy(u0),
-        copy(x0), copy(x0), copy(x0),
+        copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,
         Ah_empty, Qh_empty, h, H, du, ddu, K, sigma, sigma,
         copy(P0),
