@@ -32,6 +32,7 @@ function perform_step!(integ::ODEFilterIntegrator)
         else
             @debug "Skipping the filtering, since the system is quasi-deterministic!"
             copy!(x_filt, x_pred)
+            mul!(u_filt, E0, x_filt.μ)
         end
     else
         # If sigma is not dynamic, we always UPDATE
