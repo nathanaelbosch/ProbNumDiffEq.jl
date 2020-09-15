@@ -56,21 +56,15 @@ function predict!(integ::ODEFilterIntegrator)
     Q!(Qh, dt)
 
     # x_pred.μ .= Ah * x.μ
-    predict!(x_pred, x, Ah, Qh)
+    mul!(x_pred.μ, Ah, x.μ)
+    x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
 
     @assert all(diag(x_pred.Σ) .>= 0) "Negative values on the prediction variance!"
 
     return x_pred
 end
-function predict!(x_pred, x_curr, Ah, Qh)
-    mul!(x_pred.μ, Ah, x_curr.μ)
-    x_pred.Σ .= Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
-end
-function predict(x_curr, Ah, Qh)
-    x_out = copy(x_curr)
-    predict!(x_out, x_curr, Ah, Qh)
-    return x_out
-end
+"""Vanilla PREDICT, without fancy checks or pre-allocation; use to test against"""
+predict(x_curr, Ah, Qh) = Gaussian(Ah * x_curr.μ, Symmetric(Ah * x_curr.Σ * Ah' .+ Qh))
 
 
 function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
@@ -111,13 +105,14 @@ function update!(integ::ODEFilterIntegrator, prediction)
 
     @unpack R, q, d = integ.constants
     @unpack measurement, h, H, K, x_filt = integ.cache
+
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
 
     m_p, P_p = prediction.μ, prediction.Σ
 
-    if all(P_p .== 0)
-        # If the predicted covariance is zero, the prediction will not be adjusted!
+    # If the predicted covariance is zero, the prediction will not be adjusted!
+    if iszero(P_p)
         x_filt.μ .= m_p
         x_filt.Σ .= P_p
         return x_filt
@@ -131,19 +126,7 @@ function update!(integ::ODEFilterIntegrator, prediction)
     D = K*S*K'
     x_filt.Σ .= P_p .- D
 
-    # Special rule to make sure nothing weird happens in the filter covariance
-    if all(diag(P_p)[d+1:2d] .≈ D[d+1:2d])
-        for i in d+1:2d
-            x_filt.Σ[i,i] = 0
-        end
-    end
-
-    # Even stronger rule: For any entry where both are approximately the same, just set to zero
-    for i in 1:d*(q+1), j in 1:d*(q+1)
-        if P_p[i,j] ≈ D[i,j]
-            x_filt.Σ[i,j] = 0
-        end
-    end
+    zero_if_approx_similar!(x_filt.Σ, P_p, D)
 
     # Check to make sure that nothing weird happened in the filter covariance
     if !all(diag(x_filt.Σ) .>= 0)
@@ -154,4 +137,37 @@ function update!(integ::ODEFilterIntegrator, prediction)
     end
 
     return x_filt
+end
+
+
+"""Vanilla UPDATE, without fancy checks or pre-allocation
+
+Use this to test any "advanced" implementation against
+"""
+function update(x_pred::AbstractVector, h::AbstractVector, H::AbstractMatrix, R::AbstractMatrix)
+    m_p, P_p = x_pred.μ, x_pred.Σ
+
+    # If the predicted covariance is zero, the prediction will not be adjusted!
+    if all(P_p .== 0)
+        return Gaussian(m_p, P_P)
+    else
+        v = 0 .- h
+        S = Symmetric(H * P_p * H' .+ R)
+        S_inv = inv(S)
+        K = P_p * H' * S_inv
+
+        filt_mean = m_p .+ K*v
+        filt_cov = P_p .- K*S*K'
+        return Gaussian(filt_mean, filt_cov)
+    end
+end
+
+function zero_if_approx_similar!(A, B, C)
+    @assert size(A) == size(B) == size(C)
+    # If B_ij ≈ C_ij, then A_ij = 0
+    for i in 1:length(A)
+        if B[i] ≈ C[i]
+            A[i] = 0
+        end
+    end
 end
