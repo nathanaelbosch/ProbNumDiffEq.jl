@@ -100,24 +100,53 @@ end
 Basically, compute the arg-max of the evidence through an actual optimization routine!
 Nice to know: The output "looks" very similar to the schober estimation!
 But, my current benchmark shows that it's much much slower: ~300ms vs 13ms!
+
+Update [15.09.2020]
+I changed the code, from using the exp to computing sigma directly but thresholding to zero.
+I also set sigma to exaclty zero for the cases where it's just too small, and I changed the
+jitter to `eps`.
 """
 struct OptimSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::OptimSigma, integ)
     @unpack d, q, R = integ.constants
+    @unpack sigmas = integ
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
+
+    sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
     z = h
     P = x.Σ
 
-    function negloglikelihood(σ_log)
-        S = H*(Ah*P*Ah' + exp.(σ_log).* Qh)*H' + R
-        S_inv = inv(S + 1e-12I)
+    # function negloglikelihood(σ_log)
+    #     S = H*(Ah*P*Ah' + exp.(σ_log).* Qh)*H' + R
+    #     S_inv = inv(S + 1e-12I)
+    #     return logdet(S) + z' * S_inv * z
+    # end
+    # g!(x, storage) = (storage[1] = ForwardDiff.gradient(s -> negloglikelihood(s), x)[1])
+    # res = optimize(negloglikelihood, [σ_sq], Newton())
+    # σ² = exp(res.minimizer[1])
+
+    # function neglikelihood(σ_log)
+    #     S = H*(Ah*P*Ah' + exp.(σ_log).* Qh)*H' + R
+    #     d = Gaussian(z, S)
+    #     return - pdf(Gaussian(z, S), zeros(size(z)))
+    # end
+    # res = optimize(neglikelihood, [sigma_prev], Newton())
+    # σ² = exp(res.minimizer[1])
+
+    function negloglikelihood(σ)
+        σ = max(σ, zero(σ))
+        S = Symmetric(H*(Ah*P*Ah' + σ .* Qh)*H' + R)
+        S_inv = inv(S + eps(eltype(S))*I)
         return logdet(S) + z' * S_inv * z
     end
-    # g!(x, storage) = (storage[1] = ForwardDiff.gradient(s -> negloglikelihood(s), x)[1])
-    res = optimize(negloglikelihood, [σ_sq], Newton())
+    res = optimize(negloglikelihood, [one(σ_sq)], Newton())
+    σ² = res.minimizer[1]
 
-    σ² = exp(res.minimizer[1])
+    (σ² < eps(typeof(σ²))) && (σ² = zero(σ²))  # set quasi-zero to exactly zero
+
+    # @info "Optimization sigma:" σ²
+
     return σ²
 end
 
