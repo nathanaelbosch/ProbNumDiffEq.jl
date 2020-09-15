@@ -164,30 +164,34 @@ struct EMSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::EMSigma, integ)
     @unpack d, q, R = integ.constants
     @unpack sigmas = integ
-    @unpack h, H, Qh, x_pred, x, Ah, σ_sq = integ.cache
+    @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
 
     sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
-    x_prev = x
+    x_curr = x
 
     for i in 1:1
+        @info "EM-sigma" sigma_prev sigma i integ.t
 
-        # Prediction if we use the "current best" sigma estimate
-        _m, _P = x_pred.μ, x_pred.Σ + (sigma-1)*Qh
-        v = 0 .- h
-        S = H * _P * H' + R
-        K = _P * H' * inv(S)
-        x_filt_sigma_adjusted = Gaussian(_m + K*v, _P - K*S*K')
+        x_next_pred = predict(x_curr, Ah, sigma*Qh)
+        x_next_filt = update(x_next_pred, h, H, R)
+        x_curr_smoothed = smooth(x_curr, x_next_filt, Ah, sigma*Qh, integ)
 
-        x_prev_smoothed = smooth(x_prev, x_filt_sigma_adjusted, Ah, sigma*Qh, integ)
+        Gain = x_curr.Σ * Ah' * inv(Symmetric(x_next_pred.Σ))
 
-        # Compute σ² in closed form:
-        diff = x_filt_sigma_adjusted.μ - Ah*x_prev_smoothed.μ
-        # @info "In the EM sigma computation" x_smoothed.μ Ah*x_smoothed.μ x_filt_sigma_adjusted.μ diff Qh inv(Qh)
-        # diff = rand(x_filt_sigma_adjusted) - Ah * rand(x_smoothed)
-        sigma = diff' * inv(Qh) * diff / (d*(q+1))
+        joint_distribution = Gaussian(
+            [x_next_filt.μ
+             x_curr_smoothed.μ],
+            [x_next_filt.Σ         x_next_filt.Σ * Gain';
+             Gain * x_next_filt.Σ  x_curr_smoothed.Σ]
+        )
+
+        A_tilde = [diagm(0=>ones(d*(q+1)))  -Ah]
+        diff_mean = A_tilde * joint_distribution.μ
+        diff_cov = A_tilde * joint_distribution.Σ * A_tilde'
+
+        sigma = tr(Qh \ (diff_cov + diff_mean * diff_mean')) / (d*(q+1))
     end
-    # sigma = min(sigma_prev*5, max(sigma_prev*0.1, sigma))
 
     return sigma
 end
