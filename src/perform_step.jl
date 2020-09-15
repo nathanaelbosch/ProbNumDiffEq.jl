@@ -17,14 +17,27 @@ function perform_step!(integ::ODEFilterIntegrator)
     measure_H!(integ, x_pred, t)
 
     if isdynamic(integ.sigma_estimator)
+        # @info "Before dynamic sigma:" x_pred.Σ
         σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
         x_pred.Σ .+= (σ_sq - 1) .* integ.cache.Qh
+        # @info "After sigma estimation:" t σ_sq x_pred.Σ (σ_sq > eps(typeof(σ_sq)))
         @assert all(diag(x_pred.Σ) .>= 0) "Negative values on the prediction variance!"
         integ.cache.σ_sq = σ_sq
-    end
+        # error("Terminate to inspect")
 
-    x_filt = update!(integ, x_pred)
-    mul!(u_filt, E0, x_filt.μ)
+        # Special case here: If sigma is too small, we don't need UPDATE
+        if (σ_sq > eps(typeof(σ_sq)))
+            x_filt = update!(integ, x_pred)
+            mul!(u_filt, E0, x_filt.μ)
+        else
+            @warn "Skipping the filtering, since the system is quasi-deterministic!"
+            copy!(x_filt, x_pred)
+        end
+    else
+        # If sigma is not dynamic, we always UPDATE
+        x_filt = update!(integ, x_pred)
+        mul!(u_filt, E0, x_filt.μ)
+    end
 
     if isstatic(integ.sigma_estimator)
         # E.g. estimate the /current/ MLE sigma
