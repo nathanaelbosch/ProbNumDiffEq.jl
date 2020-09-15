@@ -30,7 +30,7 @@ function perform_step!(integ::ODEFilterIntegrator)
             x_filt = update!(integ, x_pred)
             mul!(u_filt, E0, x_filt.μ)
         else
-            @warn "Skipping the filtering, since the system is quasi-deterministic!"
+            @debug "Skipping the filtering, since the system is quasi-deterministic!"
             copy!(x_filt, x_pred)
         end
     else
