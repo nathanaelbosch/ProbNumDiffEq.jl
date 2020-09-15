@@ -24,24 +24,13 @@ function perform_step!(integ::ODEFilterIntegrator)
         @assert all(diag(x_pred.Σ) .>= 0) "Negative values on the prediction variance!"
         integ.cache.σ_sq = σ_sq
         # error("Terminate to inspect")
-
-        # Special case here: If sigma is too small, we don't need UPDATE
-        if (σ_sq > eps(typeof(σ_sq)))
-            x_filt = update!(integ, x_pred)
-            mul!(u_filt, E0, x_filt.μ)
-        else
-            @debug "Skipping the filtering, since the system is quasi-deterministic!"
-            copy!(x_filt, x_pred)
-            mul!(u_filt, E0, x_filt.μ)
-        end
-    else
-        # If sigma is not dynamic, we always UPDATE
-        x_filt = update!(integ, x_pred)
-        mul!(u_filt, E0, x_filt.μ)
     end
 
+    x_filt = update!(integ, x_pred)
+    mul!(u_filt, E0, x_filt.μ)
+
     if isstatic(integ.sigma_estimator)
-        # E.g. estimate the /current/ MLE sigma
+        # E.g. estimate the /current/ MLE sigma; Needed for error estimation
         σ_sq = static_sigma_estimation(integ.sigma_estimator, integ)
         integ.cache.σ_sq = σ_sq
     end
