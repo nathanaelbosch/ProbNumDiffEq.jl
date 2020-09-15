@@ -1,60 +1,49 @@
-########################################################################################
-# (Extended) Kalman Filtering and Smoothing
-########################################################################################
-function kf_predict(m::Vector, P::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix)
-    return (m=(A*m), P=(A*P*A' + Q))
-end
+"""Simple, understandable implementations for Gaussian filtering and smoothing
 
-function kf_update(m::Vector, P::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix, H::AbstractMatrix, R::AbstractMatrix, y::Vector)
-    v = y - H*m
-    S = H * P * H' + R
-    K = P * H' * inv(S)
-    return (m=(m + K*v), P=(P - K*S*K'))
-end
+The functions all operate on `Gaussian` types.
+"""
 
-function kf_smooth(m_f_t::Vector, P_f_t::AbstractMatrix,
-                   m_p_t1::Vector, P_p_t1::AbstractMatrix,
-                   m_s_t1::Vector, P_s_t1::AbstractMatrix,
-                   A::AbstractMatrix, Q::AbstractMatrix,
-                   Precond::AbstractMatrix,
-                   jitter=1e-12)
-    G = P_f_t * A' * inv(P_p_t1)
-    m = m_f_t + G * (m_s_t1 - m_p_t1)
-    P = P_f_t + G * (P_s_t1 - P_p_t1) * G'
 
-    # Sanity: Make sure that the diagonal of P is non-negative
-    if minimum(diag(P)) < 0
-        @info "Error while smoothing: negative variances!" P_f_t P_s_t1 P_p_t1 P_s_t1-P_p_t1 G P
-        display(P_f_t)
-        display(P_s_t1 - P_p_t1)
-        display(G)
-        display(P)
-        error("Encountered negative variances during smoothing")
+"""Vanilla PREDICT, without fancy checks or pre-allocation; use to test against"""
+predict(x_curr, Ah, Qh) = Gaussian(Ah * x_curr.μ, Symmetric(Ah * x_curr.Σ * Ah' .+ Qh))
+
+
+"""Vanilla UPDATE, without fancy checks or pre-allocation
+
+Use this to test any "advanced" implementation against
+"""
+function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::AbstractMatrix)
+    m_p, P_p = x_pred.μ, x_pred.Σ
+
+    # If the predicted covariance is zero, the prediction will not be adjusted!
+    if all(P_p .== 0)
+        return Gaussian(m_p, P_P)
+    else
+        v = 0 .- h
+        S = Symmetric(H * P_p * H' .+ R)
+        S_inv = inv(S)
+        K = P_p * H' * S_inv
+
+        filt_mean = m_p .+ K*v
+        filt_cov = P_p .- K*S*K'
+        return Gaussian(filt_mean, filt_cov)
     end
-    @assert all(diag(P) .>= 0) "The covariance `P` might be NaN! Make sure that the covariances during the solve make sense."
-
-    return m, P
 end
 
 
-function ekf_predict(m::Vector, P::AbstractMatrix, f::Function, F::Function, Q::AbstractMatrix)
-    return (m=f(m), P=(F(m)*P*F(m)' + Q))
-end
+"""Vanilla SMOOTH, without fancy checks or pre-allocation
 
-function ekf_update(m::Vector, P::AbstractMatrix, h::Function, H::Function, R::AbstractMatrix, y::Vector)
-    v = y - h(m)
-    S = H(m) * P * H(m)' + R
-    K = P * H(m)' * inv(S)
-    @show K*S*K'
-    return (m=(m + K*v), P=(P - K*S*K'))
-end
+Use this to test any "advanced" implementation against.
+Requires the PREDICTed state.
+"""
+function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix)
 
-function ekf_smooth(m_f_t::Vector, P_f_t::AbstractMatrix,
-                    m_p_t1::Vector, P_p_t1::AbstractMatrix,
-                    m_s_t1::Vector, P_s_t1::AbstractMatrix,
-                    F::Function, Q::AbstractMatrix)
-    G = P_f_t * F(m_f_t)' * inv(P_p_t1)
-    m = m_f_t + G * (m_s_t1 - m_p_t1)
-    P = P_f_t + G * (P_s_t1 - P_p_t1) * G'
-    return m, P
+    P_p_inv = inv(Symmetric(x_next_pred.Σ))
+    Gain = x_curr.Σ * Ah' * P_p_inv
+
+    x_curr_smoothed = Gaussian(
+        x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ),
+        x_curr.Σ + Gain * (x_next_smoothed.Σ - x_next_pred.Σ) * Gain'
+    )
+    return x_curr_smoothed, Gain
 end

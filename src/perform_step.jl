@@ -63,8 +63,6 @@ function predict!(integ::ODEFilterIntegrator)
 
     return x_pred
 end
-"""Vanilla PREDICT, without fancy checks or pre-allocation; use to test against"""
-predict(x_curr, Ah, Qh) = Gaussian(Ah * x_curr.μ, Symmetric(Ah * x_curr.Σ * Ah' .+ Qh))
 
 
 function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
@@ -139,28 +137,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
     return x_filt
 end
 
-
-"""Vanilla UPDATE, without fancy checks or pre-allocation
-
-Use this to test any "advanced" implementation against
-"""
-function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::AbstractMatrix)
-    m_p, P_p = x_pred.μ, x_pred.Σ
-
-    # If the predicted covariance is zero, the prediction will not be adjusted!
-    if all(P_p .== 0)
-        return Gaussian(m_p, P_P)
-    else
-        v = 0 .- h
-        S = Symmetric(H * P_p * H' .+ R)
-        S_inv = inv(S)
-        K = P_p * H' * S_inv
-
-        filt_mean = m_p .+ K*v
-        filt_cov = P_p .- K*S*K'
-        return Gaussian(filt_mean, filt_cov)
-    end
-end
 
 function zero_if_approx_similar!(A, B, C)
     @assert size(A) == size(B) == size(C)

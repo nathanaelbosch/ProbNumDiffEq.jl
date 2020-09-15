@@ -114,33 +114,27 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     σ² = sigmas[minimum((idx, end))]
 
     # Extrapolate
-    m, P = prev_rv.μ, prev_rv.Σ
     h1 = tval - prev_t
     A!(Ah, h1)
     Q!(Qh, h1, σ²)
-    m_pred, P_pred = kf_predict(m, P, Ah, Qh)
-
-    pred_rv = Gaussian(m_pred, P_pred)
+    goal_pred = predict(prev_rv, Ah, Qh)
 
     if !solver.smooth || tval >= t[end]
-        return pred_rv
+        return goal_pred
     end
 
     next_t = t[idx+1]
-    next_rv = x[idx+1]
+    next_smoothed = x[idx+1]
 
     # Smooth
     h2 = next_t - tval
     A!(Ah, h2)
     Q!(Qh, h2, σ²)
-    m_pred_next, P_pred_next = kf_predict(m_pred, P_pred, Ah, Qh)
+    next_pred = predict(goal_pred, Ah, Qh)
 
-    m_smoothed, P_smoothed = kf_smooth(
-        m_pred, P_pred, m_pred_next, P_pred_next, next_rv.μ, next_rv.Σ, Ah, Qh,
-        solver.constants.Precond)
-    smoothed_rv = Gaussian(m_smoothed, P_smoothed)
+    goal_smoothed = smooth(goal_pred, next_pred, next_smoothed, Ah)
 
-    return smoothed_rv
+    return goal_smoothed
 
 end
 (posterior::GaussianFilteringPosterior)(tvals::AbstractVector) = StructArray(posterior.(tvals))
