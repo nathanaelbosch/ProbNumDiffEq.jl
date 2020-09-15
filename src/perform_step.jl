@@ -67,12 +67,20 @@ function predict!(integ::ODEFilterIntegrator)
     Q!(Qh, dt)
 
     # x_pred.μ .= Ah * x.μ
-    mul!(x_pred.μ, Ah, x.μ)
-    x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
+    predict!(x_pred, x, Ah, Qh)
 
     @assert all(diag(x_pred.Σ) .>= 0) "Negative values on the prediction variance!"
 
     return x_pred
+end
+function predict!(x_pred, x_curr, Ah, Qh)
+    mul!(x_pred.μ, Ah, x_curr.μ)
+    x_pred.Σ .= Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
+end
+function predict(x_curr, Ah, Qh)
+    x_out = copy(x_curr)
+    predict!(x_out, x_curr, Ah, Qh)
+    return x_out
 end
 
 
