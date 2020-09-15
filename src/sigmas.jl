@@ -175,9 +175,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
 
         x_next_pred = predict(x_curr, Ah, sigma*Qh)
         x_next_filt = update(x_next_pred, h, H, R)
-        x_curr_smoothed = smooth(x_curr, x_next_filt, Ah, sigma*Qh, integ)
-
-        Gain = x_curr.Σ * Ah' * inv(Symmetric(x_next_pred.Σ))
+        x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah)
 
         joint_distribution = Gaussian(
             [x_next_filt.μ

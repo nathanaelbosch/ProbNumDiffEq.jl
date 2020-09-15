@@ -96,3 +96,21 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
 
     return nothing
 end
+
+
+"""Vanilla SMOOTH, without fancy checks or pre-allocation
+
+Use this to test any "advanced" implementation against.
+Requires the PREDICTed state.
+"""
+function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix)
+
+    P_p_inv = inv(Symmetric(x_next_pred.Σ))
+    Gain = x_curr.Σ * Ah' * P_p_inv
+
+    x_curr_smoothed = Gaussian(
+        x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ),
+        x_curr.Σ + Gain * (x_next_smoothed.Σ - x_next_pred.Σ) * Gain'
+    )
+    return x_curr_smoothed, Gain
+end
