@@ -105,6 +105,8 @@ Update [15.09.2020]
 I changed the code, from using the exp to computing sigma directly but thresholding to zero.
 I also set sigma to exaclty zero for the cases where it's just too small, and I changed the
 jitter to `eps`.
+
+Note: It does not really seem to work that well!
 """
 struct OptimSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::OptimSigma, integ)
