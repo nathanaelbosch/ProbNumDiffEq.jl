@@ -144,7 +144,7 @@ end
 
 Use this to test any "advanced" implementation against
 """
-function update(x_pred::AbstractVector, h::AbstractVector, H::AbstractMatrix, R::AbstractMatrix)
+function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::AbstractMatrix)
     m_p, P_p = x_pred.μ, x_pred.Σ
 
     # If the predicted covariance is zero, the prediction will not be adjusted!
