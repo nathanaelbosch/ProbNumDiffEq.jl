@@ -19,6 +19,7 @@ end
 function fix_dt_at_bounds!(integ)
     integ.dt = min(integ.opts.dtmax, integ.dt)
     integ.dt = max(integ.opts.dtmin, integ.dt)
+    integ.dt = min(integ.prob.tspan[2] - integ.t, integ.dt)
 end
 
 
