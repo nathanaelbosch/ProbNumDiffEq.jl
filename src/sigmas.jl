@@ -171,7 +171,8 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
     x_curr = x
 
     for i in 1:1
-        @info "EM-sigma" sigma_prev sigma i integ.t
+        # @info "EM-sigma" sigma_prev sigma i integ.t
+        # @info "EM-sigma" h H integ.dt Qh Ah
 
         x_next_pred = predict(x_curr, Ah, sigma*Qh)
         x_next_filt = update(x_next_pred, h, H, R)
