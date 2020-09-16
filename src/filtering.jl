@@ -47,17 +47,25 @@ Use this to test any "advanced" implementation against.
 Requires the PREDICTed state.
 """
 function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix)
+    # @info "smooth" x_curr x_next_pred x_next_smoothed Ah
 
     P_p_inv = inv(Symmetric(x_next_pred.Σ))
     Gain = x_curr.Σ * Ah' * P_p_inv
 
-    x_curr_smoothed = Gaussian(
-        x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ),
-        x_curr.Σ + Gain * (x_next_smoothed.Σ - x_next_pred.Σ) * Gain'
-    )
+    smoothed_mean = x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ)
+    GDG = Gain * (x_next_smoothed.Σ - x_next_pred.Σ) * Gain'
+    smoothed_cov = x_curr.Σ + GDG
 
-    assert_good_covariance(x_curr_smoothed.Σ)
+    zero_if_approx_similar!(smoothed_cov, x_curr.Σ, -GDG)
 
+    try
+        assert_good_covariance(smoothed_cov)
+    catch e
+        @error "Bad smoothed_cov" x_curr.Σ x_next_pred.Σ x_next_smoothed.Σ smoothed_cov GDG
+        throw(e)
+    end
+
+    x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, Gain
 end
 
