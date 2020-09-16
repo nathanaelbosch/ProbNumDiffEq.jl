@@ -73,7 +73,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     try
         assert_good_covariance(x_curr.Σ)
     catch e
-        @info "Error while smoothing: negative variances! (in x_curr)" P x_pred.Σ x_next.Σ x_curr.Σ Ah Qh G D
+        @info "Error while smoothing: negative variances! (in x_curr)" P x_pred.Σ x_next.Σ x_curr.Σ Ah Qh G GSG
         @info "Solver used" integ.constants.q integ.sigma_estimator integ.steprule integ.smooth
         throw(e)
     end

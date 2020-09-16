@@ -121,16 +121,16 @@ function update!(integ::ODEFilterIntegrator, prediction)
     K .= P_p * H' * S_inv
 
     x_filt.μ .= m_p .+ K*v
-    D = K*S*K'
-    x_filt.Σ .= P_p .- D
+    KSK = K*S*K'
+    x_filt.Σ .= P_p .- KSK
 
-    zero_if_approx_similar!(x_filt.Σ, P_p, D)
+    zero_if_approx_similar!(x_filt.Σ, P_p, KSK)
 
     # Check to make sure that nothing weird happened in the filter covariance
     if !all(diag(x_filt.Σ) .>= 0)
 
         @warn "Negative values on the filtering variance!" P_p K*S*K' x_filt.Σ
-        @info "Are the (1,1) entries approximately the same?" diag(P_p)[d+1:2d] diag(K*S*K')[d+1:2d] isapprox(diag(P_p)[d+1:2d], diag(K*S*K')[d+1:2d])
+        @info "Are the (1,1) entries approximately the same?" diag(P_p)[d+1:2d] diag(K*S*K')[d+1:2d] isapprox(diag(P_p)[d+1:2d], diag(KSK)[d+1:2d])
         error("Negative values on the filtering variance!")
     end
 
