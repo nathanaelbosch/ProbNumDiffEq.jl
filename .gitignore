@@ -2,6 +2,8 @@ build/
 .ob-jupyter/
 /.vscode/
 *.svg
+*.png
+*.pdf
 *.bson
 
 
