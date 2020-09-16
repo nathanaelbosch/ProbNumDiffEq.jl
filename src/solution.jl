@@ -132,7 +132,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     Q!(Qh, h2, σ²)
     next_pred = predict(goal_pred, Ah, Qh)
 
-    goal_smoothed = smooth(goal_pred, next_pred, next_smoothed, Ah)
+    goal_smoothed, _Gain = smooth(goal_pred, next_pred, next_smoothed, Ah)
 
     return goal_smoothed
 
