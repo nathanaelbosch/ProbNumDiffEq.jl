@@ -140,9 +140,11 @@ end
 
 function zero_if_approx_similar!(A, B, C)
     @assert size(A) == size(B) == size(C)
+    @assert eltype(A) == eltype(B) == eltype(C)
     # If B_ij ≈ C_ij, then A_ij = 0
+    # But, only do this if the value in A is actually negative
     for i in 1:length(A)
-        if B[i] ≈ C[i]
+        if (B[i] ≈ C[i] || abs(B[i] - C[i]) < eps(eltype(A))) && A[i] < 0
             A[i] = 0
         end
     end
