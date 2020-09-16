@@ -57,38 +57,27 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
 
     # Vanilla:
-    D = G * (x_next.Σ .- x_pred.Σ) * G'
-    # x_curr.Σ .+= D
+    GDG = G * (x_next.Σ .- x_pred.Σ) * G'
+    x_tmp.Σ .= x_curr.Σ .+ GDG
+    zero_if_approx_similar!(x_tmp.Σ, x_curr.Σ, -GDG)
+    copy!(x_curr.Σ, x_tmp.Σ)
     # Joseph-Form:
-    P = copy(x_curr.Σ)
-    C_tilde = Ah
-    K_tilde = P * Ah' * P_p_inv
-    P_s = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
-           + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
-    x_curr.Σ .= P_s
+    # P = copy(x_curr.Σ)
+    # C_tilde = Ah
+    # K_tilde = P * Ah' * P_p_inv
+    # P_s = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
+    #        + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
+    # x_curr.Σ .= P_s
 
 
-    # Sanity: Make sure that the diagonal of P is non-negative
-    minval = minimum(diag(x_curr.Σ))
-    if abs(minval) < eps(eltype(x_curr.Σ))
-    # if abs(minval) < 1e-12
-        for i in 1:(d*(q+1))
-            x_curr.Σ[i,i] -= minval
-        end
-    end
-    minval = minimum(diag(x_curr.Σ))
-    if minval < 0
+    try
+        assert_good_covariance(x_curr.Σ)
+    catch e
         @info "Error while smoothing: negative variances! (in x_curr)" P x_pred.Σ x_next.Σ x_curr.Σ Ah Qh G D
         @info "Solver used" integ.constants.q integ.sigma_estimator integ.steprule integ.smooth
-
-        display(P)
-        # display((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)')
-        # display(K_tilde * Qh * K_tilde')
-        # display(G * x_next.Σ * G')
-
-        error("Encountered negative variances during smoothing")
+        throw(e)
     end
-    @assert all(diag(x_curr.Σ) .>= 0) "The covariance `P` might be NaN! Make sure that the covariances during the solve make sense."
+
 
     return nothing
 end
