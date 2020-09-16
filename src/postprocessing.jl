@@ -57,7 +57,8 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
 
     # Vanilla:
-    # x_curr.Σ .+= G * (x_next.Σ .- x_pred.Σ) * G'
+    D = G * (x_next.Σ .- x_pred.Σ) * G'
+    # x_curr.Σ .+= D
     # Joseph-Form:
     P = copy(x_curr.Σ)
     C_tilde = Ah
@@ -77,7 +78,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     end
     minval = minimum(diag(x_curr.Σ))
     if minval < 0
-        @info "Error while smoothing: negative variances!" P x_pred.Σ x_next.Σ x_curr.Σ Ah Qh G
+        @info "Error while smoothing: negative variances! (in x_curr)" P x_pred.Σ x_next.Σ x_curr.Σ Ah Qh G D
         @info "Solver used" integ.constants.q integ.sigma_estimator integ.steprule integ.smooth
 
         display(P)
