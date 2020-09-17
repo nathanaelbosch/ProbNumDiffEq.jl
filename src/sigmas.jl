@@ -191,6 +191,8 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
 
         sigma = tr(Qh \ (diff_cov + diff_mean * diff_mean')) / (d*(q+1))
     end
+    (sigma < 0) && (sigma=zero(sigma))
+    # @info "em-sigma" sigma Qh integ.dt
 
     return sigma
 end
