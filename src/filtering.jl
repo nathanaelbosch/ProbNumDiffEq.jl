@@ -53,7 +53,9 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
     Gain = x_curr.Σ * Ah' * P_p_inv
 
     smoothed_mean = x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ)
-    GDG = Gain * (x_next_smoothed.Σ - x_next_pred.Σ) * Gain'
+    x_next_diff_cov = x_next_smoothed.Σ - x_next_pred.Σ
+    zero_if_approx_similar!(x_next_diff_cov, x_next_smoothed.Σ, x_next_pred.Σ)
+    GDG = Gain * (x_next_diff_cov) * Gain'
     smoothed_cov = x_curr.Σ + GDG
 
     zero_if_approx_similar!(smoothed_cov, x_curr.Σ, -GDG)

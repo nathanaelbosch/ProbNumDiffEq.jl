@@ -13,7 +13,11 @@ end
 function fix_dt_at_bounds!(integ)
     integ.dt = min(integ.opts.dtmax, integ.dt)
     integ.dt = max(integ.opts.dtmin, integ.dt)
-    integ.dt = min(integ.prob.tspan[2] - integ.t, integ.dt)
+    next_t = integ.t + integ.dt
+    if next_t + integ.opts.dtmin > integ.prob.tspan[2]
+        # Avoid having to make a step smaller than dtmin in the next step
+        integ.dt = integ.prob.tspan[2] - integ.t
+    end
 end
 
 

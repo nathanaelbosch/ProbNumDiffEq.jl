@@ -22,7 +22,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            dt=eltype(prob.tspan)(0),
                            abstol=1e-6, reltol=1e-3, gamma=9//10,
                            qmin=0.1, qmax=5.0,
-                           dtmin=nothing,
+                           dtmin=1e-8,
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
 
                            precond_dt = dt == 0 ? 1e-2 : dt,

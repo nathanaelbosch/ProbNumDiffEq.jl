@@ -28,9 +28,13 @@ function estimate_errors(::FilterErrors, integ)
     @unpack E0, R = integ.constants
     @unpack σ_sq, Qh, H = integ.cache
 
+    if iszero(Qh) || iszero(σ_sq)
+        return zero(integ.EEst)
+    end
+
     P_pred_loc = σ_sq .* Qh
 
-    S_loc = H * P_pred_loc * H' .+ R
+    S_loc = Symmetric(H * P_pred_loc * H' .+ R)
     K_loc = P_pred_loc * H' * inv(S_loc)
     P_filt_loc = P_pred_loc .- K_loc * S_loc * K_loc'
 
