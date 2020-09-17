@@ -47,8 +47,6 @@ function loopfooter!(integ)
     integ.opts.adaptive && isnan(integ.EEst) && error("Error estimate is NaN")
     isnan(integ.dt) && error("Step size is NaN")
 
-
-
     # Accept or reject the step: Moved this here from loopheader!
     if integ.iter > 0 && integ.accept_step
         integ.success_iter += 1
