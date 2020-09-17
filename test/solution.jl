@@ -24,6 +24,11 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
         @test sol.destats.naccept <= sol.destats.nf
     end
 
+    @testset "Hit the provided tspan" begin
+        @test sol.t[1] ≈ prob.tspan[1]
+        @test sol.t[end] ≈ prob.tspan[2]
+    end
+
     @testset "Prob and non-prob u" begin
         @test sol.u == sol.pu.μ
     end
