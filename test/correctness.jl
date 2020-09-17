@@ -24,6 +24,7 @@ for (prob, probname) in [
             sigma in [:fixedMLE, :schober, :EM, :fixedWeightedMLE, :fixedMAP],
             error in (:schober, :prediction, :filtering),
             q in 1:3
+            @testset "Constant steps: $probname; q=$q, sigma=$sigma, methdo=$method, error=$error" begin
 
             @debug "Testing for correctness: Constant steps" probname method sigma error q
 
@@ -34,6 +35,7 @@ for (prob, probname) in [
                         smooth=false,
                         )
             @test sol.u ≈ true_sol.(sol.t)
+            end
         end
     end
 end
@@ -54,6 +56,7 @@ for (prob, probname) in [
             sigma in [:schober, :fixedMLE, :EM, :fixedWeightedMLE, :fixedMAP],
             error in (:schober, :prediction, :filtering),
             q in 1:3
+            @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, methdo=$method, error=$error" begin
 
             @debug "Testing for correctness: Adaptive steps" probname method sigma error q
 
@@ -70,6 +73,7 @@ for (prob, probname) in [
             @test mse < 1e-5
             @test maxdiff < 1e-5
             # @test sol.u ≈ true_sol.(sol.t)
+            end
         end
     end
 end
