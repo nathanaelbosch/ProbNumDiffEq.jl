@@ -20,7 +20,7 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
 
     # Destats
     @testset "DEStats" begin
-        @test length(sol.t) == sol.destats.naccept
+        @test length(sol.t) == sol.destats.naccept + 1
         @test sol.destats.naccept <= sol.destats.nf
     end
 

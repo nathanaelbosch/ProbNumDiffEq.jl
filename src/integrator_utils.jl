@@ -1,18 +1,12 @@
 """accept/reject previous step and chose new dt
 
 "This is done at the top so that way the interator interface happens mid-step instead of post-step"
+UPDATE 17-09-2020:
+Had trouble with correclty handling the exact step to T, so I moved the "apply step" stuff
+into loopfooter!.
 """
 function loopheader!(integ)
-
-    # Accept or reject the step
-    if integ.iter > 0 && integ.accept_step
-        integ.success_iter += 1
-        apply_step!(integ)
-    end
-
-
     integ.iter += 1
-
     fix_dt_at_bounds!(integ)
 end
 
@@ -48,6 +42,14 @@ function loopfooter!(integ)
     isnan(integ.cache.σ_sq) && error("Estimated sigma is NaN")
     integ.opts.adaptive && isnan(integ.EEst) && error("Error estimate is NaN")
     isnan(integ.dt) && error("Step size is NaN")
+
+
+
+    # Accept or reject the step: Moved this here from loopheader!
+    if integ.iter > 0 && integ.accept_step
+        integ.success_iter += 1
+        apply_step!(integ)
+    end
 end
 
 

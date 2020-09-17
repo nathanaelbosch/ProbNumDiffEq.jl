@@ -7,10 +7,6 @@ function perform_step!(integ::ODEFilterIntegrator)
     @unpack E0 = integ.constants
     @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
 
-    if iszero(dt)
-        return nothing
-    end
-
     t = t + dt
     integ.t_new = t
 
