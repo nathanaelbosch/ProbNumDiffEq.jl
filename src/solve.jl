@@ -117,7 +117,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
     dt_init = dt != 0 ? dt : 1e-3
-    QT = typeof(dtmin)
+    QT = typeof(qmin)
     opts = DEOptions{typeof(maxiters), typeof(abstol), typeof(reltol), QT, typeof(internalnorm), tType}(
         maxiters, adaptive, abstol, reltol, QT(gamma), qmin, qmax, internalnorm, dtmin, dtmax)
 

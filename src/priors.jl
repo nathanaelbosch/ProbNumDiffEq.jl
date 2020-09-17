@@ -20,13 +20,13 @@ function ibm(d::Integer, q::Integer; precond_dt=1.0)
         end
     end
 
-    @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::AbstractFloat)
+    @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::Real)
         idx = 2 * q + 1 - row - col
         fact_rw = factorial(q - row)
         fact_cl = factorial(q - col)
         return (h^idx) / (idx * fact_rw * fact_cl)
     end
-    @fastmath function Q!(Q::AbstractMatrix, h::AbstractFloat, σ²::AbstractFloat=1.0)
+    @fastmath function Q!(Q::AbstractMatrix, h::Real, σ²::Real=1.0)
         val = one(h)
         @simd for col in 0:q
             @simd for row in col:q
