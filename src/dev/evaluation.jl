@@ -100,6 +100,9 @@ function compute_costs_errors(prob, alg, abstol, reltol, appxsol, dt=nothing;
     end
 
     sol = sol_fun()
+    if sol.retcode != :Success
+        return nothing, nothing
+    end
     if DiffEqBase.has_analytic(sol.prob.f)
         @assert :l2 in keys(sol.errors)
         @assert :χ² in keys(sol.errors)

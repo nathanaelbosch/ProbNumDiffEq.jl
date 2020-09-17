@@ -140,6 +140,7 @@ function DiffEqBase.solve!(integ::ODEFilterIntegrator)
     while integ.t < integ.tmax && integ.iter < integ.opts.maxiters
         step!(integ)
     end
+    retcode = integ.iter == integ.opts.maxiters ? :MaxIters : :Success
     postamble!(integ)
     sol = DiffEqBase.build_solution(
         integ.prob, integ.alg,
@@ -147,5 +148,6 @@ function DiffEqBase.solve!(integ::ODEFilterIntegrator)
         integ.state_estimates,
         integ.sigmas,
         integ.proposals, integ;
+        retcode=retcode,
         destats=integ.destats)
 end
