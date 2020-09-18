@@ -10,12 +10,12 @@ h = rand()
 σ = rand()
 
 
-@testset "Test IBM (d=2,q=2)" begin
+@testset "Test vanilla (ie. non-preconditioned) IBM (d=2,q=2)" begin
     # Tests are broken, because there is no option right now to get A and Q without
     # the preconditioning
     d, q = 2, 2
 
-    A!, Q! = ProbNumODE.ibm(d, q)
+    A!, Q! = ProbNumODE.vanilla_ibm(d, q)
     Ah = diagm(0 => ones(d*(q+1)))
     Qh = zeros(d*(q+1), d*(q+1))
     A!(Ah, h)
@@ -28,7 +28,7 @@ h = rand()
                  0 0 0 1 0 h;
                  0 0 0 0 1 0;
                  0 0 0 0 0 1]
-    @test_broken AH_22_IBM ≈ Ah
+    @test AH_22_IBM ≈ Ah
 
     QH_22_IBM = σ^2 .* [h^5/20  0       h^4/8  0      h^3/6  0;
                         0       h^5/20  0      h^4/8  0      h^3/6;
@@ -36,7 +36,7 @@ h = rand()
                         0       h^4/8   0      h^3/3  0      h^2/2;
                         h^3/6   0       h^2/2  0      h      0;
                         0       h^3/6   0      h^2/2  0      h]
-    @test_broken QH_22_IBM ≈ Qh
+    @test QH_22_IBM ≈ Qh
 end
 
 
