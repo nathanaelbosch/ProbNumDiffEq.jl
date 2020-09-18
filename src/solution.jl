@@ -98,7 +98,7 @@ end
 function (posterior::GaussianFilteringPosterior)(tval::Real)
     @unpack t, x, sigmas, solver = posterior
 
-    @unpack A!, Q!, d, q, E0 = solver.constants
+    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.constants
     @unpack Ah, Qh = solver.cache
     if tval < t[1]
         error("Invalid t<t0")
@@ -116,9 +116,11 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
 
     # Extrapolate
     h1 = tval - prev_t
+    P, PI = Precond(dt), InvPrecond(dt)
     A!(Ah, h1)
     Q!(Qh, h1, σ²)
-    goal_pred = predict(prev_rv, Ah, Qh)
+    goal_pred = predict(P * prev_rv, Ah, Qh)
+    goal_pred = PI * goal_pred
 
     if !solver.smooth || tval >= t[end]
         return goal_pred
@@ -129,13 +131,16 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
 
     # Smooth
     h2 = next_t - tval
+    P, PI = Precond(dt), InvPrecond(dt)
+    goal_pred = P * goal_pred
+    next_smoothed = P * next_smoothed
     A!(Ah, h2)
     Q!(Qh, h2, σ²)
     next_pred = predict(goal_pred, Ah, Qh)
 
     goal_smoothed, _Gain = smooth(goal_pred, next_pred, next_smoothed, Ah)
 
-    return goal_smoothed
+    return PI * goal_smoothed
 
 end
 (posterior::GaussianFilteringPosterior)(tvals::AbstractVector) = StructArray(posterior.(tvals))
