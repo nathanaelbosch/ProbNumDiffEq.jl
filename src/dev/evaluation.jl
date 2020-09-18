@@ -8,7 +8,7 @@ function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution,
     @assert sol2.dense
     interp_analytic = sol2(densetimes)[2:end]
     diffs = interp_pu.μ - interp_analytic.u
-    xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
+    xi2_stats = [r' * (cov \ r) for (r, cov) in zip(diffs, interp_pu.Σ)]
     sol.errors[:Χ²] = mean(xi2_stats)
 
     return nothing
@@ -36,7 +36,7 @@ function add_dense_chi2_statistic!(sol::ProbNumODE.ProbODESolution)
     @assert length(means) > 0 "All values are skipped in the computation of the chi2-statistic!"
     # @show size(means), size(u_analytic)
     diffs = means - u_analytic
-    xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, covs)]
+    xi2_stats = [r' * (cov \ r) for (r, cov) in zip(diffs, covs)]
     sol.errors[:Χ²] = mean(xi2_stats)
 end
 
@@ -48,7 +48,7 @@ function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution,
 
     interp_analytic = sol2(sol.t)[2:end]
     diffs = interp_pu.μ - interp_analytic.u
-    xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, interp_pu.Σ)]
+    xi2_stats = [r' * (cov \ r) for (r, cov) in zip(diffs, interp_pu.Σ)]
     sol.errors[:χ²] = mean(xi2_stats)
 
     return nothing
@@ -72,7 +72,7 @@ function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution)
     u_analytic = f_analytic.(sol.t)[skip_idx:end]
 
     diffs = means - u_analytic
-    xi2_stats = [r' * inv(cov) * r for (r, cov) in zip(diffs, covs)]
+    xi2_stats = [r' * (cov \ r) for (r, cov) in zip(diffs, covs)]
     sol.errors[:χ²] = mean(xi2_stats)
 
     return nothing
@@ -88,7 +88,7 @@ function add_final_chi2_statistic!(sol::ProbNumODE.ProbODESolution,
 
     @assert sol2.dense
     diff = pu.μ - sol2(T)
-    xi2 = diff' * inv(pu.Σ) * diff
+    xi2 = diff' * (pu.Σ \ diff)
     sol.errors[:final_χ²] = xi2
 
     return nothing
@@ -103,7 +103,7 @@ function add_final_chi2_statistic!(sol::ProbNumODE.ProbODESolution)
     @assert DiffEqBase.has_analytic(sol.prob.f)
     f_analytic(t) = sol.prob.f.analytic(sol.prob.u0, sol.prob.p, t)
     diff = pu.μ - f_analytic(T)
-    xi2 = diff' * inv(pu.Σ) * diff
+    xi2 = diff' * (pu.Σ \ diff)
     sol.errors[:final_χ²] = xi2
 
     return nothing
