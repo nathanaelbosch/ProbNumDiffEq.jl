@@ -17,7 +17,7 @@ function perform_step!(integ::ODEFilterIntegrator)
     integ.t_new = t
 
     x_pred = predict!(integ)
-    mul!(u_pred, E0 * PI, x_pred.μ)
+    mul!(u_pred, E0, PI*x_pred.μ)
 
     measure_h!(integ, x_pred, t)
     measure_H!(integ, x_pred, t)
@@ -33,7 +33,7 @@ function perform_step!(integ::ODEFilterIntegrator)
     end
 
     x_filt = update!(integ, x_pred)
-    mul!(u_filt, E0 * PI, x_filt.μ)
+    mul!(u_filt, E0, PI*x_filt.μ)
 
     if isstatic(integ.sigma_estimator)
         # E.g. estimate the /current/ MLE sigma; Needed for error estimation
@@ -76,9 +76,10 @@ end
 
 function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
 
-    @unpack p, f = integ
-    @unpack E0, h! = integ.constants
+    @unpack p, f, dt = integ
+    @unpack E0, h!, InvPrecond = integ.constants
     @unpack du, h, u_pred = integ.cache
+    PI = InvPrecond(dt)
 
     IIP = isinplace(integ)
     if IIP
@@ -88,7 +89,7 @@ function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
     end
     integ.destats.nf += 1
 
-    h!(h, du, x_pred.μ)
+    h!(h, du, PI*x_pred.μ)
 end
 
 function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
@@ -110,8 +111,10 @@ end
 
 function update!(integ::ODEFilterIntegrator, prediction)
 
-    @unpack R, q, d = integ.constants
+    @unpack dt = integ
+    @unpack R, q, d, Precond, InvPrecond = integ.constants
     @unpack measurement, h, H, K, x_filt = integ.cache
+    P, PI = Precond(dt), InvPrecond(dt)
 
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
@@ -119,12 +122,13 @@ function update!(integ::ODEFilterIntegrator, prediction)
     m_p, P_p = prediction.μ, prediction.Σ
 
     # If the predicted covariance is zero, the prediction will not be adjusted!
-    if iszero(P_p)
+    if all((PI*P_p*PI') .< eps(eltype(P_p)))
         x_filt.μ .= m_p
         x_filt.Σ .= P_p
         return x_filt
     end
 
+    H = H*PI
     S .= Symmetric(H * P_p * H' .+ R)
     S_inv = inv(S)
     K .= P_p * H' * S_inv

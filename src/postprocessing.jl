@@ -15,16 +15,24 @@ end
 function smooth_all!(integ::ODEFilterIntegrator)
 
     @unpack state_estimates, times, sigmas = integ
-    @unpack A!, Q! = integ.constants
+    @unpack A!, Q!, Precond, InvPrecond = integ.constants
     @unpack Ah, Qh = integ.cache
     # x_pred is just used as a cache here
 
     for i in length(state_estimates)-1:-1:2
         dt = times[i+1] - times[i]
+
+        P = Precond(dt)
+        PI = InvPrecond(dt)
+
         A!(Ah, dt)
         Q!(Qh, dt, sigmas[i])
+
         # @info "Smoothing" i dt sigmas[i] sigmas[i]==0
-        smooth!(state_estimates[i], state_estimates[i+1], Ah, Qh, integ)
+
+        state_estimates[i] = P * state_estimates[i]
+        smooth!(state_estimates[i], P*state_estimates[i+1], Ah, Qh, integ)
+        state_estimates[i] = PI * state_estimates[i]
     end
 end
 
