@@ -110,9 +110,12 @@ Note: It does not really seem to work that well!
 """
 struct OptimSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::OptimSigma, integ)
-    @unpack d, q, R = integ.constants
-    @unpack sigmas = integ
+    @unpack d, q, R, InvPrecond = integ.constants
+    @unpack sigmas, dt = integ
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
+
+    PI = InvPrecond(dt)
+    H = H * PI
 
     sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
@@ -166,6 +169,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
     @unpack sigmas, dt = integ
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
     P, PI = Precond(dt), InvPrecond(dt)
+    H = H * PI
 
     sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
@@ -176,7 +180,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
         # @info "EM-sigma" h H integ.dt Qh Ah
 
         x_next_pred = predict(x_curr, Ah, sigma*Qh)
-        x_next_filt = update(x_next_pred, h, H*PI, R)
+        x_next_filt = update(x_next_pred, h, H, R)
         x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah)
 
         joint_distribution = Gaussian(
@@ -193,7 +197,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
         sigma = tr(Qh \ (diff_cov + diff_mean * diff_mean')) / (d*(q+1))
     end
     (sigma < 0) && (sigma=zero(sigma))
-    # @info "em-sigma" sigma Qh integ.dt
+    # @debug "em-sigma" sigma Qh integ.dt
 
     return sigma
 end

@@ -67,7 +67,7 @@ end
 
 function apply_step!(integ)
     copy!(integ.cache.x, integ.cache.x_filt)
-    mul!(integ.u, integ.constants.E0, integ.cache.x.μ)
+    copy!(integ.u, integ.cache.u_filt)
     integ.t = integ.t_new
 
     integ.cache.σ_sq_prev = integ.cache.σ_sq
