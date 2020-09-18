@@ -116,7 +116,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
 
     # Extrapolate
     h1 = tval - prev_t
-    P, PI = Precond(dt), InvPrecond(dt)
+    P, PI = Precond(h1), InvPrecond(h1)
     A!(Ah, h1)
     Q!(Qh, h1, σ²)
     goal_pred = predict(P * prev_rv, Ah, Qh)
@@ -131,7 +131,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
 
     # Smooth
     h2 = next_t - tval
-    P, PI = Precond(dt), InvPrecond(dt)
+    P, PI = Precond(h2), InvPrecond(h2)
     goal_pred = P * goal_pred
     next_smoothed = P * next_smoothed
     A!(Ah, h2)
