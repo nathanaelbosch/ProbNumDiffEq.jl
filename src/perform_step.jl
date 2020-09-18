@@ -10,8 +10,6 @@ function perform_step!(integ::ODEFilterIntegrator)
     P = Precond(dt)
     PI = InvPrecond(dt)
     integ.cache.x = P * integ.cache.x
-    integ.cache.x_pred = P * integ.cache.x_pred
-    integ.cache.x_filt = P * integ.cache.x_filt
 
     t = t + dt
     integ.t_new = t
