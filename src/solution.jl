@@ -62,6 +62,7 @@ function DiffEqBase.build_solution(
             DiffEqBase.calculate_solution_errors!(sol;
                 timeseries_errors=timeseries_errors,
                 dense_errors=dense_errors)
+            add_final_chi2_statistic!(sol)
             dense_errors && add_dense_chi2_statistic!(sol)
             timeseries_errors && add_discrete_chi2_statistic!(sol)
         end

@@ -79,6 +79,38 @@ function add_discrete_chi2_statistic!(sol::ProbNumODE.ProbODESolution)
 end
 
 
+function add_final_chi2_statistic!(sol::ProbNumODE.ProbODESolution,
+                                   sol2::DiffEqBase.AbstractODESolution)
+    :final_χ² in keys(sol.errors) && error("final_χ² error is already computed!")
+
+    T = sol.t[end]
+    pu = sol.pu[end]
+
+    @assert sol2.dense
+    diff = pu.μ - sol2(T)
+    xi2 = diff' * inv(pu.Σ) * diff
+    sol.errors[:final_χ²] = xi2
+
+    return nothing
+end
+
+function add_final_chi2_statistic!(sol::ProbNumODE.ProbODESolution)
+    :final_χ² in keys(sol.errors) && error("final_χ² error is already computed!")
+
+    T = sol.t[end]
+    pu = sol.pu[end]
+
+    @assert DiffEqBase.has_analytic(sol.prob.f)
+    f_analytic(t) = sol.prob.f.analytic(sol.prob.u0, sol.prob.p, t)
+    diff = pu.μ - f_analytic(T)
+    xi2 = diff' * inv(pu.Σ) * diff
+    sol.errors[:final_χ²] = xi2
+
+    return nothing
+end
+
+
+
 mutable struct MyWorkPrecision
     prob::DiffEqBase.AbstractODEProblem
     abstols::Vector{Real}
@@ -108,6 +140,7 @@ function compute_costs_errors(prob, alg, abstol, reltol, appxsol, dt=nothing;
         @assert :χ² in keys(sol.errors)
     else
         sol = appxtrue(sol, appxsol)
+        add_final_chi2_statistic!(sol, appxsol)
         add_dense_chi2_statistic!(sol, appxsol)
         add_discrete_chi2_statistic!(sol, appxsol)
     end
