@@ -110,12 +110,9 @@ Note: It does not really seem to work that well!
 """
 struct OptimSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::OptimSigma, integ)
-    @unpack d, q, R, InvPrecond = integ.constants
+    @unpack d, q, R = integ.constants
     @unpack sigmas, dt = integ
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
-
-    PI = InvPrecond(dt)
-    H = H * PI
 
     sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
@@ -168,8 +165,6 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
     @unpack d, q, R, Precond, InvPrecond = integ.constants
     @unpack sigmas, dt = integ
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
-    P, PI = Precond(dt), InvPrecond(dt)
-    H = H * PI
 
     sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 

@@ -92,9 +92,10 @@ end
 
 function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
 
-    @unpack p, f = integ
-    @unpack jac, H! = integ.constants
+    @unpack p, f, dt = integ
+    @unpack jac, H!, InvPrecond = integ.constants
     @unpack u_pred, ddu, H = integ.cache
+    PI = InvPrecond(dt)
 
     if !isnothing(jac)
         if isinplace(integ)
@@ -105,6 +106,7 @@ function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
         integ.destats.njacs += 1
     end
     H!(H, ddu)
+    H .= H * PI
 end
 
 function update!(integ::ODEFilterIntegrator, prediction)
@@ -112,7 +114,7 @@ function update!(integ::ODEFilterIntegrator, prediction)
     @unpack dt = integ
     @unpack R, q, d, Precond, InvPrecond = integ.constants
     @unpack measurement, h, H, K, x_filt = integ.cache
-    P, PI = Precond(dt), InvPrecond(dt)
+    PI = InvPrecond(dt)
 
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
@@ -126,7 +128,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
         return x_filt
     end
 
-    H = H*PI
     S .= Symmetric(H * P_p * H' .+ R)
     S_inv = inv(S)
     K .= P_p * H' * S_inv
