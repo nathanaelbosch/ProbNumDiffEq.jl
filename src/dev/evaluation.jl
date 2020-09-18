@@ -138,6 +138,8 @@ function compute_costs_errors(prob, alg, abstol, reltol, appxsol, dt=nothing;
     if DiffEqBase.has_analytic(sol.prob.f)
         @assert :l2 in keys(sol.errors)
         @assert :χ² in keys(sol.errors)
+        @assert :final_χ² in keys(sol.errors)
+        @assert :final in keys(sol.errors)
     else
         sol = appxtrue(sol, appxsol)
         add_final_chi2_statistic!(sol, appxsol)
