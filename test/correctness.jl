@@ -70,6 +70,7 @@ for (prob, probname) in [
             maxdiff = maximum(abs.(ProbNumODE.stack(diffs)))
             mse = sum(norm.(diffs, 2)) / length(t_eval)
 
+            @debug "Reult:" mse maxdiff
             @test mse < 1e-5
             @test maxdiff < 1e-5
             # @test sol.u ≈ true_sol.(sol.t)
