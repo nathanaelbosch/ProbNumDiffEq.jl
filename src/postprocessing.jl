@@ -45,6 +45,11 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     @unpack x_tmp = integ.cache
     x_pred = x_tmp
 
+    if all((Qh) .< eps(eltype(Qh)))
+        @warn "smooth: Qh is really small! The system is basically deterministic, so we just \"predict backwards\"."
+        return inv(Ah) * x_next
+    end
+
 
     # Prediction: t -> t+1
     mul!(x_pred.μ, Ah, x_curr.μ)
