@@ -23,7 +23,7 @@ for (prob, probname) in [
         for method in (EKF0(), EKF1()),
             sigma in [:fixedMLE, :schober, :EM, :fixedWeightedMLE, :fixedMAP],
             error in (:schober, :prediction, :filtering),
-            q in 1:3
+            q in 1:4
             @testset "Constant steps: $probname; q=$q, sigma=$sigma, methdo=$method, error=$error" begin
 
             @debug "Testing for correctness: Constant steps" probname method sigma error q
@@ -55,7 +55,7 @@ for (prob, probname) in [
         for method in (EKF0(), EKF1()),
             sigma in [:schober, :fixedMLE, :EM, :fixedWeightedMLE, :fixedMAP],
             error in (:schober, :prediction, :filtering),
-            q in 1:3
+            q in 1:4
             @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, methdo=$method, error=$error" begin
 
             @debug "Testing for correctness: Adaptive steps" probname method sigma error q
