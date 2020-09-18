@@ -87,7 +87,7 @@ DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 abstract type ProbNumODECache <: DiffEqBase.DECache end
 abstract type ProbNumODEConstantCache <: ProbNumODECache end
 abstract type ProbNumODEMutableCache <: ProbNumODECache end
-struct GaussianODEFilterConstantCache{RType, EType, PrecondType} <: ProbNumODEMutableCache
+struct GaussianODEFilterConstantCache{RType, EType, F1, F2} <: ProbNumODEMutableCache
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
     # dm                    # Dynamics Model
@@ -102,19 +102,19 @@ struct GaussianODEFilterConstantCache{RType, EType, PrecondType} <: ProbNumODEMu
     E0::EType
     E1::EType
     jac
-    Precond::PrecondType
-    InvPrecond::PrecondType
+    Precond::F1
+    InvPrecond::F2
 end
-function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
+function GaussianODEFilterConstantCache(prob, q, prior, method)
     d, f = length(prob.u0), prob.f
     @assert prior == :ibm
-    Precond, InvPrecond = preconditioner(precond_dt, d, q)
-    A!, Q! = ibm(d, q; precond_dt=precond_dt)
+    Precond, InvPrecond = preconditioner(d, q)
+    A!, Q! = ibm(d, q)
 
     E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    E0 = E0 * InvPrecond
+    # E0 = E0 * InvPrecond
     E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    E1 = E1 * InvPrecond
+    # E1 = E1 * InvPrecond
 
     @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
     jac = method == :ekf1 ? f.jac : nothing
@@ -123,7 +123,7 @@ function GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt=0.5)
     # R = diagm(0 => 1e-10 .* ones(d))
     R = zeros(d, d)
 
-    return GaussianODEFilterConstantCache{typeof(R), typeof(E0), typeof(Precond)}(
+    return GaussianODEFilterConstantCache{typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond)}(
         d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond)
 end
 
@@ -152,7 +152,7 @@ mutable struct GaussianODEFilterCache{uType, xType, matType, sigmaType} <: ProbN
     err_tmp::uType
 end
 function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=true)
-    @unpack Precond, InvPrecond, E0, E1 = constants
+    @unpack E0, E1 = constants
     u0 = prob.u0
 
     uType = typeof(u0)
@@ -165,7 +165,7 @@ function GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives=tr
         get_initial_states_forwarddiff(prob, q) :
         initialize_without_derivatives(prob, q)
     # P0 += eps(eltype(P0)) * I
-    x0 = Precond * Gaussian(m0, P0)
+    x0 = Gaussian(m0, P0)
 
     Ah_empty = diagm(0=>ones(uElType, d*(q+1)))
     Qh_empty = zeros(uElType, d*(q+1), d*(q+1))

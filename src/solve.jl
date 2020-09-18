@@ -25,8 +25,6 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            dtmin=1e-8,
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
 
-                           precond_dt = dt == 0 ? 1e-2 : dt,
-
                            sigmarule=:schober,
                            local_errors=:schober,
 
@@ -64,7 +62,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     d = length(u0)
 
     # Model
-    constants = GaussianODEFilterConstantCache(prob, q, prior, method, precond_dt)
+    constants = GaussianODEFilterConstantCache(prob, q, prior, method)
 
     # Cache
     cache = GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives)

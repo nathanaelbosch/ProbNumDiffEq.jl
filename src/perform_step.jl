@@ -4,14 +4,20 @@ This is the actual interestin part of the algorithm
 """
 function perform_step!(integ::ODEFilterIntegrator)
     @unpack t, dt = integ
-    @unpack E0 = integ.constants
+    @unpack E0, Precond, InvPrecond = integ.constants
     @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
+
+    P = Precond(dt)
+    PI = InvPrecond(dt)
+    integ.cache.x = P * integ.cache.x
+    integ.cache.x_pred = P * integ.cache.x_pred
+    integ.cache.x_filt = P * integ.cache.x_filt
 
     t = t + dt
     integ.t_new = t
 
     x_pred = predict!(integ)
-    mul!(u_pred, E0, x_pred.μ)
+    mul!(u_pred, E0 * PI, x_pred.μ)
 
     measure_h!(integ, x_pred, t)
     measure_H!(integ, x_pred, t)
@@ -27,7 +33,7 @@ function perform_step!(integ::ODEFilterIntegrator)
     end
 
     x_filt = update!(integ, x_pred)
-    mul!(u_filt, E0, x_filt.μ)
+    mul!(u_filt, E0 * PI, x_filt.μ)
 
     if isstatic(integ.sigma_estimator)
         # E.g. estimate the /current/ MLE sigma; Needed for error estimation
@@ -43,6 +49,9 @@ function perform_step!(integ::ODEFilterIntegrator)
     err_est_combined = integ.opts.internalnorm(err_tmp, t)  # Norm over the dimensions
     integ.EEst = err_est_combined
 
+    integ.cache.x = PI * integ.cache.x
+    integ.cache.x_pred = PI * integ.cache.x_pred
+    integ.cache.x_filt = PI * integ.cache.x_filt
 end
 
 
