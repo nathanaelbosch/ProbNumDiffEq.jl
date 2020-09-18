@@ -162,9 +162,10 @@ It does not seem to behave too different from the schober sigmas, but I mean the
 """
 struct EMSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::EMSigma, integ)
-    @unpack d, q, R = integ.constants
-    @unpack sigmas = integ
+    @unpack d, q, R, Precond, InvPrecond = integ.constants
+    @unpack sigmas, dt = integ
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
+    P, PI = Precond(dt), InvPrecond(dt)
 
     sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
 
@@ -175,7 +176,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
         # @info "EM-sigma" h H integ.dt Qh Ah
 
         x_next_pred = predict(x_curr, Ah, sigma*Qh)
-        x_next_filt = update(x_next_pred, h, H, R)
+        x_next_filt = update(x_next_pred, h, H*PI, R)
         x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah)
 
         joint_distribution = Gaussian(
