@@ -185,7 +185,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
              Gain * x_next_filt.Σ  x_curr_smoothed.Σ]
         )
 
-        A_tilde = [diagm(0=>ones(d*(q+1)))  -Ah]
+        A_tilde = [I  -Ah]
         diff_mean = A_tilde * joint_distribution.μ
         diff_cov = A_tilde * joint_distribution.Σ * A_tilde'
 
