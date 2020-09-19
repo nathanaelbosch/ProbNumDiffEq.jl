@@ -74,7 +74,7 @@ end
 
 function assert_good_covariance(cov)
     if !all(diag(cov) .>= 0)
-        @error "Non-positive variances" cov
+        @error "Non-positive variances" cov diag(cov)
         error("The provided covariance has non-positive entries on the diagonal!")
     end
 end
