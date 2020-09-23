@@ -10,12 +10,12 @@ import Base: copy, copy!
 using LinearAlgebra
 using Measurements
 using ForwardDiff
-using StructArrays
+@reexport using StructArrays
 using UnPack
 using StaticArrays
 using RecipesBase
 using Distributions
-using GaussianDistributions
+@reexport using GaussianDistributions
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.Σ); nothing)
 using ModelingToolkit
