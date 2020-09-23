@@ -64,9 +64,6 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     # Model
     constants = GaussianODEFilterConstantCache(prob, q, prior, method)
 
-    # Cache
-    cache = GaussianODEFilterCache(d, q, prob, constants, initialize_derivatives)
-
     # Solver Options
     tType = eltype(prob.tspan)
     adaptive = steprule != :constant
@@ -89,13 +86,18 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     sigmarules = Dict(
         :schober => SchoberSigma(),
+        :MVSchober => MVSchoberSigma(),
         :EM => EMSigma(),
         :optim => OptimSigma(),
         :fixedMLE => MLESigma(),
+        :MVfixedMLE => MVMLESigma(),
         :fixedMAP => MAPSigma(),
         :fixedWeightedMLE => WeightedMLESigma(),
     )
     sigmarule = sigmarules[sigmarule]
+
+    # Cache
+    cache = GaussianODEFilterCache(d, q, prob, constants, initial_sigma(sigmarule, d, q), initialize_derivatives)
 
     xType = typeof(cache.x)
     sigmaType = typeof(cache.σ_sq)

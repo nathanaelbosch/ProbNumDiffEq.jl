@@ -11,7 +11,7 @@ isstatic(sigmarule::AbstractStaticSigmaRule) = true
 isdynamic(sigmarule::AbstractStaticSigmaRule) = false
 isstatic(sigmarule::AbstractDynamicSigmaRule) = false
 isdynamic(sigmarule::AbstractDynamicSigmaRule) = true
-
+initial_sigma(sigmarule::AbstractSigmaRule, d, q) = 1.0
 
 struct MLESigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MLESigma, integ)
@@ -92,6 +92,69 @@ function dynamic_sigma_estimation(kind::SchoberSigma, integ)
     @assert all(R .== 0) "The schober-sigma assumes R==0!"
     σ² = h' * inv(H*Qh*H') * h / d
     return σ²
+end
+
+
+struct MVSchoberSigma <: AbstractDynamicSigmaRule end
+initial_sigma(sigmarule::MVSchoberSigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
+function dynamic_sigma_estimation(kind::MVSchoberSigma, integ)
+    @unpack dt = integ
+    @unpack d, q, R, InvPrecond, E1 = integ.constants
+    @unpack h, H, Qh = integ.cache
+
+    @assert all(R .== 0) "The schober-sigma assumes R==0!"
+
+    # Assert EKF0
+    PI = InvPrecond(dt)
+    @assert all(H .== E1 * PI)
+
+    # More safety checks
+    @assert isdiag(H*Qh*H')
+    @assert length(unique(diag(H*Qh*H'))) == 1
+    Q0_11 = diag(H*Qh*H')[1]
+
+    Σ_ii = h .^ 2 ./ Q0_11
+    Σ = Diagonal(Σ_ii)
+
+    Σ_out = kron(ones(q+1, q+1), Σ)
+    # @info "MVSchober sigma" Σ Σ_out
+    return Σ_out
+end
+
+
+struct MVMLESigma <: AbstractStaticSigmaRule end
+initial_sigma(sigmarule::MVMLESigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
+function static_sigma_estimation(kind::MVMLESigma, integ)
+    @unpack dt = integ
+    @unpack d, q, R, InvPrecond, E1 = integ.constants
+    @unpack measurement, H = integ.cache
+
+    # Assert EKF0
+    PI = InvPrecond(dt)
+    @assert all(H .== E1 * PI)
+
+    @unpack measurement = integ.cache
+    v, S = measurement.μ, measurement.Σ
+
+    # More safety checks
+    @assert isdiag(S)
+    @assert length(unique(diag(S))) == 1
+    S_11 = diag(S)[1]
+
+    Σ_ii = v .^ 2 ./ S_11
+    Σ = Diagonal(Σ_ii)
+    Σ_out = kron(ones(q+1, q+1), Σ)
+    # @info "MV-MLE-Sigma" v S Σ Σ_out
+
+    if integ.success_iter == 0
+        @assert length(integ.sigmas) == 0
+        return Σ_out
+    else
+        @assert length(integ.sigmas) == integ.success_iter
+        sigma_prev = integ.sigmas[end]
+        sigma = sigma_prev + (Σ_out - sigma_prev) / integ.success_iter
+        return sigma
+    end
 end
 
 

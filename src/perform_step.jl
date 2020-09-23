@@ -23,8 +23,8 @@ function perform_step!(integ::ODEFilterIntegrator)
     if isdynamic(integ.sigma_estimator)
         # @info "Before dynamic sigma:" x_pred.Σ
         σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
-        x_pred.Σ .+= (σ_sq - 1) .* integ.cache.Qh
-        # @info "After sigma estimation:" t σ_sq x_pred.Σ (σ_sq > eps(typeof(σ_sq)))
+        x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
+        # @info "After sigma estimation:" t σ_sq x_pred.Σ # (σ_sq > eps(typeof(σ_sq)))
         assert_good_covariance(x_pred.Σ)
         integ.cache.σ_sq = σ_sq
         # error("Terminate to inspect")

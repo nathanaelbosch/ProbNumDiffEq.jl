@@ -43,7 +43,7 @@ function loopfooter!(integ)
     integ.accept_step ? (integ.destats.naccept += 1) : (integ.destats.nreject += 1)
 
     # TODO: Add check for maxiters back in again
-    isnan(integ.cache.σ_sq) && error("Estimated sigma is NaN")
+    any(isnan.(integ.cache.σ_sq)) && error("Estimated sigma is NaN")
     integ.opts.adaptive && isnan(integ.EEst) && error("Error estimate is NaN")
     isnan(integ.dt) && error("Step size is NaN")
 
@@ -59,7 +59,7 @@ end
 function postamble!(integ)
     if isstatic(integ.sigma_estimator)
         calibrate!(integ)
-        integ.sigmas .= integ.sigmas[end]
+        integ.sigmas = [integ.sigmas[end] for s in integ.sigmas]
     end
     integ.smooth && smooth_all!(integ)
 end
