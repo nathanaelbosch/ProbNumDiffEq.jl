@@ -66,7 +66,7 @@ function predict!(integ::ODEFilterIntegrator)
     mul!(x_pred.μ, Ah, x.μ)
     x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
 
-    @assert all(diag(x_pred.Σ) .>= 0) "Negative values on the prediction variance!"
+    assert_good_covariance(x_pred.Σ)
 
     return x_pred
 end
@@ -139,10 +139,11 @@ function update!(integ::ODEFilterIntegrator, prediction)
     zero_if_approx_similar!(x_filt.Σ, P_p, KSK)
 
     # Check to make sure that nothing weird happened in the filter covariance
+    assert_good_covariance(x_filt.Σ)
     if !all(diag(x_filt.Σ) .>= 0)
 
         @warn "Negative values on the filtering variance!" P_p K*S*K' x_filt.Σ
-        @info "Are the (1,1) entries approximately the same?" diag(P_p)[d+1:2d] diag(K*S*K')[d+1:2d] isapprox(diag(P_p)[d+1:2d], diag(KSK)[d+1:2d])
+        @info "Are the (1,1) entries approximately the same?" diag(P_p)[d+1:2d] diag(KSK)[d+1:2d] isapprox(diag(P_p)[d+1:2d], diag(KSK)[d+1:2d])
         error("Negative values on the filtering variance!")
     end
 

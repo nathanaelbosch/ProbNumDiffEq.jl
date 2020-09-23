@@ -165,18 +165,25 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
     @unpack d, q, R, Precond, InvPrecond = integ.constants
     @unpack sigmas, dt = integ
     @unpack h, H, Qh, x, Ah, σ_sq = integ.cache
+    PI = InvPrecond(dt)
 
     sigma_prev = sigma = length(sigmas) > 0 ? sigmas[end] : σ_sq
+
+    if integ.t_new == integ.prob.tspan[2]
+        # There are weird things happening in the last step since the step size could change drastically
+        # Keeping the same sigma should not be too bad
+        return sigma_prev
+    end
 
     x_curr = x
 
     for i in 1:1
-        # @info "EM-sigma" sigma_prev sigma i integ.t
-        # @info "EM-sigma" h H integ.dt Qh Ah
+        # @info "EM-sigma" integ.t integ.t_new integ.dt
+        # @info "EM-sigma" sigma h H Qh Ah
 
         x_next_pred = predict(x_curr, Ah, sigma*Qh)
-        x_next_filt = update(x_next_pred, h, H, R)
-        x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah)
+        x_next_filt = update(x_next_pred, h, H, R, PI)
+        x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah, PI)
 
         joint_distribution = Gaussian(
             [x_next_filt.μ
@@ -187,12 +194,22 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
 
         A_tilde = [I  -Ah]
         diff_mean = A_tilde * joint_distribution.μ
-        diff_cov = A_tilde * joint_distribution.Σ * A_tilde'
+        # diff_cov = A_tilde * joint_distribution.Σ * A_tilde'
+        # Different way of computing it more explicitly:
+        _D1 = x_next_filt.Σ + Ah * x_curr_smoothed.Σ * Ah'
+        _D2 = Ah * Gain * x_next_filt.Σ + x_next_filt.Σ * Gain' * Ah'
+        diff_cov = _D1 .- _D2
+        # @assert diff_cov ≈ diff_cov2
+
+        zero_if_approx_similar!(diff_cov, _D1, _D2)
+        assert_good_covariance(diff_cov)
 
         sigma = tr(Qh \ (diff_cov + diff_mean * diff_mean')) / (d*(q+1))
+        # @info "EM-sigma" diff_cov _D1 _D2 Qh \ (diff_cov + diff_mean * diff_mean') tr(Qh \ (diff_cov + diff_mean * diff_mean'))
     end
     (sigma < 0) && (sigma=zero(sigma))
-    # @debug "em-sigma" sigma Qh integ.dt
+    # @assert sigma >= 0
+    # (sigma < eps(typeof(sigma))) && (sigma=eps(typeof(sigma)))
 
     return sigma
 end
