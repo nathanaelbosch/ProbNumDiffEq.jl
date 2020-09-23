@@ -26,7 +26,8 @@ function smooth_all!(integ::ODEFilterIntegrator)
         PI = InvPrecond(dt)
 
         A!(Ah, dt)
-        Q!(Qh, dt, sigmas[i])
+        Q!(Qh, dt)
+        Qh .*= sigmas[i]
 
         # @info "Smoothing" i dt sigmas[i] sigmas[i]==0
 
