@@ -29,16 +29,20 @@ function smooth_all!(integ::ODEFilterIntegrator)
         Q!(Qh, dt)
         Qh .*= sigmas[i]
 
-        # @info "Smoothing" i dt sigmas[i] sigmas[i]==0
+        # @info "Smoothing" i dt sigmas[i] Qh
 
+        # @info "smooth_all!" state_estimates[i].Σ state_estimates[i+1].Σ
+        # @info "smooth_all!" P*state_estimates[i].Σ P*state_estimates[i+1].Σ
         state_estimates[i] = P * state_estimates[i]
-        smooth!(state_estimates[i], P*state_estimates[i+1], Ah, Qh, integ)
+        smooth!(state_estimates[i], P*state_estimates[i+1], Ah, Qh, integ, PI)
+        any(isnan.(state_estimates[i].μ)) && error("NaN mean after smoothing")
+        any(isnan.(state_estimates[i].Σ)) && error("NaN cov after smoothing")
         state_estimates[i] = PI * state_estimates[i]
     end
 end
 
 
-function smooth!(x_curr, x_next, Ah, Qh, integ)
+function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
 
@@ -46,6 +50,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     @unpack x_tmp = integ.cache
     x_pred = x_tmp
 
+    # @info "smooth!" x_curr.Σ x_next.Σ Ah Qh PI
     if all((Qh) .< eps(eltype(Qh)))
         @warn "smooth: Qh is really small! The system is basically deterministic, so we just \"predict backwards\"."
         return inv(Ah) * x_next
@@ -58,7 +63,8 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
 
 
     # Smoothing
-    P = copy(x_curr.Σ)
+    cov_before = copy(x_curr.Σ)
+    cov_pred = copy(x_pred.Σ)
     try
         inv(Symmetric(x_pred.Σ))
     catch
@@ -66,15 +72,19 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
         IP = integ.constants.InvPrecond
         @info "Without the preconditioning:" IP*x_pred.Σ*IP' IP*x_curr.Σ*IP' IP*x_next.Σ*IP'
     end
-    P_p_inv = inv(Symmetric(x_pred.Σ))
+    P_p = Symmetric(x_pred.Σ)
+    P_p_inv = inv(P_p)
     G = x_curr.Σ * Ah' * P_p_inv
     x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
 
     # Vanilla:
-    GDG = G * (x_next.Σ .- x_pred.Σ) * G'
-    x_tmp.Σ .= x_curr.Σ .+ GDG
-    zero_if_approx_similar!(x_tmp.Σ, x_curr.Σ, -GDG)
-    copy!(x_curr.Σ, x_tmp.Σ)
+    cov_diff = x_next.Σ .- x_pred.Σ
+    zero_if_approx_similar!(cov_diff, x_next.Σ, x_pred.Σ)
+    GDG = G * cov_diff * G'
+    x_pred.Σ .= x_curr.Σ .+ GDG
+    zero_if_approx_similar!(x_pred.Σ, x_curr.Σ, -GDG)
+    zero_if_approx_similar!(x_pred.Σ, PI*x_curr.Σ*PI', -PI*GDG*PI')
+    copy!(x_curr.Σ, x_pred.Σ)
     # Joseph-Form:
     # P = copy(x_curr.Σ)
     # C_tilde = Ah
@@ -83,12 +93,10 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     #        + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
     # x_curr.Σ .= P_s
 
-
     try
         assert_good_covariance(x_curr.Σ)
     catch e
-        @info "Error while smoothing: negative variances! (in x_curr)" P x_pred.Σ x_next.Σ x_curr.Σ Ah Qh G GDG
-        @info "Solver used" integ.constants.q integ.sigma_estimator integ.steprule integ.smooth
+        @info "Error while smoothing: negative variances! (in x_curr)" cov_before cov_pred x_next.Σ x_curr.Σ Qh GDG
         throw(e)
     end
 
