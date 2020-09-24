@@ -23,7 +23,7 @@ function make_savable(sol; appxsol=nothing)
         DiffEqBase.has_analytic(sol.prob.f) ?
         sol.prob.f.analytic(sol.prob.u0, sol.prob.p, t) :
         appxsol(t)
-    densetimes = collect(range(sol.t[1], stop=sol.t[end], length=100))
+    densetimes = collect(range(sol.t[1], stop=sol.t[end], length=1000))
     return (
         x=sol.x,
         t=sol.t,
