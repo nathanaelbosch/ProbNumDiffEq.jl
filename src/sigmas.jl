@@ -244,7 +244,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
         # @info "EM-sigma" integ.t integ.t_new integ.dt
         # @info "EM-sigma" sigma h H Qh Ah
 
-        x_next_pred = predict(x_curr, Ah, sigma*Qh)
+        x_next_pred = predict(x_curr, Ah, sigma*Qh, PI)
         x_next_filt = update(x_next_pred, h, H, R, PI)
         x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah, PI)
 
@@ -265,7 +265,8 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
         # @assert diff_cov ≈ diff_cov2
 
         zero_if_approx_similar!(diff_cov, _D1, _D2)
-        assert_good_covariance(diff_cov)
+        zero_if_approx_similar!(diff_cov, PI*_D1*PI, PI*_D2*PI)
+        # assert_good_covariance(diff_cov)
 
         sigma = tr(Qh \ (diff_cov + diff_mean * diff_mean')) / (d*(q+1))
         # @info "EM-sigma" diff_cov _D1 _D2 Qh \ (diff_cov + diff_mean * diff_mean') tr(Qh \ (diff_cov + diff_mean * diff_mean'))
