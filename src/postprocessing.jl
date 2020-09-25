@@ -48,7 +48,6 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
 
     @unpack d, q = integ.constants
     @unpack x_tmp = integ.cache
-    x_pred = x_tmp
 
     # @info "smooth!" x_curr.Σ x_next.Σ Ah Qh PI
     if all((Qh) .< eps(eltype(Qh)))
@@ -58,33 +57,29 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
 
 
     # Prediction: t -> t+1
-    mul!(x_pred.μ, Ah, x_curr.μ)
-    x_pred.Σ .= Ah * x_curr.Σ * Ah' .+ Qh
+    mul!(x_tmp.μ, Ah, x_curr.μ)
+    x_tmp.Σ .= Ah * x_curr.Σ * Ah' .+ Qh
 
 
     # Smoothing
     cov_before = copy(x_curr.Σ)
-    cov_pred = copy(x_pred.Σ)
-    try
-        inv(Symmetric(x_pred.Σ))
-    catch
-        @warn "Inverse not working" x_pred.Σ x_curr.Σ x_next.Σ
-        IP = integ.constants.InvPrecond
-        @info "Without the preconditioning:" IP*x_pred.Σ*IP' IP*x_curr.Σ*IP' IP*x_next.Σ*IP'
-    end
-    P_p = Symmetric(x_pred.Σ)
+    cov_pred = copy(x_tmp.Σ)
+    P_p = Symmetric(cov_pred)
     P_p_inv = inv(P_p)
     G = x_curr.Σ * Ah' * P_p_inv
-    x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
+    x_curr.μ .+= G * (x_next.μ .- x_tmp.μ)
 
     # Vanilla:
-    cov_diff = x_next.Σ .- x_pred.Σ
-    zero_if_approx_similar!(cov_diff, x_next.Σ, x_pred.Σ)
+    cov_diff = x_next.Σ .- x_tmp.Σ
+    zero_if_approx_similar!(cov_diff, x_next.Σ, x_tmp.Σ)
     GDG = G * cov_diff * G'
-    x_pred.Σ .= x_curr.Σ .+ GDG
-    zero_if_approx_similar!(x_pred.Σ, x_curr.Σ, -GDG)
-    zero_if_approx_similar!(x_pred.Σ, PI*x_curr.Σ*PI', -PI*GDG*PI')
-    copy!(x_curr.Σ, x_pred.Σ)
+    # GDG = x_curr.Σ * Ah' * (P_p \ (
+    #     x_curr.Σ * Ah' * (P_p \ cov_diff')
+    # )')
+    x_tmp.Σ .= x_curr.Σ .+ GDG
+    zero_if_approx_similar!(x_tmp.Σ, x_curr.Σ, -GDG)
+    zero_if_approx_similar!(x_tmp.Σ, PI*x_curr.Σ*PI', -PI*GDG*PI')
+    copy!(x_curr.Σ, x_tmp.Σ)
     # Joseph-Form:
     # P = copy(x_curr.Σ)
     # C_tilde = Ah
