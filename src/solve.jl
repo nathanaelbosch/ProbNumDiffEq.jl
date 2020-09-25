@@ -29,8 +29,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            # Schober Defaults
                            # gamma=0.95,
                            # qmin=0.1, qmax=5.0,
-                           # dtmin=eps(eltype(prob.tspan))^(1/q),
-                           dtmin=bigfloat ? eps(BigFloat)^(1/q) : eps(eltype(prob.u0))^(1/q),
+                           dtmin=DiffEqBase.prob2dtmin(prob; use_end_time=true),
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
                            # Some random manual tweaking lead to this
                            # beta1 = 1.2/(q+1),

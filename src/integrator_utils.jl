@@ -13,6 +13,11 @@ end
 function fix_dt_at_bounds!(integ)
     integ.dt = min(integ.opts.dtmax, integ.dt)
     integ.dt = max(integ.opts.dtmin, integ.dt)
+
+    if integ.dt^(1/integ.constants.q) < eps(eltype(integ.u))
+        @warn "Small step size: h^q < eps(u)! Continuing, but this could lead to numerical issues" integ.dt
+    end
+
     next_t = integ.t + integ.dt
     if next_t + integ.opts.dtmin > integ.prob.tspan[2]
         # Avoid having to make a step smaller than dtmin in the next step
