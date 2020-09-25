@@ -66,13 +66,11 @@ function lotka_volterra(;
 end
 
 
-function van_der_pol(; u0=[0;2.], tspan=(0.0,6.3), p=1e6)
-    function f(u, p, t)
-        μ = p
-        return [
-            μ*((1-u[2]^2)*u[1] - u[2])
-            1*u[1]
-        ]
+function van_der_pol(; u0=[0;2.], tspan=(0.0,6.3), p=[1e6])
+    function f(du, u, p, t)
+        μ = p[1]
+        du[1] = μ*((1-u[2]^2)*u[1] - u[2])
+        du[2] = 1*u[1]
     end
     return ODEProblem(f, u0, tspan, p)
 end

@@ -23,8 +23,9 @@ mutable struct DEOptions{MI, absType, relType, QT, F1, tType}
     gamma::QT
     qmin::QT
     qmax::QT
-    # beta1
-    # beta2
+    beta1::QT
+    beta2::QT
+    qoldinit::QT
     internalnorm::F1
     dtmin::tType
     dtmax::tType
@@ -50,6 +51,7 @@ mutable struct ODEFilterIntegrator{
     dt::T                              # step size
     p::P                               # parameter container
     EEst::QT                           # (Scaled) error estimate
+    qold::QT                           #
 
     constants::constantsType
     cache::cacheType

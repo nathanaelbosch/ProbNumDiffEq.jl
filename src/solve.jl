@@ -20,10 +20,26 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
                            steprule=:standard,
                            dt=eltype(prob.tspan)(0),
-                           abstol=1e-6, reltol=1e-3, gamma=9//10,
-                           qmin=0.1, qmax=5.0,
+                           abstol=1e-6, reltol=1e-3,
+                           # DiffEq defaults
+                           gamma=9//10,
+                           qmin=2//10, qmax=10,
+                           # Schober Defaults
+                           # gamma=0.95,
+                           # qmin=0.1, qmax=5.0,
                            dtmin=eps(eltype(prob.tspan))^(1/q),
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
+                           # Some random manual tweaking lead to this
+                           beta1 = 1.2/(q+1),
+                           beta2 = 0.2/(q+1),
+                           # OrdinaryDiffEq defaults
+                           # beta1 = 7//(10(q+1)),
+                           # beta2 = 2//(5(q+1)),
+                           # Bras paper betas
+                           # beta1 = 0.07/(q+1),
+                           # beta2 = 1.2/(q+1),
+
+                           qoldinit = 1//10^4,
 
                            sigmarule=:schober,
                            local_errors=:schober,
@@ -73,7 +89,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     steprules = Dict(
         :constant => ConstantSteps(),
         :standard => StandardSteps(),
-        :pi => PISteps(),
+        :PI => PISteps(),
     )
     steprule = steprules[steprule]
 
@@ -119,12 +135,14 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     dt_init = dt != 0 ? dt : 1e-3
     QT = tType
     opts = DEOptions{typeof(maxiters), typeof(abstol), typeof(reltol), QT, typeof(internalnorm), tType}(
-        maxiters, adaptive, abstol, reltol, QT(gamma), QT(qmin), QT(qmax), internalnorm, dtmin, dtmax)
+        maxiters, adaptive, abstol, reltol, QT(gamma), QT(qmin), QT(qmax),
+        QT(beta1), QT(beta2), QT(qoldinit),
+        internalnorm, dtmin, dtmax)
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(constants), typeof(cache),
                                typeof(sigmarule), typeof(error_estimator), typeof(steprule), typeof(empty_proposals),
                                xType, sigmaType, typeof(prob), typeof(alg)}(
-        f, u0, t0, t0, t0, tmax, dt_init, p, one(QT),
+        f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
         constants, cache,
         # d, q, dm, mm, sigmarule, steprule,
         opts, sigmarule, error_estimator, steprule, smooth,

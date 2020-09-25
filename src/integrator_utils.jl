@@ -38,7 +38,7 @@ function loopfooter!(integ)
         dt=integ.dt
     ))
 
-    integ.opts.adaptive && (integ.dt = propose_step(integ.steprule, integ))
+    integ.opts.adaptive && (integ.dt = propose_step!(integ.steprule, integ))
 
     integ.accept_step ? (integ.destats.naccept += 1) : (integ.destats.nreject += 1)
 

@@ -25,7 +25,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         dt_new = dt * scale * gamma
         dt_new = max(dt*qmin, min(dt*qmax, dt_new))
 
-        dt_prop = ProbNumODE.propose_step(integ.steprule, integ)
+        dt_prop = ProbNumODE.propose_step!(integ.steprule, integ)
         @test dt_new ≈ dt_prop atol=1e-4
     end
 end
