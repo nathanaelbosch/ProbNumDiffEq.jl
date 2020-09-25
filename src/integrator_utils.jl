@@ -19,8 +19,9 @@ function fix_dt_at_bounds!(integ)
     end
 
     next_t = integ.t + integ.dt
-    if next_t + integ.opts.dtmin > integ.prob.tspan[2]
+    if next_t + integ.opts.dtmin^(1/2) > integ.prob.tspan[2]
         # Avoid having to make a step smaller than dtmin in the next step
+        @warn "Increasing the step size now to avoid having to do a really small step next to hit t_max"
         integ.dt = integ.prob.tspan[2] - integ.t
     end
 end
