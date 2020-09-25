@@ -172,13 +172,13 @@ function GaussianODEFilterCache(d, q, prob, constants, σ0, initialize_derivativ
     Ah_empty = diagm(0=>ones(uElType, d*(q+1)))
     Qh_empty = zeros(uElType, d*(q+1), d*(q+1))
     h = E1 * x0.μ
-    H = zeros(d, d*(q+1))
+    H = uElType.(zeros(d, d*(q+1)))
     du = copy(h)
-    ddu = zeros(d, d)
+    ddu = uElType.(zeros(d, d))
     sigma = σ0
-    v, S = copy(h), zeros(d,d)
+    v, S = copy(h), copy(ddu)
     measurement = Gaussian(v, S)
-    K = zeros(d*(q+1),d)
+    K = copy(H')
 
     GaussianODEFilterCache{uType, typeof(x0), matType, typeof(sigma)}(
         copy(u0), copy(u0), copy(u0), copy(u0),
