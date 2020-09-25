@@ -57,16 +57,16 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
         @test sol(t0:1e-3:t1) isa DiffEqBase.DiffEqArray
     end
 
-    @testset "Plotting" begin
-        @test plot(sol) isa Plots.Plot
-        @test plot_stepsizes(sol) isa Plots.Plot
-        @test plot_sigmas(sol) isa Plots.Plot
-        @test plot_residuals(sol) isa Plots.Plot
+    # @testset "Plotting" begin
+    #     @test plot(sol) isa Plots.Plot
+    #     @test plot_stepsizes(sol) isa Plots.Plot
+    #     @test plot_sigmas(sol) isa Plots.Plot
+    #     @test plot_residuals(sol) isa Plots.Plot
 
-        sol2 = solve(prob, Tsit5(), abstol=1e-10, reltol=1e-10)
-        @test_broken plot_errors(sol, sol2) isa Plots.Plot
-        @test_broken plot_calibration(sol, sol2) isa Plots.Plot
-    end
+    #     sol2 = solve(prob, Tsit5(), abstol=1e-10, reltol=1e-10)
+    #     @test_broken plot_errors(sol, sol2) isa Plots.Plot
+    #     @test_broken plot_calibration(sol, sol2) isa Plots.Plot
+    # end
 
     @testset "GaussianODEFilterPosterior" begin
         t = prob.tspan[1] + 1e-2
