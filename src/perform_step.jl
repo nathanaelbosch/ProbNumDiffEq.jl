@@ -25,7 +25,7 @@ function perform_step!(integ::ODEFilterIntegrator)
         σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
         x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
         # @info "After sigma estimation:" t σ_sq x_pred.Σ # (σ_sq > eps(typeof(σ_sq)))
-        assert_good_covariance(x_pred.Σ)
+        # assert_good_covariance(x_pred.Σ)
         integ.cache.σ_sq = σ_sq
         # error("Terminate to inspect")
     end
@@ -62,11 +62,10 @@ function predict!(integ::ODEFilterIntegrator)
     A!(Ah, dt)
     Q!(Qh, dt)
 
-    # x_pred.μ .= Ah * x.μ
     mul!(x_pred.μ, Ah, x.μ)
     x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
 
-    assert_good_covariance(x_pred.Σ)
+    # assert_good_covariance(x_pred.Σ)
 
     return x_pred
 end
@@ -125,6 +124,7 @@ function update!(integ::ODEFilterIntegrator, prediction)
     if all((PI*P_p*PI') .< eps(eltype(P_p)))
         x_filt.μ .= m_p
         x_filt.Σ .= P_p
+        assert_good_covariance(x_filt.Σ)
         return x_filt
     end
 
@@ -134,10 +134,11 @@ function update!(integ::ODEFilterIntegrator, prediction)
 
     x_filt.μ .= m_p .+ K*v
     KSK = K*S*K'
+    # KSK = P_p * H' * (S \ (H * P_p'))
     x_filt.Σ .= P_p .- KSK
 
     zero_if_approx_similar!(x_filt.Σ, P_p, KSK)
-    # zero_if_approx_similar!(x_filt.Σ, PI*P_p*PI', PI*KSK*PI')
+    zero_if_approx_similar!(x_filt.Σ, PI*P_p*PI', PI*KSK*PI')
 
     # Check to make sure that nothing weird happened in the filter covariance
     assert_good_covariance(x_filt.Σ)
@@ -159,7 +160,9 @@ function zero_if_approx_similar!(A, B, C)
     # If B_ij ≈ C_ij, then A_ij = 0
     # But, only do this if the value in A is actually negative
     @simd for i in 1:length(A)
-        @inbounds if (A[i] < 0) && (B[i] ≈ C[i] || abs(B[i] - C[i]) < eps(eltype(A)))
+        @inbounds if (A[i] < 0) && (
+            B[i] ≈ C[i] || abs(B[i] - C[i]) < eps(eltype(A))
+        )
             A[i] = 0
         end
     end

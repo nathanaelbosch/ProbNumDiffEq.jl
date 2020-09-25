@@ -5,10 +5,13 @@ The functions all operate on `Gaussian` types.
 
 
 """Vanilla PREDICT, without fancy checks or pre-allocation; use to test against"""
-function predict(x_curr, Ah, Qh)
+function predict(x_curr, Ah, Qh, PI=I)
     mean = Ah * x_curr.μ
     cov = Ah * x_curr.Σ * Ah' .+ Qh
+
+    zero_if_approx_similar!(cov, PI*cov*PI', zero(cov))
     assert_good_covariance(cov)
+
     return Gaussian(mean, cov)
 end
 
