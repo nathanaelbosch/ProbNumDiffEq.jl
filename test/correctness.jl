@@ -7,7 +7,6 @@ using OrdinaryDiffEq
 using LinearAlgebra
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
-using ModelingToolkit
 
 import ProbNumODE: remake_prob_with_jac
 
@@ -18,23 +17,21 @@ for (prob, probname) in [
 ]
     @testset "Constant steps: $probname" begin
 
-        true_sol = solve(prob, Tsit5(), abstol=1e-15, reltol=1e-15)
+        true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
         for method in (EKF0(), EKF1()),
             sigma in [:fixedMLE, :schober, :EM, :fixedWeightedMLE, :fixedMAP],
-            error in (:schober, :prediction, :filtering),
             q in 1:4
-            @testset "Constant steps: $probname; q=$q, sigma=$sigma, methdo=$method, error=$error" begin
+            @testset "Constant steps: $probname; q=$q, sigma=$sigma, methdo=$method" begin
 
-            @debug "Testing for correctness: Constant steps" probname method sigma error q
+            @debug "Testing for correctness: Constant steps" probname method sigma q dt
 
             sol = solve(prob, method, q=q,
                         steprule=:constant, dt=1e-4,
                         sigmarule=sigma,
-                        local_errors=error,
                         smooth=false,
                         )
-            @test sol.u ≈ true_sol.(sol.t)
+            @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
             end
         end
     end
@@ -49,31 +46,25 @@ for (prob, probname) in [
     @testset "Adaptive steps: $probname" begin
 
         t_eval = prob.tspan[1]:0.01:prob.tspan[end]
-        sol = solve(prob, Tsit5(), abstol=1e-12, reltol=1e-12)
-        true_sol = sol.(t_eval)
+        true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
+        true_dense_vals = true_sol.(t_eval)
 
         for method in (EKF0(), EKF1()),
             sigma in [:schober, :fixedMLE, :EM, :fixedWeightedMLE, :fixedMAP],
-            error in (:schober, :prediction, :filtering),
             q in 1:4
-            @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, methdo=$method, error=$error" begin
+            @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, methdo=$method" begin
 
-            @debug "Testing for correctness: Adaptive steps" probname method sigma error q
+            @debug "Testing for correctness: Adaptive steps" probname method sigma q
 
             sol = solve(prob, method, q=q,
                         steprule=:standard, abstol=1e-9, reltol=1e-9,
                         sigmarule=sigma,
-                        local_errors=error,
                         smooth=false,
                         )
-            diffs = sol.(t_eval) .- true_sol
-            maxdiff = maximum(abs.(ProbNumODE.stack(diffs)))
-            mse = sum(norm.(diffs, 2)) / length(t_eval)
 
-            @debug "Reult:" mse maxdiff
-            @test mse < 1e-5
-            @test maxdiff < 1e-5
-            # @test sol.u ≈ true_sol.(sol.t)
+            @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
+            @test sol.(t_eval) ≈ true_dense_vals rtol=1e-6
+
             end
         end
     end
