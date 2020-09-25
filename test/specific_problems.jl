@@ -15,8 +15,10 @@ end
 
 @testset "Smoothing with small constant steps" begin
     prob = ProbNumODE.remake_prob_with_jac(fitzhugh_nagumo_iip())
-    @test solve(prob, EKF0(), q=4, steprule=:constant, dt=1e-3, smooth=true) isa ProbNumODE.ProbODESolution
-    @test solve(prob, EKF1(), q=4, steprule=:constant, dt=1e-3, smooth=true) isa ProbNumODE.ProbODESolution
+    @test solve(prob, EKF0(), q=4, steprule=:constant, dt=1e-3, sigmarule=:fixedMLE,
+                smooth=true) isa ProbNumODE.ProbODESolution
+    @test solve(prob, EKF1(), q=4, steprule=:constant, dt=1e-3, sigmarule=:fixedMLE,
+                smooth=true) isa ProbNumODE.ProbODESolution
 end
 
 
