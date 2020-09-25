@@ -23,6 +23,7 @@ function propose_step!(::StandardSteps, integ)
     return dt
 end
 
+"""Note: Setting beta1=1/(q+1), beta2=0 recovers the proportional control"""
 struct PISteps <: StepController end
 function propose_step!(::PISteps, integ)
     # PI-controller

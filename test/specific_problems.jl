@@ -19,3 +19,10 @@ end
     @test solve(prob, EKF0(), q=4, steprule=:constant, dt=1e-3, smooth=true) isa ProbNumODE.ProbODESolution
     @test solve(prob, EKF1(), q=4, steprule=:constant, dt=1e-3, smooth=true) isa ProbNumODE.ProbODESolution
 end
+
+
+@testset "Relatively stiff Vanderpol" begin
+    prob = ProbNumODE.remake_prob_with_jac(van_der_pol(p=[1e5]))
+    prob = remake(prob, u0=big.(prob.u0))
+    @test solve(prob, EKF1(), q=4) isa ProbNumODE.ProbODESolution
+end
