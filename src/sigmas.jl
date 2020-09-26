@@ -114,6 +114,7 @@ function dynamic_sigma_estimation(kind::MVSchoberSigma, integ)
     Q0_11 = diag(H*Qh*H')[1]
 
     Σ_ii = h .^ 2 ./ Q0_11
+    Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 
     Σ_out = kron(ones(q+1, q+1), Σ)
