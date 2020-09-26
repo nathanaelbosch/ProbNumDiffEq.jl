@@ -65,7 +65,7 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
     smoothed_cov = x_curr.Σ + GDG
 
     zero_if_approx_similar!(smoothed_cov, x_curr.Σ, -GDG)
-    zero_if_approx_similar!(smoothed_cov, PI*x_curr.Σ*PI', -PI*GDG*PI')
+    # zero_if_approx_similar!(smoothed_cov, PI*x_curr.Σ*PI', -PI*GDG*PI')
 
     try
         assert_good_covariance(smoothed_cov)
