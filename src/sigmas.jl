@@ -246,7 +246,14 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
 
         x_next_pred = predict(x_curr, Ah, sigma*Qh, PI)
         x_next_filt = update(x_next_pred, h, H, R, PI)
-        x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah, PI)
+
+        if all((sigma*Qh) .< eps(eltype(Qh)))
+            @warn "smooth: Qh is really small! The system is basically deterministic, so we just \"predict backwards\"."
+            Gain = inv(Ah)
+            x_curr_smoothed = Gain * x_next_filt
+        else
+            x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah, PI)
+        end
 
         joint_distribution = Gaussian(
             [x_next_filt.μ
