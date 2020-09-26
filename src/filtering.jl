@@ -25,7 +25,7 @@ function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::Abstr
 
     # If the predicted covariance is zero, the prediction will not be adjusted!
     if all((P_p) .< eps(eltype(P_p)))
-        return Gaussian(m_p, P_P)
+        return Gaussian(m_p, P_p)
     else
         v = 0 .- h
         S = Symmetric(H * P_p * H' .+ R)
