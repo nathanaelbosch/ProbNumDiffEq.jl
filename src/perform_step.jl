@@ -69,7 +69,6 @@ function predict!(integ::ODEFilterIntegrator)
 
     mul!(x_pred.μ, Ah, x.μ)
     x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
-    zero_if_approx_similar!(x_pred.Σ, PI*x_pred.Σ*PI, zero(x_pred.Σ))
 
     assert_good_covariance(x_pred.Σ)
 
