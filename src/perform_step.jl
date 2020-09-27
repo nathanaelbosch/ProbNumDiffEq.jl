@@ -57,16 +57,18 @@ end
 function predict!(integ::ODEFilterIntegrator)
 
     @unpack dt = integ
-    @unpack A!, Q! = integ.constants
+    @unpack A!, Q!, InvPrecond = integ.constants
     @unpack x, Ah, Qh, x_pred = integ.cache
+    PI = InvPrecond(dt)
 
     A!(Ah, dt)
     Q!(Qh, dt)
 
     mul!(x_pred.μ, Ah, x.μ)
     x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
+    zero_if_approx_similar!(x_pred.Σ, PI*x_pred.Σ*PI, zero(x_pred.Σ))
 
-    # assert_good_covariance(x_pred.Σ)
+    assert_good_covariance(x_pred.Σ)
 
     return x_pred
 end
