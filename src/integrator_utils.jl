@@ -48,10 +48,8 @@ function loopfooter!(integ)
 
     integ.accept_step ? (integ.destats.naccept += 1) : (integ.destats.nreject += 1)
 
-    # TODO: Add check for maxiters back in again
     any(isnan.(integ.cache.σ_sq)) && error("Estimated sigma is NaN")
     integ.opts.adaptive && isnan(integ.EEst) && error("Error estimate is NaN")
-    isnan(integ.dt) && error("Step size is NaN")
 
     # Accept or reject the step: Moved this here from loopheader!
     if integ.iter > 0 && integ.accept_step
