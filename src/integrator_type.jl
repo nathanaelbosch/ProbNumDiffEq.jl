@@ -15,7 +15,7 @@ mutable struct EKF1 <: AbstractODEFilter end
 ########################################################################################
 # Options
 ########################################################################################
-mutable struct DEOptions{MI, absType, relType, QT, F1, tType}
+mutable struct DEOptions{MI, absType, relType, QT, F1, tType, F2}
     maxiters::MI
     adaptive::Bool
     abstol::absType
@@ -27,8 +27,11 @@ mutable struct DEOptions{MI, absType, relType, QT, F1, tType}
     beta2::QT
     qoldinit::QT
     internalnorm::F1
+    unstable_check::F2
     dtmin::tType
     dtmax::tType
+    force_dtmin::Bool
+    verbose::Bool
 end
 
 

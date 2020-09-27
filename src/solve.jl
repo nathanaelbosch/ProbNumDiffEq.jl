@@ -51,6 +51,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            saveat=nothing,
                            save_everystep=true,
                            internalnorm = DiffEqBase.ODE_DEFAULT_NORM,
+                           unstable_check = DiffEqBase.ODE_DEFAULT_UNSTABLE_CHECK,
 
                            timeseries_errors=false,
                            dense_errors=false,
@@ -137,10 +138,11 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
     dt_init = dt != 0 ? dt : 1e-3
     QT = tType
-    opts = DEOptions{typeof(maxiters), typeof(abstol), typeof(reltol), QT, typeof(internalnorm), tType}(
+    opts = DEOptions{typeof(maxiters), typeof(abstol), typeof(reltol), QT,
+    typeof(internalnorm), tType, typeof(unstable_check)}(
         maxiters, adaptive, abstol, reltol, QT(gamma), QT(qmin), QT(qmax),
         QT(beta1), QT(beta2), QT(qoldinit),
-        internalnorm, dtmin, dtmax)
+        internalnorm, unstable_check, dtmin, dtmax, false, true)
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(constants), typeof(cache),
                                typeof(sigmarule), typeof(error_estimator), typeof(steprule), typeof(empty_proposals),
