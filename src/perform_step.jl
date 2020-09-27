@@ -19,6 +19,7 @@ function perform_step!(integ::ODEFilterIntegrator)
 
     measure_h!(integ, x_pred, t)
     measure_H!(integ, x_pred, t)
+    fill_measurement!(integ)
 
     if isdynamic(integ.sigma_estimator)
         # @info "Before dynamic sigma:" x_pred.Σ
@@ -108,6 +109,16 @@ function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
     H .= H * PI
 end
 
+function fill_measurement!(integ)
+    @unpack R = integ.constants
+    @unpack measurement, h, H, x_pred = integ.cache
+    v, S = measurement.μ, measurement.Σ
+    v .= 0 .- h
+    S .= Symmetric(H * x_pred.Σ * H' .+ R)
+    zero_if_approx_similar!(S, S, zero(S))
+    return nothing
+end
+
 function update!(integ::ODEFilterIntegrator, prediction)
 
     @unpack dt = integ
@@ -116,7 +127,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
     PI = InvPrecond(dt)
 
     v, S = measurement.μ, measurement.Σ
-    v .= 0 .- h
 
     m_p, P_p = prediction.μ, prediction.Σ
 
@@ -128,7 +138,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
         return x_filt
     end
 
-    S .= Symmetric(H * P_p * H' .+ R)
     S_inv = inv(S)
     K .= P_p * H' * S_inv
 
