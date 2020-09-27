@@ -149,12 +149,13 @@ function update!(integ::ODEFilterIntegrator, prediction)
         return x_filt
     end
 
-    S_inv = inv(S)
-    K .= P_p * H' * S_inv
+    # S_inv = inv(S)
+    # K .= P_p * H' * S_inv
 
-    x_filt.μ .= m_p .+ K*v
-    KSK = K*S*K'
-    # KSK = P_p * H' * (S \ (H * P_p'))
+    # x_filt.μ .= m_p .+ K*v
+    x_filt.μ .= m_p .+ P_p * H' * (S\v)
+    # KSK = K*S*K'
+    KSK = P_p * H' * (S \ (H * P_p'))
     x_filt.Σ .= P_p .- KSK
 
     zero_if_approx_similar!(x_filt.Σ, P_p, KSK)
