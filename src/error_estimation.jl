@@ -23,7 +23,7 @@ function estimate_errors(::PredictionErrors, integ)
     @unpack σ_sq, Qh = integ.cache
     PI = InvPrecond(dt)
 
-    f_cov = σ_sq * E0 * PI * Qh * PI' * E0'
+    f_cov = E0 * PI * (σ_sq .* Qh) * PI' * E0'
     error_estimate = sqrt.(diag(f_cov))
 
     return error_estimate
