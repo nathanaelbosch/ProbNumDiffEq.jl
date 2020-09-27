@@ -155,13 +155,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
 
     # Check to make sure that nothing weird happened in the filter covariance
     assert_good_covariance(x_filt.Σ)
-    if !all(diag(x_filt.Σ) .>= 0)
-
-        @warn "Negative values on the filtering variance!" P_p K*S*K' x_filt.Σ
-        @info "Are the (1,1) entries approximately the same?" diag(P_p)[d+1:2d] diag(KSK)[d+1:2d] isapprox(diag(P_p)[d+1:2d], diag(KSK)[d+1:2d])
-        error("Negative values on the filtering variance!")
-    end
-    # @info "update!" x_filt.Σ diag(x_filt.Σ)[d+1:2d]
 
     return x_filt
 end
