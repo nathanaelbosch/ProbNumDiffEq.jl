@@ -6,7 +6,7 @@ function estimate_errors(::SchoberErrors, integ)
     @unpack InvPrecond = integ.constants
     @unpack σ_sq, Qh, H = integ.cache
 
-    if isinf(σ_sq)
+    if σ_sq isa Real && isinf(σ_sq)
         return Inf
     end
 
