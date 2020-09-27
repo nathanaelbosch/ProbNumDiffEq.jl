@@ -6,6 +6,10 @@ function estimate_errors(::SchoberErrors, integ)
     @unpack InvPrecond = integ.constants
     @unpack σ_sq, Qh, H = integ.cache
 
+    if isinf(σ_sq)
+        return Inf
+    end
+
     error_estimate = sqrt.(diag(H * σ_sq*Qh * H'))
 
     return error_estimate
