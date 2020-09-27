@@ -41,6 +41,7 @@ mutable struct ODEFilterIntegrator{
     IIP, S, T, P, F, QT, O, constantsType, cacheType,
     sigmaestType, errorestType, stepruleType, proposalsType,
     xType, sigmaType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
+    sol
     f::F                               # eom
     u::S                               # current functionvalue
     # x::X                             # current state

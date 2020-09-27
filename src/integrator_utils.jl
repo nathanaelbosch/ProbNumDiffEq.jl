@@ -68,6 +68,15 @@ function postamble!(integ)
         integ.sigmas = [integ.sigmas[end] for s in integ.sigmas]
     end
     integ.smooth && smooth_all!(integ)
+
+    integ.sol = DiffEqBase.build_solution(
+        integ.prob, integ.alg,
+        integ.times,
+        integ.state_estimates,
+        integ.sigmas,
+        integ.proposals, integ;
+        retcode=integ.retcode,
+        destats=integ.destats)
 end
 
 

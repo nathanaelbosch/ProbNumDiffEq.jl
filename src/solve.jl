@@ -145,7 +145,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(constants), typeof(cache),
                                typeof(sigmarule), typeof(error_estimator), typeof(steprule), typeof(empty_proposals),
                                xType, sigmaType, typeof(prob), typeof(alg)}(
-        f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
+        nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
         constants, cache,
         # d, q, dm, mm, sigmarule, steprule,
         opts, sigmarule, error_estimator, steprule, smooth,
