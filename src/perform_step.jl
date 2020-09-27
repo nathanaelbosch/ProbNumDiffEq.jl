@@ -144,8 +144,9 @@ function update!(integ::ODEFilterIntegrator, prediction)
     if iszero(S)
         _H = H*P  # H without the "undo predoditioning stuff"
         x_filt.μ .= m_p - _H'*_H*m_p + _H'*v
-        @assert iszero(H*P_p*H')
-        x_filt.Σ .= P_p
+        @assert all(H*P_p*H' .< eps(eltype(P_p)))
+        x_filt.Σ .= P_p - _H'*_H*P_p*_H'*_H
+        # zero_if_approx_similar!(x_filt.Σ, P_p, zero(P_p))
         return x_filt
     end
 
