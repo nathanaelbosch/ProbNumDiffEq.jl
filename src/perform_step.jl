@@ -17,16 +17,19 @@ function perform_step!(integ::ODEFilterIntegrator)
     x_pred = predict!(integ)
     mul!(u_pred, E0, PI*x_pred.μ)
 
-    measure_h!(integ, x_pred, t)
-    measure_H!(integ, x_pred, t)
-    fill_measurement!(integ)
+    measure!(integ, x_pred, t)
 
     if isdynamic(integ.sigma_estimator)
         # @info "Before dynamic sigma:" x_pred.Σ
         σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
+
+        # Adjust prediction and measurement accordingly
         x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
+        integ.cache.measurement.Σ .+= integ.cache.H * ((σ_sq .- 1) .* integ.cache.Qh) * integ.cache.H'
+
         # @info "After sigma estimation:" t σ_sq x_pred.Σ # (σ_sq > eps(typeof(σ_sq)))
         # assert_good_covariance(x_pred.Σ)
+
         integ.cache.σ_sq = σ_sq
         # error("Terminate to inspect")
     end
@@ -111,13 +114,18 @@ function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
     H .= H * PI
 end
 
-function fill_measurement!(integ)
+function measure!(integ, x_pred, t)
+    measure_h!(integ, x_pred, t)
+    measure_H!(integ, x_pred, t)
+
     @unpack R = integ.constants
-    @unpack measurement, h, H, x_pred = integ.cache
+    @unpack measurement, h, H = integ.cache
+
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
     zero_if_approx_similar!(S, S, zero(S))
+
     return nothing
 end
 
