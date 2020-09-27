@@ -20,6 +20,16 @@ struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,
     retcode::Symbol
     destats::DE
 end
+function solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
+    ProbODESolution{T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p),
+                    typeof(sol.u_analytic), typeof(sol.errors), typeof(sol.x),
+                    typeof(sol.t), typeof(sol.sigmas), typeof(sol.proposals),
+                    typeof(sol.prob), typeof(sol.alg), typeof(sol.solver),
+                    typeof(sol.interp), typeof(sol.destats)}(
+                        sol.u, sol.pu, sol.p, sol.u_analytic, sol.errors, sol.x, sol.t,
+                        sol.sigmas, sol.proposals, sol.prob, sol.alg, sol.solver, sol.dense,
+                        sol.interp, retcode, sol.destats)
+end
 
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
