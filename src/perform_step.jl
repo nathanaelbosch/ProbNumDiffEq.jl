@@ -124,17 +124,19 @@ function update!(integ::ODEFilterIntegrator, prediction)
     @unpack dt = integ
     @unpack R, q, d, Precond, InvPrecond = integ.constants
     @unpack measurement, h, H, K, x_filt = integ.cache
-    PI = InvPrecond(dt)
+    P, PI = Precond(dt), InvPrecond(dt)
 
     v, S = measurement.μ, measurement.Σ
 
     m_p, P_p = prediction.μ, prediction.Σ
 
-    # If the predicted covariance is zero, the prediction will not be adjusted!
-    if all((PI*P_p*PI') .< eps(eltype(P_p)))
-        x_filt.μ .= m_p
+    # If the measurement covariance is zero:
+    # Set the mean to the measurement, and don't adjust the cov
+    if iszero(S)
+        _H = H*P  # H without the "undo predoditioning stuff"
+        x_filt.μ .= m_p - _H'*_H*m_p + _H'*v
+        @assert iszero(H*P_p*H')
         x_filt.Σ .= P_p
-        assert_good_covariance(x_filt.Σ)
         return x_filt
     end
 
