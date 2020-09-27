@@ -19,6 +19,14 @@ function static_sigma_estimation(rule::MLESigma, integ)
     @unpack measurement = integ.cache
 
     v, S = measurement.μ, measurement.Σ
+
+    if iszero(v)
+        return zero(integ.cache.σ_sq)
+    end
+    if iszero(S)
+        return Inf
+    end
+
     sigma_t = v' * inv(S) * v / d
 
     if integ.success_iter == 0
