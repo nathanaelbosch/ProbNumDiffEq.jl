@@ -231,7 +231,8 @@ function sample(sol::ProbODESolution, n::Int=1)
     dim = d*(q+1)
 
     x = sol.x[end]
-    sample = _rand(sol.x[end], d)
+    sample = _rand(sol.x[end], d, n)
+    @assert size(sample) == (dim, n)
 
     sample_path = zeros(length(sol.t), dim, n)
     sample_path[end, :, :] .= sample
