@@ -58,6 +58,11 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
     Gain = x_curr.Σ * Ah' * P_p_inv
 
     smoothed_mean = x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ)
+
+    if iszero(x_next_smoothed.Σ)
+        return Gaussian(smoothed_mean, zeros(size(x_next_pred.Σ))), Gain
+    end
+
     x_next_diff_cov = x_next_smoothed.Σ - x_next_pred.Σ
     zero_if_approx_similar!(x_next_diff_cov, x_next_smoothed.Σ, x_next_pred.Σ)
     # zero_if_approx_similar!(x_next_diff_cov, PI*x_next_smoothed.Σ*PI', PI*x_next_pred.Σ*PI')
@@ -76,6 +81,13 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
 
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, Gain
+end
+
+
+function predsmooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix, PI=I)
+    x_next_pred = predict(x_curr, Ah, Qh, PI)
+    x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_smoothed, Ah, PI)
+    return x_curr_smoothed
 end
 
 

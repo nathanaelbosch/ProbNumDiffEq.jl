@@ -194,3 +194,66 @@ end
     ribbon := c * stds
     return sol.t, values
 end
+
+
+########################################################################################
+# Sampling from a solution
+########################################################################################
+"""Helper function to sample from our covariances, which often have a "cross" of zeros
+For the 0-cov entries the outcome of the sampling is deterministic!"""
+function _rand(x::Gaussian, d::Int, n::Int=1)
+    m, C = x.μ, x.Σ
+
+    @assert all(C[d+1:2d, :] .< eps(eltype(C)))
+    @assert all(C[:, d+1:2d] .< eps(eltype(C)))
+
+    @assert x.Σ == [x.Σ[1:d, 1:d]      x.Σ[1:d, d+1:2d]      x.Σ[1:d, 2d+1:end]
+                    x.Σ[d+1:2d, 1:d]   x.Σ[d+1:2d, d+1:2d]   x.Σ[d+1:2d, 2d+1:end]
+                    x.Σ[2d+1:end, 1:d] x.Σ[2d+1:end, d+1:2d] x.Σ[2d+1:end, 2d+1:end]]
+
+    # Remove the "cross" that is zero
+    C_relevant = [x.Σ[1:d, 1:d]      x.Σ[1:d, 2d+1:end]
+                  x.Σ[2d+1:end, 1:d] x.Σ[2d+1:end, 2d+1:end]]
+
+    # Sample from this reduced system.
+    _s = rand(Gaussian(zeros(length(m)-d), Symmetric(C_relevant)), n)
+
+    sample = x.μ .+ [_s[1:d, :]; zeros(d, n); _s[d+1:end, :]]
+    return sample
+end
+
+
+
+function sample(sol::ProbODESolution, n::Int=1)
+
+    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = sol.solver.constants
+    @unpack Ah, Qh = sol.solver.cache
+    dim = d*(q+1)
+
+    x = sol.x[end]
+    sample = _rand(sol.x[end], d)
+
+    sample_path = zeros(length(sol.t), dim, n)
+    sample_path[end, :, :] .= sample
+    # @info "final value and samples" x.μ sample sample_path[end, :]
+
+    for i in length(sol.x)-1:-1:1
+        dt = sol.t[i+1] - sol.t[i]
+        σ² = sol.sigmas[i]
+        A!(Ah, dt)
+        Q!(Qh, dt)
+        Qh .*= σ²
+        P, PI = Precond(dt), InvPrecond(dt)
+
+        for j in 1:n
+            sample_p = P*Gaussian(sample_path[i+1, :, j], zeros(dim, dim))
+            x_prev_p = P*sol.x[i+1]
+
+            prev_sample_p = predsmooth(x_prev_p, sample_p, Ah, Qh, PI)
+
+            sample_path[i, :, j] .= PI*prev_sample_p.μ
+        end
+    end
+
+    return sample_path[:, 1:d, :]
+end
