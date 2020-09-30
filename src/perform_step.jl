@@ -132,7 +132,7 @@ end
 function update!(integ::ODEFilterIntegrator, prediction)
 
     @unpack dt = integ
-    @unpack R, q, d, Precond, InvPrecond = integ.constants
+    @unpack R, q, d, Precond, InvPrecond, E1 = integ.constants
     @unpack measurement, h, H, K, x_filt = integ.cache
     P, PI = Precond(dt), InvPrecond(dt)
 
@@ -165,6 +165,15 @@ function update!(integ::ODEFilterIntegrator, prediction)
 
     # Check to make sure that nothing weird happened in the filter covariance
     assert_good_covariance(x_filt.Σ)
+
+    if all(H .== E1 * PI) && iszero(R)
+        # C = PI*x_filt.Σ*PI
+        # @info "update!" x_filt.Σ
+        # @assert all(C[d+1:2d, :] .< eps(eltype(C)))
+        # @assert all(C[:, d+1:2d] .< eps(eltype(C)))
+        x_filt.Σ[d+1:2d, :] .= 0
+        x_filt.Σ[:, d+1:2d] .= 0
+    end
 
     return x_filt
 end
