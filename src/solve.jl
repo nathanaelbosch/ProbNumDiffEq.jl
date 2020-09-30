@@ -110,7 +110,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         :EM => EMSigma(),
         :optim => OptimSigma(),
         :fixedMLE => MLESigma(),
-        :MVfixedMLE => MVMLESigma(),
+        :fixedMLEMV => MVMLESigma(),
         :fixedMAP => MAPSigma(),
         :fixedWeightedMLE => WeightedMLESigma(),
     )
