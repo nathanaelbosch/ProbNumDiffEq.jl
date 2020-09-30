@@ -9,8 +9,8 @@ function predict(x_curr, Ah, Qh, PI=I)
     mean = Ah * x_curr.μ
     cov = Ah * x_curr.Σ * Ah' .+ Qh
 
-    zero_if_approx_similar!(cov, PI*cov*PI', zero(cov))
-    assert_good_covariance(cov)
+    # zero_if_approx_similar!(cov, PI*cov*PI', zero(cov))
+    # assert_good_covariance(cov)
 
     return Gaussian(mean, cov)
 end
@@ -64,13 +64,13 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
     end
 
     x_next_diff_cov = x_next_smoothed.Σ - x_next_pred.Σ
-    zero_if_approx_similar!(x_next_diff_cov, x_next_smoothed.Σ, x_next_pred.Σ)
+    # zero_if_approx_similar!(x_next_diff_cov, x_next_smoothed.Σ, x_next_pred.Σ)
     # zero_if_approx_similar!(x_next_diff_cov, PI*x_next_smoothed.Σ*PI', PI*x_next_pred.Σ*PI')
     GDG = Gain * (x_next_diff_cov) * Gain'
     smoothed_cov = x_curr.Σ + GDG
 
-    zero_if_approx_similar!(smoothed_cov, x_curr.Σ, -GDG)
-    zero_if_approx_similar!(smoothed_cov, PI*x_curr.Σ*PI', -PI*GDG*PI')
+    # zero_if_approx_similar!(smoothed_cov, x_curr.Σ, -GDG)
+    # zero_if_approx_similar!(smoothed_cov, PI*x_curr.Σ*PI', -PI*GDG*PI')
 
     try
         assert_good_covariance(smoothed_cov)
@@ -86,7 +86,7 @@ end
 
 function predsmooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix, PI=I)
     x_next_pred = predict(x_curr, Ah, Qh, PI)
-    x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_smoothed, Ah, PI)
+    x_curr_smoothed, _ = smooth(x_curr, x_next_pred, x_next_smoothed, Ah, PI)
     return x_curr_smoothed
 end
 
