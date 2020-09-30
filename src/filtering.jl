@@ -59,10 +59,6 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
 
     smoothed_mean = x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ)
 
-    if iszero(x_next_smoothed.Σ)
-        return Gaussian(smoothed_mean, zeros(size(x_next_pred.Σ))), Gain
-    end
-
     x_next_diff_cov = x_next_smoothed.Σ - x_next_pred.Σ
     # zero_if_approx_similar!(x_next_diff_cov, x_next_smoothed.Σ, x_next_pred.Σ)
     # zero_if_approx_similar!(x_next_diff_cov, PI*x_next_smoothed.Σ*PI', PI*x_next_pred.Σ*PI')
