@@ -190,7 +190,8 @@ end
 @recipe function f(sol::AbstractProbODESolution; c=1.96)
     stack(x) = collect(reduce(hcat, x)')
     values = stack(sol.pu.μ)
-    stds = stack([sqrt.(diag(cov)) for cov in sol.pu.Σ])
+    vars = stack(diag.(sol.pu.Σ))
+    stds = sqrt.(vars)
     ribbon := c * stds
     return sol.t, values
 end
@@ -247,12 +248,13 @@ function sample(sol::ProbODESolution, n::Int=1)
         P, PI = Precond(dt), InvPrecond(dt)
 
         for j in 1:n
-            sample_p = P*Gaussian(sample_path[i+1, :, j], zeros(dim, dim))
+            sample_p = P*sample_path[i+1, :, j]
             x_prev_p = P*sol.x[i+1]
 
-            prev_sample_p = predsmooth(x_prev_p, sample_p, Ah, Qh, PI)
+            prev_sample_p = sample_back(x_prev_p, sample_p, Ah, Qh, PI)
 
-            sample_path[i, :, j] .= PI*prev_sample_p.μ
+            # sample_path[i, :, j] .= PI*prev_sample_p.μ
+            sample_path[i, :, j] .= PI*_rand(prev_sample_p, d)[:]
         end
     end
 
