@@ -57,10 +57,10 @@ function lotka_volterra(;
                         u0=[1.0;1.0],
                         tspan=(0.0,10.0),
                         p=[1.5,1.0,3.0,1.0])
-    function f(u, p, t)
+    function f(du, u, p, t)
         a, b, c, d = p
-        return [a*u[1] - b*u[1]*u[2];
-                -c*u[2] + d*u[1]*u[2]]
+        du[1] = a*u[1] - b*u[1]*u[2]
+        du[2] = -c*u[2] + d*u[1]*u[2]
     end
     return ODEProblem(f, u0, tspan, p)
 end
