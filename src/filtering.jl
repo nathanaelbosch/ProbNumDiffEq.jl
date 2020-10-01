@@ -92,11 +92,11 @@ function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::Abstra
     Gain = x_curr.Σ * Ah' * P_p_inv
 
     m = x_curr.μ + Gain * (x_next_sample - m_p)
-    P = x_curr.Σ - Gain * P_p * Gain'
-    # P = copy(x_curr.Σ)
-    # approx_diff!(P, x_curr.Σ, Gain * P_p * Gain')
-    # @info "sample_back" P
 
+    P = ((I - Gain*Ah) * x_curr.Σ * (I - Gain*Ah)'
+         + Gain * Qh * Gain')
+
+    assert_nonnegative_diagonal(P)
     return Gaussian(m, P)
 end
 
