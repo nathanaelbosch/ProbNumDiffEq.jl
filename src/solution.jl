@@ -145,9 +145,8 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     A!(Ah, h2)
     Q!(Qh, h2)
     Qh .*= σ²
-    next_pred = predict(goal_pred, Ah, Qh)
 
-    goal_smoothed, _Gain = smooth(goal_pred, next_pred, next_smoothed, Ah)
+    goal_smoothed = smooth(goal_pred, next_smoothed, Ah, Qh)
 
     return PI * goal_smoothed
 
@@ -193,6 +192,8 @@ end
     vars = stack(diag.(sol.pu.Σ))
     stds = sqrt.(vars)
     ribbon := c * stds
+    xguide --> "t"
+    yguide --> "y(t)"
     return sol.t, values
 end
 
@@ -234,7 +235,7 @@ function sample(sol::ProbODESolution, n::Int=1)
     dim = d*(q+1)
 
     x = sol.x[end]
-    sample = _rand(sol.x[end], n)
+    sample = _rand(x, n)
     @assert size(sample) == (dim, n)
 
     sample_path = zeros(length(sol.t), dim, n)

@@ -21,21 +21,17 @@ function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::Abstr
     m_p, P_p = x_pred.μ, x_pred.Σ
 
     # If the predicted covariance is zero, the prediction will not be adjusted!
-    if all((P_p) .< eps(eltype(P_p)))
-        return Gaussian(m_p, P_p)
-    else
-        v = 0 .- h
-        S = Symmetric(H * P_p * H' .+ R)
-        # K = P_p * H' * S_inv
+    v = 0 .- h
+    S = Symmetric(H * P_p * H' .+ R)
+    # K = P_p * H' * S_inv
 
-        filt_mean = m_p .+ P_p * H' * (S\v)
-        KSK = P_p * H' * (S \ (H * P_p'))
-        filt_cov = P_p .- KSK
+    filt_mean = m_p .+ P_p * H' * (S\v)
+    KSK = P_p * H' * (S \ (H * P_p'))
+    filt_cov = P_p .- KSK
 
-        assert_nonnegative_diagonal(filt_cov)
+    assert_nonnegative_diagonal(filt_cov)
 
-        return Gaussian(filt_mean, filt_cov)
-    end
+    return Gaussian(filt_mean, filt_cov)
 end
 
 
@@ -44,36 +40,32 @@ end
 Use this to test any "advanced" implementation against.
 Requires the PREDICTed state.
 """
-function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix,
+function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix,
                 PI=I)
     # @info "smooth" x_curr x_next_pred x_next_smoothed Ah
+    P_p = Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
+    P_p_inv = inv(P_p)
 
-    P_p_inv = inv(Symmetric(x_next_pred.Σ))
-    Gain = x_curr.Σ * Ah' * P_p_inv
+    G = x_curr.Σ * Ah' * P_p_inv
 
-    smoothed_mean = x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ)
+    smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - Ah*x_curr.μ)
 
-    x_next_diff_cov = x_next_smoothed.Σ - x_next_pred.Σ
-    GDG = Gain * (x_next_diff_cov) * Gain'
-    smoothed_cov = x_curr.Σ + GDG
+    # x_next_diff_cov = x_next_smoothed.Σ - x_next_pred.Σ
+    # GDG = Gain * (x_next_diff_cov) * Gain'
+    # smoothed_cov = x_curr.Σ + GDG
 
-    try
-        assert_nonnegative_diagonal(smoothed_cov)
-    catch e
-        @error "Bad smoothed_cov" x_curr.Σ x_next_pred.Σ x_next_smoothed.Σ smoothed_cov GDG
-        throw(e)
-    end
+    P = copy(x_curr.Σ)
+    C_tilde = Ah
+    K_tilde = P * Ah' * P_p_inv
+    smoothed_cov = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
+                    + K_tilde * Qh * K_tilde' + G * x_next_smoothed.Σ * G')
+
+    assert_nonnegative_diagonal(smoothed_cov)
 
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
-    return x_curr_smoothed, Gain
-end
-
-
-function predsmooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix, PI=I)
-    x_next_pred = predict(x_curr, Ah, Qh, PI)
-    x_curr_smoothed, _ = smooth(x_curr, x_next_pred, x_next_smoothed, Ah, PI)
     return x_curr_smoothed
 end
+
 
 function assert_nonnegative_diagonal(cov)
     if !all(diag(cov) .>= 0)
