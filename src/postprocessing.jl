@@ -85,6 +85,8 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     P_s = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
            + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
     x_curr.Σ .= P_s
+
+    # fix_negative_variances(x_curr, integ.opts.abstol, integ.opts.reltol)
     assert_nonnegative_diagonal(x_curr.Σ)
 
     return nothing

@@ -171,6 +171,7 @@ function update!(integ::ODEFilterIntegrator, prediction)
         x_filt.Σ[:, d+1:2d] .= 0
     end
 
+    # fix_negative_variances(x_filt, integ.opts.abstol, integ.opts.reltol)
     assert_nonnegative_diagonal(x_filt.Σ)
     # cholesky(x_filt.Σ)
 
@@ -191,6 +192,14 @@ function approx_diff!(A, B, C)
     end
 end
 
+
+function fix_negative_variances(g::Gaussian, abstol::Real, reltol::Real)
+    for i in 1:length(g.μ)
+        if (g.Σ[i,i] < 0) && (sqrt(-g.Σ[i,i]) / (abstol + reltol * abs(g.μ[i]))) .< eps(eltype(g.Σ))
+            # @info "fix_neg" g.Σ[i,i] g.μ[i] abstol reltol (abstol+reltol*abs(g.μ[i])) eps(eltype(g.Σ))*(abstol+reltol*abs(g.μ[i]))
+            g.Σ[i,i] = eps(eltype(g.Σ))*(abstol+reltol*abs(g.μ[i]))
+            g.Σ[i,i] = 0
         end
     end
 end
+
