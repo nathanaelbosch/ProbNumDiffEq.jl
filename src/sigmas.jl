@@ -280,8 +280,6 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
         diff_cov = _D1 .- _D2
         # @assert diff_cov ≈ diff_cov2
 
-        zero_if_approx_similar!(diff_cov, _D1, _D2)
-        zero_if_approx_similar!(diff_cov, PI*_D1*PI, PI*_D2*PI)
         # assert_good_covariance(diff_cov)
 
         sigma = tr(Qh \ (diff_cov + diff_mean * diff_mean')) / (d*(q+1))

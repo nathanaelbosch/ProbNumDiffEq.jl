@@ -9,7 +9,6 @@ function predict(x_curr, Ah, Qh, PI=I)
     mean = Ah * x_curr.μ
     cov = Ah * x_curr.Σ * Ah' .+ Qh
 
-    # zero_if_approx_similar!(cov, PI*cov*PI', zero(cov))
     # assert_good_covariance(cov)
 
     return Gaussian(mean, cov)
@@ -35,9 +34,6 @@ function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::Abstr
         KSK = P_p * H' * (S \ (H * P_p'))
         filt_cov = P_p .- KSK
 
-        zero_if_approx_similar!(filt_cov, P_p, KSK)
-        # @info "update" filt_cov P_p KSK
-        # @info "update" filt_cov P_p h H R S S_inv K KSK
         assert_good_covariance(filt_cov)
 
         return Gaussian(filt_mean, filt_cov)
@@ -60,13 +56,8 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
     smoothed_mean = x_curr.μ + Gain * (x_next_smoothed.μ - x_next_pred.μ)
 
     x_next_diff_cov = x_next_smoothed.Σ - x_next_pred.Σ
-    # zero_if_approx_similar!(x_next_diff_cov, x_next_smoothed.Σ, x_next_pred.Σ)
-    # zero_if_approx_similar!(x_next_diff_cov, PI*x_next_smoothed.Σ*PI', PI*x_next_pred.Σ*PI')
     GDG = Gain * (x_next_diff_cov) * Gain'
     smoothed_cov = x_curr.Σ + GDG
-
-    # zero_if_approx_similar!(smoothed_cov, x_curr.Σ, -GDG)
-    # zero_if_approx_similar!(smoothed_cov, PI*x_curr.Σ*PI', -PI*GDG*PI')
 
     try
         assert_good_covariance(smoothed_cov)
