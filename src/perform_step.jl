@@ -146,14 +146,20 @@ function update!(integ::ODEFilterIntegrator, prediction)
         return x_filt
     end
 
-    # S_inv = inv(S)
-    # K .= P_p * H' * S_inv
+    S_inv = inv(S)
+    K .= P_p * H' * S_inv
 
-    # x_filt.μ .= m_p .+ K*v
-    x_filt.μ .= m_p .+ P_p * H' * (S\v)
+    x_filt.μ .= m_p .+ K*v
+    # x_filt.μ .= m_p .+ P_p * H' * (S\v)
+
+    # Vanilla
     # KSK = K*S*K'
-    KSK = P_p * H' * (S \ (H * P_p'))
-    x_filt.Σ .= P_p .- KSK
+    # KSK = P_p * H' * (S \ (H * P_p'))
+    # x_filt.Σ .= P_p .- KSK
+    # approx_diff!(x_filt.Σ, P_p, KSK)
+
+    # Joseph Form
+    x_filt.Σ .= (I-K*H) * P_p * (I-K*H)' + K*R*K'
 
 
     if all(H .== E1 * PI) && iszero(R)
