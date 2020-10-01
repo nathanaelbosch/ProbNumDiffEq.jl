@@ -177,19 +177,20 @@ function update!(integ::ODEFilterIntegrator, prediction)
     return x_filt
 end
 
-
-function zero_if_approx_similar!(A, B, C)
+function approx_diff!(A, B, C)
     @assert size(A) == size(B) == size(C)
     @assert eltype(A) == eltype(B) == eltype(C)
     # If B_ij ≈ C_ij, then A_ij = 0
     # But, only do this if the value in A is actually negative
-    nrows, ncols = size(A)
-    @assert nrows == ncols
-    @simd for i in 1:nrows
-        @inbounds if (A[i,i] < 0) && (
-            B[i,i] ≈ C[i,i] || abs(B[i,i] - C[i,i]) < eps(eltype(A))
-        )
-            A[i,i] = 0
+    @simd for i in 1:length(A)
+        @inbounds if B[i] ≈ C[i]
+            A[i] = 0
+        else
+            A[i] = B[i] - C[i]
+        end
+    end
+end
+
         end
     end
 end
