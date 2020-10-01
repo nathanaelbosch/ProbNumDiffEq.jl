@@ -221,7 +221,7 @@ function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::Abstra
          + Gain * Qh * Gain')
 
     assert_nonnegative_diagonal(P)
-    P = Symmetric(P .+ compute_jitter(Gaussian(m, P)))
+    # P = Symmetric(P .+ compute_jitter(Gaussian(m, P)))
     # @info "sample_back" x_curr.μ x_curr.Σ x_next_sample Ah Qh
     cholesky(P)
     return Gaussian(m, P)

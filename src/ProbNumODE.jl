@@ -22,6 +22,7 @@ copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.
 using ModelingToolkit
 using DiffEqDevTools
 using Optim
+using PDMats
 
 using UUIDs, ProgressLogging
 

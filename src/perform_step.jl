@@ -160,11 +160,16 @@ function update!(integ::ODEFilterIntegrator, prediction)
     # approx_diff!(x_filt.Σ, P_p, KSK)
 
     # Joseph Form
-    x_filt.Σ .= Symmetric((I-K*H) * P_p * (I-K*H)' + K*R*K')
+    x_filt.Σ .= Symmetric(X_A_Xt(PDMat(P_p), (I-K*H)))
+    if !iszero(R)
+        x_filt.Σ .+= Symmetric(X_A_Xt(PDMat(R), K))
+    end
 
-    # fix_negative_variances(x_filt, integ.opts.abstol, integ.opts.reltol)
     assert_nonnegative_diagonal(x_filt.Σ)
-    x_filt.Σ .= Symmetric(x_filt.Σ .+ compute_jitter(x_filt))
+    J = compute_jitter(PI*x_filt)
+    # @info "update! about the jitter" x_filt.Σ J eigen(x_filt.Σ) eigen(x_filt.Σ+J)
+    # @info "update! final check" eigen(x_filt.Σ) eigen(Symmetric(x_filt.Σ))
+    x_filt.Σ .= Symmetric(x_filt.Σ .+ P*J*P)
     cholesky(Symmetric(x_filt.Σ))
 
     return x_filt
