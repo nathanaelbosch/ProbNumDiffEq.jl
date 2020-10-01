@@ -203,9 +203,9 @@ end
 """Helper function to sample from our covariances, which often have a "cross" of zeros
 For the 0-cov entries the outcome of the sampling is deterministic!"""
 function _rand(x::Gaussian, n::Int=1)
-    J = compute_jitter(x::Gaussian)
-    chol = cholesky(Symmetric(x.Σ+J))
+    chol = cholesky(Symmetric(x.Σ))
     sample = x.μ .+ chol.L*randn(length(x.μ), n)
+    return sample
 end
 
 
