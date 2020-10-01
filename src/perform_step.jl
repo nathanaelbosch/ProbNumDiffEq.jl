@@ -203,3 +203,17 @@ function fix_negative_variances(g::Gaussian, abstol::Real, reltol::Real)
     end
 end
 
+
+function compute_jitter(g::Gaussian, integ)
+    @unpack dt = integ
+    @unpack Precond, InvPrecond = integ.constants
+    P, PI = Precond(dt), InvPrecond(dt)
+
+    @unpack abstol, reltol = integ.opts
+
+    m, P = g.μ, g.Σ
+    e = (abstol.*diag(P) .+ reltol .* abs.(m))
+    # @info "compute_jitter" e e*e'
+    J = eps(eltype(e)) * e*e'
+    return J
+end
