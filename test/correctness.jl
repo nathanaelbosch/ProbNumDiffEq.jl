@@ -20,7 +20,7 @@ for (prob, probname) in [
         true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
         for method in (EKF0(), EKF1()),
-            sigma in [:fixedMLE, :schober, :EM, :fixedWeightedMLE, :fixedMAP],
+            sigma in [:fixedMLE, :schober, :fixedWeightedMLE, :fixedMAP],
             q in 1:4
             @testset "Constant steps: $probname; q=$q, sigma=$sigma, methdo=$method" begin
 
@@ -50,7 +50,7 @@ for (prob, probname) in [
         true_dense_vals = true_sol.(t_eval)
 
         for method in (EKF0(), EKF1()),
-            sigma in [:schober, :fixedMLE, :EM, :fixedWeightedMLE, :fixedMAP],
+            sigma in [:schober, :fixedMLE, :fixedWeightedMLE, :fixedMAP],
             q in 1:4
             @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, methdo=$method" begin
 

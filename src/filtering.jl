@@ -9,8 +9,6 @@ function predict(x_curr, Ah, Qh, PI=I)
     mean = Ah * x_curr.μ
     cov = Ah * x_curr.Σ * Ah' .+ Qh
 
-    # assert_good_covariance(cov)
-
     return Gaussian(mean, cov)
 end
 
@@ -34,7 +32,7 @@ function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::Abstr
         KSK = P_p * H' * (S \ (H * P_p'))
         filt_cov = P_p .- KSK
 
-        assert_good_covariance(filt_cov)
+        assert_nonnegative_diagonal(filt_cov)
 
         return Gaussian(filt_mean, filt_cov)
     end
@@ -60,7 +58,7 @@ function smooth(x_curr::Gaussian, x_next_pred::Gaussian, x_next_smoothed::Gaussi
     smoothed_cov = x_curr.Σ + GDG
 
     try
-        assert_good_covariance(smoothed_cov)
+        assert_nonnegative_diagonal(smoothed_cov)
     catch e
         @error "Bad smoothed_cov" x_curr.Σ x_next_pred.Σ x_next_smoothed.Σ smoothed_cov GDG
         throw(e)

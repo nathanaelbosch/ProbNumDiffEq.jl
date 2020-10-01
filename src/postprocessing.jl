@@ -89,7 +89,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     # fix_negative_variances(x_curr, integ.opts.abstol, integ.opts.reltol)
     assert_nonnegative_diagonal(x_curr.Σ)
     x_curr.Σ .= Symmetric(x_curr.Σ .+ compute_jitter(x_curr))
-    cholesky(x_curr.Σ)
+    cholesky(Symmetric(x_curr.Σ))
 
     return nothing
 end

@@ -162,9 +162,9 @@ function update!(integ::ODEFilterIntegrator, prediction)
     x_filt.Σ .= Symmetric((I-K*H) * P_p * (I-K*H)' + K*R*K')
 
     # fix_negative_variances(x_filt, integ.opts.abstol, integ.opts.reltol)
-    x_filt.Σ .= Symmetric(x_filt.Σ .+ compute_jitter(x_filt))
     assert_nonnegative_diagonal(x_filt.Σ)
-    cholesky(x_filt.Σ)
+    x_filt.Σ .= Symmetric(x_filt.Σ .+ compute_jitter(x_filt))
+    cholesky(Symmetric(x_filt.Σ))
 
     return x_filt
 end
