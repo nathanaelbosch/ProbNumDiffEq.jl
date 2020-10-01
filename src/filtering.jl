@@ -77,21 +77,6 @@ function predsmooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMat
     return x_curr_smoothed
 end
 
-function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::AbstractMatrix, Qh::AbstractMatrix, PI=I)
-    m_p, P_p = Ah*x_curr.μ, Ah*x_curr.Σ*Ah' + Qh
-    P_p_inv = inv(Symmetric(P_p))
-    Gain = x_curr.Σ * Ah' * P_p_inv
-
-    m = x_curr.μ + Gain * (x_next_sample - m_p)
-
-    P = ((I - Gain*Ah) * x_curr.Σ * (I - Gain*Ah)'
-         + Gain * Qh * Gain')
-
-    assert_nonnegative_diagonal(P)
-    return Gaussian(m, P)
-end
-
-
 function assert_nonnegative_diagonal(cov)
     if !all(diag(cov) .>= 0)
         @error "Non-positive variances" cov diag(cov)

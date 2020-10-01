@@ -209,6 +209,24 @@ function _rand(x::Gaussian, n::Int=1)
 end
 
 
+function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::AbstractMatrix, Qh::AbstractMatrix, PI=I)
+    m_p, P_p = Ah*x_curr.μ, Ah*x_curr.Σ*Ah' + Qh
+    P_p_inv = inv(Symmetric(P_p))
+    Gain = x_curr.Σ * Ah' * P_p_inv
+
+    m = x_curr.μ + Gain * (x_next_sample - m_p)
+
+    P = ((I - Gain*Ah) * x_curr.Σ * (I - Gain*Ah)'
+         + Gain * Qh * Gain')
+
+    assert_nonnegative_diagonal(P)
+    P = Symmetric(P .+ compute_jitter(Gaussian(m, P)))
+    # @info "sample_back" x_curr.μ x_curr.Σ x_next_sample Ah Qh
+    cholesky(P)
+    return Gaussian(m, P)
+end
+
+
 function sample(sol::ProbODESolution, n::Int=1)
 
     @unpack A!, Q!, d, q, E0, Precond, InvPrecond = sol.solver.constants
