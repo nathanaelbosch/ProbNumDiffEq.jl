@@ -159,21 +159,12 @@ function update!(integ::ODEFilterIntegrator, prediction)
     # approx_diff!(x_filt.Σ, P_p, KSK)
 
     # Joseph Form
-    x_filt.Σ .= (I-K*H) * P_p * (I-K*H)' + K*R*K'
-
-
-    if all(H .== E1 * PI) && iszero(R)
-        C = PI*x_filt.Σ*PI
-        # @info "update!" x_filt.Σ
-        @assert all(C[d+1:2d, :] .< eps(eltype(C)))
-        @assert all(C[:, d+1:2d] .< eps(eltype(C)))
-        x_filt.Σ[d+1:2d, :] .= 0
-        x_filt.Σ[:, d+1:2d] .= 0
-    end
+    x_filt.Σ .= Symmetric((I-K*H) * P_p * (I-K*H)' + K*R*K')
 
     # fix_negative_variances(x_filt, integ.opts.abstol, integ.opts.reltol)
+    x_filt.Σ .= Symmetric(x_filt.Σ .+ compute_jitter(x_filt))
     assert_nonnegative_diagonal(x_filt.Σ)
-    # cholesky(x_filt.Σ)
+    cholesky(x_filt.Σ)
 
     return x_filt
 end
@@ -216,4 +207,9 @@ function compute_jitter(g::Gaussian, integ)
     # @info "compute_jitter" e e*e'
     J = eps(eltype(e)) * e*e'
     return J
+end
+
+
+function compute_jitter(g::Gaussian)
+    return Diagonal(eps.(g.μ))
 end

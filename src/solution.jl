@@ -202,28 +202,11 @@ end
 ########################################################################################
 """Helper function to sample from our covariances, which often have a "cross" of zeros
 For the 0-cov entries the outcome of the sampling is deterministic!"""
-function _rand(x::Gaussian, d::Int, n::Int=1)
-    m, C = x.μ, x.Σ
-
-    @assert all(C[d+1:2d, :] .< eps(eltype(C)))
-    @assert all(C[:, d+1:2d] .< eps(eltype(C)))
-
-    @assert x.Σ == [x.Σ[1:d, 1:d]      x.Σ[1:d, d+1:2d]      x.Σ[1:d, 2d+1:end]
-                    x.Σ[d+1:2d, 1:d]   x.Σ[d+1:2d, d+1:2d]   x.Σ[d+1:2d, 2d+1:end]
-                    x.Σ[2d+1:end, 1:d] x.Σ[2d+1:end, d+1:2d] x.Σ[2d+1:end, 2d+1:end]]
-
-    # Remove the "cross" that is zero
-    C_relevant = [x.Σ[1:d, 1:d]      x.Σ[1:d, 2d+1:end]
-                  x.Σ[2d+1:end, 1:d] x.Σ[2d+1:end, 2d+1:end]]
-
-    # Sample from this reduced system.
-    assert_nonnegative_diagonal(C_relevant)
-    _s = rand(Gaussian(zeros(length(m)-d), Symmetric(C_relevant)), n)
-
-    sample = x.μ .+ [_s[1:d, :]; zeros(d, n); _s[d+1:end, :]]
-    return sample
+function _rand(x::Gaussian, n::Int=1)
+    J = compute_jitter(x::Gaussian)
+    cholesky(Symmetric(x.Σ+J))
+    sample = rand(Gaussian(x.μ, Symmetric(x.Σ+J)), n)
 end
-
 
 
 function sample(sol::ProbODESolution, n::Int=1)
@@ -233,7 +216,7 @@ function sample(sol::ProbODESolution, n::Int=1)
     dim = d*(q+1)
 
     x = sol.x[end]
-    sample = _rand(sol.x[end], d, n)
+    sample = _rand(sol.x[end], n)
     @assert size(sample) == (dim, n)
 
     sample_path = zeros(length(sol.t), dim, n)
@@ -255,7 +238,7 @@ function sample(sol::ProbODESolution, n::Int=1)
             prev_sample_p = sample_back(x_prev_p, sample_p, Ah, Qh, PI)
 
             # sample_path[i, :, j] .= PI*prev_sample_p.μ
-            sample_path[i, :, j] .= PI*_rand(prev_sample_p, d)[:]
+            sample_path[i, :, j] .= PI*_rand(prev_sample_p)[:]
         end
     end
 
