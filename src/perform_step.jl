@@ -70,9 +70,6 @@ function predict!(integ::ODEFilterIntegrator)
     mul!(x_pred.μ, Ah, x.μ)
     x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
 
-    # zero_if_approx_similar!(x_pred.Σ, PI*x_pred.Σ*PI, zero(x_pred.Σ))
-    # assert_good_covariance(x_pred.Σ)
-
     return x_pred
 end
 
@@ -124,7 +121,6 @@ function measure!(integ, x_pred, t)
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
-    zero_if_approx_similar!(S, S, zero(S))
 
     return nothing
 end
@@ -147,7 +143,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
         x_filt.μ .= m_p - _H'*_H*m_p + _H'*v
         @assert all(H*P_p*H' .< eps(eltype(P_p)))
         x_filt.Σ .= P_p - _H'*_H*P_p*_H'*_H
-        # zero_if_approx_similar!(x_filt.Σ, P_p, zero(P_p))
         return x_filt
     end
 
@@ -160,11 +155,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
     KSK = P_p * H' * (S \ (H * P_p'))
     x_filt.Σ .= P_p .- KSK
 
-    zero_if_approx_similar!(x_filt.Σ, P_p, KSK)
-    zero_if_approx_similar!(x_filt.Σ, PI*P_p*PI', PI*KSK*PI')
-
-    # Check to make sure that nothing weird happened in the filter covariance
-    assert_good_covariance(x_filt.Σ)
 
     if all(H .== E1 * PI) && iszero(R)
         # C = PI*x_filt.Σ*PI
@@ -174,6 +164,9 @@ function update!(integ::ODEFilterIntegrator, prediction)
         x_filt.Σ[d+1:2d, :] .= 0
         x_filt.Σ[:, d+1:2d] .= 0
     end
+
+    assert_nonnegative_diagonal(x_filt.Σ)
+    # cholesky(x_filt.Σ)
 
     return x_filt
 end

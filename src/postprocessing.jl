@@ -88,13 +88,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     #        + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
     # x_curr.Σ .= P_s
 
-    try
-        assert_good_covariance(x_curr.Σ)
-    catch e
-        @info "Error while smoothing: negative variances! (in x_curr)" cov_before cov_pred x_next.Σ x_curr.Σ Qh GDG
-        throw(e)
-    end
-
+    assert_nonnegative_diagonal(x_curr.Σ)
 
     return nothing
 end

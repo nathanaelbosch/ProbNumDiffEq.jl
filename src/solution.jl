@@ -217,6 +217,7 @@ function _rand(x::Gaussian, d::Int, n::Int=1)
                   x.Σ[2d+1:end, 1:d] x.Σ[2d+1:end, 2d+1:end]]
 
     # Sample from this reduced system.
+    assert_nonnegative_diagonal(C_relevant)
     _s = rand(Gaussian(zeros(length(m)-d), Symmetric(C_relevant)), n)
 
     sample = x.μ .+ [_s[1:d, :]; zeros(d, n); _s[d+1:end, :]]
