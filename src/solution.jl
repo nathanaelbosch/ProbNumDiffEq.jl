@@ -204,8 +204,8 @@ end
 For the 0-cov entries the outcome of the sampling is deterministic!"""
 function _rand(x::Gaussian, n::Int=1)
     J = compute_jitter(x::Gaussian)
-    cholesky(Symmetric(x.Σ+J))
-    sample = rand(Gaussian(x.μ, Symmetric(x.Σ+J)), n)
+    chol = cholesky(Symmetric(x.Σ+J))
+    sample = x.μ .+ chol.L*randn(length(x.μ), n)
 end
 
 
@@ -251,7 +251,7 @@ function sample(sol::ProbODESolution, n::Int=1)
 
         for j in 1:n
             sample_p = P*sample_path[i+1, :, j]
-            x_prev_p = P*sol.x[i+1]
+            x_prev_p = P*sol.x[i]
 
             prev_sample_p = sample_back(x_prev_p, sample_p, Ah, Qh, PI)
 
