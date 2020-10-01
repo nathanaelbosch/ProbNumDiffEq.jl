@@ -70,24 +70,21 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     x_curr.μ .+= G * (x_next.μ .- x_tmp.μ)
 
     # Vanilla:
-    cov_diff = x_next.Σ .- x_tmp.Σ
-    zero_if_approx_similar!(cov_diff, x_next.Σ, x_tmp.Σ)
-    GDG = G * cov_diff * G'
+    # cov_diff = x_next.Σ .- x_tmp.Σ
+    # GDG = G * cov_diff * G'
     # GDG = x_curr.Σ * Ah' * (P_p \ (
     #     x_curr.Σ * Ah' * (P_p \ cov_diff')
     # )')
-    x_tmp.Σ .= x_curr.Σ .+ GDG
-    zero_if_approx_similar!(x_tmp.Σ, x_curr.Σ, -GDG)
-    zero_if_approx_similar!(x_tmp.Σ, PI*x_curr.Σ*PI', -PI*GDG*PI')
-    copy!(x_curr.Σ, x_tmp.Σ)
+    # x_tmp.Σ .= x_curr.Σ .+ GDG
+    # approx_diff!(x_tmp.Σ, x_curr.Σ, -GDG)
+    # copy!(x_curr.Σ, x_tmp.Σ)
     # Joseph-Form:
-    # P = copy(x_curr.Σ)
-    # C_tilde = Ah
-    # K_tilde = P * Ah' * P_p_inv
-    # P_s = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
-    #        + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
-    # x_curr.Σ .= P_s
-
+    P = copy(x_curr.Σ)
+    C_tilde = Ah
+    K_tilde = P * Ah' * P_p_inv
+    P_s = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
+           + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
+    x_curr.Σ .= P_s
     assert_nonnegative_diagonal(x_curr.Σ)
 
     return nothing
