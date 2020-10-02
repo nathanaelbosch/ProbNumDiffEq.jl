@@ -45,8 +45,8 @@ end
 function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
-    PDMat(Symmetric(x_curr.Σ))
-    PDMat(Symmetric(x_next.Σ))
+    # PDMat(Symmetric(x_curr.Σ))
+    # PDMat(Symmetric(x_next.Σ))
 
     @unpack d, q = integ.constants
     @unpack x_tmp = integ.cache
@@ -72,30 +72,30 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     x_curr.μ .+= G * (x_next.μ .- x_tmp.μ)
 
     # Vanilla:
-    # cov_diff = x_next.Σ .- x_tmp.Σ
-    # GDG = G * cov_diff * G'
+    cov_diff = x_next.Σ .- x_tmp.Σ
+    GDG = G * cov_diff * G'
     # GDG = x_curr.Σ * Ah' * (P_p \ (
     #     x_curr.Σ * Ah' * (P_p \ cov_diff')
     # )')
-    # x_tmp.Σ .= x_curr.Σ .+ GDG
+    x_tmp.Σ .= x_curr.Σ .+ GDG
     # approx_diff!(x_tmp.Σ, x_curr.Σ, -GDG)
     # copy!(x_curr.Σ, x_tmp.Σ)
     # Joseph-Form:
-    P = copy(x_curr.Σ)
-    C_tilde = Ah
-    K_tilde = P * Ah' * P_p_inv
+    # P = copy(x_curr.Σ)
+    # C_tilde = Ah
+    # K_tilde = P * Ah' * P_p_inv
     # P_s = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
     #        + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
-    P_s = Symmetric(
-        X_A_Xt(PDMat(Symmetric(P)), (I - K_tilde*C_tilde))
-        + X_A_Xt(PDMat(Symmetric(Qh)), K_tilde)
-        + X_A_Xt(PDMat(Symmetric(x_next.Σ)), G)
-    )
-    x_curr.Σ .= P_s
+    # P_s = Symmetric(
+    #     X_A_Xt(PDMat(Symmetric(P)), (I - K_tilde*C_tilde))
+    #     + X_A_Xt(PDMat(Symmetric(Qh)), K_tilde)
+    #     + X_A_Xt(PDMat(Symmetric(x_next.Σ)), G)
+    # )
+    # x_curr.Σ .= P_s
 
     # fix_negative_variances(x_curr, integ.opts.abstol, integ.opts.reltol)
     assert_nonnegative_diagonal(x_curr.Σ)
-    PDMat(Symmetric(x_curr.Σ))
+    # PDMat(Symmetric(x_curr.Σ))
 
     return nothing
 end

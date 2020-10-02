@@ -115,12 +115,15 @@ function measure!(integ, x_pred, t)
     measure_h!(integ, x_pred, t)
     measure_H!(integ, x_pred, t)
 
-    @unpack R = integ.constants
+    @unpack dt = integ
+    @unpack R, q, d = integ.constants
     @unpack measurement, h, H = integ.cache
 
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
-    R .= Diagonal(eps.(v) .^ 2)
+    # R .= Diagonal(eps.(v) .^ 2)
+    R .= Diagonal(eps.(v))
+    # R .= Diagonal(dt^(2q) * ones(d))
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
 
     return nothing

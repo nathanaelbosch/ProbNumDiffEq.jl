@@ -23,11 +23,16 @@ function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::Abstr
     # If the predicted covariance is zero, the prediction will not be adjusted!
     v = 0 .- h
     S = Symmetric(H * P_p * H' .+ R)
-    # K = P_p * H' * S_inv
+    S_inv = inv(S)
+    K = P_p * H' * S_inv
 
     filt_mean = m_p .+ P_p * H' * (S\v)
-    KSK = P_p * H' * (S \ (H * P_p'))
-    filt_cov = P_p .- KSK
+    # KSK = P_p * H' * (S \ (H * P_p'))
+    # filt_cov = P_p .- KSK
+    filt_cov = X_A_Xt(PDMat(Symmetric(P_p)), (I-K*H))
+    if !iszero(R)
+        filt_cov .+= Symmetric(X_A_Xt(PDMat(R), K))
+    end
 
     assert_nonnegative_diagonal(filt_cov)
 
@@ -63,7 +68,7 @@ function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix,
     assert_nonnegative_diagonal(smoothed_cov)
 
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
-    return x_curr_smoothed
+    return x_curr_smoothed, G
 end
 
 
