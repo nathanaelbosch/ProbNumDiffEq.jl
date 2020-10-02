@@ -254,6 +254,9 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
         # @info "EM-sigma" sigma h H Qh Ah
 
         x_next_pred = predict(x_curr, Ah, sigma*Qh, PI)
+        @info "EM sigma" x_next_pred.Σ sigma
+        PDMat(Symmetric(x_next_pred.Σ))
+        R .= Diagonal(eps.(h) .^ 2)
         x_next_filt = update(x_next_pred, h, H, R, PI)
 
         if all((sigma*Qh) .< eps(eltype(Qh)))
@@ -261,7 +264,7 @@ function dynamic_sigma_estimation(kind::EMSigma, integ)
             Gain = inv(Ah)
             x_curr_smoothed = Gain * x_next_filt
         else
-            x_curr_smoothed, Gain = smooth(x_curr, x_next_pred, x_next_filt, Ah, PI)
+            x_curr_smoothed, Gain = smooth(x_curr, x_next_filt, Ah, Qh, PI)
         end
 
         joint_distribution = Gaussian(
