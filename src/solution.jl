@@ -146,7 +146,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     Q!(Qh, h2)
     Qh .*= σ²
 
-    goal_smoothed = smooth(goal_pred, next_smoothed, Ah, Qh)
+    goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
 
     return PI * goal_smoothed
 
@@ -187,26 +187,68 @@ end
 # Plotting
 ########################################################################################
 @recipe function f(sol::AbstractProbODESolution; c=1.96)
-    stack(x) = collect(reduce(hcat, x)')
-    values = stack(sol.pu.μ)
-    vars = stack(diag.(sol.pu.Σ))
+    times = range(sol.t[1], sol.t[end], length=1000)
+    # values = stack(sol.u)
+    pus = StructArray(sol.p.(times))
+    values = stack(pus.μ)
+    # vars = stack(diag.(sol.pu.Σ))
+    vars = stack(diag.(pus.Σ))
     stds = sqrt.(vars)
-    ribbon := c * stds
+    ribbon --> c * stds
     xguide --> "t"
     yguide --> "y(t)"
-    return sol.t, values
+    return times, values
 end
 
 
 ########################################################################################
 # Sampling from a solution
 ########################################################################################
+# function _rand(x::Gaussian, n::Int=1)
+#     chol = cholesky(Symmetric(x.Σ))
+#     sample = x.μ .+ chol.L*randn(length(x.μ), n)
+#     return sample
+# end
+
+function get_zero_cross_indices(C)
+    bad_idx = []
+    D = size(C)[1]
+    for i in 1:D
+        if all(C[i, :] .< eps(eltype(C))) && all(C[:, i] .< eps(eltype(C)))
+            push!(bad_idx, i)
+        end
+    end
+    return bad_idx
+end
+
 """Helper function to sample from our covariances, which often have a "cross" of zeros
 For the 0-cov entries the outcome of the sampling is deterministic!"""
 function _rand(x::Gaussian, n::Int=1)
-    chol = cholesky(Symmetric(x.Σ))
-    sample = x.μ .+ chol.L*randn(length(x.μ), n)
-    return sample
+    m, C = x.μ, x.Σ
+
+    try
+        chol = cholesky(Symmetric(C))
+        sample = m .+ chol.L*randn(length(m), n)
+        return sample
+    catch e
+        @warn "Cholesky failed; Try to sample more manually" e
+        bad_idx = get_zero_cross_indices(C)
+
+        D = length(m)
+        @assert all(C[bad_idx, :] .< eps(eltype(C)))
+        @assert all(C[:, bad_idx] .< eps(eltype(C)))
+        reduced_idx = setdiff(1:D, bad_idx)
+        reduced_x = Gaussian(m[reduced_idx], Symmetric(C[reduced_idx, reduced_idx]))
+        reduced_sample = rand(reduced_x)
+
+        sample = reduced_sample
+        for i in bad_idx
+            insert!(sample, i, m[i])
+        end
+        @assert sample[bad_idx] == m[bad_idx]
+
+        return sample
+    end
 end
 
 
@@ -221,28 +263,33 @@ function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::Abstra
          + Gain * Qh * Gain')
 
     assert_nonnegative_diagonal(P)
-    cholesky(P)
     return Gaussian(m, P)
 end
 
 
 function sample(sol::ProbODESolution, n::Int=1)
+    sample(sol.t, sol.x, sol.solver, n)
+end
+function sample(ts, xs, solver, n::Int=1)
 
-    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = sol.solver.constants
-    @unpack Ah, Qh = sol.solver.cache
+    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.constants
+    @unpack Ah, Qh = solver.cache
     dim = d*(q+1)
 
-    x = sol.x[end]
+    x = xs[end]
     sample = _rand(x, n)
     @assert size(sample) == (dim, n)
 
-    sample_path = zeros(length(sol.t), dim, n)
+    sample_path = zeros(length(ts), dim, n)
     sample_path[end, :, :] .= sample
     # @info "final value and samples" x.μ sample sample_path[end, :]
 
-    for i in length(sol.x)-1:-1:1
-        dt = sol.t[i+1] - sol.t[i]
-        σ² = sol.sigmas[i]
+    for i in length(xs)-1:-1:1
+        dt = ts[i+1] - ts[i]
+
+        i_sigma = sum(solver.times .<= ts[i])
+        σ² = solver.sol.sigmas[i_sigma]
+
         A!(Ah, dt)
         Q!(Qh, dt)
         Qh .*= σ²
@@ -250,7 +297,7 @@ function sample(sol::ProbODESolution, n::Int=1)
 
         for j in 1:n
             sample_p = P*sample_path[i+1, :, j]
-            x_prev_p = P*sol.x[i]
+            x_prev_p = P*xs[i]
 
             prev_sample_p = sample_back(x_prev_p, sample_p, Ah, Qh, PI)
 
@@ -260,4 +307,10 @@ function sample(sol::ProbODESolution, n::Int=1)
     end
 
     return sample_path[:, 1:d, :]
+end
+function dense_sample(sol::ProbODESolution, n::Int=1)
+    times = range(sol.t[1], sol.t[end], length=1000)
+    states = StructArray(sol.p.filtering_posterior(times))
+
+    sample(times, states, sol.solver, n), times
 end
