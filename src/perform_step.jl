@@ -120,7 +120,7 @@ function measure!(integ, x_pred, t)
 
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
-    R .= Diagonal(eps.(v))
+    R .= Diagonal(eps.(v) .^ 2)
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
 
     return nothing
