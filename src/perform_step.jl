@@ -137,16 +137,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
 
     m_p, P_p = prediction.μ, prediction.Σ
 
-    # If the measurement covariance is zero:
-    # Set the mean to the measurement, and don't adjust the cov
-    if iszero(S)
-        _H = H*P  # H without the "undo predoditioning stuff"
-        x_filt.μ .= m_p - _H'*_H*m_p + _H'*v
-        @assert all(H*P_p*H' .< eps(eltype(P_p)))
-        x_filt.Σ .= P_p - _H'*_H*P_p*_H'*_H
-        return x_filt
-    end
-
     S_inv = inv(S)
     K .= P_p * H' * S_inv
 
