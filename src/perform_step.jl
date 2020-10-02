@@ -166,11 +166,7 @@ function update!(integ::ODEFilterIntegrator, prediction)
     end
 
     assert_nonnegative_diagonal(x_filt.Σ)
-    J = compute_jitter(PI*x_filt)
-    # @info "update! about the jitter" x_filt.Σ J eigen(x_filt.Σ) eigen(x_filt.Σ+J)
-    # @info "update! final check" eigen(x_filt.Σ) eigen(Symmetric(x_filt.Σ))
-    x_filt.Σ .= Symmetric(x_filt.Σ .+ P*J*P)
-    cholesky(Symmetric(x_filt.Σ))
+    # cholesky(Symmetric(x_filt.Σ))
 
     return x_filt
 end
@@ -198,24 +194,4 @@ function fix_negative_variances(g::Gaussian, abstol::Real, reltol::Real)
             g.Σ[i,i] = 0
         end
     end
-end
-
-
-function compute_jitter(g::Gaussian, integ)
-    @unpack dt = integ
-    @unpack Precond, InvPrecond = integ.constants
-    P, PI = Precond(dt), InvPrecond(dt)
-
-    @unpack abstol, reltol = integ.opts
-
-    m, P = g.μ, g.Σ
-    e = (abstol.*diag(P) .+ reltol .* abs.(m))
-    # @info "compute_jitter" e e*e'
-    J = eps(eltype(e)) * e*e'
-    return J
-end
-
-
-function compute_jitter(g::Gaussian)
-    return Diagonal(eps.(g.μ))
 end
