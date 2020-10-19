@@ -1,17 +1,6 @@
 ########################################################################################
 # Post-Processing: Smoothing and uncertainty calibration
 ########################################################################################
-function calibrate!(integ::ODEFilterIntegrator)
-
-    @unpack state_estimates, sigmas = integ
-    for s in state_estimates
-        s.Σ .*= sigmas[end]
-    end
-end
-
-
-
-
 function smooth_all!(integ::ODEFilterIntegrator)
 
     @unpack state_estimates, times, sigmas = integ
