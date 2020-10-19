@@ -20,18 +20,13 @@ function perform_step!(integ::ODEFilterIntegrator)
     measure!(integ, x_pred, t)
 
     if isdynamic(integ.sigma_estimator)
-        # @info "Before dynamic sigma:" x_pred.Σ
         σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
 
         # Adjust prediction and measurement accordingly
         x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
         integ.cache.measurement.Σ .+= integ.cache.H * ((σ_sq .- 1) .* integ.cache.Qh) * integ.cache.H'
 
-        # @info "After sigma estimation:" t σ_sq x_pred.Σ # (σ_sq > eps(typeof(σ_sq)))
-        # assert_good_covariance(x_pred.Σ)
-
         integ.cache.σ_sq = σ_sq
-        # error("Terminate to inspect")
     end
 
     x_filt = update!(integ, x_pred)
@@ -62,13 +57,12 @@ function predict!(integ::ODEFilterIntegrator)
     @unpack dt = integ
     @unpack A!, Q!, InvPrecond = integ.constants
     @unpack x, Ah, Qh, x_pred = integ.cache
-    PI = InvPrecond(dt)
 
     A!(Ah, dt)
     Q!(Qh, dt)
 
-    mul!(x_pred.μ, Ah, x.μ)
-    x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
+    pred = predict(x, Ah, Qh)
+    copy!(x_pred, pred)
 
     return x_pred
 end
@@ -121,13 +115,12 @@ function measure!(integ, x_pred, t)
 
     v, S = measurement.μ, measurement.Σ
     v .= 0 .- h
-    # R .= Diagonal(eps.(v) .^ 2)
     R .= Diagonal(eps.(v))
-    # R .= Diagonal(dt^(2q) * ones(d))
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
 
     return nothing
 end
+
 
 function update!(integ::ODEFilterIntegrator, prediction)
 
@@ -144,13 +137,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
     K .= P_p * H' * S_inv
 
     x_filt.μ .= m_p .+ K*v
-    # x_filt.μ .= m_p .+ P_p * H' * (S\v)
-
-    # Vanilla
-    # KSK = K*S*K'
-    # KSK = P_p * H' * (S \ (H * P_p'))
-    # x_filt.Σ .= P_p .- KSK
-    # approx_diff!(x_filt.Σ, P_p, KSK)
 
     # Joseph Form
     x_filt.Σ .= Symmetric(X_A_Xt(PDMat(P_p), (I-K*H)))
@@ -159,32 +145,6 @@ function update!(integ::ODEFilterIntegrator, prediction)
     end
 
     assert_nonnegative_diagonal(x_filt.Σ)
-    # cholesky(Symmetric(x_filt.Σ))
 
     return x_filt
-end
-
-function approx_diff!(A, B, C)
-    @assert size(A) == size(B) == size(C)
-    @assert eltype(A) == eltype(B) == eltype(C)
-    # If B_ij ≈ C_ij, then A_ij = 0
-    # But, only do this if the value in A is actually negative
-    @simd for i in 1:length(A)
-        @inbounds if B[i] ≈ C[i]
-            A[i] = 0
-        else
-            A[i] = B[i] - C[i]
-        end
-    end
-end
-
-
-function fix_negative_variances(g::Gaussian, abstol::Real, reltol::Real)
-    for i in 1:length(g.μ)
-        if (g.Σ[i,i] < 0) && (sqrt(-g.Σ[i,i]) / (abstol + reltol * abs(g.μ[i]))) .< eps(eltype(g.Σ))
-            # @info "fix_neg" g.Σ[i,i] g.μ[i] abstol reltol (abstol+reltol*abs(g.μ[i])) eps(eltype(g.Σ))*(abstol+reltol*abs(g.μ[i]))
-            g.Σ[i,i] = eps(eltype(g.Σ))*(abstol+reltol*abs(g.μ[i]))
-            g.Σ[i,i] = 0
-        end
-    end
 end

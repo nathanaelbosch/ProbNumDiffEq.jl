@@ -30,7 +30,6 @@ import Base: copy
 
 stack(x) = copy(reduce(hcat, x)')
 
-include("filtering.jl")
 include("steprules.jl")
 include("priors.jl")
 # include("measurement_model.jl")
@@ -41,10 +40,12 @@ include("integrator_type.jl")
 export EKF0, EKF1, ODEFilter
 include("integrator_interface.jl")
 include("integrator_utils.jl")
+include("filtering.jl")
 include("perform_step.jl")
 include("solve.jl")
 include("preconditioning.jl")
-include("postprocessing.jl")
+include("calibration.jl")
+include("smoothing.jl")
 include("solution.jl")
 
 include("dev/problems.jl")
@@ -56,5 +57,6 @@ export MyWorkPrecision, MyWorkPrecisionSet, plot_wps
 
 include("utils/progressbar.jl")
 include("utils/rhs_derivatives.jl")
+include("utils/numerics_tricks.jl")
 
 end
