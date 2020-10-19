@@ -25,5 +25,5 @@ end
 @testset "Stiff Vanderpol" begin
     prob = ProbNumODE.remake_prob_with_jac(van_der_pol(p=[1e6]))
     prob = remake(prob, u0=big.(prob.u0))
-    @test_broken solve(prob, EKF1(), q=5) isa ProbNumODE.ProbODESolution
+    @test solve(prob, EKF1(), q=5) isa ProbNumODE.ProbODESolution
 end

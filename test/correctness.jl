@@ -27,7 +27,7 @@ for (prob, probname) in [
             @debug "Testing for correctness: Constant steps" probname method sigma q dt
 
             sol = solve(prob, method, q=q,
-                        steprule=:constant, dt=1e-4,
+                        steprule=:constant, dt=5e-4,
                         sigmarule=sigma,
                         smooth=false,
                         )
@@ -52,7 +52,7 @@ for (prob, probname) in [
         for method in (EKF0(), EKF1()),
             sigma in [:schober, :fixedMLE, :fixedWeightedMLE, :fixedMAP],
             q in 1:4
-            @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, methdo=$method" begin
+            @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, method=$method" begin
 
             @debug "Testing for correctness: Adaptive steps" probname method sigma q
 

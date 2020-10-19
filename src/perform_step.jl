@@ -139,7 +139,7 @@ function update!(integ::ODEFilterIntegrator, prediction)
     x_filt.μ .= m_p .+ K*v
 
     # Joseph Form
-    x_filt.Σ .= Symmetric(X_A_Xt(PDMat(P_p), (I-K*H)))
+    x_filt.Σ .= Symmetric(X_A_Xt(PDMat(Symmetric(P_p)), (I-K*H)))
     if !iszero(R)
         x_filt.Σ .+= Symmetric(X_A_Xt(PDMat(R), K))
     end

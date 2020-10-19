@@ -7,7 +7,7 @@ The functions all operate on `Gaussian` types.
 """Vanilla PREDICT, without fancy checks or pre-allocation; use to test against"""
 function predict(x_curr, Ah, Qh)
     mean = Ah * x_curr.μ
-    cov = Ah * x_curr.Σ * Ah' .+ Qh
+    cov = Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
     return Gaussian(mean, cov)
 end
 

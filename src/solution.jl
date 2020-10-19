@@ -127,7 +127,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     A!(Ah, h1)
     Q!(Qh, h1)
     Qh .*= σ²
-    goal_pred = predict(P * prev_rv, Ah, Qh, PI)
+    goal_pred = predict(P * prev_rv, Ah, Qh)
     goal_pred = PI * goal_pred
 
     if !solver.smooth || tval >= t[end]
