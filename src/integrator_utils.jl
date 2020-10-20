@@ -50,8 +50,10 @@ end
 
 """This could handle smoothing and uncertainty-calibration"""
 function postamble!(integ)
-    if isstatic(integ.sigma_estimator)
-        calibrate!(integ)
+    if isstatic(integ.sigma_estimator) # Calibrate
+        for s in integ.state_estimates
+            s.Σ .*= integ.sigmas[end]
+        end
         integ.sigmas = [integ.sigmas[end] for s in integ.sigmas]
     end
     integ.smooth && smooth_all!(integ)
