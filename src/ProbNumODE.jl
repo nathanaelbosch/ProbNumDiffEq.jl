@@ -30,8 +30,11 @@ include("priors.jl")
 include("sigmas.jl")
 include("error_estimation.jl")
 
-include("integrator_type.jl")
+include("algorithms.jl")
 export EKF0, EKF1, ODEFilter
+include("caches.jl")
+include("state_initialization.jl")
+include("integrator_type.jl")
 include("integrator_interface.jl")
 include("integrator_utils.jl")
 include("filtering.jl")
@@ -43,7 +46,7 @@ include("smoothing.jl")
 include("solution.jl")
 
 # Utils
-include("rhs_derivatives.jl")
+include("jacobian.jl")
 include("numerics_tricks.jl")
 
 end

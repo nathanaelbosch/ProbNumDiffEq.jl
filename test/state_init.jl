@@ -22,7 +22,7 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
 
 
 @testset "OOP state init" begin
-    m0, P0 = ProbNumODE.get_initial_states_forwarddiff(prob, 6)
+    m0, P0 = ProbNumODE.initialize_with_derivatives(prob, 6)
     @test m0 ≈ true_init_states
     @test all(P0 .== 0)
 end
@@ -31,7 +31,7 @@ end
 @testset "IIP state init" begin
     f!(du, u, p, t) = (du .= f(u, p, t))
     prob = ODEProblem(f!, u0, tspan)
-    m0, P0 = ProbNumODE.get_initial_states_forwarddiff(prob, 6)
+    m0, P0 = ProbNumODE.initialize_with_derivatives(prob, 6)
     @test m0 ≈ true_init_states
     @test all(P0 .== 0)
 end
