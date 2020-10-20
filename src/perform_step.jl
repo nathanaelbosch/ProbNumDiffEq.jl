@@ -7,17 +7,17 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     @unpack E0, Precond, InvPrecond = integ.cache
     @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
 
+    tnew = t + dt
+
+    # Coordinate change / preconditioning
     P = Precond(dt)
     PI = InvPrecond(dt)
     integ.cache.x = P * integ.cache.x
 
-    t = t + dt
-    integ.t_new = t
-
     x_pred = predict!(integ)
     mul!(u_pred, E0, PI*x_pred.μ)
 
-    measure!(integ, x_pred, t)
+    measure!(integ, x_pred, tnew)
 
     if isdynamic(integ.sigma_estimator)
         σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
@@ -38,6 +38,7 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
         integ.cache.σ_sq = σ_sq
     end
 
+    # Error estimation
     err_est_unscaled = estimate_errors(integ.error_estimator, integ)
     # Scale the error with old u-values and tolerances
     DiffEqBase.calculate_residuals!(
@@ -46,6 +47,7 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     err_est_combined = integ.opts.internalnorm(err_tmp, t)  # Norm over the dimensions
     integ.EEst = err_est_combined
 
+    # Undo the coordinate change / preconditioning
     integ.cache.x = PI * integ.cache.x
     integ.cache.x_pred = PI * integ.cache.x_pred
     integ.cache.x_filt = PI * integ.cache.x_filt

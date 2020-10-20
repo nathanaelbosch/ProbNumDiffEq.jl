@@ -81,9 +81,7 @@ end
 function apply_step!(integ)
     copy!(integ.cache.x, integ.cache.x_filt)
     copy!(integ.u, integ.cache.u_filt)
-    integ.t = integ.t_new
-
-    integ.cache.σ_sq_prev = integ.cache.σ_sq
+    integ.t = integ.t + integ.dt
 
     # For the solution
     push!(integ.state_estimates, copy(integ.cache.x))
