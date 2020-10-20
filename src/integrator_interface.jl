@@ -2,12 +2,12 @@
 function DiffEqBase.step!(integrator::ODEFilterIntegrator)
     loopheader!(integrator)
     check_error!(integrator) != :Success && return
-    perform_step!(integrator)
+    perform_step!(integrator, integrator.cache)
     loopfooter!(integrator)
     while !integrator.accept_step
         loopheader!(integrator)
         check_error!(integrator) != :Success && return
-        perform_step!(integrator)
+        perform_step!(integrator, integrator.cache)
         loopfooter!(integrator)
     end
 end

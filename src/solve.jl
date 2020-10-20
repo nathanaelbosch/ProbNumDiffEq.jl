@@ -160,7 +160,7 @@ function DiffEqBase.solve!(integ::ODEFilterIntegrator)
         if check_error!(integ) != :Success
             return integ.sol
         end
-        perform_step!(integ)
+        perform_step!(integ, integ.cache)
         loopfooter!(integ)
     end
     postamble!(integ)

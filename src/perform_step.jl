@@ -2,7 +2,7 @@
 
 This is the actual interestin part of the algorithm
 """
-function perform_step!(integ::ODEFilterIntegrator)
+function perform_step!(integ, cache::GaussianODEFilterCache)
     @unpack t, dt = integ
     @unpack E0, Precond, InvPrecond = integ.constants
     @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
