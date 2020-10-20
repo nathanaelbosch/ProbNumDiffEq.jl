@@ -1,6 +1,13 @@
 """Perform a step, but not necessarily successful!
 
-This is the actual interestin part of the algorithm
+Basically consists of the following steps
+- Coordinate change / Predonditioning
+- Prediction step
+- Measurement: Evaluate f and Jf; Build z, S, H
+- Calibration; Adjust prediction / measurement covs if the diffusion model "dynamic"
+- Update step
+- Error estimation
+- Undo the coordinate change / Predonditioning
 """
 function perform_step!(integ, cache::GaussianODEFilterCache)
     @unpack t, dt = integ
@@ -14,38 +21,35 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     PI = InvPrecond(dt)
     integ.cache.x = P * integ.cache.x
 
+    # Predict
     x_pred = predict!(integ)
     mul!(u_pred, E0, PI*x_pred.μ)
 
+    # Measure
     measure!(integ, x_pred, tnew)
 
-    if isdynamic(integ.sigma_estimator)
-        σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
-
-        # Adjust prediction and measurement accordingly
+    # Estimate sigma; Adjust prediction / measurement if dynamic
+    σ_sq = sigma_estimation(integ.sigma_estimator, integ)
+    integ.cache.σ_sq = σ_sq
+    if isdynamic(integ.sigma_estimator) # Adjust prediction and measurement
         x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
-        integ.cache.measurement.Σ .+= integ.cache.H * ((σ_sq .- 1) .* integ.cache.Qh) * integ.cache.H'
-
-        integ.cache.σ_sq = σ_sq
+        integ.cache.measurement.Σ .+=
+            integ.cache.H * ((σ_sq .- 1) .* integ.cache.Qh) * integ.cache.H'
     end
 
+    # Update
     x_filt = update!(integ, x_pred)
     mul!(u_filt, E0, PI*x_filt.μ)
 
-    if isstatic(integ.sigma_estimator)
-        # E.g. estimate the /current/ MLE sigma; Needed for error estimation
-        σ_sq = static_sigma_estimation(integ.sigma_estimator, integ)
-        integ.cache.σ_sq = σ_sq
+    # Estimate error for adaptive steps
+    if integ.opts.adaptive
+        err_est_unscaled = estimate_errors(integ.error_estimator, integ)
+        # Scale the error with old u-values and tolerances
+        DiffEqBase.calculate_residuals!(
+            err_tmp, dt * err_est_unscaled, integ.u, u_filt,
+            integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
-
-    # Error estimation
-    err_est_unscaled = estimate_errors(integ.error_estimator, integ)
-    # Scale the error with old u-values and tolerances
-    DiffEqBase.calculate_residuals!(
-        err_tmp,
-        dt * err_est_unscaled, integ.u, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
-    err_est_combined = integ.opts.internalnorm(err_tmp, t)  # Norm over the dimensions
-    integ.EEst = err_est_combined
 
     # Undo the coordinate change / preconditioning
     integ.cache.x = PI * integ.cache.x
