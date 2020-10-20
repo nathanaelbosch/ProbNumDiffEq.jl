@@ -33,17 +33,6 @@ function loopfooter!(integ)
     integ.accept_step = integ.opts.adaptive ? integ.EEst < 1 : true
 
 
-    # push!(integ.proposals, (
-    #     t=integ.t_new,
-    #     prediction=copy(integ.cache.x_pred),
-    #     filter_estimate=copy(integ.cache.x_filt),
-    #     measurement=copy(integ.cache.measurement),
-    #     H=copy(integ.cache.H), Q=copy(integ.cache.Qh), v=copy(integ.cache.h),
-    #     σ²=copy(integ.cache.σ_sq),
-    #     accept=integ.accept_step,
-    #     dt=integ.dt
-    # ))
-
     integ.opts.adaptive && (integ.dt = propose_step!(integ.steprule, integ))
 
     integ.accept_step ? (integ.destats.naccept += 1) : (integ.destats.nreject += 1)
@@ -72,7 +61,7 @@ function postamble!(integ)
         integ.times,
         integ.state_estimates,
         integ.sigmas,
-        integ.proposals, integ;
+        integ;
         retcode=integ.retcode,
         destats=integ.destats)
 end

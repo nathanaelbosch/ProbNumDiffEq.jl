@@ -119,14 +119,9 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         copy(u0), f, t, dt, real.(reltol), p, calck, Val(isinplace(prob)),
         q, prior, method, initial_sigma(sigmarule, d, q), initialize_derivatives)
 
-
     xType = typeof(cache.x)
     sigmaType = typeof(cache.σ_sq)
     measType = typeof(cache.measurement)
-    proposalType = NamedTuple{(:t, :prediction, :filter_estimate, :measurement, :H, :Q, :v, :σ², :accept, :dt),
-                              Tuple{tType, xType, xType, measType, typeof(cache.H), typeof(cache.Qh),
-                                    typeof(cache.h), sigmaType, Bool, tType}}
-    empty_proposals = proposalType[]
 
     destats = DiffEqBase.DEStats(0)
 
@@ -146,14 +141,14 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         internalnorm, unstable_check, dtmin, dtmax, false, true)
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(cache),
-                               typeof(sigmarule), typeof(error_estimator), typeof(steprule), typeof(empty_proposals),
+                               typeof(sigmarule), typeof(error_estimator), typeof(steprule),
                                xType, sigmaType, typeof(prob), typeof(alg)}(
         nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
         cache,
         # d, q, dm, mm, sigmarule, steprule,
         opts, sigmarule, error_estimator, steprule, smooth,
         #
-        empty_proposals, state_estimates, times, sigmas,
+        state_estimates, times, sigmas,
         #
         0, 0, accept_step, retcode, prob, alg, destats,
     )

@@ -2,7 +2,7 @@
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
-struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,pType,P,A,S,IType,DE} <: AbstractProbODESolution{T,N,uType}
+struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,P,A,S,IType,DE} <: AbstractProbODESolution{T,N,uType}
     u::uType                # array of non-probabilistic function values
     pu::puType              # array of Gaussians
     p::probType             # ODE posterior
@@ -11,7 +11,6 @@ struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,
     x::xType
     t::tType
     sigmas::sType
-    proposals::pType
     prob::P
     alg::A
     solver::S
@@ -23,11 +22,11 @@ end
 function solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     ProbODESolution{T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p),
                     typeof(sol.u_analytic), typeof(sol.errors), typeof(sol.x),
-                    typeof(sol.t), typeof(sol.sigmas), typeof(sol.proposals),
+                    typeof(sol.t), typeof(sol.sigmas),
                     typeof(sol.prob), typeof(sol.alg), typeof(sol.solver),
                     typeof(sol.interp), typeof(sol.destats)}(
                         sol.u, sol.pu, sol.p, sol.u_analytic, sol.errors, sol.x, sol.t,
-                        sol.sigmas, sol.proposals, sol.prob, sol.alg, sol.solver, sol.dense,
+                        sol.sigmas, sol.prob, sol.alg, sol.solver, sol.dense,
                         sol.interp, retcode, sol.destats)
 end
 
@@ -35,7 +34,7 @@ function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
     alg::ODEFilter,
     t, x, sigmas,
-    proposals, solver;
+    solver;
     retcode = :Default,
     destats = nothing,
     timeseries_errors = length(x)>2,
@@ -64,9 +63,9 @@ function DiffEqBase.build_solution(
         sol = ProbODESolution{
             T, N, typeof(u), typeof(pu), typeof(p),
             typeof(u_analytic), typeof(errors),
-            typeof(x), typeof(t), typeof(sigmas), typeof(proposals),
+            typeof(x), typeof(t), typeof(sigmas),
             typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-                u, pu, p, u_analytic, errors, x, t, sigmas, proposals, prob, alg, solver, dense, interp, retcode, destats)
+                u, pu, p, u_analytic, errors, x, t, sigmas, prob, alg, solver, dense, interp, retcode, destats)
 
         if calculate_error
             DiffEqBase.calculate_solution_errors!(sol;
@@ -78,18 +77,18 @@ function DiffEqBase.build_solution(
     else
         return ProbODESolution{
             T, N, typeof(u), typeof(pu), typeof(p), Nothing, Nothing,
-            typeof(x), typeof(t), typeof(sigmas), typeof(proposals),
+            typeof(x), typeof(t), typeof(sigmas),
             typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-                u, pu, p, nothing, nothing, x, t, sigmas, proposals, prob, alg, solver, dense, interp, retcode, destats)
+                u, pu, p, nothing, nothing, x, t, sigmas, prob, alg, solver, dense, interp, retcode, destats)
     end
 end
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
     return ProbODESolution{
         T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p), typeof(u_analytic), typeof(errors),
-        typeof(sol.x), typeof(sol.t), typeof(sol.sigmas), typeof(sol.proposals),
+        typeof(sol.x), typeof(sol.t), typeof(sol.sigmas),
         typeof(sol.prob), typeof(sol.alg), typeof(sol.solver), typeof(sol.interp), typeof(sol.destats)}(
-            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.sigmas, sol.proposals, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
+            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.sigmas, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
 end
 
 ########################################################################################

@@ -31,7 +31,7 @@ end
 ########################################################################################
 mutable struct ODEFilterIntegrator{
     IIP, S, T, P, F, QT, O, cacheType,
-    sigmaestType, errorestType, stepruleType, proposalsType,
+    sigmaestType, errorestType, stepruleType,
     xType, sigmaType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
     sol
     f::F                               # eom
@@ -56,7 +56,6 @@ mutable struct ODEFilterIntegrator{
     smooth::Bool                       # Smooth the solution or not
 
     # Save into
-    proposals::proposalsType           # List of proposals
     state_estimates::Vector{xType}     # List of state estimates, used to build the solution
     times::Vector{T}
     sigmas::Vector{sigmaType}
