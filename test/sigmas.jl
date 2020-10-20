@@ -19,23 +19,19 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         @test sol.u ≈ true_sol.(sol.t)
     end
 
+    @testset "Schober Sigma" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:schoberMV)
+        @test sol.u ≈ true_sol.(sol.t)
+    end
+
+    @testset "Fixed MLE" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedMLEMV)
+        @test sol.u ≈ true_sol.(sol.t)
+    end
+
     @testset "Fixed MAP" begin
         sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedMAP)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
-    @testset "Fixed weighted MLE" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedWeightedMLE)
-        @test sol.u ≈ true_sol.(sol.t)
-    end
-
-    # @testset "Dynamic one-step EM" begin
-    #     sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:EM)
-    #     @test sol.u ≈ true_sol.(sol.t)
-    # end
-
-    # @testset "Optim-based" begin
-    #     sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:optim)
-    #     @test sol.u ≈ true_sol.(sol.t)
-    # end
 end

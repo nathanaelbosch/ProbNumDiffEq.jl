@@ -7,8 +7,6 @@ using OrdinaryDiffEq
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
-import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plot_calibration
-
 
 @testset "Solution" begin
     prob = ProbNumODE.remake_prob_with_jac(prob_ode_lotkavoltera)
@@ -56,17 +54,6 @@ import ProbNumODE: plot_stepsizes, plot_sigmas, plot_residuals, plot_errors, plo
 
         @test sol(t0:1e-3:t1) isa DiffEqBase.DiffEqArray
     end
-
-    # @testset "Plotting" begin
-    #     @test plot(sol) isa Plots.Plot
-    #     @test plot_stepsizes(sol) isa Plots.Plot
-    #     @test plot_sigmas(sol) isa Plots.Plot
-    #     @test plot_residuals(sol) isa Plots.Plot
-
-    #     sol2 = solve(prob, Tsit5(), abstol=1e-10, reltol=1e-10)
-    #     @test_broken plot_errors(sol, sol2) isa Plots.Plot
-    #     @test_broken plot_calibration(sol, sol2) isa Plots.Plot
-    # end
 
     @testset "GaussianODEFilterPosterior" begin
         t = prob.tspan[1] + 1e-2

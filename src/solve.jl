@@ -99,20 +99,15 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     error_estimators = Dict(
         :schober => SchoberErrors(),
-        :prediction => PredictionErrors(),
-        :filtering => FilterErrors(),
     )
     error_estimator = error_estimators[local_errors]
 
     sigmarules = Dict(
         :schober => SchoberSigma(),
         :schoberMV => MVSchoberSigma(),
-        :EM => EMSigma(),
-        :optim => OptimSigma(),
         :fixedMLE => MLESigma(),
         :fixedMLEMV => MVMLESigma(),
         :fixedMAP => MAPSigma(),
-        :fixedWeightedMLE => WeightedMLESigma(),
     )
     sigmarule = sigmarules[sigmarule]
 
