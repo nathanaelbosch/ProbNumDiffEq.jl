@@ -81,9 +81,6 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     p = prob.p
     d = length(u0)
 
-    # Model
-    constants = GaussianODEFilterConstantCache(prob, q, prior, method)
-
     # Solver Options
     tType = eltype(prob.tspan)
     adaptive = steprule != :constant
@@ -112,7 +109,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     sigmarule = sigmarules[sigmarule]
 
     # Cache
-    cache = GaussianODEFilterCache(d, q, prob, constants, initial_sigma(sigmarule, d, q), initialize_derivatives)
+    cache = GaussianODEFilterCache(d, q, prob, prior, method, initial_sigma(sigmarule, d, q), initialize_derivatives)
 
     xType = typeof(cache.x)
     sigmaType = typeof(cache.σ_sq)
@@ -139,11 +136,11 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         QT(beta1), QT(beta2), QT(qoldinit),
         internalnorm, unstable_check, dtmin, dtmax, false, true)
 
-    return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(constants), typeof(cache),
+    return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(cache),
                                typeof(sigmarule), typeof(error_estimator), typeof(steprule), typeof(empty_proposals),
                                xType, sigmaType, typeof(prob), typeof(alg)}(
         nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
-        constants, cache,
+        cache,
         # d, q, dm, mm, sigmarule, steprule,
         opts, sigmarule, error_estimator, steprule, smooth,
         #

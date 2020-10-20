@@ -4,7 +4,7 @@
 function smooth_all!(integ::ODEFilterIntegrator)
 
     @unpack state_estimates, times, sigmas = integ
-    @unpack A!, Q!, Precond, InvPrecond = integ.constants
+    @unpack A!, Q!, Precond, InvPrecond = integ.cache
     @unpack Ah, Qh = integ.cache
     # x_pred is just used as a cache here
 
@@ -37,7 +37,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     # PDMat(Symmetric(x_curr.Σ))
     # PDMat(Symmetric(x_next.Σ))
 
-    @unpack d, q = integ.constants
+    @unpack d, q = integ.cache
     @unpack x_tmp = integ.cache
 
     # @info "smooth!" x_curr.Σ x_next.Σ Ah Qh PI

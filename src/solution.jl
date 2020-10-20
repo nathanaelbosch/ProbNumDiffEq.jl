@@ -42,7 +42,7 @@ function DiffEqBase.build_solution(
     dense = true, dense_errors = dense,
     calculate_error = true,
     kwargs...)
-    @unpack d, q, E0 = solver.constants
+    @unpack d, q, E0 = solver.cache
 
     @assert length(t) == length(x) == (length(sigmas)+1)
 
@@ -105,7 +105,7 @@ end
 function (posterior::GaussianFilteringPosterior)(tval::Real)
     @unpack t, x, sigmas, solver = posterior
 
-    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.constants
+    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.cache
     @unpack Ah, Qh = solver.cache
     if tval < t[1]
         error("Invalid t<t0")
@@ -164,7 +164,7 @@ end
 function GaussianODEFilterPosterior(t, x, sigmas, solver)
     GaussianODEFilterPosterior(
         GaussianFilteringPosterior(t, x, sigmas, solver),
-        solver.constants.E0)
+        solver.cache.E0)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 Base.getindex(post::GaussianODEFilterPosterior, key) = post.proj * post.filtering_posterior[key]
@@ -272,7 +272,7 @@ function sample(sol::ProbODESolution, n::Int=1)
 end
 function sample(ts, xs, solver, n::Int=1)
 
-    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.constants
+    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.cache
     @unpack Ah, Qh = solver.cache
     dim = d*(q+1)
 

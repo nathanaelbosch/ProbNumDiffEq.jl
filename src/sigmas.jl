@@ -10,7 +10,7 @@ initial_sigma(sigmarule::AbstractSigmaRule, d, q) = 1.0
 
 struct MLESigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MLESigma, integ)
-    @unpack d = integ.constants
+    @unpack d = integ.cache
     @unpack measurement = integ.cache
 
     v, S = measurement.μ, measurement.Σ
@@ -45,7 +45,7 @@ sigma.
 """
 struct MAPSigma <: AbstractStaticSigmaRule end
 function static_sigma_estimation(rule::MAPSigma, integ)
-    @unpack d = integ.constants
+    @unpack d = integ.cache
     @unpack measurement = integ.cache
 
     N = integ.success_iter + 1
@@ -70,7 +70,7 @@ end
 
 struct SchoberSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::SchoberSigma, integ)
-    @unpack d, R = integ.constants
+    @unpack d, R = integ.cache
     @unpack h, H, Qh = integ.cache
     # @assert all(R .== 0) "The schober-sigma assumes R==0!"
     σ² = h' * inv(H*Qh*H') * h / d
@@ -82,7 +82,7 @@ struct MVSchoberSigma <: AbstractDynamicSigmaRule end
 initial_sigma(sigmarule::MVSchoberSigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
 function dynamic_sigma_estimation(kind::MVSchoberSigma, integ)
     @unpack dt = integ
-    @unpack d, q, R, InvPrecond, E1 = integ.constants
+    @unpack d, q, R, InvPrecond, E1 = integ.cache
     @unpack h, H, Qh = integ.cache
 
     # @assert all(R .== 0) "The schober-sigma assumes R==0!"
@@ -110,7 +110,7 @@ struct MVMLESigma <: AbstractStaticSigmaRule end
 initial_sigma(sigmarule::MVMLESigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
 function static_sigma_estimation(kind::MVMLESigma, integ)
     @unpack dt = integ
-    @unpack d, q, R, InvPrecond, E1 = integ.constants
+    @unpack d, q, R, InvPrecond, E1 = integ.cache
     @unpack measurement, H = integ.cache
 
     # Assert EKF0

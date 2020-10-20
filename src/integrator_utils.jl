@@ -14,7 +14,7 @@ function fix_dt_at_bounds!(integ)
     integ.dt = min(integ.opts.dtmax, integ.dt)
     integ.opts.force_dtmin && (integ.dt = max(integ.opts.dtmin, integ.dt))
 
-    if integ.dt^(1/integ.constants.q) < eps(eltype(integ.u))
+    if integ.dt^(1/integ.cache.q) < eps(eltype(integ.u))
         @warn "Small step size: h^q < eps(u)! Continuing, but this could lead to numerical issues" integ.dt
     end
 

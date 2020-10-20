@@ -4,7 +4,7 @@ This is the actual interestin part of the algorithm
 """
 function perform_step!(integ, cache::GaussianODEFilterCache)
     @unpack t, dt = integ
-    @unpack E0, Precond, InvPrecond = integ.constants
+    @unpack E0, Precond, InvPrecond = integ.cache
     @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
 
     P = Precond(dt)
@@ -55,7 +55,7 @@ end
 function predict!(integ::ODEFilterIntegrator)
 
     @unpack dt = integ
-    @unpack A!, Q!, InvPrecond = integ.constants
+    @unpack A!, Q!, InvPrecond = integ.cache
     @unpack x, Ah, Qh, x_pred = integ.cache
 
     A!(Ah, dt)
@@ -71,7 +71,7 @@ end
 function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
 
     @unpack p, f, dt = integ
-    @unpack E0, h!, InvPrecond = integ.constants
+    @unpack E0, h!, InvPrecond = integ.cache
     @unpack du, h, u_pred = integ.cache
     PI = InvPrecond(dt)
 
@@ -89,7 +89,7 @@ end
 function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
 
     @unpack p, f, dt = integ
-    @unpack jac, H!, InvPrecond = integ.constants
+    @unpack jac, H!, InvPrecond = integ.cache
     @unpack u_pred, ddu, H = integ.cache
     PI = InvPrecond(dt)
 
@@ -110,7 +110,7 @@ function measure!(integ, x_pred, t)
     measure_H!(integ, x_pred, t)
 
     @unpack dt = integ
-    @unpack R, q, d = integ.constants
+    @unpack R, q, d = integ.cache
     @unpack measurement, h, H = integ.cache
 
     v, S = measurement.μ, measurement.Σ
@@ -125,7 +125,7 @@ end
 function update!(integ::ODEFilterIntegrator, prediction)
 
     @unpack dt = integ
-    @unpack R, q, d, Precond, InvPrecond, E1 = integ.constants
+    @unpack R, q, d, Precond, InvPrecond, E1 = integ.cache
     @unpack measurement, h, H, K, x_filt = integ.cache
     P, PI = Precond(dt), InvPrecond(dt)
 

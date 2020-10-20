@@ -18,7 +18,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         integ.EEst = EEst
         integ.dt = dt
 
-        @unpack q = integ.constants
+        @unpack q = integ.cache
         @unpack qmin, qmax = integ.opts
 
         scale = (1/EEst)^(1/(q+1))

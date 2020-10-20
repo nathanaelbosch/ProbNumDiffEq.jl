@@ -41,7 +41,7 @@ end
 # Integrator
 ########################################################################################
 mutable struct ODEFilterIntegrator{
-    IIP, S, T, P, F, QT, O, constantsType, cacheType,
+    IIP, S, T, P, F, QT, O, cacheType,
     sigmaestType, errorestType, stepruleType, proposalsType,
     xType, sigmaType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
     sol
@@ -57,7 +57,6 @@ mutable struct ODEFilterIntegrator{
     EEst::QT                           # (Scaled) error estimate
     qold::QT                           #
 
-    constants::constantsType
     cache::cacheType
 
     # Options
@@ -91,9 +90,8 @@ DiffEqBase.isinplace(::ODEFilterIntegrator{IIP}) where {IIP} = IIP
 # Caches
 ########################################################################################
 abstract type ProbNumODECache <: DiffEqBase.DECache end
-abstract type ProbNumODEConstantCache <: ProbNumODECache end
-abstract type ProbNumODEMutableCache <: ProbNumODECache end
-struct GaussianODEFilterConstantCache{RType, EType, F1, F2} <: ProbNumODEMutableCache
+mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matType, sigmaType} <: ProbNumODECache
+    # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
     # dm                    # Dynamics Model
@@ -110,31 +108,7 @@ struct GaussianODEFilterConstantCache{RType, EType, F1, F2} <: ProbNumODEMutable
     jac
     Precond::F1
     InvPrecond::F2
-end
-function GaussianODEFilterConstantCache(prob, q, prior, method)
-    d, f = length(prob.u0), prob.f
-    @assert prior == :ibm
-    Precond, InvPrecond = preconditioner(d, q)
-    A!, Q! = ibm(d, q)
-
-    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    # E0 = E0 * InvPrecond
-    E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    # E1 = E1 * InvPrecond
-
-    @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
-    jac = method == :ekf1 ? f.jac : nothing
-    h!(h, du, m) = h .= E1*m - du
-    H!(H, ddu) = H .= E1 - ddu * E0
-    # R = diagm(0 => eps(eltype(prob.u0)) .* ones(d))
-    R = zeros(d, d)
-
-    return GaussianODEFilterConstantCache{typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond)}(
-        d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond)
-end
-
-
-mutable struct GaussianODEFilterCache{uType, xType, matType, sigmaType} <: ProbNumODEMutableCache
+    # Mutable stuff
     u::uType
     u_pred::uType
     u_filt::uType
@@ -156,9 +130,29 @@ mutable struct GaussianODEFilterCache{uType, xType, matType, sigmaType} <: ProbN
     σ_sq_prev::sigmaType
     P_tmp::matType
     err_tmp::uType
+
 end
-function GaussianODEFilterCache(d, q, prob, constants, σ0, initialize_derivatives=true)
-    @unpack E0, E1 = constants
+
+function GaussianODEFilterCache(d, q, prob, prior, method, σ0, initialize_derivatives=true)
+
+    d, f = length(prob.u0), prob.f
+    @assert prior == :ibm
+    Precond, InvPrecond = preconditioner(d, q)
+    A!, Q! = ibm(d, q)
+
+    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    # E0 = E0 * InvPrecond
+    E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    # E1 = E1 * InvPrecond
+
+    @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
+    jac = method == :ekf1 ? f.jac : nothing
+    h!(h, du, m) = h .= E1*m - du
+    H!(H, ddu) = H .= E1 - ddu * E0
+    # R = diagm(0 => eps(eltype(prob.u0)) .* ones(d))
+    R = zeros(d, d)
+
+
     u0 = prob.u0
 
     uType = typeof(u0)
@@ -184,7 +178,13 @@ function GaussianODEFilterCache(d, q, prob, constants, σ0, initialize_derivativ
     measurement = Gaussian(v, S)
     K = copy(H')
 
-    GaussianODEFilterCache{uType, typeof(x0), matType, typeof(sigma)}(
+    return GaussianODEFilterCache{
+        typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond),
+        uType, typeof(x0), matType, typeof(sigma),
+    }(
+        # Constants
+        d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond,
+        # Mutable stuff
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,

@@ -3,7 +3,7 @@ abstract type AbstractErrorEstimator end
 struct SchoberErrors <: AbstractErrorEstimator end
 function estimate_errors(::SchoberErrors, integ)
     @unpack dt = integ
-    @unpack InvPrecond = integ.constants
+    @unpack InvPrecond = integ.cache
     @unpack σ_sq, Qh, H = integ.cache
 
     if σ_sq isa Real && isinf(σ_sq)
