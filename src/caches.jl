@@ -35,7 +35,7 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
 end
 
 function GaussianODEFilterCache(
-    alg::ODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP::Val{true},
+    alg::ODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP,
     q, prior, method, σ0, initialize_derivatives=true)
 
     u0 = u
