@@ -71,9 +71,10 @@ end
 struct SchoberSigma <: AbstractDynamicSigmaRule end
 function dynamic_sigma_estimation(kind::SchoberSigma, integ)
     @unpack d, R = integ.cache
-    @unpack h, H, Qh = integ.cache
+    @unpack H, Qh, measurement = integ.cache
     # @assert all(R .== 0) "The schober-sigma assumes R==0!"
-    σ² = h' * inv(H*Qh*H') * h / d
+    z = measurement.μ
+    σ² = z' * inv(H*Qh*H') * z / d
     return σ²
 end
 
@@ -83,7 +84,8 @@ initial_sigma(sigmarule::MVSchoberSigma, d, q) = kron(ones(q+1, q+1), diagm(0 =>
 function dynamic_sigma_estimation(kind::MVSchoberSigma, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, E1 = integ.cache
-    @unpack h, H, Qh = integ.cache
+    @unpack H, Qh, measurement = integ.cache
+    z = measurement.μ
 
     # @assert all(R .== 0) "The schober-sigma assumes R==0!"
 
@@ -96,7 +98,7 @@ function dynamic_sigma_estimation(kind::MVSchoberSigma, integ)
     @assert length(unique(diag(H*Qh*H'))) == 1
     Q0_11 = diag(H*Qh*H')[1]
 
-    Σ_ii = h .^ 2 ./ Q0_11
+    Σ_ii = z .^ 2 ./ Q0_11
     Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 

@@ -70,13 +70,12 @@ function predict!(integ::ODEFilterIntegrator)
 end
 
 
-function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
-
-    @unpack p, f, dt = integ
-    @unpack E0, h!, InvPrecond = integ.cache
-    @unpack du, h, u_pred = integ.cache
+function h!(integ, x_pred, t)
+    @unpack f, p, dt = integ
+    @unpack du, E0, E1, InvPrecond = integ.cache
     PI = InvPrecond(dt)
 
+    u_pred = E0*PI*x_pred.μ
     IIP = isinplace(integ)
     if IIP
         f(du, u_pred, p, t)
@@ -85,39 +84,40 @@ function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
     end
     integ.destats.nf += 1
 
-    h!(h, du, PI*x_pred.μ)
+    z = E1*PI*x_pred.μ .- du
+
+    return z
 end
 
-function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
 
-    @unpack p, f, dt = integ
-    @unpack jac, H!, InvPrecond = integ.cache
-    @unpack u_pred, ddu, H = integ.cache
+function H!(integ, x_pred, t)
+    @unpack f, p, dt = integ
+    @unpack ddu, E0, E1, InvPrecond, H, method = integ.cache
     PI = InvPrecond(dt)
 
-    if !isnothing(jac)
+    u_pred = E0*PI*x_pred.μ
+    if method == :ekf1
         if isinplace(integ)
-            jac(ddu, u_pred, p, t)
+            f.jac(ddu, u_pred, p, t)
         else
-            ddu .= jac(u_pred, p, t)
+            ddu .= f.jac(u_pred, p, t)
         end
         integ.destats.njacs += 1
     end
-    H!(H, ddu)
-    H .= H * PI
+
+    H .= (E1 .- ddu * E0) * PI  # For ekf0 we have ddu==0
+    return H
 end
 
+
 function measure!(integ, x_pred, t)
-    measure_h!(integ, x_pred, t)
-    measure_H!(integ, x_pred, t)
+    @unpack R = integ.cache
+    @unpack u_pred, measurement, H = integ.cache
 
-    @unpack dt = integ
-    @unpack R, q, d = integ.cache
-    @unpack measurement, h, H = integ.cache
-
-    v, S = measurement.μ, measurement.Σ
-    v .= 0 .- h
-    R .= Diagonal(eps.(v))
+    z, S = measurement.μ, measurement.Σ
+    z .= h!(integ, x_pred, t)
+    H = H!(integ, x_pred, t)
+    R .= Diagonal(eps.(z))
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
 
     return nothing
@@ -127,18 +127,17 @@ end
 function update!(integ::ODEFilterIntegrator, prediction)
 
     @unpack dt = integ
-    @unpack R, q, d, Precond, InvPrecond, E1 = integ.cache
-    @unpack measurement, h, H, K, x_filt = integ.cache
-    P, PI = Precond(dt), InvPrecond(dt)
+    @unpack R, q = integ.cache
+    @unpack measurement, H, K, x_filt = integ.cache
 
-    v, S = measurement.μ, measurement.Σ
+    z, S = measurement.μ, measurement.Σ
 
     m_p, P_p = prediction.μ, prediction.Σ
 
     S_inv = inv(S)
     K .= P_p * H' * S_inv
 
-    x_filt.μ .= m_p .+ K*v
+    x_filt.μ .= m_p .+ K * (0 .- z)
 
     # Joseph Form
     x_filt.Σ .= Symmetric(X_A_Xt(PDMat(Symmetric(P_p)), (I-K*H)))

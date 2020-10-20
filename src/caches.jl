@@ -8,12 +8,10 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
     q::Int                  # Order of the prior
     A!
     Q!
-    h!
-    H!
     R::RType
     E0::EType
     E1::EType
-    jac
+    method::Symbol
     Precond::F1
     InvPrecond::F2
     # Mutable stuff
@@ -28,7 +26,6 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
     measurement
     Ah::matType
     Qh::matType
-    h::uType
     H::matType
     du::uType
     ddu::matType
@@ -56,9 +53,6 @@ function GaussianODEFilterCache(
 
     # Measurement model
     @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
-    jac = method == :ekf1 ? f.jac : nothing
-    h!(h, du, m) = h .= E1*m - du
-    H!(H, ddu) = H .= E1 - ddu * E0
     R = zeros(d, d)
 
     uType = typeof(u0)
@@ -75,7 +69,7 @@ function GaussianODEFilterCache(
     Ah_empty = diagm(0=>ones(uElType, d*(q+1)))
     Qh_empty = zeros(uElType, d*(q+1), d*(q+1))
     h = E1 * x0.μ
-    H = uElType.(zeros(d, d*(q+1)))
+    H = copy(E1)
     du = copy(h)
     ddu = uElType.(zeros(d, d))
     v, S = copy(h), copy(ddu)
@@ -88,12 +82,12 @@ function GaussianODEFilterCache(
         uType, typeof(x0), matType, typeof(σ0),
     }(
         # Constants
-        d, q, A!, Q!, h!, H!, R, E0, E1, jac, Precond, InvPrecond,
+        d, q, A!, Q!, R, E0, E1, method, Precond, InvPrecond,
         # Mutable stuff
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,
-        Ah_empty, Qh_empty, h, H, du, ddu, K, σ0,
+        Ah_empty, Qh_empty, H, du, ddu, K, σ0,
         copy(u0),
     )
 
