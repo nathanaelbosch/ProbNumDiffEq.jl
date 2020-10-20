@@ -45,10 +45,14 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
 
 end
 
-function GaussianODEFilterCache(d, q, prob, prior, method, σ0, initialize_derivatives=true)
+function GaussianODEFilterCache(
+    alg::ODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP::Val{true},
+    q, prior, method, σ0, initialize_derivatives=true)
 
-    d, f = length(prob.u0), prob.f
+    d = length(u)
+
     @assert prior == :ibm
+
     Precond, InvPrecond = preconditioner(d, q)
     A!, Q! = ibm(d, q)
 
@@ -61,21 +65,20 @@ function GaussianODEFilterCache(d, q, prob, prior, method, σ0, initialize_deriv
     jac = method == :ekf1 ? f.jac : nothing
     h!(h, du, m) = h .= E1*m - du
     H!(H, ddu) = H .= E1 - ddu * E0
-    # R = diagm(0 => eps(eltype(prob.u0)) .* ones(d))
     R = zeros(d, d)
 
 
-    u0 = prob.u0
+    u0 = u
 
     uType = typeof(u0)
     uElType = eltype(u0)
     matType = Matrix{uElType}
 
-    t0 = prob.tspan[1]
+    t0 = t
     # Initial states
     m0, P0 = initialize_derivatives ?
-        initialize_with_derivatives(prob, q) :
-        initialize_without_derivatives(prob, q)
+        initialize_with_derivatives(u0, f, p, t0, q) :
+        initialize_without_derivatives(u0, f, p, t0, q)
     # P0 += eps(eltype(P0)) * I
     x0 = Gaussian(m0, P0)
 

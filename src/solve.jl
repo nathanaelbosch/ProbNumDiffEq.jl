@@ -56,6 +56,10 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            timeseries_errors=false,
                            dense_errors=false,
 
+                           dense=true,
+                           callback=nothing,
+                           calck = (callback !== nothing && callback != CallbackSet()) || (dense), # and no dense output
+
                            kwargs...)
     # Init
     bigfloat && (prob = remake(prob, u0=big.(prob.u0)))
@@ -78,6 +82,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     f = prob.f
     u0 = copy(prob.u0)
     t0, tmax = prob.tspan
+    t = t0
     p = prob.p
     d = length(u0)
 
@@ -109,7 +114,11 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     sigmarule = sigmarules[sigmarule]
 
     # Cache
-    cache = GaussianODEFilterCache(d, q, prob, prior, method, initial_sigma(sigmarule, d, q), initialize_derivatives)
+    cache = GaussianODEFilterCache(
+        alg, copy(u0), copy(u0), eltype(u0), eltype(u0), typeof(one(tType)), copy(u0),
+        copy(u0), f, t, dt, real.(reltol), p, calck, Val(isinplace(prob)),
+        q, prior, method, initial_sigma(sigmarule, d, q), initialize_derivatives)
+
 
     xType = typeof(cache.x)
     sigmaType = typeof(cache.σ_sq)

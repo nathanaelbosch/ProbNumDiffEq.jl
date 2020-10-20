@@ -1,16 +1,13 @@
-function initialize_without_derivatives(prob, order, var=1e-3)
+function initialize_without_derivatives(u0, f, p, t0, order, var=1e-3)
     q = order
-    u0 = prob.u0
     d = length(u0)
-    p = prob.p
-    t0 = prob.tspan[1]
 
     m0 = zeros(d*(q+1))
     m0[1:d] = u0
-    if !isinplace(prob)
-        m0[d+1:2d] = prob.f(u0, p, t0)
+    if !isinplace(f)
+        m0[d+1:2d] = f(u0, p, t0)
     else
-        prob.f(m0[d+1:2d], u0, p, t0)
+        f(m0[d+1:2d], u0, p, t0)
     end
     P0 = [zeros(d, d) zeros(d, d*q);
           zeros(d*q, d) diagm(0 => var .* ones(d*q))]
@@ -18,12 +15,8 @@ function initialize_without_derivatives(prob, order, var=1e-3)
 end
 
 
-function initialize_with_derivatives(prob::ODEProblem, order::Int)
-    f = isinplace(prob) ? iip_to_oop(prob.f) : prob.f
-
-    u0 = prob.u0
-    t0 = prob.tspan[1]
-    p = prob.p
+function initialize_with_derivatives(u0, f, p, t0, order::Int)
+    f = isinplace(f) ? iip_to_oop(f) : f
 
     d = length(u0)
     q = order
