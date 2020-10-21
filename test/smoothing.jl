@@ -16,7 +16,7 @@ prob = ProbNumODE.remake_prob_with_jac(prob)
     q = 4
     @test solve(
         prob, EKF0(), q=q, smooth=true,
-        sigmarule=:schober,
+        diffusion=:dynamic,
         steprule=:constant,
         dt=dt,
     ) isa DiffEqBase.AbstractODESolution

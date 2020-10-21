@@ -43,8 +43,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
                            qoldinit = 1//10^4,
 
-                           sigmarule=:schober,
-                           local_errors=:schober,
+                           diffusion=:dynamic,
 
                            progressbar=false,
                            maxiters=1e5,
@@ -99,25 +98,20 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     )
     steprule = steprules[steprule]
 
-    error_estimators = Dict(
-        :schober => SchoberErrors(),
-    )
-    error_estimator = error_estimators[local_errors]
-
-    sigmarules = Dict(
-        :schober => SchoberSigma(),
-        :schoberMV => MVSchoberSigma(),
-        :fixedMLE => MLESigma(),
-        :fixedMLEMV => MVMLESigma(),
+    diffusions = Dict(
+        :dynamic => DynamicSigma(),
+        :dynamicMV => MVDynamicSigma(),
+        :fixed => MLESigma(),
+        :fixedMV => MVMLESigma(),
         :fixedMAP => MAPSigma(),
     )
-    sigmarule = sigmarules[sigmarule]
+    diffusion = diffusions[diffusion]
 
     # Cache
     cache = GaussianODEFilterCache(
         alg, copy(u0), copy(u0), eltype(u0), eltype(u0), typeof(one(tType)), copy(u0),
         copy(u0), f, t, dt, real.(reltol), p, calck, Val(isinplace(prob)),
-        q, prior, method, initial_sigma(sigmarule, d, q), initialize_derivatives)
+        q, prior, method, initial_sigma(diffusion, d, q), initialize_derivatives)
 
     xType = typeof(cache.x)
     sigmaType = typeof(cache.σ_sq)
@@ -141,12 +135,12 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         internalnorm, unstable_check, dtmin, dtmax, false, true)
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(cache),
-                               typeof(sigmarule), typeof(error_estimator), typeof(steprule),
+                               typeof(diffusion),  typeof(steprule),
                                xType, sigmaType, typeof(prob), typeof(alg)}(
         nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
         cache,
-        # d, q, dm, mm, sigmarule, steprule,
-        opts, sigmarule, error_estimator, steprule, smooth,
+        # d, q, dm, mm, diffusion, steprule,
+        opts, diffusion,  steprule, smooth,
         #
         state_estimates, times, sigmas,
         #

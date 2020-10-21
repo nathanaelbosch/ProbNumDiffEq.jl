@@ -28,7 +28,6 @@ include("steprules.jl")
 include("priors.jl")
 # include("measurement_model.jl")
 include("sigmas.jl")
-include("error_estimation.jl")
 
 include("algorithms.jl")
 export EKF0, EKF1, ODEFilter
@@ -41,7 +40,6 @@ include("filtering.jl")
 include("perform_step.jl")
 include("solve.jl")
 include("preconditioning.jl")
-include("calibration.jl")
 include("smoothing.jl")
 include("solution.jl")
 

@@ -20,19 +20,19 @@ for (prob, probname) in [
         true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
         for method in (EKF0(), EKF1()),
-            sigma in [:fixedMLE, :schober, :fixedMAP, :fixedMLEMV, :schoberMV],
+            sigma in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             q in 1:4
 
-            if method isa EKF1 && sigma in (:fixedMLEMV, :schoberMV) continue end
+            if method isa EKF1 && sigma in (:fixedMV, :dynamicMV) continue end
 
             @testset "Constant steps: $probname; q=$q, sigma=$sigma, methdo=$method" begin
 
             @debug "Testing for correctness: Constant steps" probname method sigma q dt
 
-            if method isa EKF0 && sigma == :schoberMV continue end
+            if method isa EKF0 && sigma == :dynamicMV continue end
             sol = solve(prob, method, q=q,
                         steprule=:constant, dt=5e-4,
-                        sigmarule=sigma,
+                        diffusion=sigma,
                         smooth=false,
                         )
             @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
@@ -54,10 +54,10 @@ for (prob, probname) in [
         true_dense_vals = true_sol.(t_eval)
 
         for method in (EKF0(), EKF1()),
-            sigma in [:fixedMLE, :schober, :fixedMAP, :fixedMLEMV, :schoberMV],
+            sigma in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             q in 1:4
 
-            if method isa EKF1 && sigma in (:fixedMLEMV, :schoberMV) continue end
+            if method isa EKF1 && sigma in (:fixedMV, :dynamicMV) continue end
 
             @testset "Adaptive steps: $probname; q=$q, sigma=$sigma, method=$method" begin
 
@@ -65,7 +65,7 @@ for (prob, probname) in [
 
             sol = solve(prob, method, q=q,
                         steprule=:standard, abstol=1e-9, reltol=1e-9,
-                        sigmarule=sigma,
+                        diffusion=sigma,
                         smooth=false,
                         )
 

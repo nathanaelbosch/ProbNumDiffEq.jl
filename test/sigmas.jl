@@ -5,32 +5,32 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
 
 
-@testset "Correctness for different sigmas" begin
+@testset "Test the different diffusion models" begin
     prob = prob_ode_fitzhughnagumo
     true_sol = solve(prob, Tsit5(), abstol=1e-12, reltol=1e-12)
 
-    @testset "Schober Sigma" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:schober)
+    @testset "Time-Varying Diffusion" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:dynamic)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
-    @testset "Fixed MLE" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedMLE)
+    @testset "Time-Fixed Diffusion" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:fixed)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
-    @testset "Schober Sigma" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:schoberMV)
+    @testset "Time-Varying Diagonal Diffusion" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:dynamicMV)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
-    @testset "Fixed MLE" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedMLEMV)
+    @testset "Time-Fixed Diagonal Diffusion" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:fixedMV)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
-    @testset "Fixed MAP" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, sigmarule=:fixedMAP)
+    @testset "Time-Fixed Diffusion MAP" begin
+        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:fixedMAP)
         @test sol.u ≈ true_sol.(sol.t)
     end
 

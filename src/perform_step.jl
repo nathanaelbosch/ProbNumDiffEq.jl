@@ -43,7 +43,7 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive
-        err_est_unscaled = estimate_errors(integ.error_estimator, integ)
+        err_est_unscaled = estimate_errors(integ, integ.cache)
         # Scale the error with old u-values and tolerances
         DiffEqBase.calculate_residuals!(
             err_tmp, dt * err_est_unscaled, integ.u, u_filt,
@@ -152,4 +152,19 @@ function update!(integ::ODEFilterIntegrator, prediction)
     assert_nonnegative_diagonal(x_filt.Σ)
 
     return x_filt
+end
+
+
+function estimate_errors(integ, cache::GaussianODEFilterCache)
+    @unpack dt = integ
+    @unpack InvPrecond = integ.cache
+    @unpack σ_sq, Qh, H = integ.cache
+
+    if σ_sq isa Real && isinf(σ_sq)
+        return Inf
+    end
+
+    error_estimate = sqrt.(diag(H * σ_sq*Qh * H'))
+
+    return error_estimate
 end

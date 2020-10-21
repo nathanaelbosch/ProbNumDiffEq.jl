@@ -1,14 +1,14 @@
-abstract type AbstractSigmaRule end
-abstract type AbstractStaticSigmaRule <: AbstractSigmaRule end
-abstract type AbstractDynamicSigmaRule <: AbstractSigmaRule end
-isstatic(sigmarule::AbstractStaticSigmaRule) = true
-isdynamic(sigmarule::AbstractStaticSigmaRule) = false
-isstatic(sigmarule::AbstractDynamicSigmaRule) = false
-isdynamic(sigmarule::AbstractDynamicSigmaRule) = true
-initial_sigma(sigmarule::AbstractSigmaRule, d, q) = 1.0
+abstract type AbstractDiffusion end
+abstract type AbstractStaticDiffusion <: AbstractDiffusion end
+abstract type AbstractDynamicDiffusion <: AbstractDiffusion end
+isstatic(diffusion::AbstractStaticDiffusion) = true
+isdynamic(diffusion::AbstractStaticDiffusion) = false
+isstatic(diffusion::AbstractDynamicDiffusion) = false
+isdynamic(diffusion::AbstractDynamicDiffusion) = true
+initial_sigma(diffusion::AbstractDiffusion, d, q) = 1.0
 
 
-struct MLESigma <: AbstractStaticSigmaRule end
+struct MLESigma <: AbstractStaticDiffusion end
 function sigma_estimation(rule::MLESigma, integ)
     @unpack d = integ.cache
     @unpack measurement = integ.cache
@@ -43,7 +43,7 @@ To compute this in an on-line basis from the previous sigma, we reverse the comp
 get the previous sum of residuals from sigma, and then modify that sum and compute the new
 sigma.
 """
-struct MAPSigma <: AbstractStaticSigmaRule end
+struct MAPSigma <: AbstractStaticDiffusion end
 function sigma_estimation(rule::MAPSigma, integ)
     @unpack d = integ.cache
     @unpack measurement = integ.cache
@@ -68,26 +68,26 @@ function sigma_estimation(rule::MAPSigma, integ)
 end
 
 
-struct SchoberSigma <: AbstractDynamicSigmaRule end
-function sigma_estimation(kind::SchoberSigma, integ)
+struct DynamicSigma <: AbstractDynamicDiffusion end
+function sigma_estimation(kind::DynamicSigma, integ)
     @unpack d, R = integ.cache
     @unpack H, Qh, measurement = integ.cache
-    # @assert all(R .== 0) "The schober-sigma assumes R==0!"
+    # @assert all(R .== 0) "The dynamic-sigma assumes R==0!"
     z = measurement.μ
     σ² = z' * inv(H*Qh*H') * z / d
     return σ²
 end
 
 
-struct MVSchoberSigma <: AbstractDynamicSigmaRule end
-initial_sigma(sigmarule::MVSchoberSigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
-function sigma_estimation(kind::MVSchoberSigma, integ)
+struct MVDynamicSigma <: AbstractDynamicDiffusion end
+initial_sigma(diffusion::MVDynamicSigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
+function sigma_estimation(kind::MVDynamicSigma, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, E1 = integ.cache
     @unpack H, Qh, measurement = integ.cache
     z = measurement.μ
 
-    # @assert all(R .== 0) "The schober-sigma assumes R==0!"
+    # @assert all(R .== 0) "The dynamic-sigma assumes R==0!"
 
     # Assert EKF0
     PI = InvPrecond(dt)
@@ -103,13 +103,13 @@ function sigma_estimation(kind::MVSchoberSigma, integ)
     Σ = Diagonal(Σ_ii)
 
     Σ_out = kron(ones(q+1, q+1), Σ)
-    # @info "MVSchober sigma" Σ Σ_out
+    # @info "MVDynamic sigma" Σ Σ_out
     return Σ_out
 end
 
 
-struct MVMLESigma <: AbstractStaticSigmaRule end
-initial_sigma(sigmarule::MVMLESigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
+struct MVMLESigma <: AbstractStaticDiffusion end
+initial_sigma(diffusion::MVMLESigma, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
 function sigma_estimation(kind::MVMLESigma, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, E1 = integ.cache

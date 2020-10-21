@@ -12,9 +12,9 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode
 
 @testset "Smoothing with small constant steps" begin
     prob = ProbNumODE.remake_prob_with_jac(prob_ode_fitzhughnagumo)
-    @test solve(prob, EKF0(), q=4, steprule=:constant, dt=1e-3, sigmarule=:fixedMLE,
+    @test solve(prob, EKF0(), q=4, steprule=:constant, dt=1e-3, diffusion=:fixed,
                 smooth=true) isa ProbNumODE.ProbODESolution
-    @test solve(prob, EKF1(), q=4, steprule=:constant, dt=1e-3, sigmarule=:fixedMLE,
+    @test solve(prob, EKF1(), q=4, steprule=:constant, dt=1e-3, diffusion=:fixed,
                 smooth=true) isa ProbNumODE.ProbODESolution
 end
 

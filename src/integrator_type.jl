@@ -31,7 +31,7 @@ end
 ########################################################################################
 mutable struct ODEFilterIntegrator{
     IIP, S, T, P, F, QT, O, cacheType,
-    sigmaestType, errorestType, stepruleType,
+    sigmaestType, stepruleType,
     xType, sigmaType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
     sol
     f::F                               # eom
@@ -51,7 +51,6 @@ mutable struct ODEFilterIntegrator{
     # Options
     opts::O                            # General (not PN-specific) solver options
     sigma_estimator::sigmaestType
-    error_estimator::errorestType
     steprule::stepruleType
     smooth::Bool                       # Smooth the solution or not
 
