@@ -37,7 +37,7 @@ function loopfooter!(integ)
 
     integ.accept_step ? (integ.destats.naccept += 1) : (integ.destats.nreject += 1)
 
-    any(isnan.(integ.cache.σ_sq)) && error("Estimated diffusion is NaN")
+    any(isnan.(integ.cache.diffmat)) && error("Estimated diffusion is NaN")
     integ.opts.adaptive && isnan(integ.EEst) && error("Error estimate is NaN")
 
     # Accept or reject the step: Moved this here from loopheader!
@@ -50,7 +50,7 @@ end
 
 """This could handle smoothing and uncertainty-calibration"""
 function postamble!(integ)
-    if isstatic(integ.diffusion_estimator) # Calibrate
+    if isstatic(integ.diffusionmodel) # Calibrate
         for s in integ.state_estimates
             s.Σ .*= integ.diffusions[end]
         end
@@ -77,5 +77,5 @@ function apply_step!(integ)
     # For the solution
     push!(integ.state_estimates, copy(integ.cache.x))
     push!(integ.times, copy(integ.t))
-    push!(integ.diffusions, copy(integ.cache.σ_sq))
+    push!(integ.diffusions, copy(integ.cache.diffmat))
 end

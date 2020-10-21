@@ -30,13 +30,13 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
     du::uType
     ddu::matType
     K::matType
-    σ_sq::diffusionType
+    diffmat::diffusionType
     err_tmp::uType
 end
 
 function GaussianODEFilterCache(
     alg::ODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP,
-    q, prior, method, σ0, initialize_derivatives=true)
+    q, prior, method, initdiff, initialize_derivatives=true)
 
     u0 = u
     t0 = t
@@ -79,7 +79,7 @@ function GaussianODEFilterCache(
 
     return GaussianODEFilterCache{
         typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond),
-        uType, typeof(x0), matType, typeof(σ0),
+        uType, typeof(x0), matType, typeof(initdiff),
     }(
         # Constants
         d, q, A!, Q!, R, E0, E1, method, Precond, InvPrecond,
@@ -87,7 +87,7 @@ function GaussianODEFilterCache(
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,
-        Ah_empty, Qh_empty, H, du, ddu, K, σ0,
+        Ah_empty, Qh_empty, H, du, ddu, K, initdiff,
         copy(u0),
     )
 

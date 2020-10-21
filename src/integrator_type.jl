@@ -50,7 +50,7 @@ mutable struct ODEFilterIntegrator{
 
     # Options
     opts::O                            # General (not PN-specific) solver options
-    diffusion_estimator::diffusionestType
+    diffusionmodel::diffusionestType
     steprule::stepruleType
     smooth::Bool                       # Smooth the solution or not
 

@@ -30,13 +30,13 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     # Measure
     measure!(integ, x_pred, tnew)
 
-    # Estimate diffusion; Adjust prediction / measurement if dynamic
-    σ_sq = diffusion_estimation(integ.diffusion_estimator, integ)
-    integ.cache.σ_sq = σ_sq
-    if isdynamic(integ.diffusion_estimator) # Adjust prediction and measurement
-        x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
+    # Estimate diffusion
+    diffmat = estimate_diffusion(integ.diffusionmodel, integ)
+    integ.cache.diffmat = diffmat
+    if isdynamic(integ.diffusionmodel) # Adjust prediction and measurement
+        x_pred.Σ .+= (diffmat .- 1) .* integ.cache.Qh
         integ.cache.measurement.Σ .+=
-            integ.cache.H * ((σ_sq .- 1) .* integ.cache.Qh) * integ.cache.H'
+            integ.cache.H * ((diffmat .- 1) .* integ.cache.Qh) * integ.cache.H'
     end
 
     # Update
@@ -160,13 +160,13 @@ end
 function estimate_errors(integ, cache::GaussianODEFilterCache)
     @unpack dt = integ
     @unpack InvPrecond = integ.cache
-    @unpack σ_sq, Qh, H = integ.cache
+    @unpack diffmat, Qh, H = integ.cache
 
-    if σ_sq isa Real && isinf(σ_sq)
+    if diffmat isa Real && isinf(diffmat)
         return Inf
     end
 
-    error_estimate = sqrt.(diag(H * σ_sq*Qh * H'))
+    error_estimate = sqrt.(diag(H * (diffmat .* Qh) * H'))
 
     return error_estimate
 end

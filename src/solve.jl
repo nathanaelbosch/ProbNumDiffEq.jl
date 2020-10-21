@@ -95,7 +95,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     dt_init = dt != 0 ? dt : 1e-3
     QT = tType
     xType = typeof(cache.x)
-    diffusionType = typeof(cache.σ_sq)
+    diffusionType = typeof(cache.diffmat)
 
     opts = DEOptions{
         typeof(maxiters), typeof(abstol), typeof(reltol), QT, typeof(internalnorm), tType,

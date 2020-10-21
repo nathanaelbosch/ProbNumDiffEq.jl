@@ -118,14 +118,14 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     idx = sum(t .<= tval)
     prev_t = t[idx]
     prev_rv = x[idx]
-    σ² = diffusions[minimum((idx, end))]
+    diffmat = diffusions[minimum((idx, end))]
 
     # Extrapolate
     h1 = tval - prev_t
     P, PI = Precond(h1), InvPrecond(h1)
     A!(Ah, h1)
     Q!(Qh, h1)
-    Qh .*= σ²
+    Qh .*= diffmat
     goal_pred = predict(P * prev_rv, Ah, Qh)
     goal_pred = PI * goal_pred
 
@@ -143,7 +143,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     next_smoothed = P * next_smoothed
     A!(Ah, h2)
     Q!(Qh, h2)
-    Qh .*= σ²
+    Qh .*= diffmat
 
     goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
 
@@ -287,11 +287,11 @@ function sample(ts, xs, solver, n::Int=1)
         dt = ts[i+1] - ts[i]
 
         i_diffusion = sum(solver.times .<= ts[i])
-        σ² = solver.sol.diffusions[i_diffusion]
+        diffmat = solver.sol.diffusions[i_diffusion]
 
         A!(Ah, dt)
         Q!(Qh, dt)
-        Qh .*= σ²
+        Qh .*= diffmat
         P, PI = Precond(dt), InvPrecond(dt)
 
         for j in 1:n
