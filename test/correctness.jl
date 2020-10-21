@@ -19,22 +19,19 @@ for (prob, probname) in [
 
         true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
-        for method in (EKF0(), EKF1()),
+        for Alg in (EKF0, EKF1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             q in 1:4
 
-            if method isa EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
+            if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
-            @testset "Constant steps: $probname; q=$q, diffusion=$diffusion, methdo=$method" begin
+            @testset "Constant steps: $probname; q=$q, diffusion=$diffusion, alg=$Alg" begin
 
-            @debug "Testing for correctness: Constant steps" probname method diffusion q dt
+            @debug "Testing for correctness: Constant steps" probname alg diffusion q dt
 
-            if method isa EKF0 && diffusion == :dynamicMV continue end
-            sol = solve(prob, method, q=q,
-                        steprule=:constant, dt=5e-4,
-                        diffusion=diffusion,
-                        smooth=false,
-                        )
+            if Alg == EKF0 && diffusion == :dynamicMV continue end
+                sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
+                            steprule=:constant, dt=5e-4)
             @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
             end
         end
@@ -53,21 +50,18 @@ for (prob, probname) in [
         true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
         true_dense_vals = true_sol.(t_eval)
 
-        for method in (EKF0(), EKF1()),
+        for Alg in (EKF0, EKF1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             q in 1:4
 
-            if method isa EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
+            if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
-            @testset "Adaptive steps: $probname; q=$q, diffusion=$diffusion, method=$method" begin
+            @testset "Adaptive steps: $probname; q=$q, diffusion=$diffusion, Alg=$Alg" begin
 
-            @debug "Testing for correctness: Adaptive steps" probname method diffusion q
+            @debug "Testing for correctness: Adaptive steps" probname Alg diffusion q
 
-            sol = solve(prob, method, q=q,
-                        steprule=:standard, abstol=1e-9, reltol=1e-9,
-                        diffusion=diffusion,
-                        smooth=false,
-                        )
+            sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
+                        steprule=:standard, abstol=1e-9, reltol=1e-9)
 
             @test_broken sol.u ≈ true_sol.(sol.t) rtol=1e-6
             @test_broken sol.(t_eval) ≈ true_dense_vals rtol=1e-6

@@ -2,16 +2,16 @@
 # Caches
 ########################################################################################
 abstract type ProbNumODECache <: DiffEqBase.DECache end
-mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matType, diffusionType} <: ProbNumODECache
+mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType} <: ProbNumODECache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
     A!
     Q!
+    diffusionmodel::diffModelType
     R::RType
     E0::EType
     E1::EType
-    method::Symbol
     Precond::F1
     InvPrecond::F2
     # Mutable stuff
@@ -35,9 +35,10 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
 end
 
 function GaussianODEFilterCache(
-    alg::ODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP,
-    q, prior, method, initdiff, initialize_derivatives=true)
+    alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP,
+    initialize_derivatives=true)
 
+    q = alg.order
     u0 = u
     t0 = t
     d = length(u)
@@ -47,12 +48,11 @@ function GaussianODEFilterCache(
     E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
 
     # Prior dynamics
-    @assert prior == :ibm
+    @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
     Precond, InvPrecond = preconditioner(d, q)
     A!, Q! = ibm(d, q)
 
     # Measurement model
-    @assert method in (:ekf0, :ekf1) ("Type of measurement model not in [:ekf0, :ekf1]")
     R = zeros(d, d)
 
     uType = typeof(u0)
@@ -76,13 +76,23 @@ function GaussianODEFilterCache(
     measurement = Gaussian(v, S)
     K = copy(H')
 
+    diffusion_models = Dict(
+        :dynamic => DynamicDiffusion(),
+        :dynamicMV => MVDynamicDiffusion(),
+        :fixed => FixedDiffusion(),
+        :fixedMV => MVFixedDiffusion(),
+        :fixedMAP => MAPFixedDiffusion(),
+    )
+    diffmodel = diffusion_models[alg.diffusionmodel]
+    initdiff = initial_diffusion(diffmodel, d, q)
 
     return GaussianODEFilterCache{
         typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond),
         uType, typeof(x0), matType, typeof(initdiff),
+        typeof(diffmodel),
     }(
         # Constants
-        d, q, A!, Q!, R, E0, E1, method, Precond, InvPrecond,
+        d, q, A!, Q!, diffmodel, R, E0, E1, Precond, InvPrecond,
         # Mutable stuff
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0),

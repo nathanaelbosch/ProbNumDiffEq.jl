@@ -1,22 +1,14 @@
 function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem,
-                            alg::AbstractODEFilter, args...; kwargs...)
+                            alg::GaussianODEFilter, args...; kwargs...)
     @debug "Called solve with" args kwargs
     integrator = DiffEqBase.__init(prob, alg, args...; kwargs...)
     sol = DiffEqBase.solve!(integrator)
     return sol
 end
-DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF0, args...; kwargs...) =
-    DiffEqBase.__init(prob, ODEFilter(), args...; method=:ekf0, kwargs...)
-DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::EKF1, args...; kwargs...) =
-    DiffEqBase.__init(prob, ODEFilter(), args...; method=:ekf1, kwargs...)
 
-function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
+function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem,
+                           alg::GaussianODEFilter;
 
-                           method=:ekf1,
-                           prior=:ibm,
-                           q=1,
-                           diffusion=:dynamic,
-                           smooth=false,
                            initialize_derivatives=true,
 
                            steprule=:standard,
@@ -26,8 +18,8 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            qmin=2//10, qmax=10,
                            dtmin=DiffEqBase.prob2dtmin(prob; use_end_time=true),
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
-                           beta1 = 7//(10(q+1)),
-                           beta2 = 2//(5(q+1)),
+                           beta2 = beta2_default(alg),
+                           beta1 = beta1_default(alg, beta2),
                            qoldinit = 1//10^4,
 
                            maxiters=1e5,
@@ -40,7 +32,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
                            kwargs...)
 
-    if method == :ekf1 && isnothing(prob.f.jac)
+    if alg isa EKF1 && isnothing(prob.f.jac)
         error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl
                use ProbNumoDE.remake_prob_with_jac(prob).""")
     end
@@ -68,22 +60,13 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     )
     steprule = steprules[steprule]
 
-    diffusion_models = Dict(
-        :dynamic => DynamicDiffusion(),
-        :dynamicMV => MVDynamicDiffusion(),
-        :fixed => FixedDiffusion(),
-        :fixedMV => MVFixedDiffusion(),
-        :fixedMAP => MAPFixedDiffusion(),
-    )
-    diffusion = diffusion_models[diffusion]
-
     tType = eltype(prob.tspan)
 
     # Cache
     cache = GaussianODEFilterCache(
         alg, copy(u0), copy(u0), eltype(u0), eltype(u0), typeof(one(tType)), copy(u0),
         copy(u0), f, t0, dt, real.(reltol), p, calck, Val(isinplace(prob)),
-        q, prior, method, initial_diffusion(diffusion, d, q), initialize_derivatives)
+        initialize_derivatives)
 
     destats = DiffEqBase.DEStats(0)
 
@@ -106,11 +89,11 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     return ODEFilterIntegrator{
         DiffEqBase.isinplace(prob), typeof(u0), typeof(t0), typeof(p), typeof(f), QT,
-        typeof(opts), typeof(cache), typeof(diffusion),  typeof(steprule), xType,
-        diffusionType, typeof(prob), typeof(alg)
+        typeof(opts), typeof(cache), typeof(steprule),
+        xType, diffusionType, typeof(prob), typeof(alg)
     }(
         nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit), cache,
-        opts, diffusion,  steprule, smooth, state_estimates, times, diffusions,
+        opts, steprule, alg.smooth, state_estimates, times, diffusions,
         0, 0, false, :Default, prob, alg, destats,
     )
 end

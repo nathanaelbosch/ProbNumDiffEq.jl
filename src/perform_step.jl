@@ -31,9 +31,9 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     measure!(integ, x_pred, tnew)
 
     # Estimate diffusion
-    diffmat = estimate_diffusion(integ.diffusionmodel, integ)
+    diffmat = estimate_diffusion(cache.diffusionmodel, integ)
     integ.cache.diffmat = diffmat
-    if isdynamic(integ.diffusionmodel) # Adjust prediction and measurement
+    if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
         x_pred.Σ .+= (diffmat .- 1) .* integ.cache.Qh
         integ.cache.measurement.Σ .+=
             integ.cache.H * ((diffmat .- 1) .* integ.cache.Qh) * integ.cache.H'
@@ -97,12 +97,12 @@ end
 
 
 function H!(integ, x_pred, t)
-    @unpack f, p, dt = integ
-    @unpack ddu, E0, E1, InvPrecond, H, method = integ.cache
+    @unpack f, p, dt, alg = integ
+    @unpack ddu, E0, E1, InvPrecond, H = integ.cache
     PI = InvPrecond(dt)
 
     u_pred = E0*PI*x_pred.μ
-    if method == :ekf1
+    if alg isa EKF1
         if isinplace(integ)
             f.jac(ddu, u_pred, p, t)
         else

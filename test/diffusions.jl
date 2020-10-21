@@ -10,27 +10,27 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
     true_sol = solve(prob, Tsit5(), abstol=1e-12, reltol=1e-12)
 
     @testset "Time-Varying Diffusion" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:dynamic)
+        sol = solve(prob, EKF0(diffusionmodel=:dynamic), steprule=:constant, dt=1e-4)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
     @testset "Time-Fixed Diffusion" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:fixed)
+        sol = solve(prob, EKF0(diffusionmodel=:fixed), steprule=:constant, dt=1e-4)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
     @testset "Time-Varying Diagonal Diffusion" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:dynamicMV)
+        sol = solve(prob, EKF0(diffusionmodel=:dynamicMV), steprule=:constant, dt=1e-4)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
     @testset "Time-Fixed Diagonal Diffusion" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:fixedMV)
+        sol = solve(prob, EKF0(diffusionmodel=:fixedMV), steprule=:constant, dt=1e-4)
         @test sol.u ≈ true_sol.(sol.t)
     end
 
     @testset "Time-Fixed Diffusion MAP" begin
-        sol = solve(prob, EKF0(), steprule=:constant, dt=1e-4, diffusion=:fixedMAP)
+        sol = solve(prob, EKF0(diffusionmodel=:fixedMAP), steprule=:constant, dt=1e-4)
         @test sol.u ≈ true_sol.(sol.t)
     end
 

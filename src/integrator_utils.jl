@@ -50,7 +50,7 @@ end
 
 """This could handle smoothing and uncertainty-calibration"""
 function postamble!(integ)
-    if isstatic(integ.diffusionmodel) # Calibrate
+    if isstatic(integ.cache.diffusionmodel) # Calibrate
         for s in integ.state_estimates
             s.Σ .*= integ.diffusions[end]
         end

@@ -32,7 +32,7 @@ end
 
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
-    alg::ODEFilter,
+    alg::GaussianODEFilter,
     t, x, diffusions,
     solver;
     retcode = :Default,

@@ -12,14 +12,14 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode
 
 @testset "Smoothing with small constant steps" begin
     prob = ProbNumODE.remake_prob_with_jac(prob_ode_fitzhughnagumo)
-    @test solve(prob, EKF0(), q=4, steprule=:constant, dt=1e-3, diffusion=:fixed,
-                smooth=true) isa ProbNumODE.ProbODESolution
-    @test solve(prob, EKF1(), q=4, steprule=:constant, dt=1e-3, diffusion=:fixed,
-                smooth=true) isa ProbNumODE.ProbODESolution
+    @test solve(prob, EKF0(order=4, diffusionmodel=:fixed, smooth=true),
+                steprule=:constant, dt=1e-3) isa ProbNumODE.ProbODESolution
+    @test solve(prob, EKF1(order=4, diffusionmodel=:fixed, smooth=true),
+                steprule=:constant, dt=1e-3) isa ProbNumODE.ProbODESolution
 end
 
 
 @testset "Stiff Vanderpol" begin
     prob = ProbNumODE.remake_prob_with_jac(prob_ode_vanstiff)
-    @test solve(prob, EKF1(), q=3) isa ProbNumODE.ProbODESolution
+    @test solve(prob, EKF1(order=3)) isa ProbNumODE.ProbODESolution
 end

@@ -30,7 +30,8 @@ include("priors.jl")
 include("diffusions.jl")
 
 include("algorithms.jl")
-export EKF0, EKF1, ODEFilter
+export EKF0, EKF1
+include("alg_utils.jl")
 include("caches.jl")
 include("state_initialization.jl")
 include("integrator_type.jl")

@@ -30,8 +30,7 @@ end
 # Integrator
 ########################################################################################
 mutable struct ODEFilterIntegrator{
-    IIP, S, T, P, F, QT, O, cacheType,
-    diffusionestType, stepruleType,
+    IIP, S, T, P, F, QT, O, cacheType, stepruleType,
     xType, diffusionType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
     sol
     f::F                               # eom
@@ -50,7 +49,6 @@ mutable struct ODEFilterIntegrator{
 
     # Options
     opts::O                            # General (not PN-specific) solver options
-    diffusionmodel::diffusionestType
     steprule::stepruleType
     smooth::Bool                       # Smooth the solution or not
 
