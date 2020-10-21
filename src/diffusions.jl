@@ -8,8 +8,8 @@ isdynamic(diffusion::AbstractDynamicDiffusion) = true
 initial_diffusion(diffusion::AbstractDiffusion, d, q) = 1.0
 
 
-struct MLEDiffusion <: AbstractStaticDiffusion end
-function diffusion_estimation(rule::MLEDiffusion, integ)
+struct FixedDiffusion <: AbstractStaticDiffusion end
+function diffusion_estimation(rule::FixedDiffusion, integ)
     @unpack d = integ.cache
     @unpack measurement = integ.cache
 
@@ -43,8 +43,8 @@ To compute this in an on-line basis from the previous Diffusion, we reverse the 
 get the previous sum of residuals from Diffusion, and then modify that sum and compute the new
 Diffusion.
 """
-struct MAPDiffusion <: AbstractStaticDiffusion end
-function diffusion_estimation(rule::MAPDiffusion, integ)
+struct MAPFixedDiffusion <: AbstractStaticDiffusion end
+function diffusion_estimation(rule::MAPFixedDiffusion, integ)
     @unpack d = integ.cache
     @unpack measurement = integ.cache
 
@@ -108,9 +108,9 @@ function diffusion_estimation(kind::MVDynamicDiffusion, integ)
 end
 
 
-struct MVMLEDiffusion <: AbstractStaticDiffusion end
-initial_diffusion(diffusion::MVMLEDiffusion, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
-function diffusion_estimation(kind::MVMLEDiffusion, integ)
+struct MVFixedDiffusion <: AbstractStaticDiffusion end
+initial_diffusion(diffusion::MVFixedDiffusion, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
+function diffusion_estimation(kind::MVFixedDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, E1 = integ.cache
     @unpack measurement, H = integ.cache

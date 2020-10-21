@@ -15,6 +15,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            method=:ekf1,
                            prior=:ibm,
                            q=1,
+                           diffusion=:dynamic,
                            smooth=false,
                            initialize_derivatives=true,
 
@@ -27,28 +28,17 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
                            beta1 = 7//(10(q+1)),
                            beta2 = 2//(5(q+1)),
-
                            qoldinit = 1//10^4,
 
-                           diffusion=:dynamic,
-
-                           progressbar=false,
                            maxiters=1e5,
-                           saveat=nothing,
-                           save_everystep=true,
                            internalnorm = DiffEqBase.ODE_DEFAULT_NORM,
                            unstable_check = DiffEqBase.ODE_DEFAULT_UNSTABLE_CHECK,
-
-                           timeseries_errors=false,
-                           dense_errors=false,
 
                            dense=true,
                            callback=nothing,
                            calck = (callback !== nothing && callback != CallbackSet()) || (dense), # from OrdinaryDiffEq; not sure what it does
 
                            kwargs...)
-    # Init
-    IIP = DiffEqBase.isinplace(prob)
 
     if method == :ekf1 && isnothing(prob.f.jac)
         error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl
@@ -60,21 +50,15 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
         prob = remake(prob, u0=[prob.u0])
     end
 
-    (timeseries_errors != false) && @warn("`timeseries_errors` currently not supported")
-    (dense_errors != false) && @warn("`dense_errors` currently not supported")
-
-
     f = prob.f
     u0 = copy(prob.u0)
     t0, tmax = prob.tspan
-    t = t0
     p = prob.p
     d = length(u0)
 
     # Solver Options
-    tType = eltype(prob.tspan)
     adaptive = steprule != :constant
-    if !adaptive && dt == tType(0)
+    if !adaptive && iszero(dt)
         error("Fixed timestep methods require a choice of dt")
     end
     steprules = Dict(
@@ -84,53 +68,50 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     )
     steprule = steprules[steprule]
 
-    diffusions = Dict(
+    diffusion_models = Dict(
         :dynamic => DynamicDiffusion(),
         :dynamicMV => MVDynamicDiffusion(),
-        :fixed => MLEDiffusion(),
-        :fixedMV => MVMLEDiffusion(),
-        :fixedMAP => MAPDiffusion(),
+        :fixed => FixedDiffusion(),
+        :fixedMV => MVFixedDiffusion(),
+        :fixedMAP => MAPFixedDiffusion(),
     )
-    diffusion = diffusions[diffusion]
+    diffusion = diffusion_models[diffusion]
+
+    tType = eltype(prob.tspan)
 
     # Cache
     cache = GaussianODEFilterCache(
         alg, copy(u0), copy(u0), eltype(u0), eltype(u0), typeof(one(tType)), copy(u0),
-        copy(u0), f, t, dt, real.(reltol), p, calck, Val(isinplace(prob)),
+        copy(u0), f, t0, dt, real.(reltol), p, calck, Val(isinplace(prob)),
         q, prior, method, initial_diffusion(diffusion, d, q), initialize_derivatives)
-
-    xType = typeof(cache.x)
-    diffusionType = typeof(cache.σ_sq)
-    measType = typeof(cache.measurement)
 
     destats = DiffEqBase.DEStats(0)
 
     state_estimates = StructArray([copy(cache.x)])
     times = [t0]
     diffusions = []
-    accept_step = false
-    retcode = :Default
 
     isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
     dt_init = dt != 0 ? dt : 1e-3
     QT = tType
-    opts = DEOptions{typeof(maxiters), typeof(abstol), typeof(reltol), QT,
-    typeof(internalnorm), tType, typeof(unstable_check)}(
-        maxiters, adaptive, abstol, reltol, QT(gamma), QT(qmin), QT(qmax),
-        QT(beta1), QT(beta2), QT(qoldinit),
-        internalnorm, unstable_check, dtmin, dtmax, false, true)
+    xType = typeof(cache.x)
+    diffusionType = typeof(cache.σ_sq)
 
-    return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(cache),
-                               typeof(diffusion),  typeof(steprule),
-                               xType, diffusionType, typeof(prob), typeof(alg)}(
-        nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
-        cache,
-        # d, q, dm, mm, diffusion, steprule,
-        opts, diffusion,  steprule, smooth,
-        #
-        state_estimates, times, diffusions,
-        #
-        0, 0, accept_step, retcode, prob, alg, destats,
+    opts = DEOptions{
+        typeof(maxiters), typeof(abstol), typeof(reltol), QT, typeof(internalnorm), tType,
+        typeof(unstable_check)}(
+            maxiters, adaptive, abstol, reltol, QT(gamma), QT(qmin), QT(qmax),
+            QT(beta1), QT(beta2), QT(qoldinit),
+            internalnorm, unstable_check, dtmin, dtmax, false, true)
+
+    return ODEFilterIntegrator{
+        DiffEqBase.isinplace(prob), typeof(u0), typeof(t0), typeof(p), typeof(f), QT,
+        typeof(opts), typeof(cache), typeof(diffusion),  typeof(steprule), xType,
+        diffusionType, typeof(prob), typeof(alg)
+    }(
+        nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit), cache,
+        opts, diffusion,  steprule, smooth, state_estimates, times, diffusions,
+        0, 0, false, :Default, prob, alg, destats,
     )
 end
 
