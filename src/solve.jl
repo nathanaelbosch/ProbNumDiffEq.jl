@@ -23,23 +23,12 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            steprule=:standard,
                            dt=eltype(prob.tspan)(0),
                            abstol=1e-6, reltol=1e-3,
-                           # DiffEq defaults: Better for STIFF problems
                            gamma=9//10,
                            qmin=2//10, qmax=10,
-                           # Schober Defaults
-                           # gamma=0.95,
-                           # qmin=0.1, qmax=5.0,
                            dtmin=DiffEqBase.prob2dtmin(prob; use_end_time=true),
                            dtmax=eltype(prob.tspan)((prob.tspan[end]-prob.tspan[1])),
-                           # Some random manual tweaking lead to this
-                           # beta1 = 1.2/(q+1),
-                           # beta2 = 0.2/(q+1),
-                           # OrdinaryDiffEq defaults: Works better for STIFF problems
                            beta1 = 7//(10(q+1)),
                            beta2 = 2//(5(q+1)),
-                           # Bras paper betas (not 100% sure since they have different notation)
-                           # beta1 = 0.07/(q+1),
-                           # beta2 = 1.2/(q+1),
 
                            qoldinit = 1//10^4,
 
@@ -57,7 +46,7 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
                            dense=true,
                            callback=nothing,
-                           calck = (callback !== nothing && callback != CallbackSet()) || (dense), # and no dense output
+                           calck = (callback !== nothing && callback != CallbackSet()) || (dense), # from OrdinaryDiffEq; not sure what it does
 
                            kwargs...)
     # Init
@@ -99,11 +88,11 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     steprule = steprules[steprule]
 
     diffusions = Dict(
-        :dynamic => DynamicSigma(),
-        :dynamicMV => MVDynamicSigma(),
-        :fixed => MLESigma(),
-        :fixedMV => MVMLESigma(),
-        :fixedMAP => MAPSigma(),
+        :dynamic => DynamicDiffusion(),
+        :dynamicMV => MVDynamicDiffusion(),
+        :fixed => MLEDiffusion(),
+        :fixedMV => MVMLEDiffusion(),
+        :fixedMAP => MAPDiffusion(),
     )
     diffusion = diffusions[diffusion]
 
@@ -111,17 +100,17 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
     cache = GaussianODEFilterCache(
         alg, copy(u0), copy(u0), eltype(u0), eltype(u0), typeof(one(tType)), copy(u0),
         copy(u0), f, t, dt, real.(reltol), p, calck, Val(isinplace(prob)),
-        q, prior, method, initial_sigma(diffusion, d, q), initialize_derivatives)
+        q, prior, method, initial_diffusion(diffusion, d, q), initialize_derivatives)
 
     xType = typeof(cache.x)
-    sigmaType = typeof(cache.σ_sq)
+    diffusionType = typeof(cache.σ_sq)
     measType = typeof(cache.measurement)
 
     destats = DiffEqBase.DEStats(0)
 
     state_estimates = StructArray([copy(cache.x)])
     times = [t0]
-    sigmas = []
+    diffusions = []
     accept_step = false
     retcode = :Default
 
@@ -136,13 +125,13 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
     return ODEFilterIntegrator{IIP, typeof(u0), typeof(t0), typeof(p), typeof(f), QT, typeof(opts), typeof(cache),
                                typeof(diffusion),  typeof(steprule),
-                               xType, sigmaType, typeof(prob), typeof(alg)}(
+                               xType, diffusionType, typeof(prob), typeof(alg)}(
         nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit),
         cache,
         # d, q, dm, mm, diffusion, steprule,
         opts, diffusion,  steprule, smooth,
         #
-        state_estimates, times, sigmas,
+        state_estimates, times, diffusions,
         #
         0, 0, accept_step, retcode, prob, alg, destats,
     )

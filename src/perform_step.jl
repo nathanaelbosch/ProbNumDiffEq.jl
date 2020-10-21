@@ -1,4 +1,6 @@
-"""Perform a step, but not necessarily successful!
+"""Perform a step
+
+Not necessarily successful! For that, see `step!(integ)`.
 
 Basically consists of the following steps
 - Coordinate change / Predonditioning
@@ -28,10 +30,10 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     # Measure
     measure!(integ, x_pred, tnew)
 
-    # Estimate sigma; Adjust prediction / measurement if dynamic
-    σ_sq = sigma_estimation(integ.sigma_estimator, integ)
+    # Estimate diffusion; Adjust prediction / measurement if dynamic
+    σ_sq = diffusion_estimation(integ.diffusion_estimator, integ)
     integ.cache.σ_sq = σ_sq
-    if isdynamic(integ.sigma_estimator) # Adjust prediction and measurement
+    if isdynamic(integ.diffusion_estimator) # Adjust prediction and measurement
         x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
         integ.cache.measurement.Σ .+=
             integ.cache.H * ((σ_sq .- 1) .* integ.cache.Qh) * integ.cache.H'

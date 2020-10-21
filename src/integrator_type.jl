@@ -31,8 +31,8 @@ end
 ########################################################################################
 mutable struct ODEFilterIntegrator{
     IIP, S, T, P, F, QT, O, cacheType,
-    sigmaestType, stepruleType,
-    xType, sigmaType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
+    diffusionestType, stepruleType,
+    xType, diffusionType, probType, algType} <: DiffEqBase.AbstractODEIntegrator{algType, IIP, S, T}
     sol
     f::F                               # eom
     u::S                               # current functionvalue
@@ -50,14 +50,14 @@ mutable struct ODEFilterIntegrator{
 
     # Options
     opts::O                            # General (not PN-specific) solver options
-    sigma_estimator::sigmaestType
+    diffusion_estimator::diffusionestType
     steprule::stepruleType
     smooth::Bool                       # Smooth the solution or not
 
     # Save into
     state_estimates::Vector{xType}     # List of state estimates, used to build the solution
     times::Vector{T}
-    sigmas::Vector{sigmaType}
+    diffusions::Vector{diffusionType}
 
     # Misc
     iter::UInt                         # Current iteration count

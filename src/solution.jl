@@ -10,7 +10,7 @@ struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,
     errors::DType
     x::xType
     t::tType
-    sigmas::sType
+    diffusions::sType
     prob::P
     alg::A
     solver::S
@@ -22,18 +22,18 @@ end
 function solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     ProbODESolution{T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p),
                     typeof(sol.u_analytic), typeof(sol.errors), typeof(sol.x),
-                    typeof(sol.t), typeof(sol.sigmas),
+                    typeof(sol.t), typeof(sol.diffusions),
                     typeof(sol.prob), typeof(sol.alg), typeof(sol.solver),
                     typeof(sol.interp), typeof(sol.destats)}(
                         sol.u, sol.pu, sol.p, sol.u_analytic, sol.errors, sol.x, sol.t,
-                        sol.sigmas, sol.prob, sol.alg, sol.solver, sol.dense,
+                        sol.diffusions, sol.prob, sol.alg, sol.solver, sol.dense,
                         sol.interp, retcode, sol.destats)
 end
 
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
     alg::ODEFilter,
-    t, x, sigmas,
+    t, x, diffusions,
     solver;
     retcode = :Default,
     destats = nothing,
@@ -43,12 +43,12 @@ function DiffEqBase.build_solution(
     kwargs...)
     @unpack d, q, E0 = solver.cache
 
-    @assert length(t) == length(x) == (length(sigmas)+1)
+    @assert length(t) == length(x) == (length(diffusions)+1)
 
     x = StructArray(x)
     pu = StructArray(map(x -> E0 * x, x))
     u = pu.μ
-    p = GaussianODEFilterPosterior(t, x, sigmas, solver)
+    p = GaussianODEFilterPosterior(t, x, diffusions, solver)
     interp = p
 
     T = eltype(eltype(u))
@@ -63,9 +63,9 @@ function DiffEqBase.build_solution(
         sol = ProbODESolution{
             T, N, typeof(u), typeof(pu), typeof(p),
             typeof(u_analytic), typeof(errors),
-            typeof(x), typeof(t), typeof(sigmas),
+            typeof(x), typeof(t), typeof(diffusions),
             typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-                u, pu, p, u_analytic, errors, x, t, sigmas, prob, alg, solver, dense, interp, retcode, destats)
+                u, pu, p, u_analytic, errors, x, t, diffusions, prob, alg, solver, dense, interp, retcode, destats)
 
         if calculate_error
             DiffEqBase.calculate_solution_errors!(sol;
@@ -77,18 +77,18 @@ function DiffEqBase.build_solution(
     else
         return ProbODESolution{
             T, N, typeof(u), typeof(pu), typeof(p), Nothing, Nothing,
-            typeof(x), typeof(t), typeof(sigmas),
+            typeof(x), typeof(t), typeof(diffusions),
             typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-                u, pu, p, nothing, nothing, x, t, sigmas, prob, alg, solver, dense, interp, retcode, destats)
+                u, pu, p, nothing, nothing, x, t, diffusions, prob, alg, solver, dense, interp, retcode, destats)
     end
 end
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
     return ProbODESolution{
         T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p), typeof(u_analytic), typeof(errors),
-        typeof(sol.x), typeof(sol.t), typeof(sol.sigmas),
+        typeof(sol.x), typeof(sol.t), typeof(sol.diffusions),
         typeof(sol.prob), typeof(sol.alg), typeof(sol.solver), typeof(sol.interp), typeof(sol.destats)}(
-            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.sigmas, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
+            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.diffusions, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
 end
 
 ########################################################################################
@@ -98,11 +98,11 @@ abstract type AbstractFilteringPosterior end
 struct GaussianFilteringPosterior <: AbstractFilteringPosterior
     t
     x
-    sigmas
+    diffusions
     solver
 end
 function (posterior::GaussianFilteringPosterior)(tval::Real)
-    @unpack t, x, sigmas, solver = posterior
+    @unpack t, x, diffusions, solver = posterior
 
     @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.cache
     @unpack Ah, Qh = solver.cache
@@ -118,7 +118,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     idx = sum(t .<= tval)
     prev_t = t[idx]
     prev_rv = x[idx]
-    σ² = sigmas[minimum((idx, end))]
+    σ² = diffusions[minimum((idx, end))]
 
     # Extrapolate
     h1 = tval - prev_t
@@ -160,9 +160,9 @@ struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
     proj
 end
 
-function GaussianODEFilterPosterior(t, x, sigmas, solver)
+function GaussianODEFilterPosterior(t, x, diffusions, solver)
     GaussianODEFilterPosterior(
-        GaussianFilteringPosterior(t, x, sigmas, solver),
+        GaussianFilteringPosterior(t, x, diffusions, solver),
         solver.cache.E0)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
@@ -286,8 +286,8 @@ function sample(ts, xs, solver, n::Int=1)
     for i in length(xs)-1:-1:1
         dt = ts[i+1] - ts[i]
 
-        i_sigma = sum(solver.times .<= ts[i])
-        σ² = solver.sol.sigmas[i_sigma]
+        i_diffusion = sum(solver.times .<= ts[i])
+        σ² = solver.sol.diffusions[i_diffusion]
 
         A!(Ah, dt)
         Q!(Qh, dt)

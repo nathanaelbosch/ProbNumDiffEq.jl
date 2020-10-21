@@ -27,7 +27,7 @@ stack(x) = copy(reduce(hcat, x)')
 include("steprules.jl")
 include("priors.jl")
 # include("measurement_model.jl")
-include("sigmas.jl")
+include("diffusions.jl")
 
 include("algorithms.jl")
 export EKF0, EKF1, ODEFilter

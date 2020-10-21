@@ -2,7 +2,7 @@
 # Caches
 ########################################################################################
 abstract type ProbNumODECache <: DiffEqBase.DECache end
-mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matType, sigmaType} <: ProbNumODECache
+mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matType, diffusionType} <: ProbNumODECache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
@@ -30,7 +30,7 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
     du::uType
     ddu::matType
     K::matType
-    σ_sq::sigmaType
+    σ_sq::diffusionType
     err_tmp::uType
 end
 

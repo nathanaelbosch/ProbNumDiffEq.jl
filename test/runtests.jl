@@ -13,8 +13,8 @@ using ProbNumODE
     println("Solution")
     @testset "Solution" begin include("solution.jl") end
 
-    println("Sigmas")
-    @testset "Sigmas" begin include("sigmas.jl") end
+    println("Diffusions")
+    @testset "Diffusions" begin include("diffusions.jl") end
 
     println("State Initialization")
     @testset "State Initialization" begin include("state_init.jl") end
