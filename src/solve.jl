@@ -9,8 +9,6 @@ end
 function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem,
                            alg::GaussianODEFilter;
 
-                           initialize_derivatives=true,
-
                            steprule=:standard,
                            dt=eltype(prob.tspan)(0),
                            abstol=1e-6, reltol=1e-3,
@@ -63,10 +61,9 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem,
     tType = eltype(prob.tspan)
 
     # Cache
-    cache = GaussianODEFilterCache(
+    cache = OrdinaryDiffEq.alg_cache(
         alg, copy(u0), copy(u0), eltype(u0), eltype(u0), typeof(one(tType)), copy(u0),
-        copy(u0), f, t0, dt, real.(reltol), p, calck, Val(isinplace(prob)),
-        initialize_derivatives)
+        copy(u0), f, t0, dt, real.(reltol), p, calck, Val(isinplace(prob)))
 
     destats = DiffEqBase.DEStats(0)
 

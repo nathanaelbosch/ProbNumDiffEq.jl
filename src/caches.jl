@@ -34,9 +34,9 @@ mutable struct GaussianODEFilterCache{RType, EType, F1, F2, uType, xType, matTyp
     err_tmp::uType
 end
 
-function GaussianODEFilterCache(
-    alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP,
-    initialize_derivatives=true)
+function OrdinaryDiffEq.alg_cache(
+    alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
+    initialize_derivatives=true
 
     q = alg.order
     u0 = u

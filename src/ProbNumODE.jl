@@ -4,6 +4,7 @@ module ProbNumODE
 
 using Reexport
 @reexport using DiffEqBase
+using OrdinaryDiffEq
 import DiffEqBase: check_error!
 
 import Base: copy, copy!
