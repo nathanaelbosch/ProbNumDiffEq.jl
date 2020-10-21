@@ -18,8 +18,6 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
                            smooth=false,
                            initialize_derivatives=true,
 
-                           bigfloat=false,
-
                            steprule=:standard,
                            dt=eltype(prob.tspan)(0),
                            abstol=1e-6, reltol=1e-3,
@@ -50,7 +48,6 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::ODEFilter;
 
                            kwargs...)
     # Init
-    bigfloat && (prob = remake(prob, u0=big.(prob.u0)))
     IIP = DiffEqBase.isinplace(prob)
 
     if method == :ekf1 && isnothing(prob.f.jac)
