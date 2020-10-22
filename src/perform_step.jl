@@ -1,3 +1,6 @@
+# Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
+function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache) end
+
 """Perform a step
 
 Not necessarily successful! For that, see `step!(integ)`.
@@ -70,7 +73,7 @@ function h!(integ, x_pred, t)
     PI = InvPrecond(dt)
 
     u_pred = E0*PI*x_pred.μ
-    IIP = isinplace(integ)
+    IIP = isinplace(integ.f)
     if IIP
         f(du, u_pred, p, t)
     else
@@ -90,7 +93,7 @@ function H!(integ, x_pred, t)
 
     u_pred = E0*PI*x_pred.μ
     if alg isa EKF1
-        if isinplace(integ)
+        if isinplace(integ.f)
             f.jac(ddu, u_pred, p, t)
         else
             ddu .= f.jac(u_pred, p, t)
@@ -120,7 +123,7 @@ function measure!(integ, x_pred, t)
 end
 
 
-function update!(integ::ODEFilterIntegrator, prediction)
+function update!(integ, prediction)
 
     @unpack dt = integ
     @unpack R, q = integ.cache

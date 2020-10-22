@@ -20,7 +20,7 @@ mutable struct GaussianODEFilterCache{
     u::uType
     u_pred::uType
     u_filt::uType
-    u_tmp::uType
+    tmp::uType
     x::xType
     x_pred::xType
     x_filt::xType
@@ -44,6 +44,15 @@ end
 function OrdinaryDiffEq.alg_cache(
     alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
     initialize_derivatives=true
+
+    if length(u) == 1 && size(u) == ()
+        error("Scalar-values problems are currently not supported. Please remake it with a
+               1-dim Array instead")
+    end
+
+    if alg isa EKF1 && isnothing(f.jac)
+        error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl use ProbNumoDE.remake_prob_with_jac(prob).""")
+    end
 
     q = alg.order
     u0 = u
@@ -77,8 +86,8 @@ function OrdinaryDiffEq.alg_cache(
     Qh_empty = zeros(uElType, d*(q+1), d*(q+1))
     h = E1 * x0.μ
     H = copy(E1)
-    du = copy(h)
-    ddu = uElType.(zeros(d, d))
+    du = copy(u0)
+    ddu = zeros(uElType, d, d)
     v, S = copy(h), copy(ddu)
     measurement = Gaussian(v, S)
     K = copy(H')

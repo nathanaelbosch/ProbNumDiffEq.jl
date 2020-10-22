@@ -2,34 +2,44 @@
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
-struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,P,A,S,IType,DE} <: AbstractProbODESolution{T,N,uType}
-    u::uType                # array of non-probabilistic function values
-    pu::puType              # array of Gaussians
-    p::probType             # ODE posterior
-    u_analytic::uType2
-    errors::DType
-    x::xType
-    t::tType
-    diffusions::sType
-    prob::P
-    alg::A
-    solver::S
+struct ProbODESolution{T,N,uType} <: AbstractProbODESolution{T,N,uType}
+    u::uType
+    pu
+    p
+    u_analytic
+    errors
+    x
+    t
+    diffusions
+    prob
+    alg
+    solver
     dense::Bool
-    interp::IType
+    interp
     retcode::Symbol
-    destats::DE
+    destats
 end
 function solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
-    ProbODESolution{T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p),
-                    typeof(sol.u_analytic), typeof(sol.errors), typeof(sol.x),
-                    typeof(sol.t), typeof(sol.diffusions),
-                    typeof(sol.prob), typeof(sol.alg), typeof(sol.solver),
-                    typeof(sol.interp), typeof(sol.destats)}(
-                        sol.u, sol.pu, sol.p, sol.u_analytic, sol.errors, sol.x, sol.t,
-                        sol.diffusions, sol.prob, sol.alg, sol.solver, sol.dense,
-                        sol.interp, retcode, sol.destats)
+    ProbODESolution{T, N, typeof(sol.u)}(
+        sol.u, sol.pu, sol.p, sol.u_analytic, sol.errors, sol.x, sol.t,
+        sol.diffusions, sol.prob, sol.alg, sol.solver, sol.dense,
+        sol.interp, retcode, sol.destats)
 end
 
+# Used to build the initial empty solution in OrdinaryDiffEq.__init
+function DiffEqBase.build_solution(
+    prob::DiffEqBase.AbstractODEProblem,
+    alg::GaussianODEFilter,
+    t, u;
+    retcode = :Default,
+    destats = nothing,
+    dense = true,
+    kwargs...)
+    T = eltype(eltype(u))
+    N = length((size(prob.u0)..., length(u)))
+    return ProbODESolution{T, N, typeof(u)}(
+        u, nothing, nothing, nothing, nothing, nothing, nothing, nothing, prob, alg, nothing, dense, nothing, retcode, destats)
+end
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
     alg::GaussianODEFilter,
@@ -75,20 +85,14 @@ function DiffEqBase.build_solution(
 
         return sol
     else
-        return ProbODESolution{
-            T, N, typeof(u), typeof(pu), typeof(p), Nothing, Nothing,
-            typeof(x), typeof(t), typeof(diffusions),
-            typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-                u, pu, p, nothing, nothing, x, t, diffusions, prob, alg, solver, dense, interp, retcode, destats)
+        return ProbODESolution{T, N, typeof(u)}(
+            u, pu, p, nothing, nothing, x, t, diffusions, prob, alg, solver, dense, interp, retcode, destats)
     end
 end
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
-    return ProbODESolution{
-        T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p), typeof(u_analytic), typeof(errors),
-        typeof(sol.x), typeof(sol.t), typeof(sol.diffusions),
-        typeof(sol.prob), typeof(sol.alg), typeof(sol.solver), typeof(sol.interp), typeof(sol.destats)}(
-            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.diffusions, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
+    return ProbODESolution{T, N, typeof(sol.u)}(
+        sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.diffusions, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
 end
 
 ########################################################################################

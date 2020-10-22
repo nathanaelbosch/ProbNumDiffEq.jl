@@ -1,7 +1,7 @@
 ########################################################################################
 # Algorithm
 ########################################################################################
-abstract type GaussianODEFilter <: DiffEqBase.AbstractODEAlgorithm end
+abstract type GaussianODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 abstract type AbstractEKF <: GaussianODEFilter end
 
 Base.@kwdef struct EKF0 <: AbstractEKF

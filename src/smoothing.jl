@@ -1,7 +1,7 @@
 ########################################################################################
 # Post-Processing: Smoothing and uncertainty calibration
 ########################################################################################
-function smooth_all!(integ::ODEFilterIntegrator)
+function smooth_all!(integ)
 
     @unpack state_estimates, times, diffusions = integ.cache
     @unpack A!, Q!, Precond, InvPrecond = integ.cache

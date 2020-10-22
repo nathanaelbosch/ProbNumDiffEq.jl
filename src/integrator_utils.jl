@@ -18,8 +18,8 @@ function fix_dt_at_bounds!(integ)
         @warn "Small step size: h^q < eps(u)! Continuing, but this could lead to numerical issues" integ.dt
     end
 
-    next_t = integ.t + integ.dt
     tmax = integ.sol.prob.tspan[2]
+    next_t = integ.t + integ.dt
     if next_t + integ.opts.dtmin^(1/2) > tmax
         # Avoid having to make a step smaller than dtmin in the next step
         @debug "Increasing the step size now to avoid having to do a really small step next to hit t_max"
@@ -33,8 +33,7 @@ function loopfooter!(integ)
 
     integ.accept_step = integ.opts.adaptive ? integ.EEst < 1 : true
 
-
-    integ.opts.adaptive && (integ.dt = propose_step!(StandardSteps(), integ))
+    integ.opts.adaptive && (integ.dtpropose = propose_step!(StandardSteps(), integ))
 
     integ.accept_step ? (integ.destats.naccept += 1) : (integ.destats.nreject += 1)
 
@@ -45,6 +44,8 @@ function loopfooter!(integ)
     if integ.iter > 0 && integ.accept_step
         integ.success_iter += 1
         apply_step!(integ)
+    else
+        integ.dt = integ.dtpropose
     end
 end
 
@@ -66,7 +67,7 @@ function postamble!(integ)
         integ.cache.state_estimates,
         integ.cache.diffusions,
         integ;
-        retcode=integ.retcode,
+        retcode=integ.sol.retcode,
         destats=integ.destats)
 end
 
@@ -74,7 +75,14 @@ end
 function apply_step!(integ)
     copy!(integ.cache.x, integ.cache.x_filt)
     copy!(integ.u, integ.cache.u_filt)
-    integ.t = integ.t + integ.dt
+
+    # Copied from OrdinaryDiffEq to handle the tstops
+    ttmp = integ.t + integ.dt
+    tstop = integ.tdir * OrdinaryDiffEq.first(integ.opts.tstops)
+    abs(ttmp - tstop) < 10eps(max(integ.t, tstop)/oneunit(integ.t))*oneunit(integ.t) ?
+        (integ.t = tstop) : (integ.t = ttmp)
+
+    integ.dt = integ.dtpropose
 
     # For the solution
     push!(integ.cache.state_estimates, copy(integ.cache.x))

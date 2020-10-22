@@ -16,7 +16,7 @@ end
 function check_error!(integrator::ODEFilterIntegrator)
     code = check_error(integrator)
     if code != :Success
-        integrator.retcode = code
+        integrator.sol = solution_new_retcode(integrator.sol, code)
         postamble!(integrator)
     end
     return code

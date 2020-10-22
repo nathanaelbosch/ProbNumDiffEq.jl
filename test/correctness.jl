@@ -12,7 +12,7 @@ import ProbNumODE: remake_prob_with_jac
 
 
 for (prob, probname) in [
-    (remake_prob_with_jac(prob_ode_lotkavoltera), "lotkavoltera"),
+    (remake_prob_with_jac(prob_ode_lotkavoltera), "lotkavolterra"),
     (remake_prob_with_jac(prob_ode_fitzhughnagumo), "fitzhughnagumo"),
 ]
     @testset "Constant steps: $probname" begin
@@ -29,7 +29,7 @@ for (prob, probname) in [
 
             @debug "Testing for correctness: Constant steps" probname alg diffusion q dt
 
-            if Alg == EKF0 && diffusion == :dynamicMV continue end
+            if q==4 && Alg == EKF0 && diffusion == :dynamicMV continue end
 
             sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
                         adaptive=false, dt=5e-4)
@@ -40,9 +40,8 @@ for (prob, probname) in [
 end
 
 
-
 for (prob, probname) in [
-    (remake_prob_with_jac(prob_ode_lotkavoltera), "lotkavoltera"),
+    (remake_prob_with_jac(prob_ode_lotkavoltera), "lotkavolterra"),
     (remake_prob_with_jac(prob_ode_fitzhughnagumo), "fitzhughnagumo"),
 ]
     @testset "Adaptive steps: $probname" begin
@@ -64,8 +63,8 @@ for (prob, probname) in [
             sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
                         adaptive=true, abstol=1e-9, reltol=1e-9)
 
-            @test_broken sol.u ≈ true_sol.(sol.t) rtol=1e-6
-            @test_broken sol.(t_eval) ≈ true_dense_vals rtol=1e-6
+            @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
+            @test sol.(t_eval) ≈ true_dense_vals rtol=1e-6
 
             end
         end

@@ -15,9 +15,9 @@ import ProbNumODE: remake_prob_with_jac
     @test solve(remake_prob_with_jac(prob), EKF1()) isa ProbNumODE.ProbODESolution
 end
 
-@testset "One-dim problems warn!" begin
+@testset "One-dim problems don't work so far!" begin
     prob = prob_ode_linear
-    @test_logs (:warn, "prob.u0 is a scalar; In order to run, we remake the problem with u0 = [u0].") solve(prob, EKF0())
+    @test_throws ErrorException solve(prob, EKF0())
 end
 
 @testset "Fixed-timestep requires dt" begin

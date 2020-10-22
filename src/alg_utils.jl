@@ -1,8 +1,10 @@
 # qmin_default(alg::AbstractEKF) =
 # qmax_default(alg::AbstractEKF) =
-# alg_order(alg::AbstractEKF) =
+OrdinaryDiffEq.alg_order(alg::AbstractEKF) = alg.order+1
+OrdinaryDiffEq.isadaptive(alg::AbstractEKF) = true
 OrdinaryDiffEq.alg_autodiff(alg::AbstractEKF) = true
 OrdinaryDiffEq.get_chunksize(alg::AbstractEKF) = Val(0)
+OrdinaryDiffEq.isfsal(alg::AbstractEKF) = false
 # alg_adaptive_order(alg::AbstractEKF) =
 beta2_default(alg::AbstractEKF) = 2//(5(alg.order+1))
 beta1_default(alg::AbstractEKF, beta2) = 7//(10(alg.order+1))
