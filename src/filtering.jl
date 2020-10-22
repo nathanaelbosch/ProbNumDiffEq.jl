@@ -4,11 +4,19 @@ The functions all operate on `Gaussian` types.
 """
 
 
-"""Vanilla PREDICT, without fancy checks or pre-allocation; use to test against"""
+"""PREDICT
+
+`predict!` is the in-place version, aiming to reduce allocations;
+"""
+function predict!(x_out, x_curr, Ah, Qh)
+    mul!(x_out.μ, Ah, x_curr.μ)
+    x_out.Σ .= Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
+    return nothing
+end
 function predict(x_curr, Ah, Qh)
-    mean = Ah * x_curr.μ
-    cov = Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
-    return Gaussian(mean, cov)
+    x_out = copy(x_curr)
+    predict!(x_out, x_curr, Ah, Qh)
+    return x_out
 end
 
 

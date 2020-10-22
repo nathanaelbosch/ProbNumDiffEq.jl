@@ -14,18 +14,23 @@ Basically consists of the following steps
 function perform_step!(integ, cache::GaussianODEFilterCache)
     @unpack t, dt = integ
     @unpack E0, Precond, InvPrecond = integ.cache
-    @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
+    @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
+    @unpack A!, Q!, Ah, Qh = integ.cache
 
     tnew = t + dt
 
     # Coordinate change / preconditioning
     P = Precond(dt)
     PI = InvPrecond(dt)
-    integ.cache.x = P * integ.cache.x
+    x = P * x
+
+    # Dynamics for this step
+    A!(Ah, dt)
+    Q!(Qh, dt)
 
     # Predict
-    x_pred = predict!(integ)
-    mul!(u_pred, E0, PI*x_pred.μ)
+    predict!(x_pred, x, Ah, Qh)
+    u_pred .= E0*PI*x_pred.μ
 
     # Measure
     measure!(integ, x_pred, tnew)
@@ -34,19 +39,18 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     diffmat = estimate_diffusion(cache.diffusionmodel, integ)
     integ.cache.diffmat = diffmat
     if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
-        x_pred.Σ .+= (diffmat .- 1) .* integ.cache.Qh
+        x_pred.Σ .+= (diffmat .- 1) .* Qh
         integ.cache.measurement.Σ .+=
-            integ.cache.H * ((diffmat .- 1) .* integ.cache.Qh) * integ.cache.H'
+            integ.cache.H * ((diffmat .- 1) .* Qh) * integ.cache.H'
     end
 
     # Update
     x_filt = update!(integ, x_pred)
-    mul!(u_filt, E0, PI*x_filt.μ)
+    u_filt .= E0*PI*x_filt.μ
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(integ, integ.cache)
-        # Scale the error with old u-values and tolerances
         DiffEqBase.calculate_residuals!(
             err_tmp, dt * err_est_unscaled, integ.u, u_filt,
             integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
@@ -54,25 +58,9 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     end
 
     # Undo the coordinate change / preconditioning
-    integ.cache.x = PI * integ.cache.x
-    integ.cache.x_pred = PI * integ.cache.x_pred
-    integ.cache.x_filt = PI * integ.cache.x_filt
-end
-
-
-function predict!(integ::ODEFilterIntegrator)
-
-    @unpack dt = integ
-    @unpack A!, Q!, InvPrecond = integ.cache
-    @unpack x, Ah, Qh, x_pred = integ.cache
-
-    A!(Ah, dt)
-    Q!(Qh, dt)
-
-    pred = predict(x, Ah, Qh)
-    copy!(x_pred, pred)
-
-    return x_pred
+    integ.cache.x = PI * x
+    integ.cache.x_pred = PI * x_pred
+    integ.cache.x_filt = PI * x_filt
 end
 
 
