@@ -9,7 +9,7 @@ end
 function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem,
                            alg::GaussianODEFilter;
 
-                           steprule=:standard,
+                           adaptive=true,
                            dt=eltype(prob.tspan)(0),
                            abstol=1e-6, reltol=1e-3,
                            gamma=9//10,
@@ -47,16 +47,9 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem,
     d = length(u0)
 
     # Solver Options
-    adaptive = steprule != :constant
     if !adaptive && iszero(dt)
         error("Fixed timestep methods require a choice of dt")
     end
-    steprules = Dict(
-        :constant => ConstantSteps(),
-        :standard => StandardSteps(),
-        :PI => PISteps(),
-    )
-    steprule = steprules[steprule]
 
     tType = eltype(prob.tspan)
 
@@ -66,10 +59,6 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem,
         copy(u0), f, t0, dt, real.(reltol), p, calck, Val(isinplace(prob)))
 
     destats = DiffEqBase.DEStats(0)
-
-    state_estimates = StructArray([copy(cache.x)])
-    times = [t0]
-    diffusions = []
 
     isnothing(dtmin) && (dtmin = DiffEqBase.prob2dtmin(prob; use_end_time=true))
     dt_init = dt != 0 ? dt : 1e-3
@@ -84,20 +73,21 @@ function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem,
             QT(beta1), QT(beta2), QT(qoldinit),
             internalnorm, unstable_check, dtmin, dtmax, false, true)
 
+    sol = DiffEqBase.build_solution(prob, alg, [], [])
+
     return ODEFilterIntegrator{
         DiffEqBase.isinplace(prob), typeof(u0), typeof(t0), typeof(p), typeof(f), QT,
-        typeof(opts), typeof(cache), typeof(steprule),
-        xType, diffusionType, typeof(prob), typeof(alg)
+        typeof(opts), typeof(cache),
+        xType, typeof(alg)
     }(
-        nothing, f, u0, t0, t0, t0, tmax, dt_init, p, one(QT), QT(qoldinit), cache,
-        opts, steprule, alg.smooth, state_estimates, times, diffusions,
-        0, 0, false, :Default, prob, alg, destats,
+        sol, f, u0, t0, dt_init, p, one(QT), QT(qoldinit), cache,
+        opts, 0, 0, false, :Default, alg, destats,
     )
 end
 
 
 function DiffEqBase.solve!(integ::ODEFilterIntegrator)
-    while integ.t < integ.tmax
+    while integ.t < integ.sol.prob.tspan[2]
         loopheader!(integ)
         if check_error!(integ) != :Success
             return integ.sol

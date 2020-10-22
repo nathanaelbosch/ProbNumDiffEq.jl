@@ -129,7 +129,7 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     goal_pred = predict(P * prev_rv, Ah, Qh)
     goal_pred = PI * goal_pred
 
-    if !solver.smooth || tval >= t[end]
+    if !solver.alg.smooth || tval >= t[end]
         return goal_pred
     end
 
@@ -286,7 +286,7 @@ function sample(ts, xs, solver, n::Int=1)
     for i in length(xs)-1:-1:1
         dt = ts[i+1] - ts[i]
 
-        i_diffusion = sum(solver.times .<= ts[i])
+        i_diffusion = sum(ts .<= ts[i])
         diffmat = solver.sol.diffusions[i_diffusion]
 
         A!(Ah, dt)

@@ -10,7 +10,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
 @testset "Solution" begin
     prob = ProbNumODE.remake_prob_with_jac(prob_ode_lotkavoltera)
-    sol = solve(prob, EKF1(), steprule=:constant, dt=1e-2)
+    sol = solve(prob, EKF1(), adaptive=false, dt=1e-2)
 
     @test length(sol) > 2
     @test length(sol.t) == length(sol.u)

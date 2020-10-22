@@ -16,7 +16,7 @@ prob = ProbNumODE.remake_prob_with_jac(prob)
     q = 4
     @test solve(
         prob, EKF0(order=q, smooth=true, diffusionmodel=:dynamic),
-        steprule=:constant,
+        adaptive=false,
         dt=dt,
     ) isa DiffEqBase.AbstractODESolution
 end
@@ -26,8 +26,8 @@ end
     q = 3
     dt = 1e-2
 
-    sol_nonsmooth = solve(prob, EKF0(order=q, smooth=false), steprule=:constant, dt=dt);
-    sol_smooth = solve(prob, EKF0(order=q, smooth=true), steprule=:constant, dt=dt);
+    sol_nonsmooth = solve(prob, EKF0(order=q, smooth=false), adaptive=false, dt=dt);
+    sol_smooth = solve(prob, EKF0(order=q, smooth=true), adaptive=false, dt=dt);
 
     @test sol_nonsmooth.t ≈ sol_smooth.t
     @test sol_nonsmooth[end] == sol_smooth[end]

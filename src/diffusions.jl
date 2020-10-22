@@ -10,8 +10,7 @@ initial_diffusion(diffusion::AbstractDiffusion, d, q) = 1.0
 
 struct FixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::FixedDiffusion, integ)
-    @unpack d = integ.cache
-    @unpack measurement = integ.cache
+    @unpack d, measurement, diffusions = integ.cache
 
     v, S = measurement.μ, measurement.Σ
 
@@ -25,11 +24,11 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
     diffusion_t = v' * inv(S) * v / d
 
     if integ.success_iter == 0
-        @assert length(integ.diffusions) == 0
+        @assert length(diffusions) == 0
         return diffusion_t
     else
-        @assert length(integ.diffusions) == integ.success_iter
-        diffusion_prev = integ.diffusions[end]
+        @assert length(diffusions) == integ.success_iter
+        diffusion_prev = diffusions[end]
         diffusion = diffusion_prev + (diffusion_t - diffusion_prev) / integ.success_iter
         return diffusion
     end
@@ -45,8 +44,7 @@ Diffusion.
 """
 struct MAPFixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::MAPFixedDiffusion, integ)
-    @unpack d = integ.cache
-    @unpack measurement = integ.cache
+    @unpack d, measurement, diffusions = integ.cache
 
     N = integ.success_iter + 1
     v, S = measurement.μ, measurement.Σ
@@ -54,12 +52,12 @@ function estimate_diffusion(rule::MAPFixedDiffusion, integ)
 
     α, β = 1/2, 1/2
     if integ.success_iter == 0
-        @assert length(integ.diffusions) == 0
+        @assert length(diffusions) == 0
         diffusion_t = (β + 1/2 * res_t) / (α + N*d/2 + 1)
         return diffusion_t
     else
-        @assert length(integ.diffusions) == integ.success_iter
-        diffusion_prev = integ.diffusions[end]
+        @assert length(diffusions) == integ.success_iter
+        diffusion_prev = diffusions[end]
         res_prev = (diffusion_prev * (α + (N-1)*d/2 + 1) - β) * 2
         res_sum_t = res_prev + res_t
         diffusion = (β + 1/2 * res_sum_t) / (α + N*d/2 + 1)
@@ -114,6 +112,7 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, E1 = integ.cache
     @unpack measurement, H = integ.cache
+    @unpack d, measurement, diffusions = integ.cache
 
     # Assert EKF0
     PI = InvPrecond(dt)
@@ -133,11 +132,11 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
     # @info "MV-MLE-Diffusion" v S Σ Σ_out
 
     if integ.success_iter == 0
-        @assert length(integ.diffusions) == 0
+        @assert length(diffusions) == 0
         return Σ_out
     else
-        @assert length(integ.diffusions) == integ.success_iter
-        diffusion_prev = integ.diffusions[end]
+        @assert length(diffusions) == integ.success_iter
+        diffusion_prev = diffusions[end]
         diffusion = diffusion_prev + (Σ_out - diffusion_prev) / integ.success_iter
         return diffusion
     end

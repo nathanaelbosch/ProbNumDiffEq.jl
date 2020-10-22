@@ -30,8 +30,9 @@ for (prob, probname) in [
             @debug "Testing for correctness: Constant steps" probname alg diffusion q dt
 
             if Alg == EKF0 && diffusion == :dynamicMV continue end
-                sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
-                            steprule=:constant, dt=5e-4)
+
+            sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
+                        adaptive=false, dt=5e-4)
             @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
             end
         end
@@ -61,7 +62,7 @@ for (prob, probname) in [
             @debug "Testing for correctness: Adaptive steps" probname Alg diffusion q
 
             sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
-                        steprule=:standard, abstol=1e-9, reltol=1e-9)
+                        adaptive=true, abstol=1e-9, reltol=1e-9)
 
             @test_broken sol.u ≈ true_sol.(sol.t) rtol=1e-6
             @test_broken sol.(t_eval) ≈ true_dense_vals rtol=1e-6

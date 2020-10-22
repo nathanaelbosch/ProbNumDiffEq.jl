@@ -22,6 +22,6 @@ end
 
 @testset "Fixed-timestep requires dt" begin
     prob = prob_ode_lotkavoltera
-    @test_throws ErrorException solve(prob, EKF0(), steprule=:constant)
-    @test solve(prob, EKF0(), steprule=:constant, dt=0.05) isa ProbNumODE.ProbODESolution
+    @test_throws ErrorException solve(prob, EKF0(), adaptive=false)
+    @test solve(prob, EKF0(), adaptive=false, dt=0.05) isa ProbNumODE.ProbODESolution
 end

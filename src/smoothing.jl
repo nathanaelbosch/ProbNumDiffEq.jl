@@ -3,7 +3,7 @@
 ########################################################################################
 function smooth_all!(integ::ODEFilterIntegrator)
 
-    @unpack state_estimates, times, diffusions = integ
+    @unpack state_estimates, times, diffusions = integ.cache
     @unpack A!, Q!, Precond, InvPrecond = integ.cache
     @unpack Ah, Qh = integ.cache
     # x_pred is just used as a cache here

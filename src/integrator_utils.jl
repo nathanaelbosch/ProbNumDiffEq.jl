@@ -19,10 +19,11 @@ function fix_dt_at_bounds!(integ)
     end
 
     next_t = integ.t + integ.dt
-    if next_t + integ.opts.dtmin^(1/2) > integ.prob.tspan[2]
+    tmax = integ.sol.prob.tspan[2]
+    if next_t + integ.opts.dtmin^(1/2) > tmax
         # Avoid having to make a step smaller than dtmin in the next step
         @debug "Increasing the step size now to avoid having to do a really small step next to hit t_max"
-        integ.dt = integ.prob.tspan[2] - integ.t
+        integ.dt = tmax - integ.t
     end
 end
 
@@ -33,7 +34,7 @@ function loopfooter!(integ)
     integ.accept_step = integ.opts.adaptive ? integ.EEst < 1 : true
 
 
-    integ.opts.adaptive && (integ.dt = propose_step!(integ.steprule, integ))
+    integ.opts.adaptive && (integ.dt = propose_step!(StandardSteps(), integ))
 
     integ.accept_step ? (integ.destats.naccept += 1) : (integ.destats.nreject += 1)
 
@@ -51,18 +52,19 @@ end
 """This could handle smoothing and uncertainty-calibration"""
 function postamble!(integ)
     if isstatic(integ.cache.diffusionmodel) # Calibrate
-        for s in integ.state_estimates
-            s.Σ .*= integ.diffusions[end]
+        final_diff = integ.cache.diffusions[end]
+        for s in integ.cache.state_estimates
+            s.Σ .*= final_diff
         end
-        integ.diffusions = [integ.diffusions[end] for s in integ.diffusions]
+        integ.cache.diffusions = repeat([final_diff], length(integ.cache.diffusions))
     end
-    integ.smooth && smooth_all!(integ)
+    integ.alg.smooth && smooth_all!(integ)
 
     integ.sol = DiffEqBase.build_solution(
-        integ.prob, integ.alg,
-        integ.times,
-        integ.state_estimates,
-        integ.diffusions,
+        integ.sol.prob, integ.alg,
+        integ.cache.times,
+        integ.cache.state_estimates,
+        integ.cache.diffusions,
         integ;
         retcode=integ.retcode,
         destats=integ.destats)
@@ -75,7 +77,7 @@ function apply_step!(integ)
     integ.t = integ.t + integ.dt
 
     # For the solution
-    push!(integ.state_estimates, copy(integ.cache.x))
-    push!(integ.times, copy(integ.t))
-    push!(integ.diffusions, copy(integ.cache.diffmat))
+    push!(integ.cache.state_estimates, copy(integ.cache.x))
+    push!(integ.cache.times, copy(integ.t))
+    push!(integ.cache.diffusions, copy(integ.cache.diffmat))
 end
