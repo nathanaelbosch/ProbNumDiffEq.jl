@@ -95,7 +95,6 @@ function h!(integ, x_pred, t)
     return z
 end
 
-
 function H!(integ, x_pred, t)
     @unpack f, p, dt, alg = integ
     @unpack ddu, E0, E1, InvPrecond, H = integ.cache
@@ -107,6 +106,9 @@ function H!(integ, x_pred, t)
             f.jac(ddu, u_pred, p, t)
         else
             ddu .= f.jac(u_pred, p, t)
+            # WIP: Handle Jacobians as OrdinaryDiffEq.jl does
+            # J = OrdinaryDiffEq.jacobian((u)-> f(u, p, t), u_pred, integ)
+            # @assert J ≈ ddu
         end
         integ.destats.njacs += 1
     end
@@ -122,7 +124,7 @@ function measure!(integ, x_pred, t)
 
     z, S = measurement.μ, measurement.Σ
     z .= h!(integ, x_pred, t)
-    H = H!(integ, x_pred, t)
+    H .= H!(integ, x_pred, t)
     R .= Diagonal(eps.(z))
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
 
