@@ -1,5 +1,9 @@
 # Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
-function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache) end
+function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
+    @assert integ.saveiter == 1
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.x, integ.saveiter, copy(integ.cache.x))
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, integ.cache.E0*integ.cache.x)
+end
 
 """Perform a step
 
@@ -14,7 +18,7 @@ Basically consists of the following steps
 - Error estimation
 - Undo the coordinate change / Predonditioning
 """
-function perform_step!(integ, cache::GaussianODEFilterCache)
+function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack E0, Precond, InvPrecond = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
@@ -50,6 +54,7 @@ function perform_step!(integ, cache::GaussianODEFilterCache)
     # Update
     x_filt = update!(integ, x_pred)
     u_filt .= E0*PI*x_filt.μ
+    integ.u .= u_filt
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive

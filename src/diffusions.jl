@@ -10,7 +10,8 @@ initial_diffusion(diffusion::AbstractDiffusion, d, q) = 1.0
 
 struct FixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::FixedDiffusion, integ)
-    @unpack d, measurement, diffusions = integ.cache
+    @unpack d, measurement = integ.cache
+    diffusions = integ.sol.diffusions
 
     v, S = measurement.μ, measurement.Σ
 
@@ -44,7 +45,8 @@ Diffusion.
 """
 struct MAPFixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::MAPFixedDiffusion, integ)
-    @unpack d, measurement, diffusions = integ.cache
+    @unpack d, measurement = integ.cache
+    diffusions = integ.sol.diffusions
 
     N = integ.success_iter + 1
     v, S = measurement.μ, measurement.Σ
@@ -112,7 +114,8 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, E1 = integ.cache
     @unpack measurement, H = integ.cache
-    @unpack d, measurement, diffusions = integ.cache
+    @unpack d, measurement = integ.cache
+    diffusions = integ.sol.diffusions
 
     # Assert EKF0
     PI = InvPrecond(dt)

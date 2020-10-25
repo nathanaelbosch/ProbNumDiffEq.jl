@@ -1,9 +1,9 @@
 ########################################################################################
 # Caches
 ########################################################################################
-abstract type ProbNumODECache <: DiffEqBase.DECache end
+abstract type ProbNumODECache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType, T,
+    RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType,
 } <: ProbNumODECache
     # Constants
     d::Int                  # Dimension of the problem
@@ -34,11 +34,6 @@ mutable struct GaussianODEFilterCache{
     K::matType
     diffmat::diffusionType
     err_tmp::uType
-
-    # Things that were previously in the integrator
-    state_estimates::Vector{xType}     # List of state estimates, used to build the solution
-    times::Vector{T}
-    diffusions::Vector{diffusionType}
 end
 
 function OrdinaryDiffEq.alg_cache(
@@ -102,15 +97,10 @@ function OrdinaryDiffEq.alg_cache(
     diffmodel = diffusion_models[alg.diffusionmodel]
     initdiff = initial_diffusion(diffmodel, d, q)
 
-    state_estimates = StructArray([copy(x0)])
-    times = [t0]
-    diffusions = []
-
     return GaussianODEFilterCache{
         typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond),
         uType, typeof(x0), matType, typeof(initdiff),
         typeof(diffmodel),
-        typeof(t),
     }(
         # Constants
         d, q, A!, Q!, diffmodel, R, E0, E1, Precond, InvPrecond,
@@ -120,8 +110,5 @@ function OrdinaryDiffEq.alg_cache(
         measurement,
         Ah_empty, Qh_empty, H, du, ddu, K, initdiff,
         copy(u0),
-        state_estimates,
-        times,
-        diffusions,
     )
 end

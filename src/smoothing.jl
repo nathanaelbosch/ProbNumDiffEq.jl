@@ -3,13 +3,13 @@
 ########################################################################################
 function smooth_all!(integ)
 
-    @unpack state_estimates, times, diffusions = integ.cache
+    @unpack x, t, diffusions = integ.sol
     @unpack A!, Q!, Precond, InvPrecond = integ.cache
     @unpack Ah, Qh = integ.cache
     # x_pred is just used as a cache here
 
-    for i in length(state_estimates)-1:-1:2
-        dt = times[i+1] - times[i]
+    for i in length(x)-1:-1:2
+        dt = t[i+1] - t[i]
 
         P = Precond(dt)
         PI = InvPrecond(dt)
@@ -22,11 +22,11 @@ function smooth_all!(integ)
 
         # @info "smooth_all!" state_estimates[i].Σ state_estimates[i+1].Σ
         # @info "smooth_all!" P*state_estimates[i].Σ P*state_estimates[i+1].Σ
-        state_estimates[i] = P * state_estimates[i]
-        smooth!(state_estimates[i], P*state_estimates[i+1], Ah, Qh, integ, PI)
-        any(isnan.(state_estimates[i].μ)) && error("NaN mean after smoothing")
-        any(isnan.(state_estimates[i].Σ)) && error("NaN cov after smoothing")
-        state_estimates[i] = PI * state_estimates[i]
+        x[i] = P * x[i]
+        smooth!(x[i], P*x[i+1], Ah, Qh, integ, PI)
+        any(isnan.(x[i].μ)) && error("NaN mean after smoothing")
+        any(isnan.(x[i].Σ)) && error("NaN cov after smoothing")
+        x[i] = PI * x[i]
     end
 end
 
