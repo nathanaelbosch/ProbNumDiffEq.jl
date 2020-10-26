@@ -150,8 +150,8 @@ end
 @recipe function f(sol::AbstractProbODESolution; c=1.96)
     times = range(sol.t[1], sol.t[end], length=1000)
     dense_post = sol(times)
-    values = mean(dense_post)
-    stds = std(dense_post)
+    values = stack(mean(dense_post))
+    stds = stack(std(dense_post))
     ribbon --> c * stds
     xguide --> "t"
     yguide --> "y(t)"

@@ -31,6 +31,8 @@ using ModelingToolkit
 using PDMats
 
 import Statistics: mean, var, std
+var(p::MvNormal{T}) where {T} = diag(p.Σ)
+std(p::MvNormal{T}) where {T} = sqrt.(diag(p.Σ))
 mean(s::MvNormalList{T}) where {T} = mean.(s)
 var(s::MvNormalList{T}) where {T} = var.(s)
 std(s::MvNormalList{T}) where {T} = std.(s)
