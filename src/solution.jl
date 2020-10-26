@@ -154,7 +154,8 @@ end
     stds = stack(std(dense_post))
     ribbon --> c * stds
     xguide --> "t"
-    yguide --> "y(t)"
+    yguide --> "u(t)"
+    label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
     return times, values
 end
 
@@ -226,12 +227,12 @@ end
 
 
 function sample(sol::ProbODESolution, n::Int=1)
-    sample(sol.t, sol.x, sol.solver, n)
+    sample(sol.t, sol.x, sol.diffusions, sol.interp, n)
 end
-function sample(ts, xs, solver, n::Int=1)
+function sample(ts, xs, diffusions, posterior, n::Int=1)
 
-    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.cache
-    @unpack Ah, Qh = solver.cache
+    @unpack A!, Q!, Ah, Qh, d, q, Precond, InvPrecond = posterior
+    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     dim = d*(q+1)
 
     x = xs[end]
@@ -246,7 +247,7 @@ function sample(ts, xs, solver, n::Int=1)
         dt = ts[i+1] - ts[i]
 
         i_diffusion = sum(ts .<= ts[i])
-        diffmat = solver.sol.diffusions[i_diffusion]
+        diffmat = diffusions[i_diffusion]
 
         A!(Ah, dt)
         Q!(Qh, dt)
@@ -268,7 +269,7 @@ function sample(ts, xs, solver, n::Int=1)
 end
 function dense_sample(sol::ProbODESolution, n::Int=1)
     times = range(sol.t[1], sol.t[end], length=1000)
-    states = StructArray(sol.p.filtering_posterior(times))
+    states = StructArray(sol(times))
 
-    sample(times, states, sol.solver, n), times
+    sample(times, states, sol.diffusions, sol.interp, n), times
 end
