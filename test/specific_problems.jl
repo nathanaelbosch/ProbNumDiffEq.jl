@@ -21,5 +21,5 @@ end
 
 @testset "Stiff Vanderpol" begin
     prob = ProbNumODE.remake_prob_with_jac(prob_ode_vanstiff)
-    @test_broken solve(prob, EKF1(order=3)) isa ProbNumODE.ProbODESolution
+    @test solve(prob, EKF1(order=3)) isa ProbNumODE.ProbODESolution
 end

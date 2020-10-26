@@ -46,8 +46,8 @@ end
 
     @testset "Compare smooth and non-smooth dense output" begin
         ts = range(sol_smooth.t[1], sol_smooth.t[2], length=10)
-        smooth_dense_covs = ProbNumODE.stack(diag.(sol_smooth.p(ts).Σ))
-        nonsmooth_dense_covs = ProbNumODE.stack(diag.(sol_nonsmooth.p(ts).Σ))
+        smooth_dense_covs = ProbNumODE.stack(diag.(sol_smooth(ts).Σ))
+        nonsmooth_dense_covs = ProbNumODE.stack(diag.(sol_nonsmooth(ts).Σ))
         @test_broken all(smooth_dense_covs .<= nonsmooth_dense_covs)
     end
 end

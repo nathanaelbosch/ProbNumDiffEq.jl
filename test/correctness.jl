@@ -64,7 +64,7 @@ for (prob, probname) in [
                         adaptive=true, abstol=1e-9, reltol=1e-9)
 
             @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
-            @test sol.(t_eval) ≈ true_dense_vals rtol=1e-6
+            @test sol(t_eval).μ ≈ true_dense_vals rtol=1e-6
 
             end
         end

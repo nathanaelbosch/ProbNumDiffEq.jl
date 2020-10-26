@@ -74,7 +74,6 @@ struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
     Qh
     Precond
     InvPrecond
-    E0
     smooth
 end
 function GaussianODEFilterPosterior(alg, u0)
@@ -85,14 +84,13 @@ function GaussianODEFilterPosterior(alg, u0)
     Precond, InvPrecond = preconditioner(d, q)
     Ah = diagm(0=>ones(uElType, d*(q+1)))
     Qh = zeros(uElType, d*(q+1), d*(q+1))
-    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     GaussianODEFilterPosterior(
-        d, q, A!, Q!, Ah, Qh, Precond, InvPrecond, E0, alg.smooth)
+        d, q, A!, Q!, Ah, Qh, Precond, InvPrecond, alg.smooth)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
 function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
-    @unpack A!, Q!, Ah, Qh, d, q, E0, Precond, InvPrecond = posterior
+    @unpack A!, Q!, Ah, Qh, d, q, Precond, InvPrecond = posterior
 
     if tval < t[1]
         error("Invalid t<t0")
@@ -100,7 +98,7 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     if tval in t
         idx = sum(t .<= tval)
         @assert t[idx] == tval
-        return E0 * x[idx]
+        return x[idx]
     end
 
     idx = sum(t .<= tval)
@@ -118,7 +116,7 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     goal_pred = PI * goal_pred
 
     if !posterior.smooth || tval >= t[end]
-        return E0 * goal_pred
+        return goal_pred
     end
 
     next_t = t[idx+1]
@@ -135,23 +133,14 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
 
     goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
 
-    return E0 * PI * goal_smoothed
+    return PI * goal_smoothed
 end
-function (sol::ProbODESolution)(t::Real, probabilistic::Bool=false)
-    p = sol.interp(t, sol.t, sol.x, sol.diffusions)
-    if probabilistic
-        return p
-    else
-        return p.μ
-    end
+function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
+    @unpack q, d = sol.interp
+    E = kron([i==1 ? N+1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    return E * sol.interp(t, sol.t, sol.x, sol.diffusions)
 end
-function (sol::ProbODESolution)(t::AbstractVector, probabilistic::Bool=false)
-    if probabilistic
-        return DiffEqBase.DiffEqArray(StructArray(sol.(t, probabilistic)), t)
-    else
-        return DiffEqBase.DiffEqArray(sol.(t, probabilistic), t)
-    end
-end
+(sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = StructArray(sol.(t, deriv))
 
 
 
@@ -160,9 +149,9 @@ end
 ########################################################################################
 @recipe function f(sol::AbstractProbODESolution; c=1.96)
     times = range(sol.t[1], sol.t[end], length=1000)
-    pus = sol(times).u
-    values = mean(pus)
-    stds = std(pus)
+    dense_post = sol(times)
+    values = mean(dense_post)
+    stds = std(dense_post)
     ribbon --> c * stds
     xguide --> "t"
     yguide --> "y(t)"
