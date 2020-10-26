@@ -4,57 +4,58 @@ module ProbNumODE
 
 using Reexport
 @reexport using DiffEqBase
+using OrdinaryDiffEq
 import DiffEqBase: check_error!
 
-import Base: copy, copy!
+import Base: copy, copy!, show, size
+stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
-using Measurements
 using ForwardDiff
 @reexport using StructArrays
 using UnPack
-using StaticArrays
 using RecipesBase
 using Distributions
+
 @reexport using GaussianDistributions
+const MvNormal{T} = Gaussian{Vector{T}, Matrix{T}}
+const MvNormalList{T} = StructArray{MvNormal{T}}
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.Σ); nothing)
+show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")
+show(io::IO, ::MIME"text/plain", g::Gaussian{T, S}) where {T, S} =
+    print(io, "Gaussian{$T,$S}($(g.μ), $(g.Σ))")
+size(g::Gaussian) = size(g.μ)
+
 using ModelingToolkit
-using DiffEqDevTools
-using Optim
 using PDMats
 
-using UUIDs, ProgressLogging
+import Statistics: mean, var, std
+var(p::MvNormal{T}) where {T} = diag(p.Σ)
+std(p::MvNormal{T}) where {T} = sqrt.(diag(p.Σ))
+mean(s::MvNormalList{T}) where {T} = mean.(s)
+var(s::MvNormalList{T}) where {T} = var.(s)
+std(s::MvNormalList{T}) where {T} = std.(s)
 
-import Base: copy
-
-stack(x) = copy(reduce(hcat, x)')
-
-include("filtering.jl")
 include("steprules.jl")
 include("priors.jl")
 # include("measurement_model.jl")
-include("sigmas.jl")
-include("error_estimation.jl")
+include("diffusions.jl")
 
-include("integrator_type.jl")
-export EKF0, EKF1, ODEFilter
-include("integrator_interface.jl")
+include("algorithms.jl")
+export EKF0, EKF1
+include("alg_utils.jl")
+include("caches.jl")
+include("state_initialization.jl")
 include("integrator_utils.jl")
+include("filtering.jl")
 include("perform_step.jl")
-include("solve.jl")
 include("preconditioning.jl")
-include("postprocessing.jl")
+include("smoothing.jl")
 include("solution.jl")
 
-include("dev/problems.jl")
-export exponential_decay, logistic_equation, brusselator, fitzhugh_nagumo, lotka_volterra, van_der_pol, fitzhugh_nagumo_iip
-include("dev/visualization.jl")
-export hairer_plot
-include("dev/evaluation.jl")
-export MyWorkPrecision, MyWorkPrecisionSet, plot_wps
-
-include("utils/progressbar.jl")
-include("utils/rhs_derivatives.jl")
+# Utils
+include("jacobian.jl")
+include("numerics_tricks.jl")
 
 end

@@ -68,7 +68,7 @@ end
     prob = prob_ode_lotkavoltera
     d = length(prob.u0)
     for q in 1:5
-        integ = init(prob, EKF0(), q=q, initialize_derivatives=false, smooth=false)
+        integ = init(prob, EKF0(order=q, smooth=false), initialize_derivatives=false)
         @test length(integ.cache.x.μ) == d*(q+1)
         sol = solve!(integ)
         @test length(integ.cache.x.μ) == d*(q+1)

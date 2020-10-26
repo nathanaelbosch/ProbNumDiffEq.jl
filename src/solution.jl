@@ -2,111 +2,96 @@
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
-struct ProbODESolution{T,N,uType,puType,probType,uType2,DType,xType,tType,sType,pType,P,A,S,IType,DE} <: AbstractProbODESolution{T,N,uType}
-    u::uType                # array of non-probabilistic function values
-    pu::puType              # array of Gaussians
-    p::probType             # ODE posterior
-    u_analytic::uType2
-    errors::DType
-    x::xType
-    t::tType
-    sigmas::sType
-    proposals::pType
-    prob::P
-    alg::A
-    solver::S
-    dense::Bool
+struct ProbODESolution{T,N,uType,IType,DE} <: AbstractProbODESolution{T,N,uType}
+    u::uType
+    pu
+    u_analytic
+    errors
+    t
+    k
+    x
+    diffusions
+    prob
+    alg
     interp::IType
-    retcode::Symbol
+    dense::Bool
     destats::DE
+    retcode::Symbol
 end
-function solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
-    ProbODESolution{T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p),
-                    typeof(sol.u_analytic), typeof(sol.errors), typeof(sol.x),
-                    typeof(sol.t), typeof(sol.sigmas), typeof(sol.proposals),
-                    typeof(sol.prob), typeof(sol.alg), typeof(sol.solver),
-                    typeof(sol.interp), typeof(sol.destats)}(
-                        sol.u, sol.pu, sol.p, sol.u_analytic, sol.errors, sol.x, sol.t,
-                        sol.sigmas, sol.proposals, sol.prob, sol.alg, sol.solver, sol.dense,
-                        sol.interp, retcode, sol.destats)
+function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
+    ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
+        sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x, sol.diffusions,
+        sol.prob, sol.alg, sol.interp, sol.dense, sol.destats, retcode,
+    )
 end
 
+# Used to build the initial empty solution in OrdinaryDiffEq.__init
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
-    alg::ODEFilter,
-    t, x, sigmas,
-    proposals, solver;
+    alg::GaussianODEFilter,
+    t, u;
+    k = nothing,
     retcode = :Default,
     destats = nothing,
-    timeseries_errors = length(x)>2,
-    dense = true, dense_errors = dense,
-    calculate_error = true,
+    dense = true,
     kwargs...)
-    @unpack d, q, E0 = solver.constants
-
-    @assert length(t) == length(x) == (length(sigmas)+1)
-
-    x = StructArray(x)
-    pu = StructArray(map(x -> E0 * x, x))
-    u = pu.μ
-    p = GaussianODEFilterPosterior(t, x, sigmas, solver)
-    interp = p
 
     T = eltype(eltype(u))
     N = length((size(prob.u0)..., length(u)))
 
-    u_analytic = nothing
-    Vector{typeof(prob.u0)}()
-    if DiffEqBase.has_analytic(prob.f)
-        u_analytic = Vector{typeof(prob.u0)}()
-        errors = Dict{Symbol,real(eltype(prob.u0))}()
+    d = length(prob.u0)
+    uEltype = eltype(prob.u0)
+    cov = zeros(uEltype, d, d)
+    pu = StructArray{Gaussian{typeof(prob.u0), typeof(cov)}}(undef, 1)
+    x = copy(pu)
 
-        sol = ProbODESolution{
-            T, N, typeof(u), typeof(pu), typeof(p),
-            typeof(u_analytic), typeof(errors),
-            typeof(x), typeof(t), typeof(sigmas), typeof(proposals),
-            typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-                u, pu, p, u_analytic, errors, x, t, sigmas, proposals, prob, alg, solver, dense, interp, retcode, destats)
+    interp = GaussianODEFilterPosterior(alg, prob.u0)
 
-        if calculate_error
-            DiffEqBase.calculate_solution_errors!(sol;
-                timeseries_errors=timeseries_errors,
-                dense_errors=dense_errors)
-        end
-
-        return sol
-    else
-        return ProbODESolution{
-            T, N, typeof(u), typeof(pu), typeof(p), Nothing, Nothing,
-            typeof(x), typeof(t), typeof(sigmas), typeof(proposals),
-            typeof(prob), typeof(alg), typeof(solver), typeof(interp), typeof(destats)}(
-                u, pu, p, nothing, nothing, x, t, sigmas, proposals, prob, alg, solver, dense, interp, retcode, destats)
-    end
+    return ProbODESolution{T, N, typeof(u), typeof(interp), typeof(destats)}(
+        u, pu, nothing, nothing, t, [], x, [], prob, alg, interp, dense, destats, retcode,
+    )
 end
+
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
-    return ProbODESolution{
-        T, N, typeof(sol.u), typeof(sol.pu), typeof(sol.p), typeof(u_analytic), typeof(errors),
-        typeof(sol.x), typeof(sol.t), typeof(sol.sigmas), typeof(sol.proposals),
-        typeof(sol.prob), typeof(sol.alg), typeof(sol.solver), typeof(sol.interp), typeof(sol.destats)}(
-            sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.sigmas, sol.proposals, sol.prob, sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats)
+    return ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(destats)}(
+        sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.diffusions, sol.prob,
+        sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats,
+    )
 end
+
 
 ########################################################################################
 # Dense Output
 ########################################################################################
-abstract type AbstractFilteringPosterior end
-struct GaussianFilteringPosterior <: AbstractFilteringPosterior
-    t
-    x
-    sigmas
-    solver
+abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
+struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
+    d
+    q
+    A!
+    Q!
+    Ah
+    Qh
+    Precond
+    InvPrecond
+    smooth
 end
-function (posterior::GaussianFilteringPosterior)(tval::Real)
-    @unpack t, x, sigmas, solver = posterior
+function GaussianODEFilterPosterior(alg, u0)
+    uElType = eltype(u0)
+    d = length(u0)
+    q = alg.order
+    A!, Q! = ibm(d, q)
+    Precond, InvPrecond = preconditioner(d, q)
+    Ah = diagm(0=>ones(uElType, d*(q+1)))
+    Qh = zeros(uElType, d*(q+1), d*(q+1))
+    GaussianODEFilterPosterior(
+        d, q, A!, Q!, Ah, Qh, Precond, InvPrecond, alg.smooth)
+end
+DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
-    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = solver.constants
-    @unpack Ah, Qh = solver.cache
+function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
+    @unpack A!, Q!, Ah, Qh, d, q, Precond, InvPrecond = posterior
+
     if tval < t[1]
         error("Invalid t<t0")
     end
@@ -119,18 +104,18 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     idx = sum(t .<= tval)
     prev_t = t[idx]
     prev_rv = x[idx]
-    σ² = sigmas[minimum((idx, end))]
+    diffmat = diffusions[minimum((idx, end))]
 
     # Extrapolate
     h1 = tval - prev_t
     P, PI = Precond(h1), InvPrecond(h1)
     A!(Ah, h1)
     Q!(Qh, h1)
-    Qh .*= σ²
-    goal_pred = predict(P * prev_rv, Ah, Qh, PI)
+    Qh .*= diffmat
+    goal_pred = predict(P * prev_rv, Ah, Qh)
     goal_pred = PI * goal_pred
 
-    if !solver.smooth || tval >= t[end]
+    if !posterior.smooth || tval >= t[end]
         return goal_pred
     end
 
@@ -144,42 +129,18 @@ function (posterior::GaussianFilteringPosterior)(tval::Real)
     next_smoothed = P * next_smoothed
     A!(Ah, h2)
     Q!(Qh, h2)
-    Qh .*= σ²
+    Qh .*= diffmat
 
-    goal_smoothed = smooth(goal_pred, next_smoothed, Ah, Qh)
+    goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
 
     return PI * goal_smoothed
-
 end
-(posterior::GaussianFilteringPosterior)(tvals::AbstractVector) = StructArray(posterior.(tvals))
-Base.getindex(post::GaussianFilteringPosterior, key) = post.x[key]
-
-
-abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
-struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
-    filtering_posterior::GaussianFilteringPosterior
-    proj
+function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
+    @unpack q, d = sol.interp
+    E = kron([i==1 ? N+1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    return E * sol.interp(t, sol.t, sol.x, sol.diffusions)
 end
-
-function GaussianODEFilterPosterior(t, x, sigmas, solver)
-    GaussianODEFilterPosterior(
-        GaussianFilteringPosterior(t, x, sigmas, solver),
-        solver.constants.E0)
-end
-DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
-Base.getindex(post::GaussianODEFilterPosterior, key) = post.proj * post.filtering_posterior[key]
-
-function (ode_posterior::GaussianODEFilterPosterior)(t::Real)
-    return ode_posterior.proj * ode_posterior.filtering_posterior(t)
-end
-function (ode_posterior::GaussianODEFilterPosterior)(tvec::AbstractVector)
-    return StructArray([ode_posterior.proj * ode_posterior.filtering_posterior(t)
-                        for t in tvec])
-end
-
-(sol::ProbODESolution)(t::Real) = sol.p(t).μ
-(sol::ProbODESolution)(t::AbstractVector) = DiffEqBase.DiffEqArray(sol.(t), t)
-
+(sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = StructArray(sol.(t, deriv))
 
 
 
@@ -187,26 +148,66 @@ end
 # Plotting
 ########################################################################################
 @recipe function f(sol::AbstractProbODESolution; c=1.96)
-    stack(x) = collect(reduce(hcat, x)')
-    values = stack(sol.pu.μ)
-    vars = stack(diag.(sol.pu.Σ))
-    stds = sqrt.(vars)
-    ribbon := c * stds
+    times = range(sol.t[1], sol.t[end], length=1000)
+    dense_post = sol(times)
+    values = stack(mean(dense_post))
+    stds = stack(std(dense_post))
+    ribbon --> c * stds
     xguide --> "t"
-    yguide --> "y(t)"
-    return sol.t, values
+    yguide --> "u(t)"
+    label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
+    return times, values
 end
 
 
 ########################################################################################
 # Sampling from a solution
 ########################################################################################
+# function _rand(x::Gaussian, n::Int=1)
+#     chol = cholesky(Symmetric(x.Σ))
+#     sample = x.μ .+ chol.L*randn(length(x.μ), n)
+#     return sample
+# end
+
+function get_zero_cross_indices(C)
+    bad_idx = []
+    D = size(C)[1]
+    for i in 1:D
+        if all(C[i, :] .< eps(eltype(C))) && all(C[:, i] .< eps(eltype(C)))
+            push!(bad_idx, i)
+        end
+    end
+    return bad_idx
+end
+
 """Helper function to sample from our covariances, which often have a "cross" of zeros
 For the 0-cov entries the outcome of the sampling is deterministic!"""
 function _rand(x::Gaussian, n::Int=1)
-    chol = cholesky(Symmetric(x.Σ))
-    sample = x.μ .+ chol.L*randn(length(x.μ), n)
-    return sample
+    m, C = x.μ, x.Σ
+
+    try
+        chol = cholesky(Symmetric(C))
+        sample = m .+ chol.L*randn(length(m), n)
+        return sample
+    catch e
+        @warn "Cholesky failed; Try to sample more manually" e
+        bad_idx = get_zero_cross_indices(C)
+
+        D = length(m)
+        @assert all(C[bad_idx, :] .< eps(eltype(C)))
+        @assert all(C[:, bad_idx] .< eps(eltype(C)))
+        reduced_idx = setdiff(1:D, bad_idx)
+        reduced_x = Gaussian(m[reduced_idx], Symmetric(C[reduced_idx, reduced_idx]))
+        reduced_sample = rand(reduced_x)
+
+        sample = reduced_sample
+        for i in bad_idx
+            insert!(sample, i, m[i])
+        end
+        @assert sample[bad_idx] == m[bad_idx]
+
+        return sample
+    end
 end
 
 
@@ -221,38 +222,41 @@ function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::Abstra
          + Gain * Qh * Gain')
 
     assert_nonnegative_diagonal(P)
-    # P = Symmetric(P .+ compute_jitter(Gaussian(m, P)))
-    # @info "sample_back" x_curr.μ x_curr.Σ x_next_sample Ah Qh
-    cholesky(P)
     return Gaussian(m, P)
 end
 
 
 function sample(sol::ProbODESolution, n::Int=1)
+    sample(sol.t, sol.x, sol.diffusions, sol.interp, n)
+end
+function sample(ts, xs, diffusions, posterior, n::Int=1)
 
-    @unpack A!, Q!, d, q, E0, Precond, InvPrecond = sol.solver.constants
-    @unpack Ah, Qh = sol.solver.cache
+    @unpack A!, Q!, Ah, Qh, d, q, Precond, InvPrecond = posterior
+    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     dim = d*(q+1)
 
-    x = sol.x[end]
+    x = xs[end]
     sample = _rand(x, n)
     @assert size(sample) == (dim, n)
 
-    sample_path = zeros(length(sol.t), dim, n)
+    sample_path = zeros(length(ts), dim, n)
     sample_path[end, :, :] .= sample
     # @info "final value and samples" x.μ sample sample_path[end, :]
 
-    for i in length(sol.x)-1:-1:1
-        dt = sol.t[i+1] - sol.t[i]
-        σ² = sol.sigmas[i]
+    for i in length(xs)-1:-1:1
+        dt = ts[i+1] - ts[i]
+
+        i_diffusion = sum(ts .<= ts[i])
+        diffmat = diffusions[i_diffusion]
+
         A!(Ah, dt)
         Q!(Qh, dt)
-        Qh .*= σ²
+        Qh .*= diffmat
         P, PI = Precond(dt), InvPrecond(dt)
 
         for j in 1:n
             sample_p = P*sample_path[i+1, :, j]
-            x_prev_p = P*sol.x[i]
+            x_prev_p = P*xs[i]
 
             prev_sample_p = sample_back(x_prev_p, sample_p, Ah, Qh, PI)
 
@@ -262,4 +266,10 @@ function sample(sol::ProbODESolution, n::Int=1)
     end
 
     return sample_path[:, 1:d, :]
+end
+function dense_sample(sol::ProbODESolution, n::Int=1)
+    times = range(sol.t[1], sol.t[end], length=1000)
+    states = StructArray(sol(times))
+
+    sample(times, states, sol.diffusions, sol.interp, n), times
 end

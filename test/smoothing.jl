@@ -15,9 +15,8 @@ prob = ProbNumODE.remake_prob_with_jac(prob)
     dt = 1e-4
     q = 4
     @test solve(
-        prob, EKF0(), q=q, smooth=true,
-        sigmarule=:schober,
-        steprule=:constant,
+        prob, EKF0(order=q, smooth=true, diffusionmodel=:dynamic),
+        adaptive=false,
         dt=dt,
     ) isa DiffEqBase.AbstractODESolution
 end
@@ -26,10 +25,9 @@ end
 @testset "Smooth vs. non-smooth" begin
     q = 3
     dt = 1e-2
-    method = EKF0()
 
-    sol_nonsmooth = solve(prob, method, q=q, steprule=:constant, dt=dt, smooth=false);
-    sol_smooth = solve(prob, method, q=q, steprule=:constant, dt=dt, smooth=true);
+    sol_nonsmooth = solve(prob, EKF0(order=q, smooth=false), adaptive=false, dt=dt);
+    sol_smooth = solve(prob, EKF0(order=q, smooth=true), adaptive=false, dt=dt);
 
     @test sol_nonsmooth.t ≈ sol_smooth.t
     @test sol_nonsmooth[end] == sol_smooth[end]
@@ -48,8 +46,8 @@ end
 
     @testset "Compare smooth and non-smooth dense output" begin
         ts = range(sol_smooth.t[1], sol_smooth.t[2], length=10)
-        smooth_dense_covs = ProbNumODE.stack(diag.(sol_smooth.p(ts).Σ))
-        nonsmooth_dense_covs = ProbNumODE.stack(diag.(sol_nonsmooth.p(ts).Σ))
+        smooth_dense_covs = ProbNumODE.stack(diag.(sol_smooth(ts).Σ))
+        nonsmooth_dense_covs = ProbNumODE.stack(diag.(sol_nonsmooth(ts).Σ))
         @test_broken all(smooth_dense_covs .<= nonsmooth_dense_covs)
     end
 end

@@ -1,7 +1,6 @@
-# ProbNumODE.jl: Probabilistic Numerics for Ordinary Differential Equations
+# ProbNumODE.jl: Probabilistic Numerics for ODEs
 
 [![Build Status](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl.svg?branch=master)](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/nathanaelbosch/ProbNumODE.jl?svg=true)](https://ci.appveyor.com/project/nathanaelbosch/ProbNumODE-jl)
 [![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathanaelbosch.github.io/ProbNumODE.jl/dev)
 [![Coverage](https://codecov.io/gh/nathanaelbosch/ProbNumODE.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/nathanaelbosch/ProbNumODE.jl)
 <!-- [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle) -->
@@ -10,7 +9,7 @@
 
 
 ProbNumODE.jl is a library for probabilistic numerical methods for solving ordinary differential equations.
-It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/).
+It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/) by extending [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl).
 
 
 ## Installation
@@ -29,10 +28,8 @@ using ProbNumODE
 function f(u, p, t)
     V, R = u
     a, b, c = p
-    return [
-        c*(V - V^3/3 + R)
-        -(1/c)*(V -  a - b*R)
-    ]
+    return [c*(V - V^3/3 + R)
+            -(1/c)*(V -  a - b*R)]
 end
 
 u0 = [-1.0; 1.0]

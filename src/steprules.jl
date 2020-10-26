@@ -9,7 +9,7 @@ struct StandardSteps <: StepController end
 function propose_step!(::StandardSteps, integ)
 
     @unpack dt, EEst = integ
-    @unpack q = integ.constants
+    @unpack q = integ.cache
     @unpack gamma, qmin, qmax = integ.opts
 
     if iszero(EEst)
