@@ -24,21 +24,21 @@ Solving ODEs with probabilistic numerical methods is as simple as that!
 ```julia
 using ProbNumODE
 
-# Fitzhugh-Nagumo model
-function f(u, p, t)
-    V, R = u
+# ODE definition as in DifferentialEquations.jl
+function fitz(u, p, t)
     a, b, c = p
-    return [c*(V - V^3/3 + R)
-            -(1/c)*(V -  a - b*R)]
+    return [c*(u[1] - u[1]^3/3 + u[2])
+            -(1/c)*(u[1] -  a - b*u[2])]
 end
-
 u0 = [-1.0; 1.0]
 tspan = (0., 20.)
 p = (0.2,0.2,3.0)
-prob = ODEProblem(f, u0, tspan, p)
+prob = ODEProblem(fitz, u0, tspan, p)
 
+# Solve the ODE with a probabilistic numerical solver: EKF0
 sol = solve(prob, EKF0())
 
+# Plot the solution
 using Plots
 plot(sol)
 ```
