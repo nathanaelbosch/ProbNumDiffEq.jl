@@ -18,6 +18,8 @@ using RecipesBase
 using Distributions
 
 @reexport using GaussianDistributions
+const MvNormal{T} = Gaussian{Vector{T}, Matrix{T}}
+const MvNormalList{T} = StructArray{MvNormal{T}}
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.Σ); nothing)
 show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")
@@ -29,15 +31,9 @@ using ModelingToolkit
 using PDMats
 
 import Statistics: mean, var, std
-mean(s::StructArray{Gaussian{T,S}}) where {T,S} = mean.(s)
-var(s::StructArray{Gaussian{T,S}}) where {T,S} = var.(s)
-std(s::StructArray{Gaussian{T,S}}) where {T,S} = std.(s)
-mean(s::DiffEqBase.DiffEqArray{A1, A2, StructArray{Gaussian{T,S}}, A3}) where {A1,A2,A3,T,S} =
-     DiffEqBase.DiffEqArray(mean.(s.u), s.t)
-var(s::DiffEqBase.DiffEqArray{A1, A2, StructArray{Gaussian{T,S}}, A3}) where {A1,A2,A3,T,S} =
-    DiffEqBase.DiffEqArray(var.(s.u), s.t)
-std(s::DiffEqBase.DiffEqArray{A1, A2, StructArray{Gaussian{T,S}}, A3}) where {A1,A2,A3,T,S} =
-    DiffEqBase.DiffEqArray(std.(s.u), s.t)
+mean(s::MvNormalList{T}) where {T} = mean.(s)
+var(s::MvNormalList{T}) where {T} = var.(s)
+std(s::MvNormalList{T}) where {T} = std.(s)
 
 include("steprules.jl")
 include("priors.jl")
