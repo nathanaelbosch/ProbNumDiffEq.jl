@@ -1,43 +1,32 @@
 ########################################################################################
 # Post-Processing: Smoothing and uncertainty calibration
 ########################################################################################
-function calibrate!(integ::ODEFilterIntegrator)
+function smooth_all!(integ)
 
-    @unpack state_estimates, sigmas = integ
-    for s in state_estimates
-        s.Σ .*= sigmas[end]
-    end
-end
-
-
-
-
-function smooth_all!(integ::ODEFilterIntegrator)
-
-    @unpack state_estimates, times, sigmas = integ
-    @unpack A!, Q!, Precond, InvPrecond = integ.constants
+    @unpack x, t, diffusions = integ.sol
+    @unpack A!, Q!, Precond, InvPrecond = integ.cache
     @unpack Ah, Qh = integ.cache
     # x_pred is just used as a cache here
 
-    for i in length(state_estimates)-1:-1:2
-        dt = times[i+1] - times[i]
+    for i in length(x)-1:-1:2
+        dt = t[i+1] - t[i]
 
         P = Precond(dt)
         PI = InvPrecond(dt)
 
         A!(Ah, dt)
         Q!(Qh, dt)
-        Qh .*= sigmas[i]
+        Qh .*= diffusions[i]
 
-        # @info "Smoothing" i dt sigmas[i] Qh
+        # @info "Smoothing" i dt diffusions[i] Qh
 
         # @info "smooth_all!" state_estimates[i].Σ state_estimates[i+1].Σ
         # @info "smooth_all!" P*state_estimates[i].Σ P*state_estimates[i+1].Σ
-        state_estimates[i] = P * state_estimates[i]
-        smooth!(state_estimates[i], P*state_estimates[i+1], Ah, Qh, integ, PI)
-        any(isnan.(state_estimates[i].μ)) && error("NaN mean after smoothing")
-        any(isnan.(state_estimates[i].Σ)) && error("NaN cov after smoothing")
-        state_estimates[i] = PI * state_estimates[i]
+        x[i] = P * x[i]
+        smooth!(x[i], P*x[i+1], Ah, Qh, integ, PI)
+        any(isnan.(x[i].μ)) && error("NaN mean after smoothing")
+        any(isnan.(x[i].Σ)) && error("NaN cov after smoothing")
+        x[i] = PI * x[i]
     end
 end
 
@@ -48,7 +37,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
     # PDMat(Symmetric(x_curr.Σ))
     # PDMat(Symmetric(x_next.Σ))
 
-    @unpack d, q = integ.constants
+    @unpack d, q = integ.cache
     @unpack x_tmp = integ.cache
 
     # @info "smooth!" x_curr.Σ x_next.Σ Ah Qh PI

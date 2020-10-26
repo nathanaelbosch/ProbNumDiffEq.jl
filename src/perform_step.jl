@@ -1,87 +1,84 @@
-"""Perform a step, but not necessarily successful!
-
-This is the actual interestin part of the algorithm
-"""
-function perform_step!(integ::ODEFilterIntegrator)
-    @unpack t, dt = integ
-    @unpack E0, Precond, InvPrecond = integ.constants
-    @unpack x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
-
-    P = Precond(dt)
-    PI = InvPrecond(dt)
-    integ.cache.x = P * integ.cache.x
-
-    t = t + dt
-    integ.t_new = t
-
-    x_pred = predict!(integ)
-    mul!(u_pred, E0, PI*x_pred.μ)
-
-    measure!(integ, x_pred, t)
-
-    if isdynamic(integ.sigma_estimator)
-        # @info "Before dynamic sigma:" x_pred.Σ
-        σ_sq = dynamic_sigma_estimation(integ.sigma_estimator, integ)
-
-        # Adjust prediction and measurement accordingly
-        x_pred.Σ .+= (σ_sq .- 1) .* integ.cache.Qh
-        integ.cache.measurement.Σ .+= integ.cache.H * ((σ_sq .- 1) .* integ.cache.Qh) * integ.cache.H'
-
-        # @info "After sigma estimation:" t σ_sq x_pred.Σ # (σ_sq > eps(typeof(σ_sq)))
-        # assert_good_covariance(x_pred.Σ)
-
-        integ.cache.σ_sq = σ_sq
-        # error("Terminate to inspect")
-    end
-
-    x_filt = update!(integ, x_pred)
-    mul!(u_filt, E0, PI*x_filt.μ)
-
-    if isstatic(integ.sigma_estimator)
-        # E.g. estimate the /current/ MLE sigma; Needed for error estimation
-        σ_sq = static_sigma_estimation(integ.sigma_estimator, integ)
-        integ.cache.σ_sq = σ_sq
-    end
-
-    err_est_unscaled = estimate_errors(integ.error_estimator, integ)
-    # Scale the error with old u-values and tolerances
-    DiffEqBase.calculate_residuals!(
-        err_tmp,
-        dt * err_est_unscaled, integ.u, u_filt, integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
-    err_est_combined = integ.opts.internalnorm(err_tmp, t)  # Norm over the dimensions
-    integ.EEst = err_est_combined
-
-    integ.cache.x = PI * integ.cache.x
-    integ.cache.x_pred = PI * integ.cache.x_pred
-    integ.cache.x_filt = PI * integ.cache.x_filt
+# Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
+function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
+    @assert integ.saveiter == 1
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.x, integ.saveiter, copy(integ.cache.x))
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, integ.cache.E0*integ.cache.x)
 end
 
+"""Perform a step
 
-function predict!(integ::ODEFilterIntegrator)
+Not necessarily successful! For that, see `step!(integ)`.
 
-    @unpack dt = integ
-    @unpack A!, Q!, InvPrecond = integ.constants
-    @unpack x, Ah, Qh, x_pred = integ.cache
+Basically consists of the following steps
+- Coordinate change / Predonditioning
+- Prediction step
+- Measurement: Evaluate f and Jf; Build z, S, H
+- Calibration; Adjust prediction / measurement covs if the diffusion model "dynamic"
+- Update step
+- Error estimation
+- Undo the coordinate change / Predonditioning
+"""
+function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
+    @unpack t, dt = integ
+    @unpack E0, Precond, InvPrecond = integ.cache
+    @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
+    @unpack A!, Q!, Ah, Qh = integ.cache
+
+    tnew = t + dt
+
+    # Coordinate change / preconditioning
+    P = Precond(dt)
     PI = InvPrecond(dt)
+    x = P * x
 
+    # Dynamics for this step
     A!(Ah, dt)
     Q!(Qh, dt)
 
-    mul!(x_pred.μ, Ah, x.μ)
-    x_pred.Σ .= Symmetric(Ah * x.Σ * Ah' .+ Qh)
+    # Predict
+    predict!(x_pred, x, Ah, Qh)
+    u_pred .= E0*PI*x_pred.μ
 
-    return x_pred
+    # Measure
+    measure!(integ, x_pred, tnew)
+
+    # Estimate diffusion
+    diffmat = estimate_diffusion(cache.diffusionmodel, integ)
+    integ.cache.diffmat = diffmat
+    if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
+        x_pred.Σ .+= (diffmat .- 1) .* Qh
+        integ.cache.measurement.Σ .+=
+            integ.cache.H * ((diffmat .- 1) .* Qh) * integ.cache.H'
+    end
+
+    # Update
+    x_filt = update!(integ, x_pred)
+    u_filt .= E0*PI*x_filt.μ
+    integ.u .= u_filt
+
+    # Estimate error for adaptive steps
+    if integ.opts.adaptive
+        err_est_unscaled = estimate_errors(integ, integ.cache)
+        DiffEqBase.calculate_residuals!(
+            err_tmp, dt * err_est_unscaled, integ.u, u_filt,
+            integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
+    end
+
+    # Undo the coordinate change / preconditioning
+    integ.cache.x = PI * x
+    integ.cache.x_pred = PI * x_pred
+    integ.cache.x_filt = PI * x_filt
 end
 
 
-function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
-
-    @unpack p, f, dt = integ
-    @unpack E0, h!, InvPrecond = integ.constants
-    @unpack du, h, u_pred = integ.cache
+function h!(integ, x_pred, t)
+    @unpack f, p, dt = integ
+    @unpack du, E0, E1, InvPrecond = integ.cache
     PI = InvPrecond(dt)
 
-    IIP = isinplace(integ)
+    u_pred = E0*PI*x_pred.μ
+    IIP = isinplace(integ.f)
     if IIP
         f(du, u_pred, p, t)
     else
@@ -89,102 +86,85 @@ function measure_h!(integ::ODEFilterIntegrator, x_pred, t)
     end
     integ.destats.nf += 1
 
-    h!(h, du, PI*x_pred.μ)
+    z = E1*PI*x_pred.μ .- du
+
+    return z
 end
 
-function measure_H!(integ::ODEFilterIntegrator, x_pred, t)
-
-    @unpack p, f, dt = integ
-    @unpack jac, H!, InvPrecond = integ.constants
-    @unpack u_pred, ddu, H = integ.cache
+function H!(integ, x_pred, t)
+    @unpack f, p, dt, alg = integ
+    @unpack ddu, E0, E1, InvPrecond, H = integ.cache
     PI = InvPrecond(dt)
 
-    if !isnothing(jac)
-        if isinplace(integ)
-            jac(ddu, u_pred, p, t)
+    u_pred = E0*PI*x_pred.μ
+    if alg isa EKF1
+        if isinplace(integ.f)
+            f.jac(ddu, u_pred, p, t)
         else
-            ddu .= jac(u_pred, p, t)
+            ddu .= f.jac(u_pred, p, t)
+            # WIP: Handle Jacobians as OrdinaryDiffEq.jl does
+            # J = OrdinaryDiffEq.jacobian((u)-> f(u, p, t), u_pred, integ)
+            # @assert J ≈ ddu
         end
         integ.destats.njacs += 1
     end
-    H!(H, ddu)
-    H .= H * PI
+
+    H .= (E1 .- ddu * E0) * PI  # For ekf0 we have ddu==0
+    return H
 end
 
+
 function measure!(integ, x_pred, t)
-    measure_h!(integ, x_pred, t)
-    measure_H!(integ, x_pred, t)
+    @unpack R = integ.cache
+    @unpack u_pred, measurement, H = integ.cache
 
-    @unpack dt = integ
-    @unpack R, q, d = integ.constants
-    @unpack measurement, h, H = integ.cache
-
-    v, S = measurement.μ, measurement.Σ
-    v .= 0 .- h
-    # R .= Diagonal(eps.(v) .^ 2)
-    R .= Diagonal(eps.(v))
-    # R .= Diagonal(dt^(2q) * ones(d))
+    z, S = measurement.μ, measurement.Σ
+    z .= h!(integ, x_pred, t)
+    H .= H!(integ, x_pred, t)
+    R .= Diagonal(eps.(z))
     S .= Symmetric(H * x_pred.Σ * H' .+ R)
 
     return nothing
 end
 
-function update!(integ::ODEFilterIntegrator, prediction)
+
+function update!(integ, prediction)
 
     @unpack dt = integ
-    @unpack R, q, d, Precond, InvPrecond, E1 = integ.constants
-    @unpack measurement, h, H, K, x_filt = integ.cache
-    P, PI = Precond(dt), InvPrecond(dt)
+    @unpack R, q = integ.cache
+    @unpack measurement, H, K, x_filt = integ.cache
 
-    v, S = measurement.μ, measurement.Σ
+    z, S = measurement.μ, measurement.Σ
 
     m_p, P_p = prediction.μ, prediction.Σ
 
     S_inv = inv(S)
     K .= P_p * H' * S_inv
 
-    x_filt.μ .= m_p .+ K*v
-    # x_filt.μ .= m_p .+ P_p * H' * (S\v)
-
-    # Vanilla
-    # KSK = K*S*K'
-    # KSK = P_p * H' * (S \ (H * P_p'))
-    # x_filt.Σ .= P_p .- KSK
-    # approx_diff!(x_filt.Σ, P_p, KSK)
+    x_filt.μ .= m_p .+ K * (0 .- z)
 
     # Joseph Form
-    x_filt.Σ .= Symmetric(X_A_Xt(PDMat(P_p), (I-K*H)))
+    x_filt.Σ .= Symmetric(X_A_Xt(PDMat(Symmetric(P_p)), (I-K*H)))
     if !iszero(R)
         x_filt.Σ .+= Symmetric(X_A_Xt(PDMat(R), K))
     end
 
     assert_nonnegative_diagonal(x_filt.Σ)
-    # cholesky(Symmetric(x_filt.Σ))
 
     return x_filt
 end
 
-function approx_diff!(A, B, C)
-    @assert size(A) == size(B) == size(C)
-    @assert eltype(A) == eltype(B) == eltype(C)
-    # If B_ij ≈ C_ij, then A_ij = 0
-    # But, only do this if the value in A is actually negative
-    @simd for i in 1:length(A)
-        @inbounds if B[i] ≈ C[i]
-            A[i] = 0
-        else
-            A[i] = B[i] - C[i]
-        end
-    end
-end
 
+function estimate_errors(integ, cache::GaussianODEFilterCache)
+    @unpack dt = integ
+    @unpack InvPrecond = integ.cache
+    @unpack diffmat, Qh, H = integ.cache
 
-function fix_negative_variances(g::Gaussian, abstol::Real, reltol::Real)
-    for i in 1:length(g.μ)
-        if (g.Σ[i,i] < 0) && (sqrt(-g.Σ[i,i]) / (abstol + reltol * abs(g.μ[i]))) .< eps(eltype(g.Σ))
-            # @info "fix_neg" g.Σ[i,i] g.μ[i] abstol reltol (abstol+reltol*abs(g.μ[i])) eps(eltype(g.Σ))*(abstol+reltol*abs(g.μ[i]))
-            g.Σ[i,i] = eps(eltype(g.Σ))*(abstol+reltol*abs(g.μ[i]))
-            g.Σ[i,i] = 0
-        end
+    if diffmat isa Real && isinf(diffmat)
+        return Inf
     end
+
+    error_estimate = sqrt.(diag(H * (diffmat .* Qh) * H'))
+
+    return error_estimate
 end
