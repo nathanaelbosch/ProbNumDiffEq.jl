@@ -37,9 +37,7 @@ mean(s::MvNormalList{T}) where {T} = mean.(s)
 var(s::MvNormalList{T}) where {T} = var.(s)
 std(s::MvNormalList{T}) where {T} = std.(s)
 
-include("steprules.jl")
 include("priors.jl")
-# include("measurement_model.jl")
 include("diffusions.jl")
 
 include("algorithms.jl")

@@ -22,9 +22,6 @@ using ProbNumODE
     println("Preconditioning")
     @testset "Preconditioning" begin include("preconditioning.jl") end
 
-    println("Step Control")
-    @testset "Step Control" begin include("step_controller.jl") end
-
     println("Smoothing")
     @testset "Smoothing" begin include("smoothing.jl") end
 
