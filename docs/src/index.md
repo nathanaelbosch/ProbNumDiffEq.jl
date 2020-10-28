@@ -68,7 +68,6 @@ sol(0.45)
 Finally, we can conveniently visualize the result through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
 ```@example 1
 using Plots
-pyplot() # hide
 plot(sol)
 savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
 ```

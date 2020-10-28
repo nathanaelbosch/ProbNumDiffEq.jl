@@ -17,7 +17,6 @@ using DifferentialEquations
 using DiffEqUncertainty
 using Statistics
 using Plots
-pyplot()
 
 
 function fitz!(du,u,p,t)
