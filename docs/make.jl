@@ -1,10 +1,10 @@
 using Documenter
-using ProbNumODE
+using ODEFilters
 
 makedocs(
-    sitename = "ProbNumODE.jl",
+    sitename = "ODEFilters.jl",
     format = Documenter.HTML(),
-    modules = [ProbNumODE],
+    modules = [ODEFilters],
     pages = [
         "Home" => "index.md",
         "Solvers and Options" => "manual.md",
@@ -18,5 +18,5 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/nathanaelbosch/ProbNumODE.jl.git"
+    repo = "github.com/nathanaelbosch/ODEFilters.jl.git"
 )

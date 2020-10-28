@@ -1,4 +1,4 @@
-using ProbNumODE
+using ODEFilters
 using Test
 using LinearAlgebra
 
@@ -15,7 +15,7 @@ h = rand()
     # the preconditioning
     d, q = 2, 2
 
-    A!, Q! = ProbNumODE.vanilla_ibm(d, q)
+    A!, Q! = ODEFilters.vanilla_ibm(d, q)
     Ah = diagm(0 => ones(d*(q+1)))
     Qh = zeros(d*(q+1), d*(q+1))
     A!(Ah, h)
@@ -44,7 +44,7 @@ end
 @testset "Test IBM with preconditioning (d=1,q=2)" begin
     d, q = 1, 2
 
-    A!, Q! = ProbNumODE.ibm(d, q)
+    A!, Q! = ODEFilters.ibm(d, q)
     Ah = diagm(0 => ones(d*(q+1)))
     Qh = zeros(d*(q+1), d*(q+1))
     A!(Ah, h)

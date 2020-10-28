@@ -11,8 +11,8 @@ In this example, we want to compare the uncertainty estimates of `Tsit5`+`Adapti
 
 ### 1. Problem definition: FitzHugh-Nagumo
 ```@example probints
-using ProbNumODE
-using ProbNumODE: remake_prob_with_jac, stack
+using ODEFilters
+using ODEFilters: remake_prob_with_jac, stack
 using DifferentialEquations
 using DiffEqUncertainty
 using Statistics

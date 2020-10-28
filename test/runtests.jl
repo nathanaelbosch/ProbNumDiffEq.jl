@@ -1,8 +1,8 @@
 using Test
-using ProbNumODE
+using ODEFilters
 
 
-@testset "ProbNumODE" begin
+@testset "ODEFilters" begin
 
     println("Correctness")
     @testset "Correctness" begin include("correctness.jl") end

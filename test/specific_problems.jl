@@ -1,7 +1,7 @@
 # Everytime I encounter something that raises some error and I fix it, I should add that
 # specific problem to this list to make sure, that this specific run then works without
 # bugs.
-using ProbNumODE
+using ODEFilters
 using Test
 using LinearAlgebra
 
@@ -11,15 +11,15 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode
 
 
 @testset "Smoothing with small constant steps" begin
-    prob = ProbNumODE.remake_prob_with_jac(prob_ode_fitzhughnagumo)
+    prob = ODEFilters.remake_prob_with_jac(prob_ode_fitzhughnagumo)
     @test solve(prob, EKF0(order=4, diffusionmodel=:fixed, smooth=true),
-                adaptive=false, dt=1e-3) isa ProbNumODE.ProbODESolution
+                adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
     @test solve(prob, EKF1(order=4, diffusionmodel=:fixed, smooth=true),
-                adaptive=false, dt=1e-3) isa ProbNumODE.ProbODESolution
+                adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
 end
 
 
 @testset "Stiff Vanderpol" begin
-    prob = ProbNumODE.remake_prob_with_jac(prob_ode_vanstiff)
-    @test solve(prob, EKF1(order=3)) isa ProbNumODE.ProbODESolution
+    prob = ODEFilters.remake_prob_with_jac(prob_ode_vanstiff)
+    @test solve(prob, EKF1(order=3)) isa ODEFilters.ProbODESolution
 end

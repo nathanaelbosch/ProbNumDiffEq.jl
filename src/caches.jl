@@ -1,10 +1,10 @@
 ########################################################################################
 # Caches
 ########################################################################################
-abstract type ProbNumODECache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
+abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
     RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType,
-} <: ProbNumODECache
+} <: ODEFiltersCache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
@@ -46,7 +46,7 @@ function OrdinaryDiffEq.alg_cache(
     end
 
     if alg isa EKF1 && isnothing(f.jac)
-        error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl use ProbNumoDE.remake_prob_with_jac(prob).""")
+        error("""EKF1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl use ODEFilters.remake_prob_with_jac(prob).""")
     end
 
     q = alg.order

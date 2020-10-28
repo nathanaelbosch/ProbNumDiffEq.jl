@@ -1,14 +1,14 @@
-# ProbNumODE.jl
+# ODEFilters.jl
 _Probabilistic numerical methods for ordinary differential equations._
 
-ProbNumODE.jl is a library for [probabilistic numerical methods](http://probabilistic-numerics.org/) for solving ordinary differential equations.
+ODEFilters.jl is a library for [probabilistic numerical methods](http://probabilistic-numerics.org/) for solving ordinary differential equations.
 It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/) by extending [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl).
 
 
 ## Installation
 The package can be installed directly from github:
 ```julia
-] add https://github.com/nathanaelbosch/ProbNumODE.jl
+] add https://github.com/nathanaelbosch/ODEFilters.jl
 ```
 
 
@@ -21,7 +21,7 @@ on how to solve ordinary differential equations.
 First, we set up an `ODEProblem` to solve the
 [Fitzhugh-Nagumo model](https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model).
 ```@example 1
-using ProbNumODE
+using ODEFilters
 
 function fitz(u, p, t)
     a, b, c = p
@@ -37,7 +37,7 @@ nothing # hide
 ```
 
 ### Step 2: Solving a problem
-Currently, ProbNumODE.jl implements two probabilistic numerical methods: `EKF0` and `EKF1`.
+Currently, ODEFilters.jl implements two probabilistic numerical methods: `EKF0` and `EKF1`.
 In this example we solve the ODE with the default `EKF0`, for high tolerance levels.
 ```@example 1
 sol = solve(prob, EKF0(), abstol=1e-1, reltol=1e-2)

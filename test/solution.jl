@@ -1,4 +1,4 @@
-using ProbNumODE
+using ODEFilters
 using Test
 using Plots
 using GaussianDistributions
@@ -9,7 +9,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
 
 @testset "Solution" begin
-    prob = ProbNumODE.remake_prob_with_jac(prob_ode_lotkavoltera)
+    prob = ODEFilters.remake_prob_with_jac(prob_ode_lotkavoltera)
     sol = solve(prob, EKF1(), adaptive=false, dt=1e-2)
 
     @test length(sol) > 2

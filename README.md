@@ -1,28 +1,28 @@
-# ProbNumODE.jl: Probabilistic Numerics for ODEs
+# ODEFilters.jl
 
-[![Build Status](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl.svg?branch=master)](https://travis-ci.com/nathanaelbosch/ProbNumODE.jl)
-[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathanaelbosch.github.io/ProbNumODE.jl/dev)
-[![Coverage](https://codecov.io/gh/nathanaelbosch/ProbNumODE.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/nathanaelbosch/ProbNumODE.jl)
+[![Build Status](https://travis-ci.com/nathanaelbosch/ODEFilters.jl.svg?branch=master)](https://travis-ci.com/nathanaelbosch/ODEFilters.jl)
+[![](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathanaelbosch.github.io/ODEFilters.jl/dev)
+[![Coverage](https://codecov.io/gh/nathanaelbosch/ODEFilters.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/nathanaelbosch/ODEFilters.jl)
 <!-- [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle) -->
-<!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathanaelbosch.github.io/ProbNumODE.jl/stable) -->
+<!-- [![](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathanaelbosch.github.io/ODEFilters.jl/stable) -->
 <!-- [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac) -->
 
 
-ProbNumODE.jl is a library for probabilistic numerical methods for solving ordinary differential equations.
+ODEFilters.jl is a library for probabilistic numerical methods for solving ordinary differential equations.
 It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/) by extending [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl).
 
 
 ## Installation
 The package can be installed directly from github:
 ```julia
-] add https://github.com/nathanaelbosch/ProbNumODE.jl
+] add https://github.com/nathanaelbosch/ODEFilters.jl
 ```
 
 
 ## Example
 Solving ODEs with probabilistic numerical methods is as simple as that!
 ```julia
-using ProbNumODE
+using ODEFilters
 
 # ODE definition as in DifferentialEquations.jl
 function fitz(u, p, t)
