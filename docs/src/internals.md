@@ -1,5 +1,0 @@
-# Internals
-
-<!-- ```@autodocs -->
-<!-- Modules = [ProbNumODE] -->
-<!-- ``` -->

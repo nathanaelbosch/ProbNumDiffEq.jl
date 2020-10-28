@@ -36,7 +36,7 @@ p = (0.2,0.2,3.0)
 prob = ODEProblem(fitz, u0, tspan, p)
 
 # Solve the ODE with a probabilistic numerical solver: EKF0
-sol = solve(prob, EKF0())
+sol = solve(prob, EKF0(), abstol=1e-1, reltol=1e-2)
 
 # Plot the solution
 using Plots

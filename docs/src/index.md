@@ -1,7 +1,8 @@
-# ProbNumODE.jl Documentation
+# ProbNumODE.jl
+_Probabilistic numerical methods for ordinary differential equations._
 
 ProbNumODE.jl is a library for [probabilistic numerical methods](http://probabilistic-numerics.org/) for solving ordinary differential equations.
-It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/).
+It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/) by extending [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl).
 
 
 ## Installation
@@ -10,53 +11,77 @@ The package can be installed directly from github:
 ] add https://github.com/nathanaelbosch/ProbNumODE.jl
 ```
 
+
 ## Getting Started
 If you are unfamiliar with DifferentialEquations.jl, check out the
 [official tutorial](https://docs.sciml.ai/stable/tutorials/ode_example/)
 on how to solve ordinary differential equations.
-With this in mind, let's set up an `ODEProblem` to solve the
+
+### Step 1: Defining a problem
+First, we set up an `ODEProblem` to solve the
 [Fitzhugh-Nagumo model](https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model).
 ```@example 1
 using ProbNumODE
 
-function f(u, p, t)
-    V, R = u
+function fitz(u, p, t)
     a, b, c = p
-    return [
-        c*(V - V^3/3 + R)
-        -(1/c)*(V -  a - b*R)
-    ]
+    return [c*(u[1] - u[1]^3/3 + u[2])
+            -(1/c)*(u[1] -  a - b*u[2])]
 end
 
 u0 = [-1.0; 1.0]
 tspan = (0., 20.)
 p = (0.2,0.2,3.0)
-prob = ODEProblem(f, u0, tspan, p)
+prob = ODEProblem(fitz, u0, tspan, p)
 nothing # hide
 ```
 
-Currently, ProbNumODE.jl implements two probabilistic numerical methods: `EKF0()` and `EKF1()`.
-Both come with additional options, but for now we just use their default values.
+### Step 2: Solving a problem
+Currently, ProbNumODE.jl implements two probabilistic numerical methods: `EKF0` and `EKF1`.
+In this example we solve the ODE with the default `EKF0`, for high tolerance levels.
 ```@example 1
-sol = solve(prob, EKF0())
-@show sol[end]
+sol = solve(prob, EKF0(), abstol=1e-1, reltol=1e-2)
 nothing # hide
 ```
 
-That's it! You just solved an ODE with a probabilistic numerical method!
-Note how the solution object includes uncertainties (using `Measurements.jl`) to describe the numerical approximation error.
+### Step 3: Analyzing the solution
+Just as in DifferentialEquations.jl, the result of `solve` is a solution object, and we can access the (mean) values and timesteps as usual
+```@repl 1
+sol[end]
+sol.u[5]
+sol.t[8]
+```
 
-Finally, we can visualize the result through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
+However, the solver returns a _probabilistic_ solution, here a Gaussian distribution over solution values.
+These can be accessed similarly, with
+```@repl 1
+sol.pu[end]
+sol.pu[5]
+```
+
+By default, the posterior distribution can be evaluated for arbitrary points in time `t` by treating `sol` as a function:
+```@repl 1
+sol(0.45)
+```
+
+#### Plotting Solutions
+Finally, we can conveniently visualize the result through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
 ```@example 1
 using Plots
+pyplot() # hide
 plot(sol)
 savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
 ```
-![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
+![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg)
 
 
-## Research References
-- Filip Tronarp, Simo Särkkä, Philipp Hennig: **Bayesian Ode Solvers: the Maximum a Posteriori Estimate**
-- Filip Tronarp, Hans Kersting, Simo Särkkä, Philipp Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**
-- Michael Schober, Simo Särkkä, Philipp Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems**
-- Hans Kersting, T.J. Sullivan, Philipp Hennig: **Convergence Rates of Gaussian Ode Filters**
+## References
+Gaussian ODE Filters:
+- M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems**
+- H. Kersting, T. J. Sullivan, and P. Hennig: **Convergence Rates of Gaussian Ode Filters**
+- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**
+
+Probabilistic Numerics:
+- [http://probabilistic-numerics.org/](http://probabilistic-numerics.org/)
+- P. Hennig, M. A. Osborne, and M. Girolami: **Probabilistic numerics and uncertainty in computations**
+- C. J. Oates and T. J. Sullivan: **A modern retrospective on probabilistic numerics**

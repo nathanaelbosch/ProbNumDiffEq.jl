@@ -8,12 +8,6 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Solvers and Options" => "manual.md",
-        "Examples" => [
-            # "DifferentialEquations.jl Compatibility" => "diffeq_compatibility.md",
-            # "Uncertainty Propagation" => "uncertain_startingvalues.md",
-            # "Uncertainty Quantification" => "uncertainty_quantification.md",
-        ],
-        "Internals" => "internals.md",
     ]
 )
 
