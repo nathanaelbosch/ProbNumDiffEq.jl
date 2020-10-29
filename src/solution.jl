@@ -147,12 +147,12 @@ end
 ########################################################################################
 # Plotting
 ########################################################################################
-@recipe function f(sol::AbstractProbODESolution; c=1.96)
+@recipe function f(sol::AbstractProbODESolution; ribbon_width=1.96)
     times = range(sol.t[1], sol.t[end], length=1000)
     dense_post = sol(times)
     values = stack(mean(dense_post))
     stds = stack(std(dense_post))
-    ribbon --> c * stds
+    ribbon --> ribbon_width * stds
     xguide --> "t"
     yguide --> "u(t)"
     label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
