@@ -44,13 +44,12 @@ end
 
 
 function initialize_with_derivatives(u0, f, p, t0, order::Int)
-    taylor_order = 15
-    @assert taylor_order > order "The internal order of TaylorSeries.jl is smaller than the requested order of derivatives"
-
     f = isinplace(f) ? iip_to_oop(f) : f
 
     d = length(u0)
     q = order
+
+    set_variables("u", numvars=d, order=order+1)
 
     uElType = eltype(u0)
     m0 = zeros(uElType, d*(q+1))
@@ -63,7 +62,7 @@ function initialize_with_derivatives(u0, f, p, t0, order::Int)
     f_t_taylor = taylor_expand(t -> f(u0, p, t), t0)
     @assert !(eltype(f_t_taylor) <: TaylorN)
 
-    fp = taylor_expand(u -> f(u, p, t0), u0; order=taylor_order)
+    fp = taylor_expand(u -> f(u, p, t0), u0)
     f_derivatives = [fp]
     for o in 2:q
         _curr_f_deriv = f_derivatives[end]
