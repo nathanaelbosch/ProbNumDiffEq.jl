@@ -1,4 +1,9 @@
-function remake_prob_with_jac(prob)
+"""
+    remake_prob_with_jac(prob)
+
+Add a jacobian function to the ODE function, using ModelingToolkit.jl.
+"""
+function remake_prob_with_jac(prob::ODEProblem)
     IIP = isinplace(prob.f)
     try
         p = prob.p isa DiffEqBase.NullParameters ? [] : collect(prob.p)
