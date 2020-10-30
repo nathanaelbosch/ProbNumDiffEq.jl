@@ -75,6 +75,8 @@ function OrdinaryDiffEq.alg_cache(
     m0, P0 = initialize_derivatives ?
         initialize_with_derivatives(u0, f, p, t0, q) :
         initialize_without_derivatives(u0, f, p, t0, q)
+    @assert iszero(P0)
+    P0 = PSDMatrix(LowerTriangular(zero(P0)))
     x0 = Gaussian(m0, P0)
 
     # Pre-allocate a bunch of matrices

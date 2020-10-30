@@ -18,12 +18,8 @@ function smooth_all!(integ)
         Q!(Qh, dt)
         Qh .*= diffusions[i]
 
-        # @info "Smoothing" i dt diffusions[i] Qh
-
-        # @info "smooth_all!" state_estimates[i].Σ state_estimates[i+1].Σ
-        # @info "smooth_all!" P*state_estimates[i].Σ P*state_estimates[i+1].Σ
         x[i] = P * x[i]
-        smooth!(x[i], P*x[i+1], Ah, Qh, integ, PI)
+        smooth!(x[i], P*x[i+1], Ah, Qh, integ)
         any(isnan.(x[i].μ)) && error("NaN mean after smoothing")
         any(isnan.(x[i].Σ)) && error("NaN cov after smoothing")
         x[i] = PI * x[i]
@@ -31,12 +27,9 @@ function smooth_all!(integ)
 end
 
 
-function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
+function smooth!(x_curr, x_next, Ah, Qh, integ)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
-    # PDMat(Symmetric(x_curr.Σ))
-    # PDMat(Symmetric(x_next.Σ))
-
     @unpack d, q = integ.cache
     @unpack x_tmp = integ.cache
 
@@ -46,41 +39,23 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, PI=I)
         return inv(Ah) * x_next
     end
 
-
     # Prediction: t -> t+1
-    mul!(x_tmp.μ, Ah, x_curr.μ)
-    x_tmp.Σ .= Ah * x_curr.Σ * Ah' .+ Qh
-
+    predict!(x_tmp, x_curr, Ah, Qh)
 
     # Smoothing
-    cov_before = copy(x_curr.Σ)
-    cov_pred = copy(x_tmp.Σ)
-    P_p = Symmetric(cov_pred)
+    P_p = x_tmp.Σ
     P_p_inv = inv(P_p)
     G = x_curr.Σ * Ah' * P_p_inv
     x_curr.μ .+= G * (x_next.μ .- x_tmp.μ)
 
-    # Vanilla:
-    cov_diff = x_next.Σ .- x_tmp.Σ
-    GDG = G * cov_diff * G'
-    # GDG = x_curr.Σ * Ah' * (P_p \ (
-    #     x_curr.Σ * Ah' * (P_p \ cov_diff')
-    # )')
-    x_tmp.Σ .= x_curr.Σ .+ GDG
-    # approx_diff!(x_tmp.Σ, x_curr.Σ, -GDG)
-    # copy!(x_curr.Σ, x_tmp.Σ)
     # Joseph-Form:
-    # P = copy(x_curr.Σ)
-    # C_tilde = Ah
-    # K_tilde = P * Ah' * P_p_inv
-    # P_s = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
-    #        + K_tilde * Qh * K_tilde' + G * x_next.Σ * G')
-    # P_s = Symmetric(
-    #     X_A_Xt(PDMat(Symmetric(P)), (I - K_tilde*C_tilde))
-    #     + X_A_Xt(PDMat(Symmetric(Qh)), K_tilde)
-    #     + X_A_Xt(PDMat(Symmetric(x_next.Σ)), G)
-    # )
-    # x_curr.Σ .= P_s
+    K_tilde = x_curr.Σ * Ah' * P_p_inv
+    P_s = (
+        X_A_Xt(x_curr.Σ, (I - K_tilde*Ah))
+        + X_A_Xt(PSDMatrix(cholesky(Qh).L), K_tilde)
+        + X_A_Xt(x_next.Σ, G)
+    )
+    copy!(x_curr.Σ, P_s)
 
     # fix_negative_variances(x_curr, integ.opts.abstol, integ.opts.reltol)
     assert_nonnegative_diagonal(x_curr.Σ)

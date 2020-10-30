@@ -10,7 +10,12 @@ The functions all operate on `Gaussian` types.
 """
 function predict!(x_out, x_curr, Ah, Qh)
     mul!(x_out.μ, Ah, x_curr.μ)
-    x_out.Σ .= Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
+    # TODO: This can be done more efficiently
+    out_cov = X_A_Xt(x_curr.Σ, Ah)
+    if !iszero(Qh)
+        out_cov = out_cov + PSDMatrix(cholesky(Qh).L)
+    end
+    copy!(x_out.Σ, out_cov)
     return nothing
 end
 function predict(x_curr, Ah, Qh)
@@ -50,18 +55,21 @@ Use this to test any "advanced" implementation against.
 Requires the PREDICTed state.
 """
 function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-    P_p = Symmetric(Ah * x_curr.Σ * Ah' .+ Qh)
+    x_pred = predict(x_curr, Ah, Qh)
+
+    P_p = x_pred.Σ
     P_p_inv = inv(P_p)
 
     G = x_curr.Σ * Ah' * P_p_inv
 
-    smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - Ah*x_curr.μ)
+    smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
 
-    P = copy(x_curr.Σ)
-    C_tilde = Ah
-    K_tilde = P * Ah' * P_p_inv
-    smoothed_cov = ((I - K_tilde*C_tilde) * P * (I - K_tilde*C_tilde)'
-                    + K_tilde * Qh * K_tilde' + G * x_next_smoothed.Σ * G')
+    K_tilde = x_curr.Σ * Ah' * P_p_inv
+    smoothed_cov = (
+        X_A_Xt(x_curr.Σ, (I - K_tilde*Ah))
+        + X_A_Xt(PSDMatrix(cholesky(Qh).L), K_tilde)
+        + X_A_Xt(x_next_smoothed.Σ, G)
+    )
 
     assert_nonnegative_diagonal(smoothed_cov)
 

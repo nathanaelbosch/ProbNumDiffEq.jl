@@ -46,13 +46,15 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     diffmat = estimate_diffusion(cache.diffusionmodel, integ)
     integ.cache.diffmat = diffmat
     if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
-        x_pred.Σ .+= (diffmat .- 1) .* Qh
+        predict!(x_pred, x, Ah, diffmat .* Qh)
         integ.cache.measurement.Σ .+=
             integ.cache.H * ((diffmat .- 1) .* Qh) * integ.cache.H'
     end
 
     # Likelihood
-    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    cache.log_likelihood = 0
+    # TODO: The correct one fails in tests due to cholesky stuff
 
     # Update
     x_filt = update!(integ, x_pred)
@@ -69,9 +71,9 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 
     # Undo the coordinate change / preconditioning
-    integ.cache.x = PI * x
-    integ.cache.x_pred = PI * x_pred
-    integ.cache.x_filt = PI * x_filt
+    copy!(integ.cache.x, PI * x)
+    copy!(integ.cache.x_pred, PI * x_pred)
+    copy!(integ.cache.x_filt, PI * x_filt)
 end
 
 
@@ -129,8 +131,9 @@ function measure!(integ, x_pred, t)
     z, S = measurement.μ, measurement.Σ
     z .= h!(integ, x_pred, t)
     H .= H!(integ, x_pred, t)
-    R .= Diagonal(eps.(z))
-    S .= Symmetric(H * x_pred.Σ * H' .+ R)
+    # R .= Diagonal(eps.(z))
+    @assert iszero(R)
+    copy!(S, X_A_Xt(x_pred.Σ, H))
 
     return nothing
 end
@@ -152,10 +155,10 @@ function update!(integ, prediction)
     x_filt.μ .= m_p .+ K * (0 .- z)
 
     # Joseph Form
-    x_filt.Σ .= Symmetric(X_A_Xt(PDMat(Symmetric(P_p)), (I-K*H)))
-    if !iszero(R)
-        x_filt.Σ .+= Symmetric(X_A_Xt(PDMat(R), K))
-    end
+    out_cov = X_A_Xt(P_p, (I-K*H))
+    copy!(x_filt.Σ, out_cov)
+    # TODO Add R back into the mix
+    # X_A_Xt(R, K)
 
     assert_nonnegative_diagonal(x_filt.Σ)
 

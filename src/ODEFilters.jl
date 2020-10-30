@@ -17,11 +17,18 @@ using TaylorSeries
 using UnPack
 using RecipesBase
 using Distributions
+using ModelingToolkit
 
+
+@reexport using PSDMatrices
+import PSDMatrices: X_A_Xt
+
+
+# All the Gaussian things
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
-const MvNormal{T} = Gaussian{Vector{T}, Matrix{T}}
-const MvNormalList{T} = StructArray{MvNormal{T}}
+const PSDGaussian{T} = Gaussian{Vector{T}, PSDMatrix{T}}
+const PSDGaussianList{T} = StructArray{PSDGaussian{T}}
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.Σ); nothing)
 show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")
@@ -29,15 +36,15 @@ show(io::IO, ::MIME"text/plain", g::Gaussian{T, S}) where {T, S} =
     print(io, "Gaussian{$T,$S}($(g.μ), $(g.Σ))")
 size(g::Gaussian) = size(g.μ)
 
-using ModelingToolkit
-using PDMats
+Base.:*(M, g::PSDGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
+GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
 
 import Statistics: mean, var, std
-var(p::MvNormal{T}) where {T} = diag(p.Σ)
-std(p::MvNormal{T}) where {T} = sqrt.(diag(p.Σ))
-mean(s::MvNormalList{T}) where {T} = mean.(s)
-var(s::MvNormalList{T}) where {T} = var.(s)
-std(s::MvNormalList{T}) where {T} = std.(s)
+var(p::PSDGaussian{T}) where {T} = diag(p.Σ)
+std(p::PSDGaussian{T}) where {T} = sqrt.(diag(p.Σ))
+mean(s::PSDGaussianList{T}) where {T} = mean.(s)
+var(s::PSDGaussianList{T}) where {T} = var.(s)
+std(s::PSDGaussianList{T}) where {T} = std.(s)
 
 include("priors.jl")
 include("diffusions.jl")
