@@ -30,6 +30,7 @@ PDMats = "0.10"
 RecipesBase = "1"
 Reexport = "0.2"
 StructArrays = "0.4"
+TaylorSeries = "0.10"
 UnPack = "1"
 julia = "1"
 
