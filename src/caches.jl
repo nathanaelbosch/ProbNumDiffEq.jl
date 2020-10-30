@@ -65,7 +65,7 @@ function OrdinaryDiffEq.alg_cache(
     A!, Q! = ibm(d, q)
 
     # Measurement model
-    R = zeros(d, d)
+    R = PSDMatrix(LowerTriangular(zeros(d, d)))
 
     uType = typeof(u0)
     uElType = eltype(u0)

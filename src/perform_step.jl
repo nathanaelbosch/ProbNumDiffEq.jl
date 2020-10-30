@@ -155,10 +155,9 @@ function update!(integ, prediction)
     x_filt.μ .= m_p .+ K * (0 .- z)
 
     # Joseph Form
-    out_cov = X_A_Xt(P_p, (I-K*H))
+    out_cov = X_A_Xt(P_p, (I-K*H)) # + X_A_Xt(R, K)
+    @assert iszero(R)
     copy!(x_filt.Σ, out_cov)
-    # TODO Add R back into the mix
-    # X_A_Xt(R, K)
 
     assert_nonnegative_diagonal(x_filt.Σ)
 
