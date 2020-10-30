@@ -66,8 +66,7 @@ function initialize_with_derivatives(u0, f, p, t0, order::Int)
     f_derivatives = [fp]
     for o in 2:q
         _curr_f_deriv = f_derivatives[end]
-        # dfdu(u, p, t) = ForwardDiff.jacobian(u -> _curr_f_deriv(u, p, t), u)
-        dfdu = [derivative.(_curr_f_deriv, 1) derivative.(_curr_f_deriv, 2)]
+        dfdu = stack([derivative.(_curr_f_deriv, i) for i in 1:d])'
         # dfdt(u, p, t) = ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
         # df(u, p, t) = dfdu(u, p, t) * f(u, p, t) + dfdt(u, p, t)
         df = dfdu * fp
