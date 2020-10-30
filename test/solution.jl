@@ -1,7 +1,6 @@
 using ODEFilters
 using Test
 using Plots
-using GaussianDistributions
 using LinearAlgebra
 using OrdinaryDiffEq
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()

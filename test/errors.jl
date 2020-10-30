@@ -4,7 +4,6 @@ using OrdinaryDiffEq
 using LinearAlgebra
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
-using ModelingToolkit
 
 import ODEFilters: remake_prob_with_jac
 
