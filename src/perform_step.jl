@@ -99,8 +99,13 @@ function H!(integ, x_pred, t)
     @unpack ddu, E0, E1, InvPrecond, H = integ.cache
     PI = InvPrecond(dt)
 
-    u_pred = E0*PI*x_pred.μ
-    if alg isa EKF1
+    if alg isa EKF1 || alg isa IEKS
+        if alg isa IEKS && !isnothing(alg.linearize_at)
+            u_pred = alg.linearize_at(t).μ
+        else
+            u_pred = E0*PI*x_pred.μ
+        end
+
         if isinplace(integ.f)
             f.jac(ddu, u_pred, p, t)
         else

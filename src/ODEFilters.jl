@@ -57,4 +57,8 @@ include("solution.jl")
 include("jacobian.jl")
 include("numerics_tricks.jl")
 
+# Iterated Extended Kalman Smoother
+include("ieks.jl")
+export IEKS, solve_ieks
+
 end
