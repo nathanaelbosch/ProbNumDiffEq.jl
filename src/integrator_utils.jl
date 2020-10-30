@@ -2,6 +2,7 @@
 function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEKF})
 
     if isstatic(integ.cache.diffusionmodel) # Calibrate
+        @warn "sol.log_likelihood is not correct for static diffusion models!"
         final_diff = integ.sol.diffusions[end]
         for s in integ.sol.x
             s.Σ .*= final_diff
@@ -42,4 +43,6 @@ function OrdinaryDiffEq.savevalues!(
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.x, integrator.saveiter, copy(integrator.cache.x))
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.diffusions, integrator.saveiter, copy(integrator.cache.diffmat))
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.pu, integrator.saveiter, integrator.cache.E0*integrator.cache.x)
+
+    integrator.sol.log_likelihood += integrator.cache.log_likelihood
 end

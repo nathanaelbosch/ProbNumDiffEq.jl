@@ -18,6 +18,7 @@ using RecipesBase
 using Distributions
 
 @reexport using GaussianDistributions
+using GaussianDistributions: logpdf
 const MvNormal{T} = Gaussian{Vector{T}, Matrix{T}}
 const MvNormalList{T} = StructArray{MvNormal{T}}
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))

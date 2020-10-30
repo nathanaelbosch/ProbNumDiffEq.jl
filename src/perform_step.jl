@@ -20,7 +20,7 @@ Basically consists of the following steps
 """
 function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
     @unpack t, dt = integ
-    @unpack E0, Precond, InvPrecond = integ.cache
+    @unpack d, E0, Precond, InvPrecond = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
     @unpack A!, Q!, Ah, Qh = integ.cache
 
@@ -50,6 +50,9 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         integ.cache.measurement.Σ .+=
             integ.cache.H * ((diffmat .- 1) .* Qh) * integ.cache.H'
     end
+
+    # Likelihood
+    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
     # Update
     x_filt = update!(integ, x_pred)
