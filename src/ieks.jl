@@ -7,6 +7,25 @@ mutable struct IEKS <: AbstractEKF
     linearize_at
 end
 
+"""
+    IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, linearize_at=nothing)
+
+Gaussian ODE filtering with iterated extended Kalman smoothing. To use it, use
+`solve_ieks(prob, IEKS(), args...)`
+instead of
+`solve(prob, IEKS(), args...)`,
+since it is implemented as an outer loop around the solver.
+
+Currently, only the integrated Brownian motion prior `:ibm` is supported.
+For the diffusionmodel, chose one of
+`[:dynamic, :dynamicMV, :fixed, :fixedMV, :fixedMAP]`.
+Just like the [`EKF1`](@ref) it requires that the Jacobian of the rhs function is available.
+
+See also: [`EKF0`](@ref), [`EKF1`](@ref), [`solve_ieks`](@ref)
+
+# References:
+- F. Tronarp, S. Särkkä, and P. Hennig: **Bayesian ODE Solvers: The Maximum A Posteriori Estimate**
+"""
 function IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, linearize_at=nothing)
     if !isnothing(linearize_at)
         @assert linearize_at isa ProbODESolution
@@ -19,6 +38,13 @@ function IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, linearize_at=nothi
 end
 
 
+"""
+    solve_ieks(prob::DiffEqBase.AbstractODEProblem, alg::IEKS, args...; iterations=10, kwargs...)
+
+Solve method to be used with the [`IEKS`](@ref). The IEKS works essentially by solving the
+ODE multiple times. `solve_ieks` therefore wraps a call to the standard `solve` method,
+passing `args...` and `kwargs...`.
+"""
 function solve_ieks(prob::DiffEqBase.AbstractODEProblem, alg::IEKS, args...;
                     iterations=10, kwargs...)
     sol = nothing
