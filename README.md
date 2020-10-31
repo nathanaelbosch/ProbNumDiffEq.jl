@@ -9,11 +9,16 @@
 
 
 **ODEFilters.jl provides _probabilistic_ ODE solvers for the [DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.**
-By casting the solution of ODEs as a problem of Bayesian inference, they return a distribution over ODE solutions and provide estimates of their own numerical approximation error.
-
-<!-- [Probabilistic Numerics](http://probabilistic-numerics.org/). -->
 
 ![Fitzhugh-Nagumo Solve Animation](./examples/fitzhughnagumo_solve.gif?raw=true "Fitzhugh-Nagumo Solve Animation")
+
+
+The field of
+[Probabilistic Numerics](http://probabilistic-numerics.org/)
+aims to quantify numerical uncertainty arising from finite computational resources.
+This package implements _ODE filters_, a class of probabilistic numerical methods for solving ordinary differential equations.
+By casting the solution of ODEs as a problem of Bayesian inference, they solve ODEs with methods of Bayesian filtering and smoothing.
+As a result, the solvers return a posterior probability distribution over ODE solutions and provide estimates of their own numerical approximation error.
 
 
 ## Installation
