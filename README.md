@@ -29,7 +29,6 @@ The package can be installed directly from github:
 
 
 ## Example
-Solving ODEs with probabilistic numerical methods is as simple as that!
 ```julia
 using ODEFilters
 
