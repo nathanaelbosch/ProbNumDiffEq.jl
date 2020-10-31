@@ -37,7 +37,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Predict
     predict!(x_pred, x, Ah, Qh)
-    u_pred .= E0*PI*x_pred.μ
+    mul!(u_pred, E0, PI*x_pred.μ)
 
     # Measure
     measure!(integ, x_pred, tnew)
@@ -58,7 +58,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Update
     x_filt = update!(integ, x_pred)
-    u_filt .= E0*PI*x_filt.μ
+    mul!(u_filt, E0, PI*x_filt.μ)
     integ.u .= u_filt
 
     # Estimate error for adaptive steps
@@ -79,8 +79,9 @@ end
 
 function h!(integ, x_pred, t)
     @unpack f, p, dt = integ
-    @unpack du, E0, E1, InvPrecond = integ.cache
+    @unpack du, E0, E1, InvPrecond, measurement = integ.cache
     PI = InvPrecond(dt)
+    z = measurement.μ
 
     u_pred = E0*PI*x_pred.μ
     IIP = isinplace(integ.f)
@@ -91,7 +92,7 @@ function h!(integ, x_pred, t)
     end
     integ.destats.nf += 1
 
-    z = E1*PI*x_pred.μ .- du
+    z .= E1*PI*x_pred.μ .- du
 
     return z
 end

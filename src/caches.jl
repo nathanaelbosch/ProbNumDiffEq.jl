@@ -3,13 +3,13 @@
 ########################################################################################
 abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType,
+    RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType, AT, QT,
 } <: ODEFiltersCache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
-    A!
-    Q!
+    A!::AT
+    Q!::QT
     diffusionmodel::diffModelType
     R::RType
     E0::EType
@@ -103,7 +103,7 @@ function OrdinaryDiffEq.alg_cache(
     return GaussianODEFilterCache{
         typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond),
         uType, typeof(x0), matType, typeof(initdiff),
-        typeof(diffmodel),
+        typeof(diffmodel), typeof(A!), typeof(Q!),
     }(
         # Constants
         d, q, A!, Q!, diffmodel, R, E0, E1, Precond, InvPrecond,
