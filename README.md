@@ -49,12 +49,12 @@ sol = solve(prob, EKF0(), abstol=1e-1, reltol=1e-2)
 
 # Plot the solution
 using Plots
-plot(sol, fillalpha=0.1)
+plot(sol, fillalpha=0.15)
 
 # Sample from the solution and plot the samples
 samples = ODEFilters.sample(sol, 100)
 for i in 1:100
-    plot!(sol.t, samples[:, :, i], color=[1 2], label="", linewidth=0.5, alpha=0.5)
+    plot!(sol.t, samples[:, :, i], color=[1 2], label="", linewidth=1, alpha=0.5)
 end
 ```
 ![Fitzhugh-Nagumo Solution](./docs/src/figures/fitzhugh_nagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
