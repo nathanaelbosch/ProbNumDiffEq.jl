@@ -11,12 +11,10 @@ import Base: copy, copy!, show, size
 stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
-using ForwardDiff
 using TaylorSeries
 @reexport using StructArrays
 using UnPack
 using RecipesBase
-using Distributions
 using ModelingToolkit
 
 

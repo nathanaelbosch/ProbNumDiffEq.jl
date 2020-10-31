@@ -15,7 +15,8 @@ function initialize_without_derivatives(u0, f, p, t0, order, var=1e-3)
 end
 
 
-function initialize_with_derivatives_forwarddiff(u0, f, p, t0, order::Int)
+function __initialize_with_derivatives_forwarddiff(u0, f, p, t0, order::Int)
+    error("Legacy code! ForwardDiff is not included in the dependencies anymore. Use the TaylorSeries.jl approach instead, implemented in `initialize_with_derivatives`.")
     @warn "Better to use the TaylorSeries.jl approach"
     f = isinplace(f) ? iip_to_oop(f) : f
 
