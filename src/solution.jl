@@ -190,7 +190,7 @@ function _rand(x::Gaussian, n::Int=1)
     m, C = x.μ, x.Σ
 
     try
-        chol = cholesky(Symmetric(C))
+        chol = cholesky(Symmetric(Matrix(C)))
         sample = m .+ chol.L*randn(length(m), n)
         return sample
     catch e
