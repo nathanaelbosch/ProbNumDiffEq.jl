@@ -1,3 +1,8 @@
+############################################################################################
+# For the equivalent parts in OrdinaryDiffEq.jl, see:
+# https://github.com/SciML/OrdinaryDiffEq.jl/blob/master/src/alg_utils.jl
+############################################################################################
+
 OrdinaryDiffEq.alg_autodiff(alg::AbstractEKF) = true
 OrdinaryDiffEq.get_chunksize(alg::AbstractEKF) = Val(0)
 OrdinaryDiffEq.isfsal(alg::AbstractEKF) = false
