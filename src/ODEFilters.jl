@@ -22,6 +22,7 @@ using ModelingToolkit
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt
+X_A_Xt(A, X) = X*A*X'
 
 
 # All the Gaussian things
