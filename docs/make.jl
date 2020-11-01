@@ -7,7 +7,7 @@ makedocs(
     modules = [ODEFilters],
     pages = [
         "Home" => "index.md",
-        "Solvers and Options" => "manual.md",
+        "Solvers and Options" => "solvers.md",
         "Examples" => [
             "Comparison to ProbInts" => "probints_comparison.md"
         ]
