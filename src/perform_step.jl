@@ -22,7 +22,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     @unpack t, dt = integ
     @unpack d, E0, Precond, InvPrecond = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
-    @unpack A!, Q!, Ah, Qh = integ.cache
+    @unpack A, Q = integ.cache
 
     tnew = t + dt
 
@@ -31,12 +31,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     PI = InvPrecond(dt)
     x = P * x
 
-    # Dynamics for this step
-    A!(Ah, dt)
-    Q!(Qh, dt)
-
     # Predict
-    predict!(x_pred, x, Ah, Qh)
+    predict!(x_pred, x, A, Q*dt)
     mul!(u_pred, E0, PI*x_pred.μ)
 
     # Measure
@@ -46,9 +42,9 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     diffmat = estimate_diffusion(cache.diffusionmodel, integ)
     integ.cache.diffmat = diffmat
     if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
-        predict!(x_pred, x, Ah, diffmat .* Qh)
+        predict!(x_pred, x, A, diffmat .* (Q*dt))
         integ.cache.measurement.Σ .+=
-            integ.cache.H * ((diffmat .- 1) .* Qh) * integ.cache.H'
+            integ.cache.H * ((diffmat .- 1) .* (Q*dt)) * integ.cache.H'
     end
 
     # Likelihood
@@ -168,13 +164,13 @@ end
 function estimate_errors(integ, cache::GaussianODEFilterCache)
     @unpack dt = integ
     @unpack InvPrecond = integ.cache
-    @unpack diffmat, Qh, H = integ.cache
+    @unpack diffmat, Q, H = integ.cache
 
     if diffmat isa Real && isinf(diffmat)
         return Inf
     end
 
-    error_estimate = sqrt.(diag(H * (diffmat .* Qh) * H'))
+    error_estimate = sqrt.(diag(H * (diffmat .* (Q*dt)) * H'))
 
     return error_estimate
 end

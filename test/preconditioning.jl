@@ -21,11 +21,9 @@ prob = ODEFilters.remake_prob_with_jac(prob)
     A!(Ah, h)
     Q!(Qh, h, σ^2)
 
-    A!_p, Q!_p = ODEFilters.ibm(d, q)
-    Ah_p = diagm(0 => ones(d*(q+1)))
-    Qh_p = zeros(d*(q+1), d*(q+1))
-    A!_p(Ah_p, h)
-    Q!_p(Qh_p, h, σ^2)
+    A_p, Q_p = ODEFilters.ibm(d, q)
+    Ah_p = A_p
+    Qh_p = Q_p * h * σ^2
 
 
     # First test that they're both equivalent

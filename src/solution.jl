@@ -72,10 +72,8 @@ abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolati
 struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
     d
     q
-    A!
-    Q!
-    Ah
-    Qh
+    A
+    Q
     Precond
     InvPrecond
     smooth
@@ -84,17 +82,15 @@ function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = length(u0)
     q = alg.order
-    A!, Q! = ibm(d, q)
+    A, Q = ibm(d, q, uElType)
     Precond, InvPrecond = preconditioner(d, q)
-    Ah = diagm(0=>ones(uElType, d*(q+1)))
-    Qh = zeros(uElType, d*(q+1), d*(q+1))
     GaussianODEFilterPosterior(
-        d, q, A!, Q!, Ah, Qh, Precond, InvPrecond, alg.smooth)
+        d, q, A, Q, Precond, InvPrecond, alg.smooth)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
 function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
-    @unpack A!, Q!, Ah, Qh, d, q, Precond, InvPrecond = posterior
+    @unpack A, Q, d, q, Precond, InvPrecond = posterior
 
     if tval < t[1]
         error("Invalid t<t0")
@@ -113,10 +109,8 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     # Extrapolate
     h1 = tval - prev_t
     P, PI = Precond(h1), InvPrecond(h1)
-    A!(Ah, h1)
-    Q!(Qh, h1)
-    Qh .*= diffmat
-    goal_pred = predict(P * prev_rv, Ah, Qh)
+    Qh = (Q*h1) .* diffmat
+    goal_pred = predict(P * prev_rv, A, Qh)
     goal_pred = PI * goal_pred
 
     if !posterior.smooth || tval >= t[end]
@@ -131,11 +125,9 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     P, PI = Precond(h2), InvPrecond(h2)
     goal_pred = P * goal_pred
     next_smoothed = P * next_smoothed
-    A!(Ah, h2)
-    Q!(Qh, h2)
-    Qh .*= diffmat
+    Qh = (Q*h2) .* diffmat
 
-    goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
+    goal_smoothed, _ = smooth(goal_pred, next_smoothed, A, Qh)
 
     return PI * goal_smoothed
 end
@@ -235,7 +227,7 @@ function sample(sol::ProbODESolution, n::Int=1)
 end
 function sample(ts, xs, diffusions, posterior, n::Int=1)
 
-    @unpack A!, Q!, Ah, Qh, d, q, Precond, InvPrecond = posterior
+    @unpack A, d, q, Precond, InvPrecond = posterior
     E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     dim = d*(q+1)
 
@@ -253,9 +245,7 @@ function sample(ts, xs, diffusions, posterior, n::Int=1)
         i_diffusion = sum(ts .<= ts[i])
         diffmat = diffusions[i_diffusion]
 
-        A!(Ah, dt)
-        Q!(Qh, dt)
-        Qh .*= diffmat
+        Qh = (Qh*dt) .* diffmat
         P, PI = Precond(dt), InvPrecond(dt)
 
         for j in 1:n

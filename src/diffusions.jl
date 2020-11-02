@@ -70,11 +70,12 @@ end
 
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 function estimate_diffusion(kind::DynamicDiffusion, integ)
+    @unpack dt = integ
     @unpack d, R = integ.cache
-    @unpack H, Qh, measurement = integ.cache
+    @unpack H, Q, measurement = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    σ² = z' * inv(H*Qh*H') * z / d
+    σ² = z' * inv(H*(Q*dt)*H') * z / d
     return σ²
 end
 
@@ -84,8 +85,9 @@ initial_diffusion(diffusion::MVDynamicDiffusion, d, q) = kron(ones(q+1, q+1), di
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, E1 = integ.cache
-    @unpack H, Qh, measurement = integ.cache
+    @unpack H, Q, measurement = integ.cache
     z = measurement.μ
+    Qh = Q*dt
 
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
 

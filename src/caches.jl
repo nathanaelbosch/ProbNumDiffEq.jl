@@ -3,13 +3,13 @@
 ########################################################################################
 abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType, AT, QT,
+    RType, EType, F1, F2, uType, xType, matType, diffusionType, diffModelType,
 } <: ODEFiltersCache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
-    A!::AT
-    Q!::QT
+    A::matType
+    Q::matType
     diffusionmodel::diffModelType
     R::RType
     E0::EType
@@ -26,8 +26,6 @@ mutable struct GaussianODEFilterCache{
     x_filt::xType
     x_tmp::xType
     measurement
-    Ah::matType
-    Qh::matType
     H::matType
     du::uType
     ddu::matType
@@ -55,6 +53,10 @@ function OrdinaryDiffEq.alg_cache(
     t0 = t
     d = length(u)
 
+    uType = typeof(u0)
+    uElType = eltype(u0)
+    matType = Matrix{uElType}
+
     # Projections
     E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
@@ -62,15 +64,10 @@ function OrdinaryDiffEq.alg_cache(
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
     Precond, InvPrecond = preconditioner(d, q)
-    A!, Q! = ibm(d, q)
+    A, Q = ibm(d, q, uElType)
 
     # Measurement model
     R = PSDMatrix(LowerTriangular(zeros(d, d)))
-
-    uType = typeof(u0)
-    uElType = eltype(u0)
-    matType = Matrix{uElType}
-
     # Initial states
     m0, P0 = initialize_derivatives ?
         initialize_with_derivatives(u0, f, p, t0, q) :
@@ -80,8 +77,6 @@ function OrdinaryDiffEq.alg_cache(
     x0 = Gaussian(m0, P0)
 
     # Pre-allocate a bunch of matrices
-    Ah_empty = diagm(0=>ones(uElType, d*(q+1)))
-    Qh_empty = zeros(uElType, d*(q+1), d*(q+1))
     h = E1 * x0.μ
     H = copy(E1)
     du = copy(u0)
@@ -103,15 +98,15 @@ function OrdinaryDiffEq.alg_cache(
     return GaussianODEFilterCache{
         typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond),
         uType, typeof(x0), matType, typeof(initdiff),
-        typeof(diffmodel), typeof(A!), typeof(Q!),
+        typeof(diffmodel),
     }(
         # Constants
-        d, q, A!, Q!, diffmodel, R, E0, E1, Precond, InvPrecond,
+        d, q, A, Q, diffmodel, R, E0, E1, Precond, InvPrecond,
         # Mutable stuff
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,
-        Ah_empty, Qh_empty, H, du, ddu, K, initdiff,
+        H, du, ddu, K, initdiff,
         copy(u0),
         0
     )

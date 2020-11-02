@@ -4,10 +4,13 @@
 """Generate the discrete dynamics for a q-IBM model. INCLUDES AUTOMATIC PRECONDITIONING!
 
 Careful: Dimensions are ordered differently than in `probnum`!"""
-function ibm(d::Integer, q::Integer)
+function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     F̃ = diagm(1 => ones(q))
     I_d = diagm(0 => ones(d))
     F = kron(F̃, I_d)  # In probnum the order is inverted
+
+    A_base = diagm(0=>ones(elType, d*(q+1)))
+    Q_base = zeros(elType, d*(q+1), d*(q+1))
 
     @fastmath function A!(A::AbstractMatrix, h::Real)
         # Assumes that A comes from a previous computation => zeros and one-diag
@@ -19,6 +22,7 @@ function ibm(d::Integer, q::Integer)
             end
         end
     end
+    A!(A_base, 1.0)
 
     @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::Real)
         idx = 2 * q + 1 - row - col
@@ -39,7 +43,9 @@ function ibm(d::Integer, q::Integer)
         end
     end
 
-    return A!, Q!
+    Q!(Q_base, 1.0)
+
+    return A_base, Q_base
 end
 
 

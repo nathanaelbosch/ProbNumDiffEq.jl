@@ -44,11 +44,8 @@ end
 @testset "Test IBM with preconditioning (d=1,q=2)" begin
     d, q = 1, 2
 
-    A!, Q! = ODEFilters.ibm(d, q)
-    Ah = diagm(0 => ones(d*(q+1)))
-    Qh = zeros(d*(q+1), d*(q+1))
-    A!(Ah, h)
-    Q!(Qh, h, σ^2)
+    A, Q = ODEFilters.ibm(d, q)
+    Qh = Q * h * σ^2
 
     AH_21_PRE = [1  1  0.5
                  0  1  1
@@ -58,7 +55,7 @@ end
                            1/8  1/3 1/2
                            1/6  1/2 1]
 
-    @test AH_21_PRE ≈ Ah
+    @test AH_21_PRE ≈ A
     @test QH_21_PRE ≈ Qh
 end
 
