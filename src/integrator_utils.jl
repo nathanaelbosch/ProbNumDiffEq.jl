@@ -2,7 +2,8 @@
 function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEKF})
 
     if isstatic(integ.cache.diffusionmodel) # Calibrate
-        @warn "sol.log_likelihood is not correct for static diffusion models!"
+        # @warn "sol.log_likelihood is not correct for static diffusion models!"
+        integ.sol.log_likelihood = NaN
         final_diff = integ.sol.diffusions[end]
         diff_sqrt = final_diff .^ (1/2)
         for s in integ.sol.x
