@@ -151,3 +151,50 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
         return diffusion
     end
 end
+
+
+"""EM-based diffusion estimation"""
+struct EMDynamicDiffusion <: AbstractDynamicDiffusion end
+function estimate_diffusion(kind::EMDynamicDiffusion, integ)
+    @unpack d, q, R, Precond, InvPrecond = integ.cache
+    @unpack dt = integ
+    @unpack measurement, H, A, Q, x, diffmat = integ.cache
+    diffusions = integ.sol.diffusions
+
+    Ah, Qh = A, Q*dt
+    v, S = measurement.μ, measurement.Σ
+    PI = InvPrecond(dt)
+
+    sigma_prev = sigma = length(diffusions) > 0 ? diffusions[end] : diffmat
+
+    x_curr = x
+
+    em_steps = 1
+    for i in 1:em_steps
+        _Qh = sigma*Qh
+
+        x_next_pred = predict(x_curr, A, _Qh)
+        # measurement
+        x_next_filt = update(x_next_pred, measurement, H, R)
+
+        if all((_Qh) .< eps(eltype(_Qh)))
+            @warn "smooth: Qh is really small! The system is basically deterministic, so we just \"predict backwards\"."
+            Gain = inv(Ah)
+            x_curr_smoothed = Gain * x_next_filt
+        else
+            x_curr_smoothed, Gain = smooth(x_curr, x_next_filt, Ah, _Qh)
+        end
+
+        μ_joint = [x_next_filt.μ; x_curr_smoothed.μ]
+        Σ_joint = PSDMatrix(LowerTriangular([x_next_filt.Σ.L         zero(Gain);
+                                             Gain * x_next_filt.Σ.L  x_curr_smoothed.Σ.L]))
+
+        A_tilde = [I  -Ah]
+        diff_mean = A_tilde * μ_joint
+        diff_cov = X_A_Xt(Σ_joint, A_tilde)
+
+        sigma = tr(Qh \ (diff_cov + diff_mean * diff_mean')) / (d*(q+1))
+    end
+
+    return sigma
+end

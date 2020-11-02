@@ -81,6 +81,7 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     @assert iszero(R)
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
+    z, S = measurement.μ, measurement.Σ
 
     S_inv = inv(S)
     K = P_p * H' * S_inv

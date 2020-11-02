@@ -93,6 +93,7 @@ function OrdinaryDiffEq.alg_cache(
     diffusion_models = Dict(
         :dynamic => DynamicDiffusion(),
         :dynamicMV => MVDynamicDiffusion(),
+        :dynamicEM => EMDynamicDiffusion(),
         :fixed => FixedDiffusion(),
         :fixedMV => MVFixedDiffusion(),
         :fixedMAP => MAPFixedDiffusion(),
