@@ -51,4 +51,28 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
         @test sol(t0:1e-3:t1) isa StructArray{Gaussian{T,S}} where {T,S}
     end
+
+    # Sampling
+    @testset "Solution Sampling" begin
+        samples = ODEFilters.sample(sol, 10)
+
+        @test samples isa Array
+
+        m, n, o = size(samples)
+        @test m == length(sol)
+        @test n == length(sol.u[1])
+        @test o == 10
+
+        u = ODEFilters.stack(sol.u)
+        stds = sqrt.(ODEFilters.stack(diag.(sol.pu.Σ)))
+        outlier_count = sum(abs.(u .- samples) .> 3stds)
+        @assert outlier_count < 0.05 * m * n * o
+
+        # Dense sampling
+        dense_samples, dense_times = ODEFilters.dense_sample(sol, 10)
+        m, n, o = size(dense_samples)
+        @test m == length(dense_times)
+        @test n == length(sol.u[1])
+        @test o == 10
+    end
 end
