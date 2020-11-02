@@ -21,7 +21,7 @@ for (prob, probname) in [
 
         for Alg in (EKF0, EKF1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
-            q in 1:4
+            q in [1, 2, 3, 5, 7]
 
             if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
@@ -52,7 +52,7 @@ for (prob, probname) in [
 
         for Alg in (EKF0, EKF1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
-            q in 1:4
+            q in [1, 2, 3, 5, 7]
 
             if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
