@@ -11,7 +11,7 @@ makedocs(
         "Examples" => [
             "Comparison to ProbInts" => "probints_comparison.md"
         ],
-        "Internals" => "internals.md",
+        # "Internals" => "internals.md",
     ]
 )
 
