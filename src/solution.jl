@@ -50,8 +50,16 @@ function DiffEqBase.build_solution(
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 
+    if DiffEqBase.has_analytic(prob.f)
+        u_analytic = Vector{typeof(prob.u0)}()
+        errors = Dict{Symbol,real(eltype(prob.u0))}()
+    else
+        u_analytic = nothing
+        errors = nothing
+    end
+
     return ProbODESolution{T, N, typeof(u), typeof(interp), typeof(destats)}(
-        u, pu, nothing, nothing, t, [], x, [], 0, prob, alg, interp, dense, destats, retcode,
+        u, pu, u_analytic, errors, t, [], x, [], 0, prob, alg, interp, dense, destats, retcode,
     )
 end
 
