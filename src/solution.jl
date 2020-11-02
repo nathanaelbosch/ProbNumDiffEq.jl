@@ -65,10 +65,10 @@ end
 
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
-    return ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(destats)}(
-        sol.u, sol.pu, sol.p, u_analytic, errors, sol.x, sol.t, sol.diffusions,
+    return ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
+        sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x, sol.diffusions,
         sol.log_likelihood, sol.prob,
-        sol.alg, sol.solver, sol.dense, sol.interp, sol.retcode, sol.destats,
+        sol.alg, sol.interp, sol.dense, sol.destats, sol.retcode,
     )
 end
 
