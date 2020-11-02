@@ -180,30 +180,10 @@ end
 For the 0-cov entries the outcome of the sampling is deterministic!"""
 function _rand(x::Gaussian, n::Int=1)
     m, C = x.μ, x.Σ
+    @assert C isa PSDMatrix
 
-    try
-        chol = cholesky(Symmetric(Matrix(C)))
-        sample = m .+ chol.L*randn(length(m), n)
-        return sample
-    catch e
-        @warn "Cholesky failed; Try to sample more manually" e
-        bad_idx = get_zero_cross_indices(C)
-
-        D = length(m)
-        @assert all(C[bad_idx, :] .< eps(eltype(C)))
-        @assert all(C[:, bad_idx] .< eps(eltype(C)))
-        reduced_idx = setdiff(1:D, bad_idx)
-        reduced_x = Gaussian(m[reduced_idx], Symmetric(C[reduced_idx, reduced_idx]))
-        reduced_sample = rand(reduced_x)
-
-        sample = reduced_sample
-        for i in bad_idx
-            insert!(sample, i, m[i])
-        end
-        @assert sample[bad_idx] == m[bad_idx]
-
-        return sample
-    end
+    sample = m .+ C.L*randn(length(m), n)
+    return sample
 end
 
 
@@ -214,8 +194,7 @@ function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::Abstra
 
     m = x_curr.μ + Gain * (x_next_sample - m_p)
 
-    P = ((I - Gain*Ah) * x_curr.Σ * (I - Gain*Ah)'
-         + Gain * Qh * Gain')
+    P = X_A_Xt(x_curr.Σ, (I - Gain*Ah)) + X_A_Xt(PSDMatrix(cholesky(Qh).L), Gain)
 
     assert_nonnegative_diagonal(P)
     return Gaussian(m, P)
@@ -223,11 +202,11 @@ end
 
 
 function sample(sol::ProbODESolution, n::Int=1)
-    sample(sol.t, sol.x, sol.diffusions, sol.interp, n)
+    sample(sol.t, sol.x, sol.diffusions, sol.t, sol.interp, n)
 end
-function sample(ts, xs, diffusions, posterior, n::Int=1)
+function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
 
-    @unpack A, d, q, Precond, InvPrecond = posterior
+    @unpack A, Q, d, q, Precond, InvPrecond = posterior
     E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     dim = d*(q+1)
 
@@ -242,17 +221,17 @@ function sample(ts, xs, diffusions, posterior, n::Int=1)
     for i in length(xs)-1:-1:1
         dt = ts[i+1] - ts[i]
 
-        i_diffusion = sum(ts .<= ts[i])
+        i_diffusion = sum(difftimes .<= ts[i])
         diffmat = diffusions[i_diffusion]
 
-        Qh = (Qh*dt) .* diffmat
+        Qh = (Q*dt) .* diffmat
         P, PI = Precond(dt), InvPrecond(dt)
 
         for j in 1:n
             sample_p = P*sample_path[i+1, :, j]
             x_prev_p = P*xs[i]
 
-            prev_sample_p = sample_back(x_prev_p, sample_p, Ah, Qh, PI)
+            prev_sample_p = sample_back(x_prev_p, sample_p, A, Qh, PI)
 
             # sample_path[i, :, j] .= PI*prev_sample_p.μ
             sample_path[i, :, j] .= PI*_rand(prev_sample_p)[:]
@@ -263,7 +242,7 @@ function sample(ts, xs, diffusions, posterior, n::Int=1)
 end
 function dense_sample(sol::ProbODESolution, n::Int=1)
     times = range(sol.t[1], sol.t[end], length=1000)
-    states = StructArray(sol(times))
+    states = StructArray([sol.interp(t, sol.t, sol.x, sol.diffusions) for t in times])
 
-    sample(times, states, sol.diffusions, sol.interp, n), times
+    sample(times, states, sol.diffusions, sol.t, sol.interp, n), times
 end
