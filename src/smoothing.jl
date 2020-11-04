@@ -54,7 +54,6 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     )
     copy!(x_curr.Σ, P_s)
 
-    # fix_negative_variances(x_curr, integ.opts.abstol, integ.opts.reltol)
     assert_nonnegative_diagonal(x_curr.Σ)
     # PDMat(Symmetric(x_curr.Σ))
 
