@@ -1,6 +1,6 @@
 # ODEFilters.jl
 
-<!-- [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathanaelbosch.github.io/ODEFilters.jl/stable) -->
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathanaelbosch.github.io/ODEFilters.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathanaelbosch.github.io/ODEFilters.jl/dev)
 [![Build Status](https://github.com/nathanaelbosch/ODEFilters.jl/workflows/CI/badge.svg)](https://github.com/nathanaelbosch/ODEFilters.jl/actions)
 [![Coverage](https://codecov.io/gh/nathanaelbosch/ODEFilters.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/nathanaelbosch/ODEFilters.jl)
@@ -22,9 +22,9 @@ As a result, the solvers return a posterior probability distribution over ODE so
 
 
 ## Installation
-The package can be installed directly from github:
+The package can be installed directly with the Julia package manager:
 ```julia
-] add https://github.com/nathanaelbosch/ODEFilters.jl
+] add ODEFilters
 ```
 
 
