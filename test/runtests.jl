@@ -28,6 +28,9 @@ using ODEFilters
     println("Errors")
     @testset "Errors" begin include("errors.jl") end
 
+    println("IEKS")
+    @testset "IEKS" begin include("ieks.jl") end
+
     println("Specific Problems")
     @testset "Specific Problems" begin include("specific_problems.jl") end
 end
