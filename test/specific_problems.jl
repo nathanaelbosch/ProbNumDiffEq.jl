@@ -29,3 +29,11 @@ end
     prob = remake(prob_ode_fitzhughnagumo, u0=big.(u0))
     @test_broken solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
 end
+
+
+@testset "OOP problem definition" begin
+    prob = ODEProblem((u, p, t) -> ([p[1] * u[1] .* (1 .- u[1])]), [1e-1], (0.0, 5), [3.0])
+    @test solve(prob, EKF0(order=4)) isa ODEFilters.ProbODESolution
+    prob = ODEFilters.remake_prob_with_jac(prob)
+    @test solve(prob, EKF1(order=4)) isa ODEFilters.ProbODESolution
+end
