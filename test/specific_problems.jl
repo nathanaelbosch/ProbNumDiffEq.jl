@@ -27,7 +27,7 @@ end
 
 @testset "Big Float" begin
     prob = remake(prob_ode_fitzhughnagumo, u0=big.(u0))
-    @test_broken solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
 end
 
 
