@@ -167,23 +167,6 @@ end
 ########################################################################################
 # Sampling from a solution
 ########################################################################################
-# function _rand(x::Gaussian, n::Int=1)
-#     chol = cholesky(Symmetric(x.Σ))
-#     sample = x.μ .+ chol.L*randn(length(x.μ), n)
-#     return sample
-# end
-
-function get_zero_cross_indices(C)
-    bad_idx = []
-    D = size(C)[1]
-    for i in 1:D
-        if all(C[i, :] .< eps(eltype(C))) && all(C[:, i] .< eps(eltype(C)))
-            push!(bad_idx, i)
-        end
-    end
-    return bad_idx
-end
-
 """Helper function to sample from our covariances, which often have a "cross" of zeros
 For the 0-cov entries the outcome of the sampling is deterministic!"""
 function _rand(x::Gaussian, n::Int=1)
