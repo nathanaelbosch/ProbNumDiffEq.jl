@@ -7,7 +7,7 @@ using LinearAlgebra
 
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_vanstiff
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_vanstiff, prob_ode_mm_linear
 
 
 @testset "Smoothing with small constant steps" begin
@@ -16,6 +16,13 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode
                 adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
     @test solve(prob, EKF1(order=4, diffusionmodel=:fixed, smooth=true),
                 adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
+end
+
+
+@testset "Problem with analytic solution" begin
+    prob = ODEFilters.remake_prob_with_jac(prob_ode_mm_linear)
+    @test solve(prob, EKF0(order=4)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EKF1(order=4)) isa ODEFilters.ProbODESolution
 end
 
 
