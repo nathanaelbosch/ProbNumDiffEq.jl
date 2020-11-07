@@ -13,7 +13,7 @@ function smooth_all!(integ)
         P = Precond(dt)
         PI = InvPrecond(dt)
 
-        Qh = (Q*dt) .* diffusions[i]
+        Qh = apply_diffusion(Q*dt, diffusions[i])
 
         x[i] = P * x[i]
         smooth!(x[i], P*x[i+1], A, Qh, integ)
@@ -49,7 +49,7 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     K_tilde = x_curr.Σ * Ah' * P_p_inv
     P_s = (
         X_A_Xt(x_curr.Σ, (I - K_tilde*Ah))
-        + X_A_Xt(PSDMatrix(cholesky(Qh).L), K_tilde)
+        + X_A_Xt(Qh, K_tilde)
         + X_A_Xt(x_next.Σ, G)
     )
     copy!(x_curr.Σ, P_s)
