@@ -19,7 +19,7 @@ function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::Abs
     # TODO: This can be done more efficiently
     out_cov = X_A_Xt(x_curr.Σ, Ah)
     if !iszero(Qh)
-        out_cov = out_cov + PSDMatrix(cholesky(Qh).L)
+        out_cov = out_cov + Qh
     end
     copy!(x_out.Σ, out_cov)
     return nothing
@@ -93,7 +93,7 @@ function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix,
 
     smoothed_cov = (
         X_A_Xt(x_curr.Σ, (I - G*Ah))
-        + X_A_Xt(PSDMatrix(cholesky(Qh).L), G)
+        + X_A_Xt(Qh, G)
         + X_A_Xt(x_next_smoothed.Σ, G)
     )
 

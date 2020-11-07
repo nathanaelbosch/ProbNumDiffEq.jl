@@ -202,7 +202,7 @@ function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::Abstra
 
     m = x_curr.μ + Gain * (x_next_sample - m_p)
 
-    P = X_A_Xt(x_curr.Σ, (I - Gain*Ah)) + X_A_Xt(PSDMatrix(cholesky(Qh).L), Gain)
+    P = X_A_Xt(x_curr.Σ, (I - Gain*Ah)) + X_A_Xt(Qh, Gain)
 
     assert_nonnegative_diagonal(P)
     return Gaussian(m, P)
