@@ -117,7 +117,7 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     # Extrapolate
     h1 = tval - prev_t
     P, PI = Precond(h1), InvPrecond(h1)
-    Qh = (Q*h1) .* diffmat
+    Qh = apply_diffusion(Q*h1, diffmat)
     goal_pred = predict(P * prev_rv, A, Qh)
     goal_pred = PI * goal_pred
 
@@ -133,7 +133,7 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     P, PI = Precond(h2), InvPrecond(h2)
     goal_pred = P * goal_pred
     next_smoothed = P * next_smoothed
-    Qh = (Q*h2) .* diffmat
+    Qh = apply_diffusion(Q*h2, diffmat)
 
     goal_smoothed, _ = smooth(goal_pred, next_smoothed, A, Qh)
 
@@ -232,7 +232,7 @@ function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
         i_diffusion = sum(difftimes .<= ts[i])
         diffmat = diffusions[i_diffusion]
 
-        Qh = (Q*dt) .* diffmat
+        Qh = apply_diffusion(Q*dt, diffmat)
         P, PI = Precond(dt), InvPrecond(dt)
 
         for j in 1:n

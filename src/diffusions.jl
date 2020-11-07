@@ -104,7 +104,7 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 
-    Σ_out = kron(ones(q+1, q+1), Σ)
+    Σ_out = kron(Diagonal(ones(q+1)), Σ)
     # @info "MVDynamic diffusion" Σ Σ_out
     return Σ_out
 end
@@ -133,7 +133,7 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
-    Σ_out = kron(ones(q+1, q+1), Σ)
+    Σ_out = kron(Diagonal(ones(q+1)), Σ)
     # @info "MV-MLE-Diffusion" v S Σ Σ_out
 
     if integ.success_iter == 0

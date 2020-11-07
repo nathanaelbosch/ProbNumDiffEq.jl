@@ -13,7 +13,7 @@ function smooth_all!(integ)
         P = Precond(dt)
         PI = InvPrecond(dt)
 
-        Qh = (Q*dt) .* diffusions[i]
+        Qh = apply_diffusion(Q*dt, diffusions[i])
 
         x[i] = P * x[i]
         smooth!(x[i], P*x[i+1], A, Qh, integ)
