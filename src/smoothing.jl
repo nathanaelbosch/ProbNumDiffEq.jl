@@ -9,6 +9,10 @@ function smooth_all!(integ)
 
     for i in length(x)-1:-1:2
         dt = t[i+1] - t[i]
+        if iszero(dt)
+            copy!(x[i], x[i+1])
+            continue
+        end
 
         P = Precond(dt)
         PI = InvPrecond(dt)
