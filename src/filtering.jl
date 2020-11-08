@@ -56,10 +56,8 @@ function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::Abstr
     K = P_p * H' * S_inv
 
     filt_mean = m_p .+ P_p * H' * (S\v)
-    filt_cov = X_A_Xt(PDMat(Symmetric(P_p)), (I-K*H))
-    if !iszero(R)
-        filt_cov .+= Symmetric(X_A_Xt(PDMat(R), K))
-    end
+    filt_cov = X_A_Xt(P_p, (I-K*H))
+    @assert iszero(R)
 
     assert_nonnegative_diagonal(filt_cov)
 
