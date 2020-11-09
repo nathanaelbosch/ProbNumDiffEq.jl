@@ -4,6 +4,7 @@
 using ODEFilters
 using Test
 using LinearAlgebra
+using UnPack
 
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
@@ -43,4 +44,48 @@ end
     @test solve(prob, EKF0(order=4)) isa ODEFilters.ProbODESolution
     prob = ODEFilters.remake_prob_with_jac(prob)
     @test solve(prob, EKF1(order=4)) isa ODEFilters.ProbODESolution
+end
+
+
+@testset "Callback: Harmonic Oscillator with condition on E=2" begin
+    u0 = ones(2)
+    function harmonic_oscillator(du,u,p,t)
+        du[1] = u[2]
+        du[2] = -u[1]
+    end
+    prob = ODEProblem(harmonic_oscillator, u0, (0.0,100.0))
+
+    function Callback()
+        function affect!(integ)
+            @unpack dt = integ
+            @unpack x_filt, E0, InvPrecond = integ.cache
+
+            PI = InvPrecond(dt)
+            x = x_filt
+
+            m, P = x.μ, x.Σ
+
+            m0, P0 = E0*m, ODEFilters.X_A_Xt(P, E0)
+
+            e = m0'm0
+            H = 2m0'E0
+            S = H*P*H'
+
+            S_inv = inv(S)
+            K = P * H' * S_inv
+
+            mnew = m + K * (2 .- e)
+            Pnew = ODEFilters.X_A_Xt(P, (I-K*H)) # + X_A_Xt(R, K)
+
+            # @info m P e S K mnew
+            copy!(m, mnew)
+            copy!(P, Pnew)
+        end
+        condtion = (t,u,integrator) -> true
+        save_positions = (true, true)
+        DiscreteCallback(condtion,affect!,save_positions=save_positions)
+    end
+
+    @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EKF0(order=3), callback=Callback()) isa ODEFilters.ProbODESolution
 end
