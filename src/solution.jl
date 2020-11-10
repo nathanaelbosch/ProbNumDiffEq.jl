@@ -16,6 +16,7 @@ mutable struct ProbODESolution{T,N,uType,IType,DE} <: AbstractProbODESolution{T,
     alg
     interp::IType
     dense::Bool
+    tslocation::Int
     destats::DE
     retcode::Symbol
 end
@@ -23,7 +24,7 @@ function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) whe
     ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
         sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x, sol.diffusions,
         sol.log_likelihood,
-        sol.prob, sol.alg, sol.interp, sol.dense, sol.destats, retcode,
+        sol.prob, sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats, retcode,
     )
 end
 
@@ -59,7 +60,7 @@ function DiffEqBase.build_solution(
     end
 
     return ProbODESolution{T, N, typeof(u), typeof(interp), typeof(destats)}(
-        u, pu, u_analytic, errors, t, [], x, [], 0, prob, alg, interp, dense, destats, retcode,
+        u, pu, u_analytic, errors, t, [], x, [], 0, prob, alg, interp, dense, 0, destats, retcode,
     )
 end
 
@@ -68,7 +69,7 @@ function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors
     return ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
         sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x, sol.diffusions,
         sol.log_likelihood, sol.prob,
-        sol.alg, sol.interp, sol.dense, sol.destats, sol.retcode,
+        sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats, sol.retcode,
     )
 end
 
