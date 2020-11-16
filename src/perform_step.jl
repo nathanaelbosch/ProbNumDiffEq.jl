@@ -135,27 +135,9 @@ end
 
 
 function update!(integ, prediction)
-
-    @unpack dt = integ
-    @unpack R, q = integ.cache
-    @unpack measurement, H, K, x_filt = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
-
-    m_p, P_p = prediction.μ, prediction.Σ
-
-    S_inv = inv(S)
-    K .= P_p * H' * S_inv
-
-    x_filt.μ .= m_p .+ K * (0 .- z)
-
-    # Joseph Form
-    out_cov = X_A_Xt(P_p, (I-K*H)) # + X_A_Xt(R, K)
-    @assert iszero(R)
-    copy!(x_filt.Σ, out_cov)
-
+    @unpack measurement, H, R, x_filt = integ.cache
+    update!(x_filt, prediction, measurement, H, R)
     assert_nonnegative_diagonal(x_filt.Σ)
-
     return x_filt
 end
 

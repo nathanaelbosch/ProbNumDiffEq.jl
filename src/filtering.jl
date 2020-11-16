@@ -16,23 +16,20 @@ See also: [`predict`](@ref)
 """
 function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
-    # TODO: This can be done more efficiently
-    out_cov = X_A_Xt(x_curr.Σ, Ah)
-    if !iszero(Qh)
-        out_cov = out_cov + Qh
-    end
+    out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
     copy!(x_out.Σ, out_cov)
     return nothing
 end
+function predict!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Qh::PSDMatrix)
+    mul!(x_out.μ, Ah, x_curr.μ)
+    _, R = qr([Ah*x_curr.Σ.L Qh.L]')
+    out_cov = PSDMatrix(LowerTriangular(collect(R')))
+    copy!(x_out.Σ, out_cov)
+    return nothing
+end
+
 """
     predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-
-PREDICT step in Kalman filtering for linear dynamics models.
-
-```math
-m_{n+1}^P = A(h)*m_n
-P_{n+1}^P = A(h)*P_n*A(h) + Q(h)
-```
 
 See also: [`predict!`](@ref)
 """
@@ -43,25 +40,45 @@ function predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
 end
 
 
-"""Vanilla UPDATE, without fancy checks or pre-allocation
-
-Use this to test any "advanced" implementation against
 """
-function update(x_pred::Gaussian, h::AbstractVector, H::AbstractMatrix, R::AbstractMatrix)
+    update!(x_out, x_pred, measurement, H, R=0)
+
+UPDATE step in Kalman filtering for linear dynamics models, given a measurement `Z=N(z, S)`.
+In-place implementation of [`update`](@ref), saving the result in `x_out`.
+
+```math
+K = P_{n+1}^P * H^T * S^{-1}
+m_{n+1} = m_{n+1}^P + K * (0 - z)
+P_{n+1} = P_{n+1}^P - K*S*K^T
+```
+
+Implemented in Joseph Form.
+
+See also: [`predict`](@ref)
+"""
+function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
+                 H::AbstractMatrix, R=0)
+    @assert iszero(R)
+    z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
 
-    v = 0 .- h
-    S = Symmetric(H * P_p * H' .+ R)
     S_inv = inv(S)
     K = P_p * H' * S_inv
 
-    filt_mean = m_p .+ P_p * H' * (S\v)
-    filt_cov = X_A_Xt(P_p, (I-K*H))
+    x_out.μ .= m_p .+ K * (0 .- z)
+    copy!(x_out.Σ, X_A_Xt(P_p, (I-K*H)))
+    return x_out
+end
+"""
+    update(x_pred, measurement, H, R=0)
+
+See also: [`update!`](@ref)
+"""
+function update(x_pred::Gaussian, measurement::Gaussian, H::AbstractMatrix, R=0)
     @assert iszero(R)
-
-    assert_nonnegative_diagonal(filt_cov)
-
-    return Gaussian(filt_mean, filt_cov)
+    x_out = copy(x_pred)
+    predict!(x_out, x_pred, measurement, H, R)
+    return x_out
 end
 
 
