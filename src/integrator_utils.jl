@@ -20,7 +20,7 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
 
     if integ.alg.smooth
         smooth_all!(integ)
-        integ.sol.pu .= [integ.cache.E0 * x for x in integ.sol.x]
+        integ.sol.pu .= [integ.cache.SolProj * x for x in integ.sol.x]
         @assert (length(integ.sol.u) == length(integ.sol.pu))
         [(su .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
     end
@@ -46,7 +46,7 @@ function DiffEqBase.savevalues!(
     # Save our custom stuff that we need for the posterior
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.x, integrator.saveiter, copy(integrator.cache.x))
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.diffusions, integrator.saveiter, copy(integrator.cache.diffmat))
-    OrdinaryDiffEq.copyat_or_push!(integrator.sol.pu, integrator.saveiter, integrator.cache.E0*integrator.cache.x)
+    OrdinaryDiffEq.copyat_or_push!(integrator.sol.pu, integrator.saveiter, integrator.cache.SolProj*integrator.cache.x)
 
     integrator.sol.log_likelihood += integrator.cache.log_likelihood
 

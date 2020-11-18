@@ -84,8 +84,9 @@ struct MVDynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::MVDynamicDiffusion, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack dt = integ
-    @unpack d, q, R, InvPrecond, E1 = integ.cache
+    @unpack d, q, R, InvPrecond, Proj = integ.cache
     @unpack H, Q, measurement = integ.cache
+    E1 = Proj(1)
     z = measurement.μ
     Qh = Q*dt
 
@@ -114,9 +115,10 @@ struct MVFixedDiffusion <: AbstractStaticDiffusion end
 initial_diffusion(diffusion::MVFixedDiffusion, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
 function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack dt = integ
-    @unpack d, q, R, InvPrecond, E1 = integ.cache
+    @unpack d, q, R, InvPrecond, Proj = integ.cache
     @unpack measurement, H = integ.cache
     @unpack d, measurement = integ.cache
+    E1 = Proj(1)
     diffusions = integ.sol.diffusions
 
     # Assert EKF0

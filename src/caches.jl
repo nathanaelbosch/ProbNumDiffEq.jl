@@ -3,7 +3,7 @@
 ########################################################################################
 abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, EType, F1, F2, uType, xType, matType, PSDMatType, diffusionType, diffModelType,
+    RType, ProjType, SolProjType, F1, F2, uType, xType, matType, PSDMatType, diffusionType, diffModelType,
 } <: ODEFiltersCache
     # Constants
     d::Int                  # Dimension of the problem
@@ -12,8 +12,8 @@ mutable struct GaussianODEFilterCache{
     Q::PSDMatType
     diffusionmodel::diffModelType
     R::RType
-    E0::EType
-    E1::EType
+    Proj::ProjType
+    SolProj::SolProjType
     Precond::F1
     InvPrecond::F2
     # Mutable stuff
@@ -58,8 +58,8 @@ function OrdinaryDiffEq.alg_cache(
     matType = Matrix{uElType}
 
     # Projections
-    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    E1 = kron([i==2 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    SolProj = Proj(0)
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
@@ -77,8 +77,8 @@ function OrdinaryDiffEq.alg_cache(
     x0 = Gaussian(m0, P0)
 
     # Pre-allocate a bunch of matrices
-    h = E1 * x0.μ
-    H = copy(E1)
+    h = Proj(0) * x0.μ
+    H = copy(Proj(0))
     du = copy(u0)
     ddu = zeros(uElType, d, d)
     v, S = copy(h), copy(ddu)
@@ -96,12 +96,12 @@ function OrdinaryDiffEq.alg_cache(
     initdiff = initial_diffusion(diffmodel, d, q)
 
     return GaussianODEFilterCache{
-        typeof(R), typeof(E0), typeof(Precond), typeof(InvPrecond),
+        typeof(R), typeof(Proj), typeof(SolProj), typeof(Precond), typeof(InvPrecond),
         uType, typeof(x0), matType, typeof(Q), typeof(initdiff),
         typeof(diffmodel),
     }(
         # Constants
-        d, q, A, Q, diffmodel, R, E0, E1, Precond, InvPrecond,
+        d, q, A, Q, diffmodel, R, Proj, SolProj, Precond, InvPrecond,
         # Mutable stuff
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0),

@@ -1,8 +1,8 @@
 # Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
 function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     @assert integ.saveiter == 1
-    OrdinaryDiffEq.copyat_or_push!(integ.sol.x, integ.saveiter, copy(integ.cache.x))
-    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, integ.cache.E0*integ.cache.x)
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.x, integ.saveiter, copy(cache.x))
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, cache.SolProj*cache.x)
 end
 
 """Perform a step
@@ -20,7 +20,7 @@ Basically consists of the following steps
 """
 function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
     @unpack t, dt = integ
-    @unpack d, E0, Precond, InvPrecond = integ.cache
+    @unpack d, Proj, SolProj, Precond, InvPrecond = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
     @unpack A, Q = integ.cache
 
@@ -33,7 +33,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Predict
     predict!(x_pred, x, A, Q*dt)
-    mul!(u_pred, E0, PI*x_pred.μ)
+    mul!(u_pred, SolProj, PI*x_pred.μ)
 
     # Measure
     measure!(integ, x_pred, tnew)
@@ -52,7 +52,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Update
     x_filt = update!(integ, x_pred)
-    mul!(u_filt, E0, PI*x_filt.μ)
+    mul!(u_filt, SolProj, PI*x_filt.μ)
     integ.u .= u_filt
 
     # Estimate error for adaptive steps
@@ -73,9 +73,10 @@ end
 
 function h!(integ, x_pred, t)
     @unpack f, p, dt = integ
-    @unpack u_pred, du, E0, E1, InvPrecond, measurement = integ.cache
+    @unpack u_pred, du, Proj, InvPrecond, measurement = integ.cache
     PI = InvPrecond(dt)
     z = measurement.μ
+    E0, E1 = Proj(0), Proj(1)
 
     u_pred .= E0*PI*x_pred.μ
     IIP = isinplace(integ.f)
@@ -93,7 +94,8 @@ end
 
 function H!(integ, x_pred, t)
     @unpack f, p, dt, alg = integ
-    @unpack ddu, E0, E1, InvPrecond, H = integ.cache
+    @unpack ddu, Proj, InvPrecond, H = integ.cache
+    E0, E1 = Proj(0), Proj(1)
     PI = InvPrecond(dt)
 
     if alg isa EKF1 || alg isa IEKS

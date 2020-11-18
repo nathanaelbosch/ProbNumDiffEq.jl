@@ -81,6 +81,7 @@ abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolati
 struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
     d
     q
+    SolProj
     A
     Q
     Precond
@@ -91,10 +92,14 @@ function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = length(u0)
     q = alg.order
+
+    Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    SolProj = Proj(0)
+
     A, Q = ibm(d, q, uElType)
     Precond, InvPrecond = preconditioner(d, q)
     GaussianODEFilterPosterior(
-        d, q, A, Q, Precond, InvPrecond, alg.smooth)
+        d, q, SolProj, A, Q, Precond, InvPrecond, alg.smooth)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
@@ -142,8 +147,7 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
 end
 function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
     @unpack q, d = sol.interp
-    E = kron([i==1 ? N+1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    return E * sol.interp(t, sol.t, sol.x, sol.diffusions)
+    return sol.interp.SolProj * sol.interp(t, sol.t, sol.x, sol.diffusions)
 end
 (sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = StructArray(sol.(t, deriv))
 

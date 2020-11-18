@@ -59,7 +59,8 @@ end
     function Callback()
         function affect!(integ)
             @unpack dt = integ
-            @unpack x_filt, E0, InvPrecond = integ.cache
+            @unpack x_filt, Proj, InvPrecond = integ.cache
+            E0 = Proj(0)
 
             PI = InvPrecond(dt)
             x = x_filt
