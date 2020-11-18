@@ -34,7 +34,8 @@ end
 
 
 @testset "Big Float" begin
-    prob = remake(prob_ode_fitzhughnagumo, u0=big.(u0))
+    prob = prob_ode_fitzhughnagumo
+    prob = remake(prob, u0=big.(prob.u0))
     @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
 end
 
