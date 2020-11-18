@@ -90,3 +90,17 @@ end
     @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
     @test solve(prob, EKF0(order=3), callback=Callback()) isa ODEFilters.ProbODESolution
 end
+
+
+@testset "2nd Order ODE" begin
+    function vanderpol!(ddu, du, u, p, t)
+        μ = p[1]
+        @. ddu = μ * ((1-u^2) * du - u)
+    end
+    du0 = [0.0]
+    u0 = [2.0]
+    tspan = (0.0, 6.3)
+    p = [1e1]
+    prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
+    @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
+end

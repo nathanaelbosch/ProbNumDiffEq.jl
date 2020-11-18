@@ -73,11 +73,11 @@ end
 
 function h!(integ, x_pred, t)
     @unpack f, p, dt = integ
-    @unpack du, E0, E1, InvPrecond, measurement = integ.cache
+    @unpack u_pred, du, E0, E1, InvPrecond, measurement = integ.cache
     PI = InvPrecond(dt)
     z = measurement.μ
 
-    u_pred = E0*PI*x_pred.μ
+    u_pred .= E0*PI*x_pred.μ
     IIP = isinplace(integ.f)
     if IIP
         f(du, u_pred, p, t)

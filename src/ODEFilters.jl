@@ -16,6 +16,7 @@ using TaylorSeries
 using UnPack
 using RecipesBase
 using ModelingToolkit
+using RecursiveArrayTools
 
 
 @reexport using PSDMatrices
