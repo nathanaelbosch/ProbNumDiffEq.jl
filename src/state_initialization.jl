@@ -80,8 +80,10 @@ end
 
 function initialize_with_derivatives(u0, f::DynamicalODEFunction, p, t0, order::Int)
     f = isinplace(f) ? iip_to_oop(f) : f
+    d = length(u0)
+    dhalf = d÷2
     function _f(u, p, t)
-        _u = ArrayPartition(u[1:1], u[2:2])
+        _u = ArrayPartition(u[1:dhalf], u[(dhalf+1):end])
         _du = f(_u, p, t)
         du = vcat(_du...)
         return du

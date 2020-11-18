@@ -46,8 +46,8 @@ function OrdinaryDiffEq.alg_cache(
         initialize_with_derivatives(u, f, p, t0, q-1) :
         initialize_without_derivatives(u, f, p, t0, q-1)
     @assert iszero(P0)
-    @assert d == 1
-    m0 = [m0[2]; m0[1:2:end]]
+    m0 = [m0[d+1:2d];
+          vcat([m0[(i*2d+1):(i*2d+d)] for i in 0:q-1]...)]
     P0 = zeros(uElType, d*(q+1), d*(q+1))
     P0 = PSDMatrix(LowerTriangular(zero(P0)))
     x0 = Gaussian(m0, P0)
@@ -128,7 +128,7 @@ end
 
 function GaussianODEFilterPosterior(alg::SecondOrderEKF0, u0)
     uElType = eltype(u0)
-    d = length(u0[1])
+    d = length(u0.x[1])
     q = alg.order+1
     Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     SolProj = [Proj(1); Proj(0)]
