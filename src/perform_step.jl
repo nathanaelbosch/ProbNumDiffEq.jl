@@ -59,7 +59,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(integ, integ.cache)
         DiffEqBase.calculate_residuals!(
-            err_tmp, dt * err_est_unscaled, integ.u, u_filt,
+            err_tmp, dt * err_est_unscaled, integ.u[1:d], u_filt[1:d],
             integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end

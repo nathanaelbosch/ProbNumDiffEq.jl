@@ -70,4 +70,7 @@ include("numerics_tricks.jl")
 include("ieks.jl")
 export IEKS, solve_ieks
 
+include("second_order.jl")
+export SecondOrderEKF0
+
 end

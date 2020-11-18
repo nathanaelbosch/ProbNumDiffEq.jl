@@ -33,4 +33,7 @@ using ODEFilters
 
     println("Specific Problems")
     @testset "Specific Problems" begin include("specific_problems.jl") end
+
+    println("Second Order Stuff")
+    @testset "Second Order Stuff" begin include("second_order.jl") end
 end
