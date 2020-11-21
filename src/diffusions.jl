@@ -5,7 +5,7 @@ isstatic(diffusion::AbstractStaticDiffusion) = true
 isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
-initial_diffusion(diffusion::AbstractDiffusion, d, q) = 1.0
+initial_diffusion(diffusion::AbstractDiffusion, d, q, Eltype) = one(Eltype)
 
 
 struct FixedDiffusion <: AbstractStaticDiffusion end
@@ -81,7 +81,8 @@ end
 
 
 struct MVDynamicDiffusion <: AbstractDynamicDiffusion end
-initial_diffusion(diffusion::MVDynamicDiffusion, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
+initial_diffusion(diffusion::MVDynamicDiffusion, d, q, Eltype) =
+    kron(ones(Eltype, q+1, q+1), diagm(0 => ones(Eltype, d)))
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, Proj = integ.cache
@@ -112,7 +113,8 @@ end
 
 
 struct MVFixedDiffusion <: AbstractStaticDiffusion end
-initial_diffusion(diffusion::MVFixedDiffusion, d, q) = kron(ones(q+1, q+1), diagm(0 => ones(d)))
+initial_diffusion(diffusion::MVFixedDiffusion, d, q, Eltype) =
+    kron(ones(Eltype, q+1, q+1), diagm(0 => ones(Eltype, d)))
 function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, Proj = integ.cache

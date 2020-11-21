@@ -93,7 +93,7 @@ function OrdinaryDiffEq.alg_cache(
         :fixedMAP => MAPFixedDiffusion(),
     )
     diffmodel = diffusion_models[alg.diffusionmodel]
-    initdiff = initial_diffusion(diffmodel, d, q)
+    initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
 
     return GaussianODEFilterCache{
         typeof(R), typeof(Proj), typeof(SolProj), typeof(Precond), typeof(InvPrecond),
