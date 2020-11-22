@@ -1,3 +1,9 @@
+"""
+    SecondOrderEKF0(; prior=:ibm, order=1, diffusionmodel=:dynamic)
+
+[`EKF0`](@ref), but on second order ODE problems (of type
+`DiffEqBase.SecondOrderODEProblem`).
+"""
 Base.@kwdef struct SecondOrderEKF0 <: AbstractEKF
     prior::Symbol = :ibm
     order::Int = 1
