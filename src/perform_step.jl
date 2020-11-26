@@ -78,7 +78,6 @@ function h!(integ, x_pred, t)
     z = measurement.μ
     E0, E1 = Proj(0), Proj(1)
 
-    u_pred .= E0*PI*x_pred.μ
     IIP = isinplace(integ.f)
     if IIP
         f(du, u_pred, p, t)
@@ -87,7 +86,8 @@ function h!(integ, x_pred, t)
     end
     integ.destats.nf += 1
 
-    z .= E1*PI*x_pred.μ .- du
+    mul!(z, E1, PI*x_pred.μ)
+    z .-= du
 
     return z
 end
