@@ -48,7 +48,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Likelihood
     v, S = cache.measurement.μ, cache.measurement.Σ
-    cache.log_likelihood = logpdf(Gaussian(v, Symmetric(Matrix(S))), zeros(d))
+    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
     # Update
     x_filt = update!(integ, x_pred)
