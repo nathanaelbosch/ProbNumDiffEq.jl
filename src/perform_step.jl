@@ -32,7 +32,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     x = P * x
 
     # Predict
-    predict!(x_pred, x, A, Q)
+    predict!(x_pred, x, A, Q, integ.cache.x_tmp2.Σ.mat)
     mul!(u_pred, SolProj, PI*x_pred.μ)
 
     # Measure

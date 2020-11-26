@@ -20,11 +20,15 @@ function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::Abs
     copy!(x_out.Σ, out_cov)
     return nothing
 end
-function predict!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Qh::PSDMatrix)
+function predict!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Qh::PSDMatrix,
+                  cache::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
-    _, R = qr([Ah*x_curr.Σ.L Qh.L]')
+
+    mul!(cache, Ah, x_curr.Σ.L)
+    _, R = qr([cache Qh.L]')
     out_cov = PSDMatrix(LowerTriangular(collect(R')))
     copy!(x_out.Σ, out_cov)
+
     return nothing
 end
 
