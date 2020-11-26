@@ -61,17 +61,27 @@ Implemented in Joseph Form.
 See also: [`predict`](@ref)
 """
 function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
-                 H::AbstractMatrix, R=0)
+                 H::AbstractMatrix, K_prealloc::AbstractMatrix, R=0)
     @assert iszero(R)
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
 
-    S_inv = inv(S)
-    K = P_p * H' * S_inv
+    # S_inv = inv(S)
+    xdim, zdim = length(m_p), length(z)
+    K_partial = K_prealloc
+    mul!(K_partial, P_p, H')
+    # K = K_partial * S_inv
 
-    x_out.μ .= m_p .+ K * (0 .- z)
-    copy!(x_out.Σ, X_A_Xt(P_p, (I-K*H)))
-    return x_out
+    # Idea 1: Use S\z
+    # S \ (0 .- z) # This still allocates some stuff
+    mul!(x_out.μ, K_partial, S \ (0 .- z))
+    x_out.μ .+= m_p
+
+    # I-K*(S\H) # This also allocates
+    mcache = x_out.Σ.mat  # Will be overwritten anyways, so it's free real estate
+    mul!(mcache, K_partial, S\H)
+    copy!(x_out.Σ, X_A_Xt(P_p, (I-mcache)))
+    return nothing
 end
 """
     update(x_pred, measurement, H, R=0)

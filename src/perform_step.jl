@@ -139,9 +139,9 @@ end
 
 
 function update!(integ, prediction)
-    @unpack measurement, H, R, x_filt = integ.cache
-    update!(x_filt, prediction, measurement, H, R)
-    assert_nonnegative_diagonal(x_filt.Σ)
+    @unpack measurement, H, R, x_filt, K = integ.cache
+    update!(x_filt, prediction, measurement, H, K, R)
+    # assert_nonnegative_diagonal(x_filt.Σ)
     return x_filt
 end
 
