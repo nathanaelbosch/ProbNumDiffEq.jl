@@ -205,7 +205,7 @@ function _rand(x::Gaussian, n::Int=1)
     m, C = x.μ, x.Σ
     @assert C isa PSDMatrix
 
-    sample = m .+ C.L*randn(length(m), n)
+    sample = m .+ C.R'*randn(length(m), n)
     return sample
 end
 

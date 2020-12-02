@@ -39,7 +39,7 @@ show(io::IO, ::MIME"text/plain", g::Gaussian{T, S}) where {T, S} =
 size(g::Gaussian) = size(g.μ)
 
 Base.:*(M, g::PSDGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
-GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
+GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.R' \ z
 
 import Statistics: mean, var, std
 var(p::PSDGaussian{T}) where {T} = diag(p.Σ)

@@ -45,8 +45,8 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     end
 
     Q!(Q_base, 1.0)
-    QL = cholesky(Q_base).L
-    Q_psd = PSDMatrix(QL)
+    QR = UpperTriangular(collect(cholesky(Q_base).L'))
+    Q_psd = PSDMatrix(QR)
 
     return A_base, Q_psd
 end
