@@ -23,6 +23,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
         end
     end
     A!(A_base, 1.0)
+    A_base = UpperTriangular(A_base)
 
     @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::Real)
         idx = 2 * q + 1 - row - col
