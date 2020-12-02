@@ -70,13 +70,16 @@ function OrdinaryDiffEq.alg_cache(
     A, Q = ibm(d, q, uElType)
 
     # Measurement model
-    R = PSDMatrix(LowerTriangular(zeros(d, d)))
+    R = zeros(d, d)
     # Initial states
     m0, P0 = initialize_derivatives ?
         initialize_with_derivatives(u0, f, p, t0, q) :
         initialize_without_derivatives(u0, f, p, t0, q)
     @assert iszero(P0)
-    P0 = PSDMatrix(LowerTriangular(zero(P0)))
+    if alg.squarerootfilter
+        R = PSDMatrix(UpperTriangular(zeros(d, d)))
+        P0 = PSDMatrix(UpperTriangular(zero(P0)))
+    end
     x0 = Gaussian(m0, P0)
 
     # Pre-allocate a bunch of matrices

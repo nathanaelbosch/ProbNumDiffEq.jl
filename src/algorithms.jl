@@ -26,6 +26,7 @@ Base.@kwdef struct EKF0 <: AbstractEKF
     order::Int = 1
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    squarerootfilter::Bool = true
 end
 
 
@@ -48,4 +49,5 @@ Base.@kwdef struct EKF1 <: AbstractEKF
     order::Int = 1
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    squarerootfilter::Bool = true
 end
