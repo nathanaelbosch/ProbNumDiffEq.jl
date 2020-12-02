@@ -131,8 +131,9 @@ function measure!(integ, x_pred, t)
     z .= h!(integ, x_pred, t)
     H .= H!(integ, x_pred, t)
     # R .= Diagonal(eps.(z))
-    @assert iszero(R)
     copy!(S, X_A_Xt(x_pred.Σ, H))
+    # @assert iszero(R)
+    !iszero(R) && copy!(S, S + R)
 
     return nothing
 end
