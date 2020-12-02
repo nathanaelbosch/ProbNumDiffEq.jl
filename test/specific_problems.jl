@@ -5,6 +5,7 @@ using ODEFilters
 using Test
 using LinearAlgebra
 using UnPack
+using ParameterizedFunctions
 
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
@@ -104,4 +105,17 @@ end
     p = [1e1]
     prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
     @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
+end
+
+
+@testset "Problem definition with ParameterizedFunctions.jl" begin
+    f = @ode_def LotkaVolterra begin
+        dx = a*x - b*x*y
+        dy = -c*y + d*x*y
+    end a b c d
+    p = [1.5,1,3,1]
+    tspan = (0.0,10.0)
+    u0 = [1.0,1.0]
+    prob = ODEProblem(f,u0,tspan,p)
+    @test solve(prob, EKF1(order=3)) isa ODEFilters.ProbODESolution
 end

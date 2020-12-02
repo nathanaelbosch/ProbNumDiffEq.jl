@@ -44,7 +44,7 @@ function __initialize_with_derivatives_forwarddiff(u0, f, p, t0, order::Int)
 end
 
 
-function initialize_with_derivatives(u0, f::ODEFunction, p, t0, order::Int)
+function initialize_with_derivatives(u0, f, p, t0, order::Int)
     f = isinplace(f) ? iip_to_oop(f) : f
 
     d = length(u0)
