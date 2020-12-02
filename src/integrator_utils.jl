@@ -6,7 +6,6 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
         integ.sol.log_likelihood = NaN
         final_diff = integ.sol.diffusions[end]
         for s in integ.sol.x
-            # s.Σ .*= final_diff
             copy!(s.Σ, apply_diffusion(s.Σ, final_diff))
         end
 
