@@ -14,9 +14,10 @@ P_{n+1}^P = A(h)*P_n*A(h) + Q(h)
 
 See also: [`predict`](@ref)
 """
-function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix,
+                  cache::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
-    out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
+    out_cov = X_A_Xt(x_curr.Σ, Ah) .+ Qh
     copy!(x_out.Σ, out_cov)
     return nothing
 end
@@ -24,9 +25,9 @@ function predict!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Q
                   cache::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
 
-    mul!(cache, Ah, x_curr.Σ.L)
-    _, R = qr([cache Qh.L]')
-    out_cov = PSDMatrix(LowerTriangular(collect(R')))
+    mul!(cache, x_curr.Σ.R, Ah')
+    _, R = qr([cache; Qh.R])
+    out_cov = PSDMatrix(UpperTriangular(R))
     copy!(x_out.Σ, out_cov)
 
     return nothing
@@ -39,7 +40,7 @@ See also: [`predict!`](@ref)
 """
 function predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
     x_out = copy(x_curr)
-    predict!(x_out, x_curr, Ah, Qh)
+    predict!(x_out, x_curr, Ah, Qh, copy(Ah))
     return x_out
 end
 
@@ -61,7 +62,8 @@ Implemented in Joseph Form.
 See also: [`predict`](@ref)
 """
 function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
-                 H::AbstractMatrix, K_prealloc::AbstractMatrix, R=0)
+                 H::AbstractMatrix, K_prealloc::AbstractMatrix, R::AbstractMatrix,
+                 cachemat::AbstractMatrix, cachevec::AbstractVector)
     @assert iszero(R)
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
@@ -78,9 +80,9 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     x_out.μ .+= m_p
 
     # I-K*(S\H) # This also allocates
-    mcache = x_out.Σ.mat  # Will be overwritten anyways, so it's free real estate
-    mul!(mcache, K_partial, S\H)
-    copy!(x_out.Σ, X_A_Xt(P_p, (I-mcache)))
+    mul!(cachemat, K_partial, S\H)
+    # @info "pre X_A_Xt" P_p I-cache P_p.R*(I-cache)'
+    copy!(x_out.Σ, X_A_Xt(P_p, (I-cachemat)))
     return nothing
 end
 """

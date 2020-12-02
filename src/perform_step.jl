@@ -32,7 +32,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     x = P * x
 
     # Predict
-    predict!(x_pred, x, A, Q, integ.cache.x_tmp2.Σ.mat)
+    predict!(x_pred, x, A, Q, integ.cache.covmatcache)
     mul!(u_pred, SolProj, PI*x_pred.μ)
 
     # Measure
@@ -42,7 +42,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     diffmat = estimate_diffusion(cache.diffusionmodel, integ)
     integ.cache.diffmat = diffmat
     if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
-        predict!(x_pred, x, A, apply_diffusion(Q, diffmat))
+        predict!(x_pred, x, A, apply_diffusion(Q, diffmat), integ.cache.covmatcache)
         copy!(integ.cache.measurement.Σ, X_A_Xt(x_pred.Σ, integ.cache.H))
     end
 
@@ -52,22 +52,22 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Update
     x_filt = update!(integ, x_pred)
-    mul!(u_filt, SolProj, PI*x_filt.μ)
+
+    # Undo the coordinate change / preconditioning
+    mul!(integ.cache.x, PI, x)
+    mul!(integ.cache.x_pred, PI, x_pred)
+    mul!(integ.cache.x_filt, PI, x_filt)
+    mul!(u_filt, SolProj, integ.cache.x_filt.μ)
     integ.u .= u_filt
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(integ, integ.cache)
         DiffEqBase.calculate_residuals!(
-            err_tmp, dt * err_est_unscaled, integ.u, u_filt,
+            err_tmp, dt * err_est_unscaled, integ.uprev, integ.u,
             integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
-
-    # Undo the coordinate change / preconditioning
-    copy!(integ.cache.x, PI * x)
-    copy!(integ.cache.x_pred, PI * x_pred)
-    copy!(integ.cache.x_filt, PI * x_filt)
 end
 
 
@@ -139,8 +139,8 @@ end
 
 
 function update!(integ, prediction)
-    @unpack measurement, H, R, x_filt, K = integ.cache
-    update!(x_filt, prediction, measurement, H, K, R)
+    @unpack measurement, H, R, x_filt, K, covmatcache, tmp = integ.cache
+    update!(x_filt, prediction, measurement, H, K, R, covmatcache, tmp)
     # assert_nonnegative_diagonal(x_filt.Σ)
     return x_filt
 end

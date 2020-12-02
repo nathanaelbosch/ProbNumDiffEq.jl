@@ -48,6 +48,18 @@ mean(s::PSDGaussianList{T}) where {T} = mean.(s)
 var(s::PSDGaussianList{T}) where {T} = var.(s)
 std(s::PSDGaussianList{T}) where {T} = std.(s)
 
+function mul!(x_out::Gaussian, A::AbstractMatrix, x_in::Gaussian)
+    mul!(x_out.μ, A, x_in.μ)
+    x_out.Σ .= A*x_in.Σ*A'
+end
+function mul!(x_out::PSDGaussian, A::AbstractMatrix, x_in::PSDGaussian)
+    mul!(x_out.μ, A, x_in.μ)
+    x_out.Σ.R .= x_in.Σ.R*A'
+    x_out.Σ.mat .= x_out.Σ.R'x_out.Σ.R
+end
+
+GaussianDistributions.sqmahal(P::Gaussian, x::Val{0}) = GaussianDistributions.norm_sqr(GaussianDistributions.whiten(P.Σ, - P.μ))
+
 include("priors.jl")
 include("diffusions.jl")
 
