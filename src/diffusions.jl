@@ -82,7 +82,7 @@ end
 
 struct MVDynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::MVDynamicDiffusion, d, q, Eltype) =
-    kron(ones(Eltype, q+1, q+1), diagm(0 => ones(Eltype, d)))
+    kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, Proj = integ.cache
@@ -107,6 +107,7 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     Σ = Diagonal(Σ_ii)
 
     Σ_out = kron(Diagonal(ones(q+1)), Σ)
+    @assert isdiag(Σ_out)
     # @info "MVDynamic diffusion" Σ Σ_out
     return Σ_out
 end
@@ -114,7 +115,7 @@ end
 
 struct MVFixedDiffusion <: AbstractStaticDiffusion end
 initial_diffusion(diffusion::MVFixedDiffusion, d, q, Eltype) =
-    kron(ones(Eltype, q+1, q+1), diagm(0 => ones(Eltype, d)))
+    kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
 function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack dt = integ
     @unpack d, q, R, InvPrecond, Proj = integ.cache
@@ -138,6 +139,7 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
     Σ_out = kron(Diagonal(ones(q+1)), Σ)
+    @assert isdiag(Σ_out)
     # @info "MV-MLE-Diffusion" v S Σ Σ_out
 
     if integ.success_iter == 0
