@@ -32,33 +32,33 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = integ.cache
-    @unpack x_tmp = integ.cache
-
-    # @info "smooth!" x_curr.Σ x_next.Σ Ah Qh PI
-    if all((Qh) .< eps(eltype(Qh)))
-        @warn "smooth: Qh is really small! The system is basically deterministic, so we just \"predict backwards\"."
-        return inv(Ah) * x_next
-    end
+    @unpack x_tmp, x_tmp2, G, covmatcache = integ.cache
+    veccache = x_tmp.μ
 
     # Prediction: t -> t+1
-    predict!(x_tmp, x_curr, Ah, Qh)
+    predict!(x_tmp, x_curr, Ah, Qh, G)
 
     # Smoothing
     P_p = x_tmp.Σ
     P_p_inv = inv(P_p)
-    G = x_curr.Σ * Ah' * P_p_inv
-    x_curr.μ .+= G * (x_next.μ .- x_tmp.μ)
+
+    # Compute G withouth additional allocations
+    mul!(covmatcache, Ah', P_p_inv)
+    mul!(G, x_curr.Σ, covmatcache)
+
+    mul!(veccache, G, (x_next.μ - x_tmp.μ))
+    x_curr.μ .+= veccache
 
     # Joseph-Form:
-    K_tilde = x_curr.Σ * Ah' * P_p_inv
+    mul!(covmatcache, G, Ah)
     P_s = (
-        X_A_Xt(x_curr.Σ, (I - K_tilde*Ah))
-        + X_A_Xt(Qh, K_tilde)
+        X_A_Xt(x_curr.Σ, (I - covmatcache))
+        + X_A_Xt(Qh, G)
         + X_A_Xt(x_next.Σ, G)
     )
     copy!(x_curr.Σ, P_s)
 
-    assert_nonnegative_diagonal(x_curr.Σ)
+    # assert_nonnegative_diagonal(x_curr.Σ)
     # PDMat(Symmetric(x_curr.Σ))
 
     return nothing
