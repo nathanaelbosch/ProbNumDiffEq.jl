@@ -23,7 +23,7 @@ prob = ODEFilters.remake_prob_with_jac(prob)
 
     A_p, Q_p = ODEFilters.ibm(d, q)
     Ah_p = A_p
-    Qh_p = Q_p * h * σ^2
+    Qh_p = Q_p * σ^2
 
 
     # First test that they're both equivalent

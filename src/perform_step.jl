@@ -32,7 +32,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     x = P * x
 
     # Predict
-    predict!(x_pred, x, A, Q*dt)
+    predict!(x_pred, x, A, Q)
     mul!(u_pred, SolProj, PI*x_pred.μ)
 
     # Measure
@@ -42,7 +42,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     diffmat = estimate_diffusion(cache.diffusionmodel, integ)
     integ.cache.diffmat = diffmat
     if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
-        predict!(x_pred, x, A, apply_diffusion(Q*dt, diffmat))
+        predict!(x_pred, x, A, apply_diffusion(Q, diffmat))
         copy!(integ.cache.measurement.Σ, X_A_Xt(x_pred.Σ, integ.cache.H))
     end
 
@@ -145,14 +145,13 @@ end
 
 
 function estimate_errors(integ, cache::GaussianODEFilterCache)
-    @unpack dt = integ
     @unpack diffmat, Q, H = integ.cache
 
     if diffmat isa Real && isinf(diffmat)
         return Inf
     end
 
-    error_estimate = sqrt.(diag(X_A_Xt(apply_diffusion(Q*dt, diffmat), H)))
+    error_estimate = sqrt.(diag(X_A_Xt(apply_diffusion(Q, diffmat), H)))
 
     return error_estimate
 end

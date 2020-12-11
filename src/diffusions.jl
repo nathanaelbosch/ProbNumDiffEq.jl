@@ -75,7 +75,7 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     @unpack H, Q, measurement = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    σ² = z' * ((H*Q*H')\z) / dt / d
+    σ² = z' * ((H*Q*H')\z) / d
     return σ²
 end
 
@@ -89,7 +89,6 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack H, Q, measurement = integ.cache
     E1 = Proj(1)
     z = measurement.μ
-    Qh = Q*dt
 
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
 
@@ -98,9 +97,9 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @assert all(H .== E1 * PI)
 
     # More safety checks
-    @assert isdiag(H*Qh*H')
-    @assert length(unique(diag(H*Qh*H'))) == 1
-    Q0_11 = diag(H*Qh*H')[1]
+    @assert isdiag(H*Q*H')
+    @assert length(unique(diag(H*Q*H'))) == 1
+    Q0_11 = diag(H*Q*H')[1]
 
     Σ_ii = z .^ 2 ./ Q0_11
     Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))

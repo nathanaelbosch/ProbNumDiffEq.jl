@@ -4,7 +4,7 @@ function preconditioner(d, q)
     @fastmath @inbounds function P(h)
         @simd for i in 1:d
             @simd for j in 0:q
-                P_preallocated[j*d + i,j*d + i] = h^(j-q)
+                P_preallocated[j*d + i,j*d + i] = h^(j-q-1/2)
             end
         end
         return P_preallocated
