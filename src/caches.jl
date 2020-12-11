@@ -3,7 +3,7 @@
 ########################################################################################
 abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, ProjType, SolProjType, F1, F2, uType, xType, AType, QType, matType, diffusionType, diffModelType,
+    RType, ProjType, SolProjType, FP, uType, xType, AType, QType, matType, diffusionType, diffModelType,
     measType, llType,
 } <: ODEFiltersCache
     # Constants
@@ -15,8 +15,7 @@ mutable struct GaussianODEFilterCache{
     R::RType
     Proj::ProjType
     SolProj::SolProjType
-    Precond::F1
-    InvPrecond::F2
+    Precond::FP
     # Mutable stuff
     u::uType
     u_pred::uType
@@ -67,7 +66,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
-    Precond, InvPrecond = preconditioner(d, q)
+    Precond = preconditioner(d, q)
     A, Q = ibm(d, q, uElType)
 
     # Measurement model
@@ -102,12 +101,12 @@ function OrdinaryDiffEq.alg_cache(
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
 
     return GaussianODEFilterCache{
-        typeof(R), typeof(Proj), typeof(SolProj), typeof(Precond), typeof(InvPrecond),
+        typeof(R), typeof(Proj), typeof(SolProj), typeof(Precond),
         uType, typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
         typeof(diffmodel), typeof(measurement), uEltypeNoUnits,
     }(
         # Constants
-        d, q, A, Q, diffmodel, R, Proj, SolProj, Precond, InvPrecond,
+        d, q, A, Q, diffmodel, R, Proj, SolProj, Precond,
         # Mutable stuff
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0), copy(x0),

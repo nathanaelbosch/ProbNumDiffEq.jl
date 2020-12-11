@@ -27,8 +27,8 @@ prob = ODEFilters.remake_prob_with_jac(prob)
 
 
     # First test that they're both equivalent
-    P, PI = ODEFilters.preconditioner(d, q)
-    P, PI = P(h), PI(h)
+    P = ODEFilters.preconditioner(d, q)
+    P, PI = P(h), inv(P(h))
     @test Qh_p ≈ P * Qh * P'
     @test Ah_p ≈ P * Ah * PI
 

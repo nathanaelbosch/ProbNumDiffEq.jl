@@ -20,7 +20,7 @@ Basically consists of the following steps
 """
 function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
     @unpack t, dt = integ
-    @unpack d, Proj, SolProj, Precond, InvPrecond = integ.cache
+    @unpack d, Proj, SolProj, Precond = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
     @unpack A, Q = integ.cache
 
@@ -28,7 +28,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Coordinate change / preconditioning
     P = Precond(dt)
-    PI = InvPrecond(dt)
+    PI = inv(P)
     x = P * x
 
     # Predict
@@ -73,8 +73,8 @@ end
 
 function h!(integ, x_pred, t)
     @unpack f, p, dt = integ
-    @unpack u_pred, du, Proj, InvPrecond, measurement = integ.cache
-    PI = InvPrecond(dt)
+    @unpack u_pred, du, Proj, Precond, measurement = integ.cache
+    PI = inv(Precond(dt))
     z = measurement.μ
     E0, E1 = Proj(0), Proj(1)
 
@@ -94,9 +94,9 @@ end
 
 function H!(integ, x_pred, t)
     @unpack f, p, dt, alg = integ
-    @unpack ddu, Proj, InvPrecond, H = integ.cache
+    @unpack ddu, Proj, H, Precond = integ.cache
     E0, E1 = Proj(0), Proj(1)
-    PI = InvPrecond(dt)
+    PI = inv(Precond(dt))
 
     if alg isa EKF1 || alg isa IEKS
         if alg isa IEKS && !isnothing(alg.linearize_at)
@@ -146,7 +146,6 @@ end
 
 function estimate_errors(integ, cache::GaussianODEFilterCache)
     @unpack dt = integ
-    @unpack InvPrecond = integ.cache
     @unpack diffmat, Q, H = integ.cache
 
     if diffmat isa Real && isinf(diffmat)

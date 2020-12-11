@@ -85,7 +85,6 @@ struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
     A
     Q
     Precond
-    InvPrecond
     smooth
 end
 function GaussianODEFilterPosterior(alg, u0)
@@ -97,14 +96,14 @@ function GaussianODEFilterPosterior(alg, u0)
     SolProj = Proj(0)
 
     A, Q = ibm(d, q, uElType)
-    Precond, InvPrecond = preconditioner(d, q)
+    Precond = preconditioner(d, q)
     GaussianODEFilterPosterior(
-        d, q, SolProj, A, Q, Precond, InvPrecond, alg.smooth)
+        d, q, SolProj, A, Q, Precond, alg.smooth)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
 function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
-    @unpack A, Q, d, q, Precond, InvPrecond = posterior
+    @unpack A, Q, d, q, Precond = posterior
 
     if tval < t[1]
         error("Invalid t<t0")
@@ -122,7 +121,8 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
 
     # Extrapolate
     h1 = tval - prev_t
-    P, PI = Precond(h1), InvPrecond(h1)
+    P = Precond(h1)
+    PI = inv(P)
     Qh = apply_diffusion(Q*h1, diffmat)
     goal_pred = predict(P * prev_rv, A, Qh)
     goal_pred = PI * goal_pred
@@ -136,7 +136,8 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
 
     # Smooth
     h2 = next_t - tval
-    P, PI = Precond(h2), InvPrecond(h2)
+    P = Precond(h2)
+    PI = inv(P)
     goal_pred = P * goal_pred
     next_smoothed = P * next_smoothed
     Qh = apply_diffusion(Q*h2, diffmat)
@@ -202,7 +203,7 @@ function sample(sol::ProbODESolution, n::Int=1)
 end
 function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
 
-    @unpack A, Q, d, q, Precond, InvPrecond = posterior
+    @unpack A, Q, d, q, Precond = posterior
     E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     dim = d*(q+1)
 
@@ -221,7 +222,8 @@ function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
         diffmat = diffusions[i_diffusion]
 
         Qh = apply_diffusion(Q*dt, diffmat)
-        P, PI = Precond(dt), InvPrecond(dt)
+        P = Precond(dt)
+        PI = inv(P)
 
         for j in 1:n
             sample_p = P*sample_path[i+1, :, j]

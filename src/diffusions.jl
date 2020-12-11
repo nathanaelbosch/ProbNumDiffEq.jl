@@ -85,7 +85,7 @@ initial_diffusion(diffusion::MVDynamicDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack dt = integ
-    @unpack d, q, R, InvPrecond, Proj = integ.cache
+    @unpack d, q, R, Precond, Proj = integ.cache
     @unpack H, Q, measurement = integ.cache
     E1 = Proj(1)
     z = measurement.μ
@@ -94,7 +94,7 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
 
     # Assert EKF0
-    PI = InvPrecond(dt)
+    PI = inv(Precond(dt))
     @assert all(H .== E1 * PI)
 
     # More safety checks
@@ -118,14 +118,14 @@ initial_diffusion(diffusion::MVFixedDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
 function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack dt = integ
-    @unpack d, q, R, InvPrecond, Proj = integ.cache
+    @unpack d, q, R, Precond, Proj = integ.cache
     @unpack measurement, H = integ.cache
     @unpack d, measurement = integ.cache
     E1 = Proj(1)
     diffusions = integ.sol.diffusions
 
     # Assert EKF0
-    PI = InvPrecond(dt)
+    PI = inv(Precond(dt))
     @assert all(H .== E1 * PI)
 
     @unpack measurement = integ.cache

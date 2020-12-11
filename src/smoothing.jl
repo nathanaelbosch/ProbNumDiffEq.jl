@@ -4,7 +4,7 @@
 function smooth_all!(integ)
 
     @unpack x, t, diffusions = integ.sol
-    @unpack A, Q, Precond, InvPrecond = integ.cache
+    @unpack A, Q, Precond = integ.cache
     # x_pred is just used as a cache here
 
     for i in length(x)-1:-1:2
@@ -15,7 +15,7 @@ function smooth_all!(integ)
         end
 
         P = Precond(dt)
-        PI = InvPrecond(dt)
+        PI = inv(P)
 
         Qh = apply_diffusion(Q*dt, diffusions[i])
 
