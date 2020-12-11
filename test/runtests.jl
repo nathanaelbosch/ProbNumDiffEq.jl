@@ -1,36 +1,43 @@
 using Test
 using ODEFilters
 
+using TimerOutputs
+const to = TimerOutput()
+macro timedtestset(name, code)
+    return esc(:(@timeit to $name @testset $name $code))
+end
 
 @testset "ODEFilters" begin
 
     println("Correctness")
-    @testset "Correctness" begin include("correctness.jl") end
+    @timedtestset "Correctness" begin include("correctness.jl") end
 
     println("Priors")
-    @testset "Priors" begin include("priors.jl") end
+    @timedtestset "Priors" begin include("priors.jl") end
 
     println("Solution")
-    @testset "Solution" begin include("solution.jl") end
+    @timedtestset "Solution" begin include("solution.jl") end
 
     println("Diffusions")
-    @testset "Diffusions" begin include("diffusions.jl") end
+    @timedtestset "Diffusions" begin include("diffusions.jl") end
 
     println("State Initialization")
-    @testset "State Initialization" begin include("state_init.jl") end
+    @timedtestset "State Initialization" begin include("state_init.jl") end
 
     println("Preconditioning")
-    @testset "Preconditioning" begin include("preconditioning.jl") end
+    @timedtestset "Preconditioning" begin include("preconditioning.jl") end
 
     println("Smoothing")
-    @testset "Smoothing" begin include("smoothing.jl") end
+    @timedtestset "Smoothing" begin include("smoothing.jl") end
 
     println("Errors")
-    @testset "Errors" begin include("errors.jl") end
+    @timedtestset "Errors" begin include("errors.jl") end
 
     println("IEKS")
-    @testset "IEKS" begin include("ieks.jl") end
+    @timedtestset "IEKS" begin include("ieks.jl") end
 
     println("Specific Problems")
-    @testset "Specific Problems" begin include("specific_problems.jl") end
+    @timedtestset "Specific Problems" begin include("specific_problems.jl") end
 end
+
+display(to)
