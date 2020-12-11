@@ -52,7 +52,7 @@ include("priors.jl")
 include("diffusions.jl")
 
 include("algorithms.jl")
-export EKF0, EKF1
+export EK0, EK1
 include("alg_utils.jl")
 include("caches.jl")
 include("state_initialization.jl")

@@ -8,19 +8,19 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 import ODEFilters: remake_prob_with_jac
 
 
-@testset "EKF1 requires Jac" begin
+@testset "EK1 requires Jac" begin
     prob = prob_ode_lotkavoltera
-    @test_throws ErrorException solve(prob, EKF1())
-    @test solve(remake_prob_with_jac(prob), EKF1()) isa ODEFilters.ProbODESolution
+    @test_throws ErrorException solve(prob, EK1())
+    @test solve(remake_prob_with_jac(prob), EK1()) isa ODEFilters.ProbODESolution
 end
 
 @testset "One-dim problems don't work so far!" begin
     prob = prob_ode_linear
-    @test_throws ErrorException solve(prob, EKF0())
+    @test_throws ErrorException solve(prob, EK0())
 end
 
 @testset "Fixed-timestep requires dt" begin
     prob = prob_ode_lotkavoltera
-    @test_throws ErrorException solve(prob, EKF0(), adaptive=false)
-    @test solve(prob, EKF0(), adaptive=false, dt=0.05) isa ODEFilters.ProbODESolution
+    @test_throws ErrorException solve(prob, EK0(), adaptive=false)
+    @test solve(prob, EK0(), adaptive=false, dt=0.05) isa ODEFilters.ProbODESolution
 end

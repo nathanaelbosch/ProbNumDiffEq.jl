@@ -14,38 +14,38 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode
 
 @testset "Smoothing with small constant steps" begin
     prob = ODEFilters.remake_prob_with_jac(prob_ode_fitzhughnagumo)
-    @test solve(prob, EKF0(order=4, diffusionmodel=:fixed, smooth=true),
+    @test solve(prob, EK0(order=4, diffusionmodel=:fixed, smooth=true),
                 adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
-    @test solve(prob, EKF1(order=4, diffusionmodel=:fixed, smooth=true),
+    @test solve(prob, EK1(order=4, diffusionmodel=:fixed, smooth=true),
                 adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
 end
 
 
 @testset "Problem with analytic solution" begin
     prob = ODEFilters.remake_prob_with_jac(prob_ode_mm_linear)
-    @test solve(prob, EKF0(order=4)) isa ODEFilters.ProbODESolution
-    @test solve(prob, EKF1(order=4)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=4)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK1(order=4)) isa ODEFilters.ProbODESolution
 end
 
 
 @testset "Stiff Vanderpol" begin
     prob = ODEFilters.remake_prob_with_jac(prob_ode_vanstiff)
-    @test solve(prob, EKF1(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK1(order=3)) isa ODEFilters.ProbODESolution
 end
 
 
 @testset "Big Float" begin
     prob = prob_ode_fitzhughnagumo
     prob = remake(prob, u0=big.(prob.u0))
-    @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=3)) isa ODEFilters.ProbODESolution
 end
 
 
 @testset "OOP problem definition" begin
     prob = ODEProblem((u, p, t) -> ([p[1] * u[1] .* (1 .- u[1])]), [1e-1], (0.0, 5), [3.0])
-    @test solve(prob, EKF0(order=4)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=4)) isa ODEFilters.ProbODESolution
     prob = ODEFilters.remake_prob_with_jac(prob)
-    @test solve(prob, EKF1(order=4)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK1(order=4)) isa ODEFilters.ProbODESolution
 end
 
 
@@ -89,8 +89,8 @@ end
         DiscreteCallback(condtion,affect!,save_positions=save_positions)
     end
 
-    @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
-    @test solve(prob, EKF0(order=3), callback=Callback()) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=3), callback=Callback()) isa ODEFilters.ProbODESolution
 end
 
 
@@ -104,7 +104,7 @@ end
     tspan = (0.0, 6.3)
     p = [1e1]
     prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
-    @test solve(prob, EKF0(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=3)) isa ODEFilters.ProbODESolution
 end
 
 
@@ -117,5 +117,5 @@ end
     tspan = (0.0,10.0)
     u0 = [1.0,1.0]
     prob = ODEProblem(f,u0,tspan,p)
-    @test solve(prob, EKF1(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK1(order=3)) isa ODEFilters.ProbODESolution
 end

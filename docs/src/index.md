@@ -37,10 +37,10 @@ nothing # hide
 ```
 
 ### Step 2: Solving a problem
-Currently, ODEFilters.jl implements two probabilistic numerical methods: `EKF0` and `EKF1`.
-In this example we solve the ODE with the default `EKF0`, for high tolerance levels.
+Currently, ODEFilters.jl implements two probabilistic numerical methods: `EK0` and `EK1`.
+In this example we solve the ODE with the default `EK0`, for high tolerance levels.
 ```@example 1
-sol = solve(prob, EKF0(), abstol=1e-1, reltol=1e-2)
+sol = solve(prob, EK0(), abstol=1e-1, reltol=1e-2)
 nothing # hide
 ```
 

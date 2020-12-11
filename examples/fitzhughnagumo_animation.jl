@@ -20,7 +20,7 @@ appxsol = solve(prob, abstol=1e-12, reltol=1e-12)
 
 ############################################################################################
 # Solve with integrator interface and make animation
-integ = init(prob, EKF0(order=1), adaptive=false, dt=7e-2)
+integ = init(prob, EK0(order=1), adaptive=false, dt=7e-2)
 
 anim = @animate for i in 1:(prob.tspan[2] / integ.dt)
     step!(integ)

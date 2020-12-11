@@ -92,7 +92,7 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
 
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
 
-    # Assert EKF0
+    # Assert EK0
     PI = inv(Precond(dt))
     @assert all(H .== E1 * PI)
 
@@ -123,7 +123,7 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
     E1 = Proj(1)
     diffusions = integ.sol.diffusions
 
-    # Assert EKF0
+    # Assert EK0
     PI = inv(Precond(dt))
     @assert all(H .== E1 * PI)
 

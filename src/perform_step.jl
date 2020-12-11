@@ -98,7 +98,7 @@ function H!(integ, x_pred, t)
     E0, E1 = Proj(0), Proj(1)
     PI = inv(Precond(dt))
 
-    if alg isa EKF1 || alg isa IEKS
+    if alg isa EK1 || alg isa IEKS
         if alg isa IEKS && !isnothing(alg.linearize_at)
             u_pred = alg.linearize_at(t).μ
         else

@@ -6,7 +6,7 @@ It describes the
 [ProbInts](https://arxiv.org/abs/1506.04592)
 method for quantification of numerical uncertainty, and provides an extension of ProbInts to adaptive step sizes.
 
-In this example, we want to compare the uncertainty estimates of `Tsit5`+`AdaptiveProbInts` to the posterior computed with the `EKF1`.
+In this example, we want to compare the uncertainty estimates of `Tsit5`+`AdaptiveProbInts` to the posterior computed with the `EK1`.
 
 
 ### 1. Problem definition: FitzHugh-Nagumo
@@ -60,10 +60,10 @@ savefig("./figures/ex_pi_probints.svg"); nothing # hide
 ![Prob-Ints Errors](./figures/ex_pi_probints.svg)
 
 
-### 3. EKF1
-Uncertainties provided by the `EKF1`:
+### 3. EK1
+Uncertainties provided by the `EK1`:
 ```@example probints
-sol = solve(prob, EKF1())
+sol = solve(prob, EK1())
 plot(sol.t, stack(appxsol.(sol.t) - sol.u), ylabel="Error")
 plot!(sol.t, zero(stack(sol.u)), ribbon=3stack(std(sol.pu)), color=[1 2], label="")
 savefig("./figures/ex_pi_ours.svg"); nothing # hide

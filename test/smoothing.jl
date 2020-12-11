@@ -14,7 +14,7 @@ prob = ODEFilters.remake_prob_with_jac(prob)
     dt = 1e-4
     q = 4
     @test solve(
-        prob, EKF0(order=q, smooth=true, diffusionmodel=:dynamic),
+        prob, EK0(order=q, smooth=true, diffusionmodel=:dynamic),
         adaptive=false,
         dt=dt,
     ) isa DiffEqBase.AbstractODESolution
@@ -25,8 +25,8 @@ end
     q = 3
     dt = 1e-2
 
-    sol_nonsmooth = solve(prob, EKF0(order=q, smooth=false), adaptive=false, dt=dt);
-    sol_smooth = solve(prob, EKF0(order=q, smooth=true), adaptive=false, dt=dt);
+    sol_nonsmooth = solve(prob, EK0(order=q, smooth=false), adaptive=false, dt=dt);
+    sol_smooth = solve(prob, EK0(order=q, smooth=true), adaptive=false, dt=dt);
 
     @test sol_nonsmooth.t ≈ sol_smooth.t
     @test sol_nonsmooth[end] == sol_smooth[end]

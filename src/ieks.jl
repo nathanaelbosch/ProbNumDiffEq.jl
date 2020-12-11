@@ -1,5 +1,5 @@
 # Iterated extended Kalman smoothing
-mutable struct IEKS <: AbstractEKF
+mutable struct IEKS <: AbstractEK
     prior::Symbol
     order::Int
     diffusionmodel::Symbol
@@ -19,9 +19,9 @@ since it is implemented as an outer loop around the solver.
 Currently, only the integrated Brownian motion prior `:ibm` is supported.
 For the diffusionmodel, chose one of
 `[:dynamic, :dynamicMV, :fixed, :fixedMV, :fixedMAP]`.
-Just like the [`EKF1`](@ref) it requires that the Jacobian of the rhs function is available.
+Just like the [`EK1`](@ref) it requires that the Jacobian of the rhs function is available.
 
-See also: [`EKF0`](@ref), [`EKF1`](@ref), [`solve_ieks`](@ref)
+See also: [`EK0`](@ref), [`EK1`](@ref), [`solve_ieks`](@ref)
 
 # References:
 - F. Tronarp, S. Särkkä, and P. Hennig: **Bayesian ODE Solvers: The Maximum A Posteriori Estimate**

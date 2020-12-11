@@ -19,11 +19,11 @@ for (prob, probname) in [
 
         true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
-        for Alg in (EKF0, EKF1),
+        for Alg in (EK0, EK1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             q in [1, 3, 5]
 
-            if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
+            if Alg == EK1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
             @testset "Constant steps: $probname; q=$q, diffusion=$diffusion, alg=$Alg" begin
 
@@ -48,11 +48,11 @@ for (prob, probname) in [
         true_sol = solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
         true_dense_vals = true_sol.(t_eval)
 
-        for Alg in (EKF0, EKF1),
+        for Alg in (EK0, EK1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             q in [2, 4, 6]
 
-            if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
+            if Alg == EK1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
             @testset "Adaptive steps: $probname; q=$q, diffusion=$diffusion, Alg=$Alg" begin
 
