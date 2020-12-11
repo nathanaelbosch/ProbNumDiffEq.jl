@@ -6,7 +6,7 @@ using Test
 using OrdinaryDiffEq
 using LinearAlgebra
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
 import ODEFilters: remake_prob_with_jac
 
@@ -21,7 +21,7 @@ for (prob, probname) in [
 
         for Alg in (EKF0, EKF1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
-            q in [1, 3, 5, 7]
+            q in [1, 3, 5]
 
             if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
@@ -29,11 +29,9 @@ for (prob, probname) in [
 
             @debug "Testing for correctness: Constant steps" probname alg diffusion q dt
 
-            if q==4 && Alg == EKF0 && diffusion == :dynamicMV continue end
-
             sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
-                        adaptive=false, dt=5e-4)
-            @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
+                        adaptive=false, dt=5e-3)
+            @test sol.u ≈ true_sol.(sol.t) rtol=1e-5
             end
         end
     end
@@ -52,7 +50,7 @@ for (prob, probname) in [
 
         for Alg in (EKF0, EKF1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
-            q in [1, 3, 5, 7]
+            q in [2, 4, 6]
 
             if Alg == EKF1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
@@ -60,11 +58,11 @@ for (prob, probname) in [
 
             @debug "Testing for correctness: Adaptive steps" probname Alg diffusion q
 
-            sol = solve(prob, Alg(order=q, diffusionmodel=diffusion, smooth=false),
-                        adaptive=true, abstol=1e-9, reltol=1e-9)
+            sol = solve(prob, Alg(order=q, diffusionmodel=diffusion),
+                        adaptive=true)
 
-            @test sol.u ≈ true_sol.(sol.t) rtol=1e-6
-            @test sol(t_eval).μ ≈ true_dense_vals rtol=1e-6
+            @test sol.u ≈ true_sol.(sol.t) rtol=1e-4
+            @test sol(t_eval).μ ≈ true_dense_vals rtol=1e-4
 
             end
         end
