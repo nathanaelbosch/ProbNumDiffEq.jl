@@ -93,29 +93,31 @@ end
 
 function H!(integ, x_pred, t)
     @unpack f, p, dt, alg = integ
-    @unpack ddu, Proj, H, Precond = integ.cache
+    @unpack ddu, Proj, Precond, H, u_pred = integ.cache
     E0, E1 = Proj(0), Proj(1)
     PI = inv(Precond(dt))
 
     if alg isa EK1 || alg isa IEKS
         if alg isa IEKS && !isnothing(alg.linearize_at)
-            u_pred = alg.linearize_at(t).μ
+            linearize_at = alg.linearize_at(t).μ
         else
-            u_pred = E0*PI*x_pred.μ
+            linearize_at = u_pred
         end
 
         if isinplace(integ.f)
-            f.jac(ddu, u_pred, p, t)
+            f.jac(ddu, linearize_at, p, t)
         else
-            ddu .= f.jac(u_pred, p, t)
+            ddu .= f.jac(linearize_at, p, t)
             # WIP: Handle Jacobians as OrdinaryDiffEq.jl does
             # J = OrdinaryDiffEq.jacobian((u)-> f(u, p, t), u_pred, integ)
             # @assert J ≈ ddu
         end
         integ.destats.njacs += 1
+        mul!(H, (E1 .- ddu * E0), PI)
+    else
+        mul!(H, E1, PI)
     end
 
-    H .= (E1 .- ddu * E0) * PI  # For ekf0 we have ddu==0
     return H
 end
 
