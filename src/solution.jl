@@ -2,30 +2,40 @@
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
-mutable struct ProbODESolution{T,N,uType,IType,DE} <: AbstractProbODESolution{T,N,uType}
+mutable struct ProbODESolution{
+    T, N, uType, puType, uType2, DType, tType, rateType, xType, diffType, llType, P, A, IType, DE
+} <: AbstractProbODESolution{T,N,uType}
     u::uType
-    pu
-    u_analytic
-    errors
-    t
-    k
-    x
-    diffusions
-    log_likelihood
-    prob
-    alg
+    pu::puType
+    u_analytic::uType2
+    errors::DType
+    t::tType
+    k::rateType
+    x::xType
+    diffusions::diffType
+    log_likelihood::llType
+    prob::P
+    alg::A
     interp::IType
     dense::Bool
     tslocation::Int
     destats::DE
     retcode::Symbol
 end
+ProbODESolution{T, N}(
+    u, pu, u_analytic, errors, t, k, x, diffusions, log_likelihood, prob, alg, interp,
+    dense, tslocation, destats, retcode) where {T, N} =
+        ProbODESolution{
+            T, N, typeof(u), typeof(pu), typeof(u_analytic), typeof(errors), typeof(t),
+            typeof(k), typeof(x), typeof(diffusions), typeof(log_likelihood), typeof(prob),
+            typeof(alg), typeof(interp), typeof(destats)}(
+                u, pu, u_analytic, errors, t, k, x, diffusions, log_likelihood, prob, alg,
+                interp, dense, tslocation, destats, retcode)
+
 function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
-    ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
-        sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x, sol.diffusions,
-        sol.log_likelihood,
-        sol.prob, sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats, retcode,
-    )
+    ProbODESolution{T, N}(sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x,
+                          sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp,
+                          sol.dense, sol.tslocation, sol.destats, retcode)
 end
 
 # Used to build the initial empty solution in OrdinaryDiffEq.__init
@@ -59,14 +69,15 @@ function DiffEqBase.build_solution(
         errors = nothing
     end
 
-    return ProbODESolution{T, N, typeof(u), typeof(interp), typeof(destats)}(
-        u, pu, u_analytic, errors, t, [], x, [], 0, prob, alg, interp, dense, 0, destats, retcode,
+    ll = zero(uEltype)
+    return ProbODESolution{T, N}(
+        u, pu, u_analytic, errors, t, [], x, [], ll, prob, alg, interp, dense, 0, destats, retcode,
     )
 end
 
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
-    return ProbODESolution{T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
+    return ProbODESolution{T, N}(
         sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x, sol.diffusions,
         sol.log_likelihood, sol.prob,
         sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats, sol.retcode,
@@ -77,27 +88,33 @@ end
 ########################################################################################
 # Compat with classic ODE solutions, to enable analysis with DiffEqDevTools.jl
 ########################################################################################
-mutable struct MeanProbODESolution{T,N,uType,IType,DE} <: DiffEqBase.AbstractODESolution{T,N,uType}
+mutable struct MeanProbODESolution{
+    T, N, uType, uType2, DType, tType, rateType, P, A, IType, DE, PSolType
+} <: DiffEqBase.AbstractODESolution{T,N,uType}
     u::uType
-    u_analytic
-    errors
-    t
-    k
-    prob
-    alg
+    u_analytic::uType2
+    errors::DType
+    t::tType
+    k::rateType
+    prob::P
+    alg::A
     interp::IType
     dense::Bool
     tslocation::Int
     destats::DE
     retcode::Symbol
-    probsol
+    probsol::PSolType
 end
 function mean(sol::ProbODESolution{T,N}) where {T,N}
     return MeanProbODESolution{
-        T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
-            sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob,
-            sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats,
-            sol.retcode, sol)
+        T, N, typeof(sol.u), typeof(sol.u_analytic), typeof(sol.errors),
+        typeof(sol.t), typeof(sol.k), typeof(sol.prob), typeof(sol.alg),
+        typeof(sol.interp), typeof(sol.dense), typeof(sol.tslocation),
+        typeof(sol.destats), typeof(sol.retcode), typeof(sol)
+    }(
+        sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob,
+        sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats,
+        sol.retcode, sol)
 end
 (sol::MeanProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N} =
     mean(sol.probsol(t, deriv))
@@ -110,14 +127,14 @@ end
 # Dense Output
 ########################################################################################
 abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
-struct GaussianODEFilterPosterior <: AbstractODEFilterPosterior
-    d
-    q
-    SolProj
-    A
-    Q
-    Precond
-    smooth
+struct GaussianODEFilterPosterior{SPType, AType, QType, PType} <: AbstractODEFilterPosterior
+    d::Int
+    q::Int
+    SolProj::SPType
+    A::AType
+    Q::QType
+    Precond::PType
+    smooth::Bool
 end
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
