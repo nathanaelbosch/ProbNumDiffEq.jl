@@ -46,8 +46,8 @@ function DiffEqBase.build_solution(
     uEltype = eltype(prob.u0)
     cov = PSDMatrix(LowerTriangular(zeros(uEltype, d, d)))
     # cov = zeros(uEltype, d, d)
-    pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
-    x = copy(pu)
+    pu = StructArray{Gaussian{typeof(prob.u0), typeof(cov)}}(undef, 0)
+    x = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 

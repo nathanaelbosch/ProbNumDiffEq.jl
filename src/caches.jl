@@ -42,9 +42,8 @@ function OrdinaryDiffEq.alg_cache(
     alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
     initialize_derivatives=true
 
-    if length(u) == 1 && size(u) == ()
-        error("Scalar-values problems are currently not supported. Please remake it with a
-               1-dim Array instead")
+    if !(u isa AbstractVector)
+        error("Problems which are not scalar- or vector-valued (e.g. u0 is a scalar or a matrix) are currently not supported")
     end
 
     if (alg isa EK1 || alg isa IEKS) && isnothing(f.jac)
