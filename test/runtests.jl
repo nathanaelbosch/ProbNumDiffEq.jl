@@ -43,4 +43,6 @@ end
     @timedtestset "Specific Problems" begin include("specific_problems.jl") end
 end
 
+println("\nTimer Summary:")
 display(to)
+println("\n")
