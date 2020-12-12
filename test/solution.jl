@@ -31,7 +31,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
     end
 
     @testset "Call on known t" begin
-        @test sol(sol.t) == sol.pu
+        @test sol(sol.t).u == sol.pu
     end
 
     @testset "Correct initial values" begin
@@ -49,7 +49,8 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
         @test all(diag(u1.Σ) .< diag(u2.Σ))
 
-        @test sol(t0:1e-3:t1) isa StructArray{Gaussian{T,S}} where {T,S}
+        @test sol.(t0:1e-3:t1) isa Array{Gaussian{T,S}} where {T,S}
+        @test sol(t0:1e-3:t1).u isa StructArray{Gaussian{T,S}} where {T,S}
     end
 
     # Sampling

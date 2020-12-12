@@ -46,7 +46,7 @@ function DiffEqBase.build_solution(
     uEltype = eltype(prob.u0)
     cov = PSDMatrix(LowerTriangular(zeros(uEltype, d, d)))
     # cov = zeros(uEltype, d, d)
-    pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 1)
+    pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
     x = copy(pu)
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
@@ -150,7 +150,7 @@ function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
     @unpack q, d = sol.interp
     return sol.interp.SolProj * sol.interp(t, sol.t, sol.x, sol.diffusions)
 end
-(sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = StructArray(sol.(t, deriv))
+(sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = DiffEqArray(StructArray(sol.(t, deriv)), t)
 
 
 
@@ -159,7 +159,7 @@ end
 ########################################################################################
 @recipe function f(sol::AbstractProbODESolution; ribbon_width=1.96)
     times = range(sol.t[1], sol.t[end], length=1000)
-    dense_post = sol(times)
+    dense_post = sol(times).u
     values = stack(mean(dense_post))
     stds = stack(std(dense_post))
     ribbon --> ribbon_width * stds

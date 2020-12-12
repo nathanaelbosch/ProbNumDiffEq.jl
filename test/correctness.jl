@@ -5,6 +5,7 @@ using ODEFilters
 using Test
 using OrdinaryDiffEq
 using LinearAlgebra
+using Statistics: mean
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
@@ -62,7 +63,7 @@ for (prob, probname) in [
                         adaptive=true)
 
             @test sol.u ≈ true_sol.(sol.t) rtol=1e-4
-            @test sol(t_eval).μ ≈ true_dense_vals rtol=1e-4
+            @test mean.(sol.(t_eval)) ≈ true_dense_vals rtol=1e-4
 
             end
         end

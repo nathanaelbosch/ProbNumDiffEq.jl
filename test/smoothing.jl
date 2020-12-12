@@ -45,8 +45,8 @@ end
 
     @testset "Compare smooth and non-smooth dense output" begin
         ts = range(sol_smooth.t[1], sol_smooth.t[2], length=10)
-        smooth_dense_covs = ODEFilters.stack(diag.(sol_smooth(ts).Σ))
-        nonsmooth_dense_covs = ODEFilters.stack(diag.(sol_nonsmooth(ts).Σ))
+        smooth_dense_covs = ODEFilters.stack(diag.(sol_smooth(ts).u.Σ))
+        nonsmooth_dense_covs = ODEFilters.stack(diag.(sol_nonsmooth(ts).u.Σ))
         @test all(smooth_dense_covs .<= nonsmooth_dense_covs)
     end
 end

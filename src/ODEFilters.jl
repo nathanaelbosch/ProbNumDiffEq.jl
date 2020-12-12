@@ -7,7 +7,7 @@ using Reexport
 using OrdinaryDiffEq
 import DiffEqBase: check_error!
 
-import Base: copy, copy!, show, size
+import Base: copy, copy!, show, size, ndims
 stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
@@ -37,6 +37,7 @@ show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")
 show(io::IO, ::MIME"text/plain", g::Gaussian{T, S}) where {T, S} =
     print(io, "Gaussian{$T,$S}($(g.μ), $(g.Σ))")
 size(g::Gaussian) = size(g.μ)
+ndims(g::Gaussian) = ndims(g.μ)
 
 Base.:*(M, g::PSDGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
