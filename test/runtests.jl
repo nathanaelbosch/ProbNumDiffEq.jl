@@ -12,6 +12,9 @@ end
     println("Correctness")
     @timedtestset "Correctness" begin include("correctness.jl") end
 
+    println("Filtering")
+    @timedtestset "Filtering" begin include("filtering.jl") end
+
     println("Convergence")
     @timedtestset "Convergence" begin include("convergence.jl") end
 

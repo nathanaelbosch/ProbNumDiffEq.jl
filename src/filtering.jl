@@ -77,7 +77,7 @@ See also: [`update!`](@ref)
 function update(x_pred::Gaussian, measurement::Gaussian, H::AbstractMatrix, R=0)
     @assert iszero(R)
     x_out = copy(x_pred)
-    predict!(x_out, x_pred, measurement, H, R)
+    update!(x_out, x_pred, measurement, H, R)
     return x_out
 end
 
