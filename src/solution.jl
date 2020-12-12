@@ -75,6 +75,38 @@ end
 
 
 ########################################################################################
+# Compat with classic ODE solutions, to enable analysis with DiffEqDevTools.jl
+########################################################################################
+mutable struct MeanProbODESolution{T,N,uType,IType,DE} <: DiffEqBase.AbstractODESolution{T,N,uType}
+    u::uType
+    u_analytic
+    errors
+    t
+    k
+    prob
+    alg
+    interp::IType
+    dense::Bool
+    tslocation::Int
+    destats::DE
+    retcode::Symbol
+    probsol
+end
+function mean(sol::ProbODESolution{T,N}) where {T,N}
+    return MeanProbODESolution{
+        T, N, typeof(sol.u), typeof(sol.interp), typeof(sol.destats)}(
+            sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob,
+            sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats,
+            sol.retcode, sol)
+end
+(sol::MeanProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N} =
+    mean(sol.probsol(t, deriv))
+(sol::MeanProbODESolution)(t::AbstractVector, deriv=Val(0)) =
+    DiffEqArray(mean(sol.probsol(t, deriv).u), t)
+
+
+
+########################################################################################
 # Dense Output
 ########################################################################################
 abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
