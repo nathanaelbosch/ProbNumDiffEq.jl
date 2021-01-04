@@ -15,18 +15,28 @@ P_{n+1}^P = A(h)*P_n*A(h) + Q(h)
 See also: [`predict`](@ref)
 """
 function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+    predict_mean!(x_out, x_curr, Ah, Qh)
+    predict_cov!(x_out, x_curr, Ah, Qh)
+    return x_out
+end
+function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
+    return x_out.μ
+end
+function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
     out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
     copy!(x_out.Σ, out_cov)
-    return nothing
+    return x_out.Σ
 end
-function predict!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Qh::PSDMatrix)
-    mul!(x_out.μ, Ah, x_curr.μ)
+
+# PSDMatrix Version of this
+function predict_cov!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Qh::PSDMatrix)
     _, R = qr([Ah*x_curr.Σ.L Qh.L]')
     out_cov = PSDMatrix(LowerTriangular(collect(R')))
     copy!(x_out.Σ, out_cov)
-    return nothing
+    return x_out.Σ
 end
+
 
 """
     predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)

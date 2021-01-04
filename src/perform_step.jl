@@ -33,18 +33,27 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     x = P * x
 
     # Predict
-    predict!(x_pred, x, A, Q)
+    predict_mean!(x_pred, x, A, Q)
     mul!(u_pred, SolProj, PI*x_pred.μ)
 
-    # Measure
-    measure!(integ, x_pred, tnew)
 
-    # Estimate diffusion
-    diffusion = estimate_diffusion(cache.diffusionmodel, integ)
-    integ.cache.diffusion = diffusion
-    if isdynamic(cache.diffusionmodel) # Adjust prediction and measurement
-        predict!(x_pred, x, A, apply_diffusion(Q, diffusion))
+    if isdynamic(cache.diffusionmodel)  # Calibrate, then predict cov
+
+        # Measure
+        measure!(integ, x_pred, tnew)
+
+        # Estimate diffusion
+        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
+        # Adjust prediction and measurement
+        predict_cov!(x_pred, x, A, apply_diffusion(Q, integ.cache.diffusion))
         copy!(integ.cache.measurement.Σ, X_A_Xt(x_pred.Σ, integ.cache.H))
+
+    else  # Vanilla filtering order: Predict, measure, calibrate
+
+        predict_cov!(x_pred, x, A, Q)
+        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
+        measure!(integ, x_pred, tnew)
+
     end
 
     # Likelihood
