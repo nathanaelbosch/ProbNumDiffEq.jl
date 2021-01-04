@@ -32,12 +32,11 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     PI = inv(P)
     x = P * x
 
-    # Predict
-    predict_mean!(x_pred, x, A, Q)
-    mul!(u_pred, SolProj, PI*x_pred.μ)
-
-
     if isdynamic(cache.diffusionmodel)  # Calibrate, then predict cov
+
+        # Predict
+        predict_mean!(x_pred, x, A, Q)
+        mul!(u_pred, SolProj, PI*x_pred.μ)
 
         # Measure
         measure!(integ, x_pred, tnew)
@@ -50,9 +49,10 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     else  # Vanilla filtering order: Predict, measure, calibrate
 
-        predict_cov!(x_pred, x, A, Q)
-        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
+        predict!(x_pred, x, A, Q)
+        mul!(u_pred, SolProj, PI*x_pred.μ)
         measure!(integ, x_pred, tnew)
+        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
 
     end
 
