@@ -1,5 +1,6 @@
 # Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
 function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
+    @assert integ.opts.dense == integ.alg.smooth "`dense` and `smooth` should have the same value! "
     @assert integ.saveiter == 1
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x, integ.saveiter, cache.x)
     OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, cache.SolProj*cache.x)
