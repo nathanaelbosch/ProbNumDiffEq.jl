@@ -29,12 +29,22 @@ function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh:
     return x_out.Σ
 end
 
-# PSDMatrix Version of this
+# PSDMatrix Version of this - But, before using QR try it with Cholesky!
 function predict_cov!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Qh::PSDMatrix)
-    _, R = qr([Ah*x_curr.Σ.L Qh.L]')
-    out_cov = PSDMatrix(LowerTriangular(collect(R')))
-    copy!(x_out.Σ, out_cov)
-    return x_out.Σ
+    _L = [Ah*x_curr.Σ.L Qh.L]
+    out_cov = Symmetric(_L*_L')
+    chol = cholesky!(out_cov, check=false)
+
+    if issuccess(chol)
+        PpL = chol.L
+        copy!(x_out.Σ, PSDMatrix(PpL))
+        return x_out.Σ
+    else
+        _, R = qr(_L')
+        out_cov = PSDMatrix(LowerTriangular(collect(R')))
+        copy!(x_out.Σ, out_cov)
+        return x_out.Σ
+    end
 end
 
 
