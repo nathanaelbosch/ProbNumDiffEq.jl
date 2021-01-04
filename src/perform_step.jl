@@ -79,7 +79,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     end
     # stuff that would normally be in apply_step!
-    if integ.EEst < one(integ.EEst)
+    if !integ.opts.adaptive || integ.EEst < one(integ.EEst)
         copy!(integ.cache.x, integ.cache.x_filt)
         integ.sol.log_likelihood += integ.cache.log_likelihood
     end
