@@ -34,6 +34,7 @@ const PSDGaussian{T} = Gaussian{Vector{T}, PSDMatrix{T}}
 const PSDGaussianList{T} = StructArray{PSDGaussian{T}}
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.Σ); nothing)
+RecursiveArrayTools.recursivecopy(P::Gaussian) = copy(P)
 show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")
 show(io::IO, ::MIME"text/plain", g::Gaussian{T, S}) where {T, S} =
     print(io, "Gaussian{$T,$S}($(g.μ), $(g.Σ))")
