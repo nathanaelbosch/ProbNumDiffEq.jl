@@ -33,13 +33,12 @@ function DiffEqBase.savevalues!(
     integrator::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
     force_save=false, reduce_size=true)
 
-    @assert integrator.opts.dense
-    @assert integrator.saveiter == integrator.saveiter_dense
-
     # Do whatever OrdinaryDiffEq would do
     out = OrdinaryDiffEq._savevalues!(integrator, force_save, reduce_size)
 
     # Save our custom stuff that we need for the posterior
+    # TODO If we don't want dense output, we might not want to save these!
+    # It's not completely clear how to specify that though; They are also needed for sampling.
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.x, integrator.saveiter, integrator.cache.x)
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.diffusions, integrator.saveiter, integrator.cache.diffusion)
     OrdinaryDiffEq.copyat_or_push!(integrator.sol.pu, integrator.saveiter, integrator.cache.SolProj*integrator.cache.x)
