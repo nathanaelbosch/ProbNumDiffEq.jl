@@ -47,7 +47,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
 
     Q!(Q_base, 1.0)
     QL = cholesky(Q_base).L
-    Q_psd = PSDMatrix(QL)
+    Q_psd = SRMatrix(QL)
 
     return A_base, Q_psd
 end

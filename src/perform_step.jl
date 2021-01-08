@@ -45,7 +45,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
         predict_cov!(x_pred, x, A, apply_diffusion(Q, integ.cache.diffusion))
-        copy!(integ.cache.measurement.Σ, X_A_Xt(x_pred.Σ, integ.cache.H))
+        copy!(integ.cache.measurement.Σ, Matrix(X_A_Xt(x_pred.Σ, integ.cache.H)))
 
     else  # Vanilla filtering order: Predict, measure, calibrate
 
@@ -147,7 +147,7 @@ function measure!(integ, x_pred, t)
     H .= H!(integ, x_pred, t)
     # R .= Diagonal(eps.(z))
     @assert iszero(R)
-    copy!(S, X_A_Xt(x_pred.Σ, H))
+    copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
 
     return nothing
 end
@@ -156,7 +156,7 @@ end
 function update!(integ, prediction)
     @unpack measurement, H, R, x_filt = integ.cache
     update!(x_filt, prediction, measurement, H, R)
-    assert_nonnegative_diagonal(x_filt.Σ)
+    # assert_nonnegative_diagonal(x_filt.Σ)
     return x_filt
 end
 
@@ -168,7 +168,7 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
         return Inf
     end
 
-    error_estimate = sqrt.(diag(X_A_Xt(apply_diffusion(Q, diffusion), H)))
+    error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
 
     return error_estimate
 end

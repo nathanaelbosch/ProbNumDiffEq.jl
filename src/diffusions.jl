@@ -75,7 +75,7 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     @unpack H, Q, measurement = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    σ² = z' * ((H*Q*H')\z) / d
+    σ² = z' * (Matrix(X_A_Xt(Q, H))\z) / d
     return σ²
 end
 

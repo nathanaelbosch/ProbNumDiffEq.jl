@@ -29,19 +29,19 @@ function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh:
     return x_out.Σ
 end
 
-# PSDMatrix Version of this - But, before using QR try it with Cholesky!
-function predict_cov!(x_out::PSDGaussian, x_curr::PSDGaussian, Ah::AbstractMatrix, Qh::PSDMatrix)
-    _L = [Ah*x_curr.Σ.L Qh.L]
+# SRMatrix Version of this - But, before using QR try it with Cholesky!
+function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix)
+    _L = [Ah*x_curr.Σ.squareroot Qh.squareroot]
     out_cov = Symmetric(_L*_L')
     chol = cholesky!(out_cov, check=false)
 
     if issuccess(chol)
         PpL = chol.L
-        copy!(x_out.Σ, PSDMatrix(PpL))
+        copy!(x_out.Σ, SRMatrix(PpL))
         return x_out.Σ
     else
         _, R = qr(_L')
-        out_cov = PSDMatrix(LowerTriangular(collect(R')))
+        out_cov = SRMatrix(LowerTriangular(collect(R')))
         copy!(x_out.Σ, out_cov)
         return x_out.Σ
     end
@@ -125,14 +125,29 @@ function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix,
     G = x_curr.Σ * Ah' * P_p_inv
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
-
     smoothed_cov = (
         X_A_Xt(x_curr.Σ, (I - G*Ah))
         + X_A_Xt(Qh, G)
         + X_A_Xt(x_next_smoothed.Σ, G)
     )
+    x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
+    return x_curr_smoothed, G
+end
+function smooth(x_curr::SRGaussian, x_next_smoothed::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix)
+    x_pred = predict(x_curr, Ah, Qh)
 
-    assert_nonnegative_diagonal(smoothed_cov)
+    P_p = x_pred.Σ
+    P_p_inv = inv(P_p)
+
+    G = x_curr.Σ * Ah' * P_p_inv
+
+    smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
+
+    _R = [x_curr.Σ.squareroot' * (I - G*Ah)'
+          Qh.squareroot' * G'
+          x_next_smoothed.Σ.squareroot' * G']
+    _, P_s_R = qr(_R)
+    smoothed_cov = SRMatrix(P_s_R')
 
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, G

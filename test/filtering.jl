@@ -2,6 +2,7 @@
 Check the correctness of the filtering implementations vs. basic readable math code
 """
 
+using Test
 using ODEFilters
 using LinearAlgebra
 
@@ -36,10 +37,10 @@ using LinearAlgebra
         @test P_p == x_out.Σ
     end
 
-    @testset "predict! with PSDMatrix" begin
-        x_curr = Gaussian(m, PSDMatrix(L_p))
+    @testset "predict! with SRMatrix" begin
+        x_curr = Gaussian(m, SRMatrix(L_p))
         x_out = copy(x_curr)
-        ODEFilters.predict!(x_out, x_curr, A, PSDMatrix(Q))
+        ODEFilters.predict!(x_out, x_curr, A, SRMatrix(L_Q))
         @test m_p == x_out.μ
         @test P_p ≈ x_out.Σ
     end
@@ -100,6 +101,7 @@ end
     A = rand(d,d)
     L_Q = LowerTriangular(rand(d,d))
     Q = L_Q*L_Q'
+    Q_SR = SRMatrix(L_Q)
 
     # PREDICT first
     m_p = A*m
@@ -110,14 +112,12 @@ end
     m_smoothed = m + G * (m_s - m_p)
     P_smoothed = P + G * (P_s - P_p) * G'
 
-    x_curr = Gaussian(m, P)
-    x_smoothed = Gaussian(m_s, P_s)
-
-    ODEFilters.smooth(x_curr, x_smoothed, A, Q)
+    x_curr = Gaussian(m, SRMatrix(L_P))
+    x_smoothed = Gaussian(m_s, SRMatrix(L_P_s))
 
     @testset "smooth" begin
-        x_out, _ = ODEFilters.smooth(x_curr, x_smoothed, A, Q)
-        @test m_smoothed == x_out.μ
+        x_out, _ = ODEFilters.smooth(x_curr, x_smoothed, A, Q_SR)
+        @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ x_out.Σ
     end
 

@@ -51,12 +51,16 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
 
     # Joseph-Form:
     K_tilde = x_curr.Σ * Ah' * P_p_inv
-    P_s = (
-        X_A_Xt(x_curr.Σ, (I - K_tilde*Ah))
-        + X_A_Xt(Qh, K_tilde)
-        + X_A_Xt(x_next.Σ, G)
-    )
-    copy!(x_curr.Σ, P_s)
+    # P_s = (
+    #     X_A_Xt(x_curr.Σ, (I - K_tilde*Ah))
+    #     + X_A_Xt(Qh, K_tilde)
+    #     + X_A_Xt(x_next.Σ, G)
+    # )
+    _R = [x_curr.Σ.squareroot' * (I - K_tilde*Ah)'
+          Qh.squareroot' * K_tilde'
+          x_next.Σ.squareroot' * G']
+    _, P_s_R = qr(_R)
+    copy!(x_curr.Σ, SRMatrix(P_s_R'))
 
     assert_nonnegative_diagonal(x_curr.Σ)
     # PDMat(Symmetric(x_curr.Σ))

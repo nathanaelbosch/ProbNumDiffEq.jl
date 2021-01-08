@@ -54,7 +54,7 @@ function DiffEqBase.build_solution(
 
     d = length(prob.u0)
     uEltype = eltype(prob.u0)
-    cov = PSDMatrix(LowerTriangular(zeros(uEltype, d, d)))
+    cov = SRMatrix(zeros(uEltype, d, d))
     # cov = zeros(uEltype, d, d)
     pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
     x = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
@@ -226,21 +226,25 @@ end
 For the 0-cov entries the outcome of the sampling is deterministic!"""
 function _rand(x::Gaussian, n::Int=1)
     m, C = x.μ, x.Σ
-    @assert C isa PSDMatrix
+    @assert C isa SRMatrix
 
-    sample = m .+ C.L*randn(length(m), n)
+    sample = m .+ C.squareroot*randn(length(m), n)
     return sample
 end
 
 
-function sample_back(x_curr::Gaussian, x_next_sample::AbstractVector, Ah::AbstractMatrix, Qh::AbstractMatrix, PI=I)
+function sample_back(x_curr::SRGaussian, x_next_sample::AbstractVector, Ah::AbstractMatrix, Qh::SRMatrix, PI=I)
     m_p, P_p = Ah*x_curr.μ, Ah*x_curr.Σ*Ah' + Qh
     P_p_inv = inv(Symmetric(P_p))
     Gain = x_curr.Σ * Ah' * P_p_inv
 
     m = x_curr.μ + Gain * (x_next_sample - m_p)
 
-    P = X_A_Xt(x_curr.Σ, (I - Gain*Ah)) + X_A_Xt(Qh, Gain)
+    # P = X_A_Xt(x_curr.Σ, (I - Gain*Ah)) + X_A_Xt(Qh, Gain)
+    _R = [x_curr.Σ.squareroot' * (I - Gain*Ah)'
+          Qh.squareroot' * Gain']
+    _, P_L = qr(_R)
+    P = SRMatrix(P_L)
 
     assert_nonnegative_diagonal(P)
     return Gaussian(m, P)
