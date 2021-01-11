@@ -13,6 +13,7 @@ function remake_prob_with_jac(prob::ODEProblem)
         f = ODEFunction{IIP}(
             prob.f.f,
             jac=jac;
+            mass_matrix=prob.f.mass_matrix,
             analytic=prob.f.analytic,
         )
         return remake(prob, f=f)

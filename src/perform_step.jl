@@ -57,7 +57,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 
     # Likelihood
-    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
     # Update
     x_filt = update!(integ, x_pred)
@@ -102,7 +102,7 @@ function h!(integ, x_pred, t)
     end
     integ.destats.nf += 1
 
-    z .= E1*PI*x_pred.μ .- du
+    z .= f.mass_matrix*E1*PI*x_pred.μ .- du
 
     return z
 end
@@ -129,9 +129,9 @@ function H!(integ, x_pred, t)
             # @assert J ≈ ddu
         end
         integ.destats.njacs += 1
-        mul!(H, (E1 .- ddu * E0), PI)
+        mul!(H, (f.mass_matrix*E1 .- ddu * E0), PI)
     else
-        mul!(H, E1, PI)
+        mul!(H, f.mass_matrix*E1, PI)
     end
 
     return H
