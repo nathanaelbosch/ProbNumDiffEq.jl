@@ -62,7 +62,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 
     # Likelihood
-    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
     # Update
     x_filt = update!(integ, x_pred)
@@ -103,7 +103,7 @@ function measure!(integ, x_pred, t)
     # Mean
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
-    z .= E1*PI*x_pred.μ .- du
+    z .= f.mass_matrix*E1*PI*x_pred.μ .- du
 
     # Cov
     if alg isa EK1 || alg isa IEKS
@@ -111,9 +111,9 @@ function measure!(integ, x_pred, t)
             alg.linearize_at(t).μ : u_pred
         _eval_f_jac!(ddu, linearize_at, p, t, f)
         integ.destats.njacs += 1
-        mul!(H, (E1 .- ddu * E0), PI)
+        mul!(H, (f.mass_matrix*E1 .- ddu * E0), PI)
     else
-        mul!(H, E1, PI)
+        mul!(H, f.mass_matrix*E1, PI)
     end
     copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
 
