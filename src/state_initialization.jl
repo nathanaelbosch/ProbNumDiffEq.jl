@@ -128,3 +128,42 @@ function iip_to_oop(f!)
     end
     return f
 end
+
+
+
+
+
+
+# DAE STUFF
+function iip_to_oop(f!::DAEFunction)
+    function f(du, u, p, t)
+        out = copy(u)
+        f!(out, du, u, p, t)
+        return out
+    end
+    return f
+end
+function initialize_without_derivatives(u0, du0, f::DAEFunction, p, t0, order, var=1e-3)
+    q = order
+    d = length(u0)
+
+    m0 = zeros(d*(q+1))
+    m0[1:d] = u0
+
+    f = isinplace(f) ? iip_to_oop(f) : f
+    @assert iszero(f(du0, u0, p, t0))
+
+    d = length(u0)
+    q = order
+    uElType = eltype(u0)
+    m0 = zeros(uElType, d*(q+1))
+    P0 = zeros(uElType, d*(q+1), d*(q+1))
+
+    m0[1:d] .= u0
+    m0[d+1:2d] .= du0
+
+    P0 = Matrix([zeros(2d, 2d) zeros(2d, d*(q-1));
+          zeros(d*(q-1), 2d) Diagonal(var .* ones(d*(q-1)))])
+
+    return m0, P0
+end
