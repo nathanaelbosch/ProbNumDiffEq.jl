@@ -26,3 +26,12 @@ OrdinaryDiffEq.beta1_default(alg::AbstractEK, beta2) = 7//(10(alg.order+1))
 
 # OrdinaryDiffEq.uses_uprev(alg::, adaptive::Bool) = adaptive
 OrdinaryDiffEq.is_mass_matrix_alg(alg::AbstractEK) = true
+
+
+
+
+OrdinaryDiffEq.isadaptive(alg::DAE_EK1) = true
+OrdinaryDiffEq.alg_order(alg::DAE_EK1) = alg.order+1
+OrdinaryDiffEq.alg_autodiff(alg::DAE_EK1) = true
+OrdinaryDiffEq.get_chunksize(alg::DAE_EK1) = Val(0)
+OrdinaryDiffEq.isfsal(alg::DAE_EK1) = false

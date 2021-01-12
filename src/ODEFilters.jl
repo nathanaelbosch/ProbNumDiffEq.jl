@@ -61,6 +61,10 @@ include("diffusions.jl")
 
 include("algorithms.jl")
 export EK0, EK1
+
+include("daesolver.jl")
+export DAE_EK1
+
 include("alg_utils.jl")
 include("caches.jl")
 include("state_initialization.jl")
