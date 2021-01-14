@@ -35,3 +35,12 @@ end
     @test m0 ≈ true_init_states
     @test all(P0 .== 0)
 end
+
+@testset "DAE state init" begin
+    f!(out, du, u, p, t) = (out .= f(u, p, t) .- du)
+    du0 = du(t0)
+    prob = DAEProblem(f!, du0, u0, tspan)
+    m0, P0 = ODEFilters.initialize_with_derivatives(prob.u0, prob.du0, prob.f, prob.p, prob.tspan[1], 6)
+    @test m0 ≈ true_init_states
+    @test all(P0 .== 0)
+end

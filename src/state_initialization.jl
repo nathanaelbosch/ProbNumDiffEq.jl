@@ -135,13 +135,14 @@ end
 
 
 # DAE STUFF
-function iip_to_oop(f!::DAEFunction)
-    function f(du, u, p, t)
-        out = copy(u)
-        f!(out, du, u, p, t)
+function iip_to_oop(F!::DAEFunction)
+    function F(du, u, p, t)
+        elType = eltype(du+u)
+        out = zeros(elType, size(u))
+        F!(out, du, u, p, t)
         return out
     end
-    return f
+    return F
 end
 function initialize_without_derivatives(u0, du0, f::DAEFunction, p, t0, order, var=1e-3)
     q = order
@@ -166,4 +167,59 @@ function initialize_without_derivatives(u0, du0, f::DAEFunction, p, t0, order, v
           zeros(d*(q-1), 2d) Diagonal(var .* ones(d*(q-1)))])
 
     return m0, P0
+end
+
+
+
+function initialize_with_derivatives(u0, du0, f::DAEFunction, p, t0, order::Int)
+    f = isinplace(f) ? iip_to_oop(f) : f
+
+    d = length(u0)
+    q = order
+
+    set_variables("x", numvars=d*(q+1), order=order+1)
+
+    uElType = eltype(u0+du0)
+    m0 = zeros(uElType, d*(q+1))
+    P0 = zeros(uElType, d*(q+1), d*(q+1)) .+ I(d*(q+1))
+
+    @assert iszero(f(du0, u0, p, t0))
+
+    m0[1:d] .= u0
+    P0[1:d, 1:d] .= 0
+    m0[d+1:2d] .= du0
+    P0[d+1:2d, d+1:2d] .= 0
+
+    # Make sure that the vector field f does not depend on t
+    f_t_taylor = taylor_expand(t -> f(du0, u0, p, t), t0)
+    @assert !(eltype(f_t_taylor) <: TaylorN)
+
+    Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    # TODO Don't redefine proj here, but use the one that we already have
+    # E.g. by moving all of this into the actual `initialize!`?
+    F(x) = f(Proj(1)*x, Proj(0)*x, p, t0)
+    Fp = taylor_expand(m -> F(m), m0)
+    driftmat = kron(diagm(1 => ones(q)), I(d))
+    dm = taylor_expand(m -> driftmat*m, m0)
+    Fs = [Fp]
+    for o in 2:q
+        F_curr = Fs[end]
+        Jac_curr = stack([derivative.(F_curr, i) for i in 1:d*(q+1)])'
+        m0, P0 = update_on_zero_F(m0, P0, F_curr, Jac_curr)
+        dm = taylor_expand(m -> driftmat*m, m0)
+        F_next = Jac_curr * dm
+        push!(Fs, F_next)
+    end
+    F_curr = Fs[end]
+    Jac_curr = stack([derivative.(F_curr, i) for i in 1:d*(q+1)])'
+    m0, P0 = update_on_zero_F(m0, P0, F_curr, Jac_curr)
+
+    return m0, P0
+end
+function update_on_zero_F(m, P, F, Jac; R=1e-18I)
+    z = evaluate(F)
+    H = evaluate(Jac')'
+    S = H*P*H' + R
+    _m, _P = update(Gaussian(m, P), Gaussian(z, S), H)
+    return _m, _P
 end
