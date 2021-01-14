@@ -109,8 +109,7 @@ function mean(sol::ProbODESolution{T,N}) where {T,N}
     return MeanProbODESolution{
         T, N, typeof(sol.u), typeof(sol.u_analytic), typeof(sol.errors),
         typeof(sol.t), typeof(sol.k), typeof(sol.prob), typeof(sol.alg),
-        typeof(sol.interp), typeof(sol.dense), typeof(sol.tslocation),
-        typeof(sol.destats), typeof(sol.retcode), typeof(sol)
+        typeof(sol.interp), typeof(sol.destats), typeof(sol)
     }(
         sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob,
         sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats,
