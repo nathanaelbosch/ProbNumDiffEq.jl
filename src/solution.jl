@@ -119,6 +119,9 @@ end
     mean(sol.probsol(t, deriv))
 (sol::MeanProbODESolution)(t::AbstractVector, deriv=Val(0)) =
     DiffEqArray(mean(sol.probsol(t, deriv).u), t)
+DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) =
+    DiffEqBase.calculate_solution_errors!(mean(sol), args...; kwargs...)
+
 
 
 
