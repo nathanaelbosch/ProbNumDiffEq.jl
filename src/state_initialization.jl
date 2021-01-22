@@ -95,6 +95,7 @@ function initialize_without_derivatives(u0, du0, f::DAEFunction, p, t0, order, v
     P0 = zeros(uElType, d*(q+1), d*(q+1))
 
     m0[1:d] .= u0
+    @warn "relying on `du0` for the state initialization"
     m0[d+1:2d] .= du0
 
     P0 = Matrix([zeros(2d, 2d) zeros(2d, d*(q-1));
