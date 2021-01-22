@@ -34,7 +34,8 @@ function OrdinaryDiffEq.alg_cache(
     # Measurement model
     R = zeros(d, d)
     # Initial states
-    m0, P0 = initialize_with_derivatives(u0, du0, f, p, t0, q)
+    m0, P0 = initialize_without_derivatives(u0, du0, f, p, t0, q)
+    # m0, P0 = initialize_with_derivatives(u0, du0, f, p, t0, q)
     # @info "after init" m0 P0
     # @assert iszero(P0)
     @assert isdiag(P0)
