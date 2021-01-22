@@ -39,7 +39,7 @@ mutable struct GaussianODEFilterCache{
 end
 
 function OrdinaryDiffEq.alg_cache(
-    alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
+    alg::ODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
     initialize_derivatives=true
 
     if !(u isa AbstractVector)

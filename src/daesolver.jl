@@ -1,16 +1,7 @@
 
-abstract type GaussianDAEFilter <: OrdinaryDiffEq.DAEAlgorithm{0, true} end
-
-Base.@kwdef struct DAE_EK1 <: GaussianDAEFilter
-    prior::Symbol = :ibm
-    order::Int = 1
-    diffusionmodel::Symbol = :dynamic
-    smooth::Bool = true
-end
-
 
 function OrdinaryDiffEq.alg_cache(
-    alg::GaussianDAEFilter, du, u, res_prototype, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
+    alg::DAEFilter, du, u, res_prototype, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
     initialize_derivatives=true
 
     if !(u isa AbstractVector)
