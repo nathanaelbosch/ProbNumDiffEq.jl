@@ -1,8 +1,11 @@
 ########################################################################################
 # Algorithm
 ########################################################################################
-abstract type GaussianODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
-abstract type AbstractEK <: GaussianODEFilter end
+abstract type DAEFilter <: OrdinaryDiffEq.DAEAlgorithm{0, true} end
+abstract type ODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
+abstract type AbstractEK <: ODEFilter end
+const DEFilter = Union{ODEFilter, DAEFilter}
+
 
 """
     EK0(; prior=:ibm, order=1, diffusionmodel=:dynamic, smooth=true)
@@ -44,6 +47,21 @@ See also: [`EK0`](@ref)
 - F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**
 """
 Base.@kwdef struct EK1 <: AbstractEK
+    prior::Symbol = :ibm
+    order::Int = 1
+    diffusionmodel::Symbol = :dynamic
+    smooth::Bool = true
+end
+
+
+"""
+    DAE_EK1(; prior=:ibm, order=1, diffusionmodel=:dynamic, smooth=true)
+
+Gaussian DAE filtering with first order extended Kalman filter
+
+WIP! Active research!
+"""
+Base.@kwdef struct DAE_EK1{G} <: DAEFilter where {G}
     prior::Symbol = :ibm
     order::Int = 1
     diffusionmodel::Symbol = :dynamic

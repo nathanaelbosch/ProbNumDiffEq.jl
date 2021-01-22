@@ -40,7 +40,7 @@ end
 
 # Used to build the initial empty solution in OrdinaryDiffEq.__init
 function DiffEqBase.build_solution(
-    prob::DiffEqBase.AbstractODEProblem, alg::GaussianODEFilter, t, u;
+    prob::DiffEqBase.AbstractODEProblem, alg::DEFilter, t, u;
     k = nothing, retcode = :Default, destats = nothing, dense = true, kwargs...)
     return _build_solution(prob, alg, t, u; k, retcode, destats, dense, kwargs...)
 end
@@ -51,7 +51,7 @@ function DiffEqBase.build_solution(
 end
 function _build_solution(
     prob,
-    alg::Union{GaussianODEFilter, DAE_EK1},
+    alg::DEFilter,
     t, u;
     k = nothing,
     retcode = :Default,

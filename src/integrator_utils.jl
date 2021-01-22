@@ -1,5 +1,5 @@
 # Calibration, smoothing, then jump to the OrdinaryDiffEq._postamble!
-function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
+function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:DEFilter})
 
     if isstatic(integ.cache.diffusionmodel) # Calibrate
         # @warn "sol.log_likelihood is not correct for static diffusion models!"
@@ -30,7 +30,7 @@ end
 
 
 function DiffEqBase.savevalues!(
-    integrator::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
+    integrator::OrdinaryDiffEq.ODEIntegrator{<:DEFilter},
     force_save=false, reduce_size=true)
 
     # Do whatever OrdinaryDiffEq would do
