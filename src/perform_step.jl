@@ -40,8 +40,15 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     if isdynamic(cache.diffusionmodel)  # Calibrate, then predict cov
 
         # Predict
-        predict_mean!(x_pred, x, A, Q)
+        # predict_mean!(x_pred, x, A, Q)
+        predict!(x_pred, x, A, Q)
         mul!(u_pred, SolProj, PI*x_pred.μ)
+
+        # Proj
+        if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
+            error("It's a bit unclear how to properly handle dynamic diffusion and manifold projections")
+            manifold_update!(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters)
+        end
 
         # Measure
         measure!(integ, x_pred, tnew)
@@ -49,12 +56,21 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         # Estimate diffusion
         integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
-        predict_cov!(x_pred, x, A, apply_diffusion(Q, integ.cache.diffusion))
+        predict!(x_pred, x, A, apply_diffusion(Q, integ.cache.diffusion))
+
+        if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
+            error("It's a bit unclear how to properly handle dynamic diffusion and manifold projections")
+            manifold_update!(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters)
+        end
+
         copy!(integ.cache.measurement.Σ, Matrix(X_A_Xt(x_pred.Σ, integ.cache.H)))
 
     else  # Vanilla filtering order: Predict, measure, calibrate
 
         predict!(x_pred, x, A, Q)
+        if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
+            manifold_update!(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x))
+        end
         mul!(u_pred, SolProj, PI*x_pred.μ)
         measure!(integ, x_pred, tnew)
         integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
@@ -66,6 +82,13 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Update
     x_filt = update!(integ, x_pred)
+
+    # Project onto the manifold
+    if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:after, :both)
+        manifold_update!(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters)
+    end
+
+    # Save
     mul!(u_filt, SolProj, PI*x_filt.μ)
 
     # Undo the coordinate change / preconditioning
@@ -91,11 +114,39 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 end
 
+
+function manifold_update!(x, h, maxiters=1)
+    z_before = h(x.μ)
+    if iszero(z_before)
+        return
+    end
+
+    for i in 1:maxiters
+        if i > 1
+            @warn "Second iteration of manifold projection!"
+        end
+        z = h(x.μ)
+        H = ForwardDiff.gradient(h, x.μ)
+        @assert H isa AbstractVector
+
+        S = H' * x.Σ * H
+        K = x.Σ * H * inv(S)
+        x.μ .= x.μ .+ K * (0 .- z)
+        Pnew = X_A_Xt(x.Σ, (I-K*H'))
+        copy!(x.Σ, Pnew)
+
+        z_after = h(x.μ)
+        # @info "Iteration" i z_before S z_after z_before ≈ z_after
+        @assert abs(z_after) <= abs(z_before) || S < eps(typeof(S))
+        if iszero(z_after) || S < eps(typeof(S)) break end
+        z_before = z_after
+    end
+    # error()
+end
+
 function measure!(integ, x_pred, t)
     @unpack f, p, dt, alg = integ
     @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
-    @assert iszero(R)
-
     PI = inv(Precond(dt))
     E0, E1 = Proj(0), Proj(1)
 
