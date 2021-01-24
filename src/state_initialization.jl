@@ -152,7 +152,9 @@ function initialize_without_derivatives(u0, du0, f::DAEFunction, p, t0, order, v
     m0[1:d] = u0
 
     f = isinplace(f) ? iip_to_oop(f) : f
-    @assert iszero(f(du0, u0, p, t0))
+    if !iszero(f(du0, u0, p, t0))
+        @warn "The supplied initial values do not completely satisfy the DAE!"
+    end
 
     d = length(u0)
     q = order

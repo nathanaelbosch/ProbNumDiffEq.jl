@@ -61,7 +61,7 @@ Gaussian DAE filtering with first order extended Kalman filter
 
 WIP! Active research!
 """
-Base.@kwdef struct DAE_EK1{G} <: DAEFilter where {G}
+Base.@kwdef struct DAE_EK1 <: DAEFilter
     prior::Symbol = :ibm
     order::Int = 1
     diffusionmodel::Symbol = :dynamic
