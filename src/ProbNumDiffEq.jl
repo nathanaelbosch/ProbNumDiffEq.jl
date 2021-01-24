@@ -26,6 +26,7 @@ using RecipesBase
 using ModelingToolkit
 using RecursiveArrayTools
 using StaticArrays
+using ForwardDiff
 
 
 # @reexport using PSDMatrices
