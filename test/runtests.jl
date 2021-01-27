@@ -53,6 +53,9 @@ end
 
     println("Specific Problems")
     @timedtestset "Specific Problems" begin include("specific_problems.jl") end
+
+    println("Manifold Projection")
+    @timedtestset "Manifold Projection" begin include("manifold_projection.jl") end
 end
 
 println("\nTimer Summary:")
