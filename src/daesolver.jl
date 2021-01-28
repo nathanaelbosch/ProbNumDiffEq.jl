@@ -116,19 +116,9 @@ function H!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t)
     @assert isinplace(integ.f)
     # @assert !isnothing(integ.f.jac)
 
-    if !isnothing(f.jac)
-        Ju = copy(ddu)
-        f.jac(Ju, du_pred, u_pred, p, 0.0, t)
-        integ.destats.njacs += 1
-        Jdu = copy(ddu)
-        f.jac(Jdu, du_pred, u_pred, p, 1.0, t)
-        integ.destats.njacs += 1
-        Jdu -= Ju
-    else
-        Ju = ForwardDiff.jacobian((u) -> (tmp = copy(u); f(tmp, du_pred, u, p, t); tmp), u_pred)
-        Jdu = ForwardDiff.jacobian((du) -> (tmp = copy(du); f(tmp, du, u_pred, p, t); tmp), du_pred)
-    end
-    # @info "Jacobian of F wrt. u and du:" Ju Jdu
+    Ju = ForwardDiff.jacobian((u) -> (tmp = copy(u); f(tmp, du_pred, u, p, t); tmp), u_pred)
+    Jdu = ForwardDiff.jacobian((du) -> (tmp = copy(du); f(tmp, du, u_pred, p, t); tmp), du_pred)
+
     H = (Jdu*E1 + Ju*E0) * PI
 
     return H
