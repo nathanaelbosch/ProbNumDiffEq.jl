@@ -22,7 +22,7 @@ UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 [compat]
 DiffEqBase = "6"
 GaussianDistributions = "0.5"
-ModelingToolkit = "3, 4.0"
+ModelingToolkit = "3, 4.0, 5.1"
 OrdinaryDiffEq = "5"
 PSDMatrices = "0.3.2"
 RecipesBase = "1"
