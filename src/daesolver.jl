@@ -12,6 +12,10 @@ function OrdinaryDiffEq.alg_cache(
         error("""EK1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl use ODEFilters.remake_prob_with_jac(prob).""")
     end
 
+    if u == du
+        @warn "`u0==du0` detected. Due to a bug in OrdinaryDiffEq.jl, make sure to use `alias_du0=true` for now."
+    end
+
     q = alg.order
     u0 = u
     du0 = du
@@ -34,8 +38,8 @@ function OrdinaryDiffEq.alg_cache(
     # Measurement model
     R = zeros(d, d)
     # Initial states
-    m0, P0 = initialize_without_derivatives(u0, du0, f, p, t0, q)
-    # m0, P0 = initialize_with_derivatives(u0, du0, f, p, t0, q)
+    # m0, P0 = initialize_without_derivatives(u0, du0, f, p, t0, q)
+    m0, P0 = initialize_with_derivatives(u0, du0, f, p, t0, q)
     # @info "after init" m0 P0
     # @assert iszero(P0)
     @assert isdiag(P0)
