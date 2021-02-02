@@ -34,12 +34,6 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     @unpack d, q = integ.cache
     @unpack x_tmp = integ.cache
 
-    # @info "smooth!" x_curr.Σ x_next.Σ Ah Qh PI
-    if all((Qh) .< eps(eltype(Qh)))
-        @warn "smooth: Qh is really small! The system is basically deterministic, so we just \"predict backwards\"."
-        return inv(Ah) * x_next
-    end
-
     # Prediction: t -> t+1
     predict!(x_tmp, x_curr, Ah, Qh)
 
