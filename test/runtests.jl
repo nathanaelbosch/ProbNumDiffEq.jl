@@ -44,6 +44,9 @@ end
 
     println("Specific Problems")
     @timedtestset "Specific Problems" begin include("specific_problems.jl") end
+
+    println("DAEs")
+    @timedtestset "DAEs" begin include("daes.jl") end
 end
 
 println("\nTimer Summary:")
