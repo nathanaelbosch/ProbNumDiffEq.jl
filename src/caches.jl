@@ -51,16 +51,19 @@ function OrdinaryDiffEq.alg_cache(
     end
 
     q = alg.order
+    d = length(u)
+    D = d*(q+1)
+
     u0 = u
     t0 = t
-    d = length(u)
 
     uType = typeof(u0)
     uElType = eltype(u0)
     matType = Matrix{uElType}
 
     # Projections
-    Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
+        kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     SolProj = Proj(0)
 
     # Prior dynamics
@@ -68,25 +71,20 @@ function OrdinaryDiffEq.alg_cache(
     Precond = preconditioner(d, q)
     A, Q = ibm(d, q, uElType)
 
+    x0 = Gaussian(zeros(uElType, D), SRMatrix(Matrix(uElType(1.0)*I, D, D)))
+
     # Measurement model
-    R = zeros(d, d)
-    # Initial states
-    m0, P0 = initialize_derivatives ?
-        initialize_with_derivatives(u0, f, p, t0, q) :
-        initialize_without_derivatives(u0, f, p, t0, q)
-    @assert iszero(P0)
-    P0 = SRMatrix(zero(P0))
-    x0 = Gaussian(m0, P0)
+    R = zeros(uElType, d, d)
 
     # Pre-allocate a bunch of matrices
-    h = Proj(0) * x0.μ
-    H = copy(Proj(0))
-    du = copy(u0)
+    h = zeros(uElType, d)
+    H = zeros(uElType, d, D)
+    du = zeros(uElType, d)
     ddu = zeros(uElType, d, d)
     v, S = copy(h), copy(ddu)
     measurement = Gaussian(v, S)
-    K = copy(H')
-    G = copy(Matrix(P0))
+    K = zeros(uElType, D, d)
+    G = zeros(uElType, D, D)
     covmatcache = copy(G)
 
     diffusion_models = Dict(

@@ -1,5 +1,12 @@
 # Goal: Test the correctness of state initialization
+using ODEFilters
+using LinearAlgebra
 using Test
+
+
+d = 2
+q = 6
+D = d*(q+1)
 
 
 a, b = 1.1, -0.5
@@ -22,7 +29,9 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
 
 
 @testset "OOP state init" begin
-    m0, P0 = ODEFilters.initialize_with_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], 6)
+    x0 = Gaussian(zeros(D), SRMatrix(Matrix(1.0*I, D, D)))
+    ODEFilters.initial_update!(x0, prob.u0, prob.f, prob.p, prob.tspan[1], q)
+    m0, P0 = x0
     @test m0 ≈ true_init_states
     @test all(P0 .== 0)
 end
@@ -31,7 +40,10 @@ end
 @testset "IIP state init" begin
     f!(du, u, p, t) = (du .= f(u, p, t))
     prob = ODEProblem(f!, u0, tspan)
-    m0, P0 = ODEFilters.initialize_with_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], 6)
+
+    x0 = Gaussian(zeros(D), SRMatrix(Matrix(1.0*I, D, D)))
+    ODEFilters.initial_update!(x0, prob.u0, prob.f, prob.p, prob.tspan[1], q)
+    m0, P0 = x0
     @test m0 ≈ true_init_states
     @test all(P0 .== 0)
 end

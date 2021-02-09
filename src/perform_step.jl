@@ -2,6 +2,11 @@
 function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     @assert integ.opts.dense == integ.alg.smooth "`dense` and `smooth` should have the same value! "
     @assert integ.saveiter == 1
+
+    # Update the initial state to the known (given or computed with AD) initial values
+    initial_update!(integ)
+
+    # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x, integ.saveiter, cache.x)
     OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, cache.SolProj*cache.x)
 end
