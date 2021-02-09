@@ -43,11 +43,13 @@ function OrdinaryDiffEq.alg_cache(
     initialize_derivatives=true
 
     if !(u isa AbstractVector)
-        error("Problems which are not scalar- or vector-valued (e.g. u0 is a scalar or a matrix) are currently not supported")
+        error("Problems which are not scalar- or vector-valued (e.g. u0 is a scalar ",
+              "or a matrix) are currently not supported")
     end
 
     if (alg isa EK1 || alg isa IEKS) && isnothing(f.jac)
-        error("""EK1 requires the Jacobian. To automatically generate it with ModelingToolkit.jl use ODEFilters.remake_prob_with_jac(prob).""")
+        error("EK1 requires the Jacobian. To automatically generate it with ",
+              "ModelingToolkit.jl use ODEFilters.remake_prob_with_jac(prob).")
     end
 
     q = alg.order
@@ -64,7 +66,8 @@ function OrdinaryDiffEq.alg_cache(
     # Projections
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
         kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    SolProj = Proj(0)
+    @assert f isa AbstractODEFunction
+    SolProj = f isa DynamicalODEFunction ? [Proj(0); Proj(1)] : Proj(0)
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"

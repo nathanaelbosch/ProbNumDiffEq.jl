@@ -90,73 +90,41 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 end
 
+function measure!(integ, x_pred, t)
+    @unpack f, p, dt, alg = integ
+    @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
+    @assert iszero(R)
 
-function h!(integ, x_pred, t)
-    @unpack f, p, dt = integ
-    @unpack u_pred, du, Proj, Precond, measurement = integ.cache
     PI = inv(Precond(dt))
-    z = measurement.μ
     E0, E1 = Proj(0), Proj(1)
 
-    u_pred .= E0*PI*x_pred.μ
-    IIP = isinplace(integ.f)
-    if IIP
-        f(du, u_pred, p, t)
-    else
-        du .= f(u_pred, p, t)
-    end
-    integ.destats.nf += 1
+    z, S = measurement.μ, measurement.Σ
 
+    # Mean
+    _eval_f!(du, u_pred, p, t, f)
+    integ.destats.nf += 1
     z .= E1*PI*x_pred.μ .- du
 
-    return z
-end
-
-function H!(integ, x_pred, t)
-    @unpack f, p, dt, alg = integ
-    @unpack ddu, Proj, Precond, H, u_pred = integ.cache
-    E0, E1 = Proj(0), Proj(1)
-    PI = inv(Precond(dt))
-
+    # Cov
     if alg isa EK1 || alg isa IEKS
-        if alg isa IEKS && !isnothing(alg.linearize_at)
-            linearize_at = alg.linearize_at(t).μ
-        else
-            linearize_at = u_pred
-        end
-
-        if isinplace(integ.f)
-            f.jac(ddu, linearize_at, p, t)
-        else
-            ddu .= f.jac(linearize_at, p, t)
-            # WIP: Handle Jacobians as OrdinaryDiffEq.jl does
-            # J = OrdinaryDiffEq.jacobian((u)-> f(u, p, t), u_pred, integ)
-            # @assert J ≈ ddu
-        end
+        linearize_at = (alg isa IEKS && !isnothing(alg.linearize_at)) ?
+            alg.linearize_at(t).μ : u_pred
+        _eval_f_jac!(ddu, linearize_at, p, t, f)
         integ.destats.njacs += 1
         mul!(H, (E1 .- ddu * E0), PI)
     else
         mul!(H, E1, PI)
     end
-
-    return H
-end
-
-
-function measure!(integ, x_pred, t)
-    @unpack R = integ.cache
-    @unpack u_pred, measurement, H = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
-    z .= h!(integ, x_pred, t)
-    H .= H!(integ, x_pred, t)
-    # R .= Diagonal(eps.(z))
-    @assert iszero(R)
     copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
 
-    return nothing
+    return measurement
 end
 
+# The following functions are just there to handle both IIP and OOP easily
+_eval_f!(du, u, p, t, f::AbstractODEFunction{true}) = f(du, u, p, t)
+_eval_f!(du, u, p, t, f::AbstractODEFunction{false}) = (du .= f(u, p, t))
+_eval_f_jac!(ddu, u, p, t, f::AbstractODEFunction{true}) = f.jac(ddu, u, p, t)
+_eval_f_jac!(ddu, u, p, t, f::AbstractODEFunction{false}) = (ddu .= f.jac(u, p, t))
 
 function update!(integ, prediction)
     @unpack measurement, H, R, x_filt = integ.cache

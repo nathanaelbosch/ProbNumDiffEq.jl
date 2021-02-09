@@ -5,7 +5,7 @@ module ODEFilters
 using Reexport
 @reexport using DiffEqBase
 using OrdinaryDiffEq
-import DiffEqBase: check_error!
+import DiffEqBase: check_error!, AbstractODEFunction
 
 import Base: copy, copy!, show, size, ndims
 stack(x) = copy(reduce(hcat, x)')
