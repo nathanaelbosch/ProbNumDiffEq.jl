@@ -67,7 +67,6 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     # Update
     x_filt = update!(integ, x_pred)
     mul!(u_filt, SolProj, PI*x_filt.μ)
-    integ.u .= u_filt
 
     # Undo the coordinate change / preconditioning
     copy!(integ.cache.x, PI * x)
@@ -81,8 +80,10 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
             err_tmp, dt * err_est_unscaled, integ.u, u_filt,
             integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
-
     end
+
+    integ.u .= u_filt
+
     # stuff that would normally be in apply_step!
     if !integ.opts.adaptive || integ.EEst < one(integ.EEst)
         copy!(integ.cache.x, integ.cache.x_filt)
