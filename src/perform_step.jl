@@ -31,6 +31,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     @unpack A, Q = integ.cache
 
     tnew = t + dt
+    @info "New perform_step!" t dt
 
     # Coordinate change / preconditioning
     P = Precond(dt)
@@ -68,9 +69,11 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     else  # Vanilla filtering order: Predict, measure, calibrate
 
         predict!(x_pred, x, A, Q)
+        # @info "after predict!" integ.alg.manifold(SolProj * PI * x_pred.μ) |> norm
         if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
             manifold_update!(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x))
         end
+        # @info "after manifold_update! 1" integ.alg.manifold(SolProj * PI * x_pred.μ) |> norm
         mul!(u_pred, SolProj, PI*x_pred.μ)
         measure!(integ, x_pred, tnew)
         integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
@@ -85,7 +88,9 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Project onto the manifold
     if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:after, :both)
-        manifold_update!(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters)
+        @info "after update!" integ.alg.manifold(SolProj * PI * x_filt.μ) |> norm
+        manifold_update!(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters, integ.alg.mprojtime==:both)
+        @info "after manifold_update! 2" integ.alg.manifold(SolProj * PI * x_filt.μ) |> norm
     end
 
     # Save
@@ -112,12 +117,13 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         copy!(integ.cache.x, integ.cache.x_filt)
         integ.sol.log_likelihood += integ.cache.log_likelihood
     end
+    # (t > 0) && error()
 end
 
 
-function manifold_update!(x, h, maxiters=1)
+function manifold_update!(x, h, maxiters=1, check=false)
     z_before = h(x.μ)
-    if iszero(z_before)
+    if iszero(z_before) || (check && z_before < eps(typeof(z_before)))
         return
     end
 
@@ -131,12 +137,18 @@ function manifold_update!(x, h, maxiters=1)
 
         S = H' * x.Σ * H
         K = x.Σ * H * inv(S)
+
+        SL = H'x.Σ.squareroot
+        @info "manifold_update!" z S inv(S) SL SL*SL'
+        K = x.Σ * H * inv(SL*SL')
+
         x.μ .= x.μ .+ K * (0 .- z)
         Pnew = X_A_Xt(x.Σ, (I-K*H'))
         copy!(x.Σ, Pnew)
 
         z_after = h(x.μ)
         # @info "Iteration" i z_before S z_after z_before ≈ z_after
+        # @assert abs(z_after) <= abs(z_before)
         @assert abs(z_after) <= abs(z_before) || S < eps(typeof(S))
         if iszero(z_after) || S < eps(typeof(S)) break end
         z_before = z_after
