@@ -23,7 +23,7 @@ See also: [`EK1`](@ref)
 """
 Base.@kwdef struct EK0 <: AbstractEK
     prior::Symbol = :ibm
-    order::Int = 1
+    order::Int = 3
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
 end
@@ -45,7 +45,7 @@ See also: [`EK0`](@ref)
 """
 Base.@kwdef struct EK1 <: AbstractEK
     prior::Symbol = :ibm
-    order::Int = 1
+    order::Int = 3
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
 end
