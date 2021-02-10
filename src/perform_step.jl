@@ -143,5 +143,82 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
 
     error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
 
+
+
+
+
+
+    # Try out some wild things on embedded error estimation
+    @unpack dt = integ
+    @unpack d, Proj, SolProj, Precond = integ.cache
+    @unpack x, x_pred, x_filt, u_filt = integ.cache
+    @unpack A, Q = integ.cache
+    q = integ.alg.order
+
+    P = Precond(dt)
+    PI = inv(P)
+    # x = P*x
+    E0 = Proj(0)
+    Ah = PI * A * P
+    Qh = X_A_Xt(Q, PI)
+
+    # Just to test: re-create the prediction step in here
+    x_tmp = copy(x_pred)
+    predict!(x_tmp, x, Ah, apply_diffusion(Qh, integ.cache.diffusion))
+    @assert x_tmp ≈ x_pred
+
+    # Now do the thing with a lower order
+    m_lower = x.μ[1:d*q]
+    P_lower_L = collect(qr(x.Σ.squareroot[1:d*q, :]').R')
+    P_lower = SquarerootMatrix(P_lower_L)
+    x_lower = Gaussian(m_lower, P_lower)
+
+    A_lower, Q_lower = ibm(d, q-1)
+    Precond_lower = preconditioner(d, q-1)
+    P_l = Precond_lower(dt)
+    PI_l = inv(P_l)
+    Ah_lower = PI_l * A_lower * P_l
+    Qh_lower = X_A_Xt(Q_lower, PI_l)
+
+    x_pred_lower = copy(x_lower)
+    predict!(x_pred_lower, x_lower, Ah_lower, apply_diffusion(Qh_lower, integ.cache.diffusion))
+    # @info "predict with lower order" x_pred_lower.μ x_pred.μ
+
+
+
+    # measure
+    @unpack f, p, dt, alg, t = integ
+    @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
+    E0 = Proj(0)[:, 1:d*q]
+    E1 = Proj(1)[:, 1:d*q]
+    _m = copy(measurement)
+    z, S = _m.μ, _m.Σ
+    _eval_f!(du, E0 * x_pred_lower.μ, p, t+dt, f)
+    integ.destats.nf += 1
+    z .= E1*x_pred_lower.μ .- du
+
+    @assert !(alg isa IEKS)
+    H = copy(H)[:, 1:d*q]
+    if alg isa EK1
+        _eval_f_jac!(ddu, E0*x_pred_lower.μ, p, t+dt, f)
+        integ.destats.njacs += 1
+        H .= E1 .- ddu * E0
+    else
+        H .= E1
+    end
+    copy!(S, Matrix(X_A_Xt(x_pred_lower.Σ, H)))
+
+    # update
+    x_filt_lower = copy(x_pred_lower)
+    update!(x_filt_lower, x_pred_lower, _m, H, R)
+
+
+
+    # Finally: Compare the orders!
+    # @info "Estimate_errors" E0*x_filt_lower.μ - integ.cache.u_filt
+    error_estimate = E0*x_filt_lower.μ - integ.cache.u_filt
+
+
+    # @info "estimate_errors" x.μ
     return error_estimate
 end
