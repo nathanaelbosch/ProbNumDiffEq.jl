@@ -135,6 +135,18 @@ end
 
 
 function estimate_errors(integ, cache::GaussianODEFilterCache)
+    if integ.alg.errest == :defect
+        return defect_error_estimate(integ, cache)
+    elseif integ.alg.errest == :embedded || integ.alg.errest == :cheap_embedded
+        return embedded_error_estimate(integ, cache)
+    elseif integ.alg.errest == :richardson
+        return richardson_error_estimate(integ, cache)
+    else
+        error("invalid errest: $(integ.alg.errest)")
+    end
+end
+
+function defect_error_estimate(integ, cache)
     @unpack diffusion, Q, H = integ.cache
 
     if diffusion isa Real && isinf(diffusion)
@@ -142,11 +154,14 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
     end
 
     error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
+end
 
+function embedded_error_estimate(integ, cache)
+    @unpack diffusion, Q, H = integ.cache
 
-
-
-
+    if diffusion isa Real && isinf(diffusion)
+        return Inf
+    end
 
     # Try out some wild things on embedded error estimation
     @unpack dt = integ
@@ -158,67 +173,130 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
     P = Precond(dt)
     PI = inv(P)
     # x = P*x
-    E0 = Proj(0)
-    Ah = PI * A * P
-    Qh = X_A_Xt(Q, PI)
+    # E0 = Proj(0)
+    # Ah = PI * A * P
+    # Qh = X_A_Xt(Q, PI)
 
     # Just to test: re-create the prediction step in here
-    x_tmp = copy(x_pred)
-    predict!(x_tmp, x, Ah, apply_diffusion(Qh, integ.cache.diffusion))
-    @assert x_tmp ≈ x_pred
+    # x_tmp = copy(x_pred)
+    # predict!(x_tmp, x, Ah, apply_diffusion(Qh, integ.cache.diffusion))
+    # @assert x_tmp ≈ x_pred
+
+
 
     # Now do the thing with a lower order
-    m_lower = x.μ[1:d*q]
-    P_lower_L = collect(qr(x.Σ.squareroot[1:d*q, :]').R')
-    P_lower = SquarerootMatrix(P_lower_L)
-    x_lower = Gaussian(m_lower, P_lower)
+    q_l = integ.alg.emb_order == 0 ? q-1 : integ.alg.emb_order
+    D_l = d*(q_l+1)
+    m_l = x.μ[1:D_l]
+    P_l_L = collect(qr(x.Σ.squareroot[1:D_l, :]').R')
+    P_l = SquarerootMatrix(P_l_L)
+    x_l = Gaussian(m_l, P_l)
 
-    A_lower, Q_lower = ibm(d, q-1)
-    Precond_lower = preconditioner(d, q-1)
-    P_l = Precond_lower(dt)
+    A_l, Q_l = ibm(d, q_l)
+    Precond_l = preconditioner(d, q_l)
+    P_l = Precond_l(dt)
     PI_l = inv(P_l)
-    Ah_lower = PI_l * A_lower * P_l
-    Qh_lower = X_A_Xt(Q_lower, PI_l)
+    Ah_l = PI_l * A_l * P_l
+    Qh_l = X_A_Xt(Q_l, PI_l)
 
-    x_pred_lower = copy(x_lower)
-    predict!(x_pred_lower, x_lower, Ah_lower, apply_diffusion(Qh_lower, integ.cache.diffusion))
-    # @info "predict with lower order" x_pred_lower.μ x_pred.μ
+
+    x_pred_l = copy(x_l)
+    predict_mean!(x_pred_l, x_l, Ah_l, Qh_l)
+
+    # @info "predict with lower order" x_pred_l.μ x_pred.μ
 
 
 
     # measure
     @unpack f, p, dt, alg, t = integ
     @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
-    E0 = Proj(0)[:, 1:d*q]
-    E1 = Proj(1)[:, 1:d*q]
+    E0 = Proj(0)[:, 1:D_l]
+    E1 = Proj(1)[:, 1:D_l]
     _m = copy(measurement)
     z, S = _m.μ, _m.Σ
-    _eval_f!(du, E0 * x_pred_lower.μ, p, t+dt, f)
-    integ.destats.nf += 1
-    z .= E1*x_pred_lower.μ .- du
+    if integ.alg.errest == :embedded
+        _eval_f!(du, E0 * x_pred_l.μ, p, t+dt, f)
+        integ.destats.nf += 1
+    end
+    z .= E1*x_pred_l.μ .- du
+
+
+    diffusion_l = z' * (Matrix(X_A_Xt(Q, H))\z) / d
+    predict_cov!(x_pred_l, x_l, Ah_l, apply_diffusion(Qh_l, diffusion_l))
+
+
 
     @assert !(alg isa IEKS)
-    H = copy(H)[:, 1:d*q]
-    if alg isa EK1
-        _eval_f_jac!(ddu, E0*x_pred_lower.μ, p, t+dt, f)
-        integ.destats.njacs += 1
+    H = copy(H)[:, 1:D_l]
+    if integ.alg isa EK1
+        # _eval_f_jac!(ddu, E0*x_pred_l.μ, p, t+dt, f)
+        # integ.destats.njacs += 1
         H .= E1 .- ddu * E0
     else
         H .= E1
     end
-    copy!(S, Matrix(X_A_Xt(x_pred_lower.Σ, H)))
+    copy!(S, Matrix(X_A_Xt(x_pred_l.Σ, H)))
 
     # update
-    x_filt_lower = copy(x_pred_lower)
-    update!(x_filt_lower, x_pred_lower, _m, H, R)
+    x_filt_l = copy(x_pred_l)
+    update!(x_filt_l, x_pred_l, _m, H, R)
 
 
 
     # Finally: Compare the orders!
-    # @info "Estimate_errors" E0*x_filt_lower.μ - integ.cache.u_filt
-    error_estimate = E0*x_filt_lower.μ - integ.cache.u_filt
+    # @info "Estimate_errors" E0*x_filt_l.μ - integ.cache.u_filt
+    error_estimate = E0*x_filt_l.μ - integ.cache.u_filt
 
 
     # @info "estimate_errors" x.μ
+    return error_estimate
+end
+
+
+function richardson_error_estimate(integ, cache)
+    @unpack diffusion, A, Q, H, R = integ.cache
+    @unpack t, dt = integ
+    @unpack d, Proj, SolProj, Precond = integ.cache
+    @unpack x, x_pred, x_filt, u_filt, measurement = integ.cache
+    q = integ.alg.order
+    # error("Not properly implemented yet; Needs to be rescaled differently / use a different exponent!")
+
+    if diffusion isa Real && isinf(diffusion)
+        return Inf
+    end
+
+    _x = copy(x)
+    _t = t
+
+    dt = dt / 2
+    P = Precond(dt)
+    PI = inv(P)
+    @assert isdynamic(cache.diffusionmodel)
+    _x_pred = copy(x_pred)
+    _x_filt = copy(x_filt)
+
+    #1
+    for i in 1:2
+
+        _t = _t + dt
+
+        # Coordinate change / preconditioning
+        copy!(_x, P * _x)
+
+        # Predict
+        predict_mean!(_x_pred, _x, A, Q)
+        measure!(integ, _x_pred, _t)
+        _diffusion = estimate_diffusion(cache.diffusionmodel, integ)
+        predict_cov!(_x_pred, _x, A, apply_diffusion(Q, _diffusion))
+        copy!(integ.cache.measurement.Σ, Matrix(X_A_Xt(_x_pred.Σ, integ.cache.H)))
+        # Update
+        update!(_x_filt, _x_pred, measurement, H, R)
+
+        copy!(_x, PI * _x_filt)
+
+    end
+
+    error_estimate = (SolProj * _x.μ - integ.cache.u_filt) / (2^q - 1)
+
     return error_estimate
 end

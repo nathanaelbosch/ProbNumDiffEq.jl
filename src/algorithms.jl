@@ -26,6 +26,8 @@ Base.@kwdef struct EK0 <: AbstractEK
     order::Int = 1
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    errest::Symbol = :defect
+    emb_order::Int = 0
 end
 
 
@@ -48,4 +50,6 @@ Base.@kwdef struct EK1 <: AbstractEK
     order::Int = 1
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    errest::Symbol = :defect
+    emb_order::Int = 0
 end
