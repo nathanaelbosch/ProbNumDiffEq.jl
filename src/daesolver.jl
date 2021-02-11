@@ -91,39 +91,34 @@ function DiffEqBase.initialize_dae!(
 end
 
 
-function h!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t)
-    @unpack f, p, dt = integ
-    @unpack u_pred, du, Proj, Precond, measurement = integ.cache
+h!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t) = error()
+H!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t) = error()
+
+function measure!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t)
+    @unpack f, p, dt, alg = integ
+    @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
+    @assert iszero(R)
+    @assert isinplace(integ.f)
+
     PI = inv(Precond(dt))
-    z = measurement.μ
     E0, E1 = Proj(0), Proj(1)
+
+    z, S = measurement.μ, measurement.Σ
+
+    @info "daesolver.jl measure!" t
 
     u_pred .= E0*PI*x_pred.μ
     du_pred = E1*PI*x_pred.μ
 
-    @assert isinplace(integ.f)
+    # Mean
     f(z, du_pred, u_pred, p, t)
     integ.destats.nf += 1
 
-    return z
-end
-
-function H!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t)
-    @unpack f, p, dt, alg = integ
-    @unpack ddu, Proj, Precond, H, u_pred = integ.cache
-    E0, E1 = Proj(0), Proj(1)
-    PI = inv(Precond(dt))
-
-    u_pred .= E0*PI*x_pred.μ
-    du_pred = E1*PI*x_pred.μ
-
-    @assert isinplace(integ.f)
-    # @assert !isnothing(integ.f.jac)
-
+    # Cov
     Ju = ForwardDiff.jacobian((u) -> (tmp = copy(u); f(tmp, du_pred, u, p, t); tmp), u_pred)
     Jdu = ForwardDiff.jacobian((du) -> (tmp = copy(du); f(tmp, du, u_pred, p, t); tmp), du_pred)
-
     H = (Jdu*E1 + Ju*E0) * PI
+    copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
 
-    return H
+    return measurement
 end

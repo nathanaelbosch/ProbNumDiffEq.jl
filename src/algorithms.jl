@@ -29,6 +29,7 @@ Base.@kwdef struct EK0 <: AbstractEK
     order::Int = 1
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    errest::Symbol = :defect
 end
 
 
@@ -66,4 +67,5 @@ Base.@kwdef struct DAE_EK1 <: DAEFilter
     order::Int = 1
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    errest::Symbol = :defect
 end
