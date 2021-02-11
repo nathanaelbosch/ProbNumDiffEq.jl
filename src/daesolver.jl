@@ -90,7 +90,6 @@ function DiffEqBase.initialize_dae!(
     integrator::OrdinaryDiffEq.ODEIntegrator{DAE_EK1})
 end
 
-
 h!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t) = error()
 H!(integ::OrdinaryDiffEq.ODEIntegrator{DAE_EK1}, x_pred, t) = error()
 

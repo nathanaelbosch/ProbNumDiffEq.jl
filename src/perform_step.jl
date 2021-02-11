@@ -137,7 +137,6 @@ function update!(integ, prediction)
     return x_filt
 end
 
-
 function estimate_errors(integ, cache::GaussianODEFilterCache)
     if integ.alg.errest == :defect
         return defect_error_estimate(integ, cache)
@@ -232,9 +231,10 @@ function embedded_error_estimate(integ, cache)
         if alg isa EK1
             # _eval_f_jac!(ddu, E0*x_pred_l.μ, p, t+dt, f)
             # integ.destats.njacs += 1
-            H .= E1 .- ddu * E0
+            #H .= E1 .- ddu * E0
+            H .= (f.mass_matrix*E1 .- ddu * E0)
         else
-            H .= E1
+            mul!(H, f.mass_matrix, E1)
         end
         copy!(S, Matrix(X_A_Xt(x_pred_l.Σ, H)))
     else
