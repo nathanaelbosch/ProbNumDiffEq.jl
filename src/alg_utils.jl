@@ -11,7 +11,8 @@ OrdinaryDiffEq.isfsal(alg::AbstractEK) = false
 ############################################
 # Step size control
 OrdinaryDiffEq.isadaptive(alg::AbstractEK) = true
-OrdinaryDiffEq.alg_order(alg::AbstractEK) = alg.order+1
+OrdinaryDiffEq.alg_order(alg::AbstractEK) =
+    alg.errest == :embedded ? alg.emb_order+1 : alg.order+1
 # OrdinaryDiffEq.alg_adaptive_order(alg::AbstractEK) =
 
 # PI control is the default!

@@ -185,7 +185,7 @@ function embedded_error_estimate(integ, cache)
 
 
     # Now do the thing with a lower order
-    q_l = integ.alg.emb_order == 0 ? q-1 : integ.alg.emb_order
+    q_l = integ.alg.emb_order
     D_l = d*(q_l+1)
     m_l = x.μ[1:D_l]
     P_l_L = collect(qr(x.Σ.squareroot[1:D_l, :]').R')
