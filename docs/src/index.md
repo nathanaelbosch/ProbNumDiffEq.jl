@@ -80,6 +80,8 @@ Gaussian ODE Filters:
 - H. Kersting, T. J. Sullivan, and P. Hennig: **Convergence Rates of Gaussian Ode Filters**
 - F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**
 - F. Tronarp, S. Särkkä, and P. Hennig: **Bayesian ODE Solvers: The Maximum A Posteriori Estimate**
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers**
+- N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers**
 
 Probabilistic Numerics:
 - [http://probabilistic-numerics.org/](http://probabilistic-numerics.org/)
