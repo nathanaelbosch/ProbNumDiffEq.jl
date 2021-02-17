@@ -62,8 +62,8 @@ for (prob, probname) in [
             sol = solve(prob, Alg(order=q, diffusionmodel=diffusion),
                         adaptive=true)
 
-            @test sol.u ≈ true_sol.(sol.t) rtol=1e-4
-            @test mean.(sol.(t_eval)) ≈ true_dense_vals rtol=1e-4
+            @test sol.u ≈ true_sol.(sol.t) rtol=1e-3
+            @test mean.(sol.(t_eval)) ≈ true_dense_vals rtol=1e-3
 
             end
         end
