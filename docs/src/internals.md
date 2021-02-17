@@ -1,5 +1,5 @@
 # Internals
 
 ```@autodocs
-Modules = [ODEFilters]
+Modules = [ProbNumDiffEq]
 ```

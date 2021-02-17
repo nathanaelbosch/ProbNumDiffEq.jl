@@ -1,4 +1,4 @@
-using ODEFilters
+using ProbNumDiffEq
 using Test
 using Plots
 using LinearAlgebra
@@ -8,7 +8,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
 
 @testset "Solution" begin
-    prob = ODEFilters.remake_prob_with_jac(prob_ode_lotkavoltera)
+    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_lotkavoltera)
     sol = solve(prob, EK1())
 
     @test length(sol) > 2
@@ -55,7 +55,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
     # Sampling
     @testset "Solution Sampling" begin
-        samples = ODEFilters.sample(sol, 10)
+        samples = ProbNumDiffEq.sample(sol, 10)
 
         @test samples isa Array
 
@@ -64,13 +64,13 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         @test n == length(sol.u[1])
         @test o == 10
 
-        u = ODEFilters.stack(sol.u)
-        stds = sqrt.(ODEFilters.stack(diag.(sol.pu.Σ)))
+        u = ProbNumDiffEq.stack(sol.u)
+        stds = sqrt.(ProbNumDiffEq.stack(diag.(sol.pu.Σ)))
         outlier_count = sum(abs.(u .- samples) .> 3stds)
         @test_broken outlier_count < 0.05 * m * n * o
 
         # Dense sampling
-        dense_samples, dense_times = ODEFilters.dense_sample(sol, 10)
+        dense_samples, dense_times = ProbNumDiffEq.dense_sample(sol, 10)
         m, n, o = size(dense_samples)
         @test m == length(dense_times)
         @test n == length(sol.u[1])

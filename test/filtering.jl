@@ -3,7 +3,7 @@ Check the correctness of the filtering implementations vs. basic readable math c
 """
 
 using Test
-using ODEFilters
+using ProbNumDiffEq
 using LinearAlgebra
 
 
@@ -26,13 +26,13 @@ using LinearAlgebra
     x_out = copy(x_curr)
 
     @testset "predict!" begin
-        ODEFilters.predict!(x_out, x_curr, A, Q)
+        ProbNumDiffEq.predict!(x_out, x_curr, A, Q)
         @test m_p == x_out.μ
         @test P_p == x_out.Σ
     end
 
     @testset "predict" begin
-        x_out = ODEFilters.predict(x_curr, A, Q)
+        x_out = ProbNumDiffEq.predict(x_curr, A, Q)
         @test m_p == x_out.μ
         @test P_p == x_out.Σ
     end
@@ -40,7 +40,7 @@ using LinearAlgebra
     @testset "predict! with SRMatrix" begin
         x_curr = Gaussian(m, SRMatrix(L_p))
         x_out = copy(x_curr)
-        ODEFilters.predict!(x_out, x_curr, A, SRMatrix(L_Q))
+        ProbNumDiffEq.predict!(x_out, x_curr, A, SRMatrix(L_Q))
         @test m_p == x_out.μ
         @test P_p ≈ x_out.Σ
     end
@@ -77,13 +77,13 @@ end
     measurement = Gaussian(z, S)
 
     @testset "update!" begin
-        ODEFilters.update!(x_out, x_pred, measurement, H, R)
+        ProbNumDiffEq.update!(x_out, x_pred, measurement, H, R)
         @test m == x_out.μ
         @test P ≈ x_out.Σ
     end
 
     @testset "update!" begin
-        x_out = ODEFilters.update(x_pred, measurement, H, R)
+        x_out = ProbNumDiffEq.update(x_pred, measurement, H, R)
         @test m == x_out.μ
         @test P ≈ x_out.Σ
     end
@@ -116,7 +116,7 @@ end
     x_smoothed = Gaussian(m_s, SRMatrix(L_P_s))
 
     @testset "smooth" begin
-        x_out, _ = ODEFilters.smooth(x_curr, x_smoothed, A, Q_SR)
+        x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q_SR)
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ x_out.Σ
     end

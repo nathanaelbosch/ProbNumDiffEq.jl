@@ -1,7 +1,7 @@
 # Everytime I encounter something that raises some error and I fix it, I should add that
 # specific problem to this list to make sure, that this specific run then works without
 # bugs.
-using ODEFilters
+using ProbNumDiffEq
 using Test
 using LinearAlgebra
 using UnPack
@@ -14,24 +14,24 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode
 
 
 @testset "Smoothing with small constant steps" begin
-    prob = ODEFilters.remake_prob_with_jac(prob_ode_fitzhughnagumo)
+    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_fitzhughnagumo)
     @test solve(prob, EK0(order=4, diffusionmodel=:fixed, smooth=true),
-                adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
+                adaptive=false, dt=1e-3) isa ProbNumDiffEq.ProbODESolution
     @test solve(prob, EK1(order=4, diffusionmodel=:fixed, smooth=true),
-                adaptive=false, dt=1e-3) isa ODEFilters.ProbODESolution
+                adaptive=false, dt=1e-3) isa ProbNumDiffEq.ProbODESolution
 end
 
 
 @testset "Problem with analytic solution" begin
-    prob = ODEFilters.remake_prob_with_jac(prob_ode_mm_linear)
-    @test solve(prob, EK0(order=4)) isa ODEFilters.ProbODESolution
-    @test solve(prob, EK1(order=4)) isa ODEFilters.ProbODESolution
+    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_mm_linear)
+    @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
+    @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
 end
 
 
 @testset "Stiff Vanderpol" begin
-    prob = ODEFilters.remake_prob_with_jac(prob_ode_vanstiff)
-    @test solve(prob, EK1(order=3)) isa ODEFilters.ProbODESolution
+    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_vanstiff)
+    @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
 
@@ -42,15 +42,15 @@ end
     @test eltype(eltype(sol.u)) == BigFloat
     @test eltype(eltype(sol.pu.μ)) == BigFloat
     @test eltype(eltype(sol.pu.Σ)) == BigFloat
-    @test sol isa ODEFilters.ProbODESolution
+    @test sol isa ProbNumDiffEq.ProbODESolution
 end
 
 
 @testset "OOP problem definition" begin
     prob = ODEProblem((u, p, t) -> ([p[1] * u[1] .* (1 .- u[1])]), [1e-1], (0.0, 5), [3.0])
-    @test solve(prob, EK0(order=4)) isa ODEFilters.ProbODESolution
-    prob = ODEFilters.remake_prob_with_jac(prob)
-    @test solve(prob, EK1(order=4)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
+    prob = ProbNumDiffEq.remake_prob_with_jac(prob)
+    @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
 end
 
 
@@ -73,7 +73,7 @@ end
 
             m, P = x.μ, x.Σ
 
-            m0, P0 = E0*m, ODEFilters.X_A_Xt(P, E0)
+            m0, P0 = E0*m, ProbNumDiffEq.X_A_Xt(P, E0)
 
             e = m0'm0
             H = 2m0'E0
@@ -83,7 +83,7 @@ end
             K = P * H' * S_inv
 
             mnew = m + K * (2 .- e)
-            Pnew = ODEFilters.X_A_Xt(P, (I-K*H)) # + X_A_Xt(R, K)
+            Pnew = ProbNumDiffEq.X_A_Xt(P, (I-K*H)) # + X_A_Xt(R, K)
 
             # @info m P e S K mnew
             copy!(m, mnew)
@@ -94,8 +94,8 @@ end
         DiscreteCallback(condtion,affect!,save_positions=save_positions)
     end
 
-    @test solve(prob, EK0(order=3)) isa ODEFilters.ProbODESolution
-    @test solve(prob, EK0(order=3), callback=Callback()) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
+    @test solve(prob, EK0(order=3), callback=Callback()) isa ProbNumDiffEq.ProbODESolution
 end
 
 
@@ -109,7 +109,7 @@ end
     tspan = (0.0, 6.3)
     p = [1e1]
     prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
-    @test_broken solve(prob, EK0(order=3)) isa ODEFilters.ProbODESolution
+    @test_broken solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
 
@@ -122,12 +122,12 @@ end
     tspan = (0.0,10.0)
     u0 = [1.0,1.0]
     prob = ODEProblem(f,u0,tspan,p)
-    @test solve(prob, EK1(order=3)) isa ODEFilters.ProbODESolution
+    @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
 
 @testset "Derivative with ForwardDiff.jl" begin
-    prob = ODEFilters.remake_prob_with_jac(prob_ode_fitzhughnagumo)
+    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_fitzhughnagumo)
     function param_to_loss(p)
         sol = solve(remake(prob, p=p), EK1(order=3))
         return norm(sol.u[end])  # Dummy loss

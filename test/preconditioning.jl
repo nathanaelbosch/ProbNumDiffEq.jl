@@ -6,7 +6,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
 prob = prob_ode_lotkavoltera
 prob = remake(prob, tspan=(0.0, 10.0))
-prob = ODEFilters.remake_prob_with_jac(prob)
+prob = ProbNumDiffEq.remake_prob_with_jac(prob)
 
 
 @testset "Condition numbers of A,Q" begin
@@ -15,19 +15,19 @@ prob = ODEFilters.remake_prob_with_jac(prob)
 
     d, q = 2, 3
 
-    A!, Q! = ODEFilters.vanilla_ibm(d, q)
+    A!, Q! = ProbNumDiffEq.vanilla_ibm(d, q)
     Ah = diagm(0 => ones(d*(q+1)))
     Qh = zeros(d*(q+1), d*(q+1))
     A!(Ah, h)
     Q!(Qh, h, σ^2)
 
-    A_p, Q_p = ODEFilters.ibm(d, q)
+    A_p, Q_p = ProbNumDiffEq.ibm(d, q)
     Ah_p = A_p
     Qh_p = Q_p * σ^2
 
 
     # First test that they're both equivalent
-    P = ODEFilters.preconditioner(d, q)
+    P = ProbNumDiffEq.preconditioner(d, q)
     P, PI = P(h), inv(P(h))
     @test Qh_p ≈ P * Qh * P'
     @test Ah_p ≈ P * Ah * PI

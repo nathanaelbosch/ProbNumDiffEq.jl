@@ -1,6 +1,6 @@
 __precompile__()
 
-module ODEFilters
+module ProbNumDiffEq
 
 using Reexport
 @reexport using DiffEqBase

@@ -7,7 +7,7 @@ using Plots
 
 
 prob = prob_ode_lotkavoltera
-prob = ODEFilters.remake_prob_with_jac(prob)
+prob = ProbNumDiffEq.remake_prob_with_jac(prob)
 
 
 @testset "Smoothing for small dt and large q" begin

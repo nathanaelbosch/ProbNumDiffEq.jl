@@ -1,7 +1,7 @@
 # Goal: Make sure that our solvers are "correct" for small steps or tolerances
 # Verify this for many (ideally all) combinations
 # Compare with an algorithm from OrdinaryDiffEq.jl with high precision
-using ODEFilters
+using ProbNumDiffEq
 using Test
 using OrdinaryDiffEq
 using LinearAlgebra
@@ -9,7 +9,7 @@ using Statistics: mean
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
-import ODEFilters: remake_prob_with_jac
+import ProbNumDiffEq: remake_prob_with_jac
 
 
 for (prob, probname) in [

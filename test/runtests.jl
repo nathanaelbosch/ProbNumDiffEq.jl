@@ -1,5 +1,5 @@
 using Test
-using ODEFilters
+using ProbNumDiffEq
 
 using TimerOutputs
 const to = TimerOutput()
@@ -7,7 +7,7 @@ macro timedtestset(name, code)
     return esc(:(@timeit to $name @testset $name $code))
 end
 
-@testset "ODEFilters" begin
+@testset "ProbNumDiffEq" begin
 
     println("Correctness")
     @timedtestset "Correctness" begin include("correctness.jl") end

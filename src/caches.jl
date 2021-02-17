@@ -49,7 +49,7 @@ function OrdinaryDiffEq.alg_cache(
 
     if (alg isa EK1 || alg isa IEKS) && isnothing(f.jac)
         error("EK1 requires the Jacobian. To automatically generate it with ",
-              "ModelingToolkit.jl use ODEFilters.remake_prob_with_jac(prob).")
+              "ModelingToolkit.jl use ProbNumDiffEq.remake_prob_with_jac(prob).")
     end
 
     q = alg.order

@@ -1,10 +1,10 @@
 using Documenter
-using ODEFilters
+using ProbNumDiffEq
 
 makedocs(
-    sitename = "ODEFilters.jl",
+    sitename = "ProbNumDiffEq.jl",
     format = Documenter.HTML(),
-    modules = [ODEFilters],
+    modules = [ProbNumDiffEq],
     pages = [
         "Home" => "index.md",
         "Solvers and Options" => "solvers.md",
@@ -19,6 +19,6 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/nathanaelbosch/ODEFilters.jl.git",
+    repo = "github.com/nathanaelbosch/ProbNumDiffEq.jl.git",
     devbranch="main"
 )

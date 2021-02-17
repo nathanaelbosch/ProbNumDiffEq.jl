@@ -1,14 +1,14 @@
-# ODEFilters.jl
+# ProbNumDiffEq.jl
 
-[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathanaelbosch.github.io/ODEFilters.jl/stable)
-[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathanaelbosch.github.io/ODEFilters.jl/dev)
-[![Build Status](https://github.com/nathanaelbosch/ODEFilters.jl/workflows/CI/badge.svg)](https://github.com/nathanaelbosch/ODEFilters.jl/actions)
-[![Coverage](https://codecov.io/gh/nathanaelbosch/ODEFilters.jl/branch/main/graph/badge.svg?token=eufIemCGXn)](https://codecov.io/gh/nathanaelbosch/ODEFilters.jl)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/stable)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/dev)
+[![Build Status](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/workflows/CI/badge.svg)](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/actions)
+[![Coverage](https://codecov.io/gh/nathanaelbosch/ProbNumDiffEq.jl/branch/main/graph/badge.svg?token=eufIemCGXn)](https://codecov.io/gh/nathanaelbosch/ProbNumDiffEq.jl)
 <!-- [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle) -->
 <!-- [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac) -->
 
 
-**ODEFilters.jl provides _probabilistic_ ODE solvers for the [DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.**
+**ProbNumDiffEq.jl provides _probabilistic_ ODE solvers for the [DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.**
 
 ![Fitzhugh-Nagumo Solve Animation](./examples/fitzhughnagumo_solve.gif?raw=true "Fitzhugh-Nagumo Solve Animation")
 
@@ -24,13 +24,13 @@ As a result, the solvers return a posterior probability distribution over ODE so
 ## Installation
 The package can be installed directly with the Julia package manager:
 ```julia
-] add ODEFilters
+] add ProbNumDiffEq
 ```
 
 
 ## Example
 ```julia
-using ODEFilters
+using ProbNumDiffEq
 
 # ODE definition as in DifferentialEquations.jl
 function fitz(u, p, t)
@@ -51,7 +51,7 @@ using Plots
 plot(sol, fillalpha=0.15)
 
 # Sample from the solution and plot the samples
-samples = ODEFilters.sample(sol, 100)
+samples = ProbNumDiffEq.sample(sol, 100)
 for i in 1:100
     plot!(sol.t, samples[:, :, i], color=[1 2], label="", linewidth=0.1)
 end
