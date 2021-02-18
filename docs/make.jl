@@ -7,11 +7,10 @@ makedocs(
     modules = [ProbNumDiffEq],
     pages = [
         "Home" => "index.md",
-        "Solvers and Options" => "solvers.md",
-        "Examples" => [
-            "Comparison to ProbInts" => "probints_comparison.md"
+        "Tutorials" => [
+            "Getting Started" => "getting_started.md"
         ],
-        # "Internals" => "internals.md",
+        "Solvers and Options" => "solvers.md",
     ]
 )
 

@@ -7,7 +7,7 @@ abstract type AbstractEK <: GaussianODEFilter end
 """
     EK0(; prior=:ibm, order=1, diffusionmodel=:dynamic, smooth=true)
 
-Gaussian ODE filtering with zeroth order extended Kalman filter.
+**Gaussian ODE filtering with zeroth order extended Kalman filtering.**
 
 Currently, only the integrated Brownian motion prior `:ibm` is supported.
 For the diffusionmodel, chose one of
@@ -16,10 +16,11 @@ For the diffusionmodel, chose one of
 See also: [`EK1`](@ref)
 
 # References:
-- M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution
-  of Initial Value Problems**
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 - F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary
-  Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**
+Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
+- M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution
+of Initial Value Problems** (2018)
 """
 Base.@kwdef struct EK0 <: AbstractEK
     prior::Symbol = :ibm
@@ -32,7 +33,7 @@ end
 """
     EK1(; prior=:ibm, order=1, diffusionmodel=:dynamic, smooth=true)
 
-Gaussian ODE filtering with first order extended Kalman filter
+**Gaussian ODE filtering with first order extended Kalman filtering.**
 
 Currently, only the integrated Brownian motion prior `:ibm` is supported.
 For the diffusionmodel, chose one of
@@ -41,7 +42,9 @@ For the diffusionmodel, chose one of
 See also: [`EK0`](@ref)
 
 # References:
-- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
+- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary
+Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
 """
 Base.@kwdef struct EK1 <: AbstractEK
     prior::Symbol = :ibm
