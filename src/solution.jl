@@ -11,7 +11,8 @@ mutable struct ProbODESolution{
     errors::DType
     t::tType
     k::rateType
-    x::xType
+    x_filt::xType
+    x_smooth::xType
     diffusions::diffType
     log_likelihood::llType
     prob::P
@@ -23,20 +24,21 @@ mutable struct ProbODESolution{
     retcode::Symbol
 end
 ProbODESolution{T, N}(
-    u, pu, u_analytic, errors, t, k, x, diffusions, log_likelihood, prob, alg, interp,
+    u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob, alg, interp,
     dense, tslocation, destats, retcode) where {T, N} =
         ProbODESolution{
             T, N, typeof(u), typeof(pu), typeof(u_analytic), typeof(errors), typeof(t),
-            typeof(k), typeof(x), typeof(diffusions), typeof(log_likelihood), typeof(prob),
+            typeof(k), typeof(x_filt), typeof(diffusions), typeof(log_likelihood), typeof(prob),
             typeof(alg), typeof(interp), typeof(destats)
         }(
-            u, pu, u_analytic, errors, t, k, x, diffusions, log_likelihood, prob, alg,
+            u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob, alg,
             interp, dense, tslocation, destats, retcode)
 
 function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
-    ProbODESolution{T, N}(sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x,
-                          sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp,
-                          sol.dense, sol.tslocation, sol.destats, retcode)
+    ProbODESolution{T, N}(
+        sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
+        sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp,
+        sol.dense, sol.tslocation, sol.destats, retcode)
 end
 
 # Used to build the initial empty solution in OrdinaryDiffEq.__init
@@ -58,7 +60,8 @@ function DiffEqBase.build_solution(
     cov = SRMatrix(zeros(uEltype, d, d))
     # cov = zeros(uEltype, d, d)
     pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
-    x = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
+    x_filt = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
+    x_smooth = copy(x_filt)
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 
@@ -72,15 +75,15 @@ function DiffEqBase.build_solution(
 
     ll = zero(uEltype)
     return ProbODESolution{T, N}(
-        u, pu, u_analytic, errors, t, [], x, [], ll, prob, alg, interp, dense, 0, destats, retcode,
+        u, pu, u_analytic, errors, t, [], x_filt, x_smooth, [], ll, prob, alg, interp, dense, 0, destats, retcode,
     )
 end
 
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
     return ProbODESolution{T, N}(
-        sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x, sol.diffusions,
-        sol.log_likelihood, sol.prob,
+        sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
+        sol.diffusions, sol.log_likelihood, sol.prob,
         sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats, sol.retcode,
     )
 end
@@ -157,7 +160,7 @@ function GaussianODEFilterPosterior(alg, u0)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
-function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
+function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, diffusions)
     @unpack A, Q, d, q, Precond = posterior
 
     if tval < t[1]
@@ -203,6 +206,6 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
 end
 function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
     @unpack q, d = sol.interp
-    return sol.interp.SolProj * sol.interp(t, sol.t, sol.x, sol.diffusions)
+    return sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.diffusions)
 end
 (sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = DiffEqArray(StructArray(sol.(t, deriv)), t)

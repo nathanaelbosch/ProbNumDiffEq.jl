@@ -69,6 +69,6 @@ end
         @test length(integ.cache.x.μ) == d*(q+1)
         sol = solve!(integ)
         @test length(integ.cache.x.μ) == d*(q+1)
-        @test length(sol.x[end].μ) == d*(q+1)
+        @test length(sol.x_filt[end].μ) == d*(q+1)
     end
 end

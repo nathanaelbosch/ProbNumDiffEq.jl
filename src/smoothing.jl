@@ -2,10 +2,11 @@
 # Post-Processing: Smoothing and uncertainty calibration
 ########################################################################################
 function smooth_all!(integ)
+    integ.sol.x_smooth = copy(integ.sol.x_filt)
 
-    @unpack x, t, diffusions = integ.sol
     @unpack A, Q, Precond = integ.cache
-    # x_pred is just used as a cache here
+    @unpack x_smooth, t, diffusions = integ.sol
+    x = x_smooth
 
     for i in length(x)-1:-1:2
         dt = t[i+1] - t[i]
@@ -21,8 +22,7 @@ function smooth_all!(integ)
 
         x[i] = P * x[i]
         smooth!(x[i], P*x[i+1], A, Qh, integ)
-        any(isnan.(x[i].μ)) && error("NaN mean after smoothing")
-        any(isnan.(x[i].Σ)) && error("NaN cov after smoothing")
+        @assert !(any(isnan.(x[i].μ)) || any(isnan.(x[i].Σ))) "NaNs after smoothing"
         x[i] = PI * x[i]
     end
 end

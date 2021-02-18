@@ -31,7 +31,7 @@ end
 
 
 function sample(sol::ProbODESolution, n::Int=1)
-    sample(sol.t, sol.x, sol.diffusions, sol.t, sol.interp, n)
+    sample(sol.t, sol.x_filt, sol.diffusions, sol.t, sol.interp, n)
 end
 function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
 
