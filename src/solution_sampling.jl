@@ -31,6 +31,7 @@ end
 
 
 function sample(sol::ProbODESolution, n::Int=1)
+    @assert sol.interp.smooth "sampling not implemented for non-smoothed posteriors"
     sample(sol.t, sol.x_filt, sol.diffusions, sol.t, sol.interp, n)
 end
 function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
@@ -71,8 +72,9 @@ function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
     return sample_path[:, 1:d, :]
 end
 function dense_sample(sol::ProbODESolution, n::Int=1)
+    @assert sol.interp.smooth "sampling not implemented for non-smoothed posteriors"
     times = range(sol.t[1], sol.t[end], length=1000)
-    states = StructArray([sol.interp(t, sol.t, sol.x, sol.diffusions) for t in times])
+    states = StructArray([sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions; smoothed=false) for t in times])
 
     sample(times, states, sol.diffusions, sol.t, sol.interp, n), times
 end

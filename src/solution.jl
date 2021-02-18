@@ -160,7 +160,8 @@ function GaussianODEFilterPosterior(alg, u0)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
-function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, x_smooth, diffusions)
+function (posterior::GaussianODEFilterPosterior)(
+    tval::Real, t, x_filt, x_smooth, diffusions; smoothed=posterior.smooth)
     @unpack A, Q, d, q, Precond = posterior
 
     if tval < t[1]
@@ -169,7 +170,7 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, x_smooth
     if tval in t
         idx = sum(t .<= tval)
         @assert t[idx] == tval
-        return posterior.smooth ? x_smooth[idx] : x_filt[idx]
+        return smoothed ? x_smooth[idx] : x_filt[idx]
     end
 
     idx = sum(t .<= tval)
@@ -185,7 +186,7 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, x_smooth
     goal_pred = predict(P * prev_rv, A, Qh)
     goal_pred = PI * goal_pred
 
-    if !posterior.smooth || tval >= t[end]
+    if !smoothed || tval >= t[end]
         return goal_pred
     end
 
