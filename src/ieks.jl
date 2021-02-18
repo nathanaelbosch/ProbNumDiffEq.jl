@@ -10,7 +10,9 @@ end
 """
     IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, linearize_at=nothing)
 
-Gaussian ODE filtering with iterated extended Kalman smoothing. To use it, use
+**Gaussian ODE filtering with iterated extended Kalman smoothing.**
+
+To use it, use
 `solve_ieks(prob, IEKS(), args...)`
 instead of
 `solve(prob, IEKS(), args...)`,
@@ -39,11 +41,14 @@ end
 
 
 """
-    solve_ieks(prob::DiffEqBase.AbstractODEProblem, alg::IEKS, args...; iterations=10, kwargs...)
+    solve_ieks(prob::AbstractODEProblem, alg::IEKS, args...; iterations=10, kwargs...)
 
 Solve method to be used with the [`IEKS`](@ref). The IEKS works essentially by solving the
 ODE multiple times. `solve_ieks` therefore wraps a call to the standard `solve` method,
 passing `args...` and `kwargs...`.
+
+Currently, this method is very simplistic - it iterates for a fixed numer of times and does
+not use a stopping criterion.
 """
 function solve_ieks(prob::DiffEqBase.AbstractODEProblem, alg::IEKS, args...;
                     iterations=10, kwargs...)
