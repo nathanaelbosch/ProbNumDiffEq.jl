@@ -69,7 +69,10 @@ include("filtering.jl")
 include("perform_step.jl")
 include("preconditioning.jl")
 include("smoothing.jl")
+
 include("solution.jl")
+include("solution_sampling.jl")
+include("solution_plotting.jl")
 
 # Utils
 include("jacobian.jl")

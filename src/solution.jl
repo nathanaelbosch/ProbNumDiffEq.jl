@@ -11,7 +11,8 @@ mutable struct ProbODESolution{
     errors::DType
     t::tType
     k::rateType
-    x::xType
+    x_filt::xType
+    x_smooth::xType
     diffusions::diffType
     log_likelihood::llType
     prob::P
@@ -23,19 +24,21 @@ mutable struct ProbODESolution{
     retcode::Symbol
 end
 ProbODESolution{T, N}(
-    u, pu, u_analytic, errors, t, k, x, diffusions, log_likelihood, prob, alg, interp,
+    u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob, alg, interp,
     dense, tslocation, destats, retcode) where {T, N} =
         ProbODESolution{
             T, N, typeof(u), typeof(pu), typeof(u_analytic), typeof(errors), typeof(t),
-            typeof(k), typeof(x), typeof(diffusions), typeof(log_likelihood), typeof(prob),
-            typeof(alg), typeof(interp), typeof(destats)}(
-                u, pu, u_analytic, errors, t, k, x, diffusions, log_likelihood, prob, alg,
-                interp, dense, tslocation, destats, retcode)
+            typeof(k), typeof(x_filt), typeof(diffusions), typeof(log_likelihood), typeof(prob),
+            typeof(alg), typeof(interp), typeof(destats)
+        }(
+            u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob, alg,
+            interp, dense, tslocation, destats, retcode)
 
 function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
-    ProbODESolution{T, N}(sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x,
-                          sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp,
-                          sol.dense, sol.tslocation, sol.destats, retcode)
+    ProbODESolution{T, N}(
+        sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
+        sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp,
+        sol.dense, sol.tslocation, sol.destats, retcode)
 end
 
 # Used to build the initial empty solution in OrdinaryDiffEq.__init
@@ -57,7 +60,8 @@ function DiffEqBase.build_solution(
     cov = SRMatrix(zeros(uEltype, d, d))
     # cov = zeros(uEltype, d, d)
     pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
-    x = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
+    x_filt = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
+    x_smooth = copy(x_filt)
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 
@@ -71,15 +75,15 @@ function DiffEqBase.build_solution(
 
     ll = zero(uEltype)
     return ProbODESolution{T, N}(
-        u, pu, u_analytic, errors, t, [], x, [], ll, prob, alg, interp, dense, 0, destats, retcode,
+        u, pu, u_analytic, errors, t, [], x_filt, x_smooth, [], ll, prob, alg, interp, dense, 0, destats, retcode,
     )
 end
 
 
 function DiffEqBase.build_solution(sol::ProbODESolution{T,N}, u_analytic, errors) where {T,N}
     return ProbODESolution{T, N}(
-        sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x, sol.diffusions,
-        sol.log_likelihood, sol.prob,
+        sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
+        sol.diffusions, sol.log_likelihood, sol.prob,
         sol.alg, sol.interp, sol.dense, sol.tslocation, sol.destats, sol.retcode,
     )
 end
@@ -88,6 +92,9 @@ end
 ########################################################################################
 # Compat with classic ODE solutions, to enable analysis with DiffEqDevTools.jl
 ########################################################################################
+"""Mean of a probabilistic ODE solution
+
+Used for compatibility with classic ODE solutions, e.g. in `DiffEqDevTools.appxtrue`."""
 mutable struct MeanProbODESolution{
     T, N, uType, uType2, DType, tType, rateType, P, A, IType, DE, PSolType
 } <: DiffEqBase.AbstractODESolution{T,N,uType}
@@ -153,7 +160,8 @@ function GaussianODEFilterPosterior(alg, u0)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
-function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
+function (posterior::GaussianODEFilterPosterior)(
+    tval::Real, t, x_filt, x_smooth, diffusions; smoothed=posterior.smooth)
     @unpack A, Q, d, q, Precond = posterior
 
     if tval < t[1]
@@ -162,12 +170,12 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     if tval in t
         idx = sum(t .<= tval)
         @assert t[idx] == tval
-        return x[idx]
+        return smoothed ? x_smooth[idx] : x_filt[idx]
     end
 
     idx = sum(t .<= tval)
     prev_t = t[idx]
-    prev_rv = x[idx]
+    prev_rv = x_filt[idx]
     diffusion = diffusions[minimum((idx, end))]
 
     # Extrapolate
@@ -178,12 +186,13 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
     goal_pred = predict(P * prev_rv, A, Qh)
     goal_pred = PI * goal_pred
 
-    if !posterior.smooth || tval >= t[end]
+    if !smoothed || tval >= t[end]
         return goal_pred
     end
 
+    @assert length(x_filt) == length(x_smooth)
     next_t = t[idx+1]
-    next_smoothed = x[idx+1]
+    next_smoothed = x_smooth[idx+1]
 
     # Smooth
     h2 = next_t - tval
@@ -199,103 +208,6 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x, diffusions)
 end
 function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
     @unpack q, d = sol.interp
-    return sol.interp.SolProj * sol.interp(t, sol.t, sol.x, sol.diffusions)
+    return sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions)
 end
 (sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = DiffEqArray(StructArray(sol.(t, deriv)), t)
-
-
-
-########################################################################################
-# Plotting
-########################################################################################
-@recipe function f(sol::AbstractProbODESolution; ribbon_width=1.96)
-    times = range(sol.t[1], sol.t[end], length=1000)
-    dense_post = sol(times).u
-    values = stack(mean(dense_post))
-    stds = stack(std(dense_post))
-    ribbon --> ribbon_width * stds
-    xguide --> "t"
-    yguide --> "u(t)"
-    label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
-    return times, values
-end
-
-
-########################################################################################
-# Sampling from a solution
-########################################################################################
-"""Helper function to sample from our covariances, which often have a "cross" of zeros
-For the 0-cov entries the outcome of the sampling is deterministic!"""
-function _rand(x::Gaussian, n::Int=1)
-    m, C = x.μ, x.Σ
-    @assert C isa SRMatrix
-
-    sample = m .+ C.squareroot*randn(length(m), n)
-    return sample
-end
-
-
-function sample_back(x_curr::SRGaussian, x_next_sample::AbstractVector, Ah::AbstractMatrix, Qh::SRMatrix, PI=I)
-    m_p, P_p = Ah*x_curr.μ, Ah*x_curr.Σ*Ah' + Qh
-    P_p_inv = inv(Symmetric(P_p))
-    Gain = x_curr.Σ * Ah' * P_p_inv
-
-    m = x_curr.μ + Gain * (x_next_sample - m_p)
-
-    # P = X_A_Xt(x_curr.Σ, (I - Gain*Ah)) + X_A_Xt(Qh, Gain)
-    _R = [x_curr.Σ.squareroot' * (I - Gain*Ah)'
-          Qh.squareroot' * Gain']
-    _, P_L = qr(_R)
-    P = SRMatrix(P_L)
-
-    assert_nonnegative_diagonal(P)
-    return Gaussian(m, P)
-end
-
-
-function sample(sol::ProbODESolution, n::Int=1)
-    sample(sol.t, sol.x, sol.diffusions, sol.t, sol.interp, n)
-end
-function sample(ts, xs, diffusions, difftimes, posterior, n::Int=1)
-
-    @unpack A, Q, d, q, Precond = posterior
-    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    dim = d*(q+1)
-
-    x = xs[end]
-    sample = _rand(x, n)
-    @assert size(sample) == (dim, n)
-
-    sample_path = zeros(length(ts), dim, n)
-    sample_path[end, :, :] .= sample
-    # @info "final value and samples" x.μ sample sample_path[end, :]
-
-    for i in length(xs)-1:-1:1
-        dt = ts[i+1] - ts[i]
-
-        i_diffusion = sum(difftimes .<= ts[i])
-        diffusion = diffusions[i_diffusion]
-
-        Qh = apply_diffusion(Q, diffusion)
-        P = Precond(dt)
-        PI = inv(P)
-
-        for j in 1:n
-            sample_p = P*sample_path[i+1, :, j]
-            x_prev_p = P*xs[i]
-
-            prev_sample_p = sample_back(x_prev_p, sample_p, A, Qh, PI)
-
-            # sample_path[i, :, j] .= PI*prev_sample_p.μ
-            sample_path[i, :, j] .= PI*_rand(prev_sample_p)[:]
-        end
-    end
-
-    return sample_path[:, 1:d, :]
-end
-function dense_sample(sol::ProbODESolution, n::Int=1)
-    times = range(sol.t[1], sol.t[end], length=1000)
-    states = StructArray([sol.interp(t, sol.t, sol.x, sol.diffusions) for t in times])
-
-    sample(times, states, sol.diffusions, sol.t, sol.interp, n), times
-end
