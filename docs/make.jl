@@ -8,9 +8,9 @@ makedocs(
     pages = [
         "Home" => "index.md",
         "Solvers and Options" => "solvers.md",
-        "Examples" => [
-            "Comparison to ProbInts" => "probints_comparison.md"
-        ],
+        # "Examples" => [
+        #     "Comparison to ProbInts" => "probints_comparison.md"
+        # ],
         # "Internals" => "internals.md",
     ]
 )
