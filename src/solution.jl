@@ -160,7 +160,7 @@ function GaussianODEFilterPosterior(alg, u0)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
-function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, diffusions)
+function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, x_smooth, diffusions)
     @unpack A, Q, d, q, Precond = posterior
 
     if tval < t[1]
@@ -169,12 +169,12 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, diffusio
     if tval in t
         idx = sum(t .<= tval)
         @assert t[idx] == tval
-        return x[idx]
+        return posterior.smooth ? x_smooth[idx] : x_filt[idx]
     end
 
     idx = sum(t .<= tval)
     prev_t = t[idx]
-    prev_rv = x[idx]
+    prev_rv = x_filt[idx]
     diffusion = diffusions[minimum((idx, end))]
 
     # Extrapolate
@@ -189,8 +189,9 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, diffusio
         return goal_pred
     end
 
+    @assert length(x_filt) == length(x_smooth)
     next_t = t[idx+1]
-    next_smoothed = x[idx+1]
+    next_smoothed = x_smooth[idx+1]
 
     # Smooth
     h2 = next_t - tval
@@ -206,6 +207,6 @@ function (posterior::GaussianODEFilterPosterior)(tval::Real, t, x_filt, diffusio
 end
 function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
     @unpack q, d = sol.interp
-    return sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.diffusions)
+    return sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions)
 end
 (sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) = DiffEqArray(StructArray(sol.(t, deriv)), t)
