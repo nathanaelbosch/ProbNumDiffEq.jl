@@ -1,7 +1,7 @@
 # ProbNumDiffEq.jl
 _Probabilistic numerical methods for solving differential equations._
 
-![Fitzhugh-Nagumo Solve Animation](../../examples/fitzhughnagumo_solve.gif)
+![Fitzhugh-Nagumo Solve Animation](https://raw.githubusercontent.com/nathanaelbosch/ProbNumDiffEq.jl/main/examples/fitzhughnagumo_solve.gif)
 
 ProbNumDiffEq.jl is a library for [probabilistic numerical methods](http://probabilistic-numerics.org/) for solving differential equations.
 It provides drop-in replacements for classic ODE solvers from [DifferentialEquations.jl](https://docs.sciml.ai/stable/) by extending [OrdinaryDiffEq.jl](https://github.com/SciML/OrdinaryDiffEq.jl).
