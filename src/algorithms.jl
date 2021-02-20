@@ -5,7 +5,7 @@ abstract type GaussianODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorith
 abstract type AbstractEK <: GaussianODEFilter end
 
 """
-    EK0(; prior=:ibm, order=1, diffusionmodel=:dynamic, smooth=true)
+    EK0(; prior=:ibm, order=3, diffusionmodel=:dynamic, smooth=true)
 
 **Gaussian ODE filtering with zeroth order extended Kalman filtering.**
 
@@ -17,10 +17,8 @@ See also: [`EK1`](@ref)
 
 # References:
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
-- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary
-Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
-- M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution
-of Initial Value Problems** (2018)
+- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
+- M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018)
 """
 Base.@kwdef struct EK0 <: AbstractEK
     prior::Symbol = :ibm
@@ -31,7 +29,7 @@ end
 
 
 """
-    EK1(; prior=:ibm, order=1, diffusionmodel=:dynamic, smooth=true)
+    EK1(; prior=:ibm, order=3, diffusionmodel=:dynamic, smooth=true)
 
 **Gaussian ODE filtering with first order extended Kalman filtering.**
 
@@ -43,8 +41,7 @@ See also: [`EK0`](@ref)
 
 # References:
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
-- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary
-Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
+- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
 """
 Base.@kwdef struct EK1 <: AbstractEK
     prior::Symbol = :ibm
