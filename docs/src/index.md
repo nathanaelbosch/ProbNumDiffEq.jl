@@ -8,9 +8,9 @@ It provides drop-in replacements for classic ODE solvers from [DifferentialEquat
 
 
 ## Installation
-The package can be installed directly from github:
+The package can be installed directly with the Julia package manager:
 ```julia
-] add https://github.com/nathanaelbosch/ProbNumDiffEq.jl
+] add ProbNumDiffEq
 ```
 
 ## Tutorials
