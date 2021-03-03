@@ -109,7 +109,7 @@ end
     tspan = (0.0, 6.3)
     p = [1e1]
     prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
-    @test_broken solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
+    @test solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
 
