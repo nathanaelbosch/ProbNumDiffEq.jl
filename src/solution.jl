@@ -145,6 +145,8 @@ struct GaussianODEFilterPosterior{SPType, AType, QType, PType} <: AbstractODEFil
     Precond::PType
     smooth::Bool
 end
+set_smooth(p::GaussianODEFilterPosterior) = GaussianODEFilterPosterior(
+    p.d, p.q, p.SolProj, p.A, p.Q, p.Precond, true)
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = length(u0)
@@ -156,7 +158,7 @@ function GaussianODEFilterPosterior(alg, u0)
     A, Q = ibm(d, q, uElType)
     Precond = preconditioner(d, q)
     GaussianODEFilterPosterior(
-        d, q, SolProj, A, Q, Precond, alg.smooth)
+        d, q, SolProj, A, Q, Precond, false)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 

@@ -20,6 +20,7 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
     if integ.alg.smooth
         smooth_all!(integ)
         integ.sol.pu .= [integ.cache.SolProj * x for x in integ.sol.x_smooth]
+        integ.sol.interp = set_smooth(integ.sol.interp)
         @assert (length(integ.sol.u) == length(integ.sol.pu))
         [(su .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
     end
