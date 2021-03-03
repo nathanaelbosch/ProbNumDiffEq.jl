@@ -136,7 +136,7 @@ function manifold_update!(x, h, maxiters=1, check=false)
         @assert H isa AbstractVector
 
         SL = H'x.Σ.squareroot
-        S = SL*SL'
+        S = SL*SL' + eps(eltype(SL))
         K = x.Σ * H * inv(S)
         @info "manifold_update!" z S inv(S) SL SL*SL'
 
