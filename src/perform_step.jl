@@ -76,9 +76,17 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     # Estimate error for adaptive steps
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(integ, integ.cache)
-        DiffEqBase.calculate_residuals!(
-            err_tmp, dt * err_est_unscaled, integ.u, u_filt,
-            integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        if integ.f isa DynamicalODEFunction # second order solver
+            DiffEqBase.calculate_residuals!(
+                err_tmp, dt * err_est_unscaled,
+                integ.u[2, :], u_filt[2, :],
+                integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        else
+            DiffEqBase.calculate_residuals!(
+                err_tmp, dt * err_est_unscaled,
+                integ.u, u_filt,
+                integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        end
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
 
@@ -91,7 +99,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 end
 
-function measure!(integ, x_pred, t)
+function measure!(integ, x_pred, t, second_order::Val{false})
     @unpack f, p, dt, alg = integ
     @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
     @assert iszero(R)
@@ -120,6 +128,33 @@ function measure!(integ, x_pred, t)
 
     return measurement
 end
+
+function measure!(integ, x_pred, t, second_order::Val{true})
+    @unpack f, p, dt, alg = integ
+    @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
+    @assert iszero(R)
+
+    PI = inv(Precond(dt))
+    E0, E1, E2 = Proj(0), Proj(1), Proj(2)
+
+    z, S = measurement.μ, measurement.Σ
+
+    # Mean
+    ddu = copy(du)
+    f.f1(ddu, du, u_pred, p, t)
+    # _eval_f!(du, u_pred, p, t, f)
+    integ.destats.nf += 1
+    z .= E2*PI*x_pred.μ .- ddu
+
+    # Cov
+    @assert alg isa EK0
+    mul!(H, E2, PI)
+    copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
+
+    return measurement
+end
+measure!(integ, x_pred, t) = measure!(
+    integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
 
 # The following functions are just there to handle both IIP and OOP easily
 _eval_f!(du, u, p, t, f::AbstractODEFunction{true}) = f(du, u, p, t)

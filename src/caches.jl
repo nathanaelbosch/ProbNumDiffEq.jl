@@ -52,8 +52,13 @@ function OrdinaryDiffEq.alg_cache(
               "ModelingToolkit.jl use ProbNumDiffEq.remake_prob_with_jac(prob).")
     end
 
+    is_secondorder_ode = f isa DiffEqBase.DynamicalODEFunction
+    if is_secondorder_ode
+        @warn "Assuming that the given ODE is a SecondOrderODE. If this is not the case, e.g. because it is some other dynamical ODE, the solver will probably run into errors!"
+    end
+
     q = alg.order
-    d = length(u)
+    d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d*(q+1)
 
     u0 = u
