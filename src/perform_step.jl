@@ -149,7 +149,7 @@ function manifold_update!(x, h, maxiters=1, check=false)
         z_after = h(x.μ)
         # @info "Iteration" i z_before S z_after z_before ≈ z_after
         # @assert abs(z_after) <= abs(z_before)
-        @assert abs(z_after) <= abs(z_before) || S < eps(typeof(S))
+        # @assert abs(z_after) <= abs(z_before) || S < eps(typeof(S))
         if iszero(z_after) || S < eps(typeof(S)) break end
         z_before = z_after
     end
