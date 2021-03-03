@@ -3,7 +3,7 @@
 ########################################################################################
 abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, ProjType, SolProjType, FP, uType, xType, AType, QType, matType, diffusionType, diffModelType,
+    RType, ProjType, SolProjType, FP, uType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
     measType, llType,
 } <: ODEFiltersCache
     # Constants
@@ -28,13 +28,13 @@ mutable struct GaussianODEFilterCache{
     x_tmp2::xType
     measurement::measType
     H::matType
-    du::uType
+    du::duType
     ddu::matType
     K::matType
     G::matType
     covmatcache::matType
     diffusion::diffusionType
-    err_tmp::uType
+    err_tmp::duType
     log_likelihood::llType
 end
 
@@ -102,7 +102,7 @@ function OrdinaryDiffEq.alg_cache(
 
     return GaussianODEFilterCache{
         typeof(R), typeof(Proj), typeof(SolProj), typeof(Precond),
-        uType, typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
+        uType, typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
         typeof(diffmodel), typeof(measurement), uEltypeNoUnits,
     }(
         # Constants
@@ -112,7 +112,7 @@ function OrdinaryDiffEq.alg_cache(
         copy(x0), copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,
         H, du, ddu, K, G, covmatcache, initdiff,
-        copy(u0),
+        copy(du),
         zero(uEltypeNoUnits),
     )
 end
