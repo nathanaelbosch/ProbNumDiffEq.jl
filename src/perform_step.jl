@@ -140,9 +140,10 @@ function measure!(integ, x_pred, t, second_order::Val{true})
     z, S = measurement.μ, measurement.Σ
 
     # Mean
-    ddu = copy(du)
-    f.f1(ddu, du, u_pred, p, t)
-    # _eval_f!(du, u_pred, p, t, f)
+    _u_pred = E0 * PI * x_pred.μ
+    _du_pred = E1 * PI * x_pred.μ
+    ddu = du
+    f.f1(ddu, _du_pred, _u_pred, p, t)
     integ.destats.nf += 1
     z .= E2*PI*x_pred.μ .- ddu
 
