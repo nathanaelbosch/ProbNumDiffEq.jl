@@ -129,18 +129,16 @@ function manifold_update!(x, h, maxiters=1, check=false)
 
     for i in 1:maxiters
         if i > 1
-            @warn "Second iteration of manifold projection!"
+            @warn "Another iteration of the manifold projection!" i
         end
         z = h(x.μ)
         H = ForwardDiff.gradient(h, x.μ)
         @assert H isa AbstractVector
 
-        S = H' * x.Σ * H
-        K = x.Σ * H * inv(S)
-
         SL = H'x.Σ.squareroot
+        S = SL*SL'
+        K = x.Σ * H * inv(S)
         @info "manifold_update!" z S inv(S) SL SL*SL'
-        K = x.Σ * H * inv(SL*SL')
 
         x.μ .= x.μ .+ K * (0 .- z)
         Pnew = X_A_Xt(x.Σ, (I-K*H'))
