@@ -148,8 +148,16 @@ function measure!(integ, x_pred, t, second_order::Val{true})
     z .= E2*PI*x_pred.μ .- ddu
 
     # Cov
-    @assert alg isa EK0
-    mul!(H, E2, PI)
+    if alg isa EK1
+        @assert !(alg isa IEKS)
+        Ju = ForwardDiff.jacobian((u) -> (tmp = copy(u); f.f1(tmp, _du_pred, u, p, t); tmp), _u_pred)
+        Jdu = ForwardDiff.jacobian((du) -> (tmp = copy(du); f.f1(tmp, du, _u_pred, p, t); tmp), _du_pred)
+        integ.destats.njacs += 2
+        mul!(H, (E2 .- Ju * E0 .- Jdu * E1), PI)
+    else
+        mul!(H, E2, PI)
+    end
+
     copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
 
     return measurement
