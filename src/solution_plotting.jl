@@ -2,21 +2,29 @@
 # Plotting
 ########################################################################################
 @recipe function f(sol::AbstractProbODESolution;
-                   denseplot = sol.dense,
-                   plotdensity = 1000,
+                   vars=nothing,
+                   denseplot=sol.dense,
+                   plotdensity=1000,
                    ribbon_width=1.96)
-    xguide --> "t"
-    yguide --> "u(t)"
-    label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
-    if denseplot
-        times = range(sol.t[1], sol.t[end], length=plotdensity)
-        dense_post = sol(times).u
-        values = stack(mean(dense_post))
-        stds = stack(std(dense_post))
+
+    times = denseplot ? range(sol.t[1], sol.t[end], length=plotdensity) : sol.t
+    sol_rvs = denseplot ? sol(times).u : sol.pu
+    values = stack(mean(sol_rvs))
+    stds = stack(std(sol_rvs))
+
+    if isnothing(vars)
         ribbon --> ribbon_width * stds
+        xguide --> "t"
+        yguide --> "u(t)"
+        label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
         return times, values
     else
-        ribbon --> ribbon_width * stack(std.(sol.pu))
-        return sol.t, stack(sol.u)
+        _times = []
+        _values = []
+        for (_, i, j) in DiffEqBase.interpret_vars(vars, sol, DiffEqBase.getsyms(sol))
+            push!(_times, i == 0 ? times : values[:, i])
+            push!(_values, j == 0 ? times : values[:, j])
+        end
+        return _times, _values
     end
 end
