@@ -44,7 +44,7 @@ p = (0.2,0.2,3.0)
 prob = ODEProblem(fitz, u0, tspan, p)
 
 # Solve the ODE with a probabilistic numerical solver: EK0
-sol = solve(prob, EK0(), abstol=1e-1, reltol=1e-2)
+sol = solve(prob, EK0(order=1), abstol=1e-1, reltol=1e-2)
 
 # Plot the solution
 using Plots
