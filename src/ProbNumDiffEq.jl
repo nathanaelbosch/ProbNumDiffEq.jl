@@ -3,6 +3,7 @@ __precompile__()
 module ProbNumDiffEq
 
 using Reexport
+@reexport using SciMLBase
 @reexport using DiffEqBase
 using OrdinaryDiffEq
 import DiffEqBase: check_error!, AbstractODEFunction

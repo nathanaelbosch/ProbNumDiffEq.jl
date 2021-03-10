@@ -25,7 +25,7 @@
         label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
         return times, values
     else
-        int_vars = DiffEqBase.interpret_vars(vars, sol, DiffEqBase.getsyms(sol))
+        int_vars = SciMLBase.interpret_vars(vars, sol, SciMLBase.getsyms(sol))
         varsizes = unique(length.(int_vars))
         @assert length(varsizes)==1 "`vars` argument has an errors"
         ndims = varsizes[1]-1  # First argument is not about dimensions
