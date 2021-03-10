@@ -32,7 +32,7 @@ anim = @animate for i in 1:(prob.tspan[2] / integ.dt)
          )
 
     times = integ.t:0.1:prob.tspan[2]
-    post = integ.sol(times)
+    post = integ.sol(times).u
     plot!(times, stack(mean(post)),
           ribbon=3stack(std(post)),
           linestyle=:dot,
