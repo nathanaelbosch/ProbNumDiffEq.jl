@@ -3,14 +3,9 @@ __precompile__()
 module ProbNumDiffEq
 
 using Reexport
-@reexport using SciMLBase
 @reexport using DiffEqBase
-using OrdinaryDiffEq
 import DiffEqBase: check_error!, AbstractODEFunction
-DynamicalODEFunction = Union{
-    OrdinaryDiffEq.DynamicalODEFunction,
-    SciMLBase.DynamicalODEFunction,
-}
+using OrdinaryDiffEq
 
 import Base: copy, copy!, show, size, ndims
 stack(x) = copy(reduce(hcat, x)')
