@@ -19,7 +19,7 @@ TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
-DiffEqBase = "<=6.38"
+DiffEqBase = "6"
 GaussianDistributions = "0.5"
 ModelingToolkit = "3, 4.0, 5.0"
 OrdinaryDiffEq = "5"
