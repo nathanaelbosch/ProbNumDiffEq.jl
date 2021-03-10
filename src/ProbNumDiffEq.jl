@@ -7,6 +7,14 @@ using Reexport
 import DiffEqBase: check_error!, AbstractODEFunction
 using OrdinaryDiffEq
 
+# Current working solution to depending on functions that moved from DiffEqBase to SciMLBase
+try
+    DiffEqBase.interpret_vars; DiffEqBase.getsyms; # these are here to trigger an error
+    import DiffEqBase: interpret_vars, getsyms
+catch
+    import DiffEqBase.SciMLBase: interpret_vars, getsyms
+end
+
 import Base: copy, copy!, show, size, ndims
 stack(x) = copy(reduce(hcat, x)')
 
