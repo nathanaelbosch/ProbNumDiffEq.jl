@@ -77,4 +77,10 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         @test n == length(sol.u[1])
         @test o == 10
     end
+
+    @testset "Plotting" begin
+        @test plot(sol) isa AbstractPlot
+        @test plot(sol, denseplot=false) isa AbstractPlot
+        @test plot(sol, vars=(1,2)) isa AbstractPlot
+    end
 end
