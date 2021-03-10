@@ -7,6 +7,10 @@ using Reexport
 @reexport using DiffEqBase
 using OrdinaryDiffEq
 import DiffEqBase: check_error!, AbstractODEFunction
+DynamicalODEFunction = Union{
+    OrdinaryDiffEq.DynamicalODEFunction,
+    SciMLBase.DynamicalODEFunction,
+}
 
 import Base: copy, copy!, show, size, ndims
 stack(x) = copy(reduce(hcat, x)')
