@@ -52,9 +52,9 @@ Base.:*(M, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 import Statistics: mean, var, std
 var(p::SRGaussian{T}) where {T} = diag(p.Σ)
 std(p::SRGaussian{T}) where {T} = sqrt.(diag(p.Σ))
-mean(s::SRGaussianList{T}) where {T} = mean.(s)
-var(s::SRGaussianList{T}) where {T} = var.(s)
-std(s::SRGaussianList{T}) where {T} = std.(s)
+mean(s::SRGaussianList{T}) where {T} = s.μ
+var(s::SRGaussianList{T}) where {T} = diag.(s.Σ)
+std(s::SRGaussianList{T}) where {T} = map(v -> sqrt.(v), (diag.(s.Σ)))
 
 include("priors.jl")
 include("diffusions.jl")
