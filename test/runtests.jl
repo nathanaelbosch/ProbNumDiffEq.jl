@@ -1,5 +1,14 @@
-using Test
 using ProbNumDiffEq
+using Test
+using Statistics
+using UnPack
+using Plots
+using DiffEqDevTools
+using ForwardDiff
+using ParameterizedFunctions
+
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo, prob_ode_vanstiff, prob_ode_mm_linear
 
 using TimerOutputs
 const to = TimerOutput()
