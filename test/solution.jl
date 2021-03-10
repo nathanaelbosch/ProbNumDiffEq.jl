@@ -3,6 +3,7 @@ using Test
 using Plots
 using LinearAlgebra
 using OrdinaryDiffEq
+using Statistics
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
@@ -82,5 +83,10 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         @test plot(sol) isa AbstractPlot
         @test plot(sol, denseplot=false) isa AbstractPlot
         @test plot(sol, vars=(1,2)) isa AbstractPlot
+    end
+
+    @testset "Mean Solution" begin
+        @test mean(sol) isa DiffEqBase.AbstractODESolution
+        @test plot(mean(sol)) isa AbstractPlot
     end
 end
