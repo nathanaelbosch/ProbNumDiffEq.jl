@@ -5,10 +5,16 @@
                    vars=nothing,
                    denseplot=sol.dense,
                    plotdensity=1000,
+                   tspan=nothing,
                    ribbon_width=1.96)
 
-    times = denseplot ? range(sol.t[1], sol.t[end], length=plotdensity) : sol.t
+    tstart, tend = isnothing(tspan) ? (sol.t[1], sol.t[end]) : tspan
+    times = denseplot ? range(tstart, tend, length=plotdensity) : sol.t
     sol_rvs = denseplot ? sol(times).u : sol.pu
+    if !isnothing(tspan)
+        sol_rvs = sol_rvs[tstart .<= times .<= tend]
+        times = times[tstart .<= times .<= tend]
+    end
     values = stack(mean(sol_rvs))
     stds = stack(std(sol_rvs))
 
