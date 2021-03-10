@@ -19,15 +19,14 @@
         label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
         return times, values
     else
-        @assert length(unique(length.(vars)))==1 "`vars` argument has an errors"
-        ndims = vars isa Tuple && all(length.(vars) .== 1) ?
-            length(vars) : unique(length.(vars))[1]
-        @info "?" vars ndims
+        int_vars = DiffEqBase.interpret_vars(vars, sol, DiffEqBase.getsyms(sol))
+        varsizes = unique(length.(int_vars))
+        @assert length(varsizes)==1 "`vars` argument has an errors"
+        ndims = varsizes[1]-1  # First argument is not about dimensions
         if ndims ==  2
             _x = []
             _y = []
             _labels = []
-            int_vars = DiffEqBase.interpret_vars(vars, sol, DiffEqBase.getsyms(sol))
             for (_, i, j) in int_vars
                 push!(_x, i == 0 ? times : values[:, i])
                 push!(_y, j == 0 ? times : values[:, j])
@@ -37,13 +36,14 @@
             _x = []
             _y = []
             _z = []
-            int_vars = DiffEqBase.interpret_vars(vars, sol, DiffEqBase.getsyms(sol))
             for (_, i, j, k) in int_vars
                 push!(_x, i == 0 ? times : values[:, i])
                 push!(_y, j == 0 ? times : values[:, j])
                 push!(_z, k == 0 ? times : values[:, k])
             end
             return _x, _y, _z
+        else
+            error("Error with `vars` argument")
         end
     end
 end
