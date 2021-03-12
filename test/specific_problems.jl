@@ -29,8 +29,9 @@ end
         ODEFunction(linear, analytic=linear_analytic),
         [1/2], (0.0, 1.0), 1.01)
 
-    @test (sol = solve(prob, EK0()); sol isa ProbNumDiffEq.ProbODESolution)
+    @test solve(prob, EK0()) isa ProbNumDiffEq.ProbODESolution
     @test solve(ProbNumDiffEq.remake_prob_with_jac(prob), EK1()) isa ProbNumDiffEq.ProbODESolution
+    sol = solve(prob, EK0())
     @test sol.errors isa Dict
     @test all(haskey.(Ref(sol.errors), (:l∞, :l2, :final)))
 end
