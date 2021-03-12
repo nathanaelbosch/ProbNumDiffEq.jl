@@ -30,7 +30,7 @@ function initial_update!(x, u, f, p, t, q)
     f_derivatives = [fp]
     for o in 2:q
         _curr_f_deriv = f_derivatives[end]
-        dfdu = stack([derivative.(_curr_f_deriv, i) for i in 1:d])'
+        dfdu = stack([TaylorSeries.derivative.(_curr_f_deriv, i) for i in 1:d])'
         # dfdt(u, p, t) = ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
         # df(u, p, t) = dfdu(u, p, t) * f(u, p, t) + dfdt(u, p, t)
         df = dfdu * fp
