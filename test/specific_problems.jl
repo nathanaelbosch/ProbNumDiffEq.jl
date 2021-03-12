@@ -23,8 +23,8 @@ end
 
 
 @testset "Problem with analytic solution" begin
-    linear(u,p,t) = p*u
-    linear_analytic(u0,p,t) = u0*exp(p*t)
+    linear(u,p,t) = p.*u
+    linear_analytic(u0,p,t) = @. u0*exp(p*t)
     prob = ODEProblem(
         ODEFunction(linear, analytic=linear_analytic),
         [1/2], (0.0, 1.0), 1.01)
