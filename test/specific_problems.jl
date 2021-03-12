@@ -35,6 +35,10 @@ end
     @test all(haskey.(Ref(sol.errors), (:l∞, :l2, :final)))
 end
 
+@testset "2d / matrix-valued problem" begin
+    @test_broken solve(prob_ode_2Dlinear, EK0()) isa ProbNumDiffEq.ProbODESolution
+end
+
 
 @testset "Stiff Vanderpol" begin
     prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_vanstiff)
