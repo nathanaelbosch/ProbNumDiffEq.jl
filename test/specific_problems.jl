@@ -10,7 +10,7 @@ using ForwardDiff
 
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_vanstiff, prob_ode_mm_linear
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_vanstiff
 
 
 @testset "Smoothing with small constant steps" begin
@@ -23,9 +23,14 @@ end
 
 
 @testset "Problem with analytic solution" begin
-    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_mm_linear)
-    @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
-    @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
+    linear(u,p,t) = p*u
+    linear_analytic(u0,p,t) = u0*exp(p*t)
+    prob = ODEProblem(
+        ODEFunction(linear, analytic=linear_analytic),
+        [1/2], (0.0, 1.0), 1.01)
+
+    @test solve(prob , EK0()) isa ProbNumDiffEq.ProbODESolution
+    @test solve(ProbNumDiffEq.remake_prob_with_jac(prob), EK1()) isa ProbNumDiffEq.ProbODESolution
 end
 
 
