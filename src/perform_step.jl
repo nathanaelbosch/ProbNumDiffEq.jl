@@ -122,36 +122,13 @@ end
 
 
 function manifold_update!(x, h, maxiters=1, check=false)
-    z_before = h(x.μ)
-    if iszero(z_before) || (check && z_before < eps(typeof(z_before)))
-        return
-    end
+    H = ForwardDiff.gradient(h, x.μ)
+    @assert H isa AbstractVector
+    _H = reshape(H, 1, length(H))
+    meas = Gaussian([h(x.μ)], X_A_Xt(x.Σ, _H))
 
-    for i in 1:maxiters
-        if i > 1
-            @warn "Another iteration of the manifold projection!" i
-        end
-        z = h(x.μ)
-        H = ForwardDiff.gradient(h, x.μ)
-        @assert H isa AbstractVector
-
-        SL = H'x.Σ.squareroot
-        S = SL*SL' + eps(eltype(SL))
-        K = x.Σ * H * inv(S)
-        @info "manifold_update!" z S inv(S) SL SL*SL'
-
-        x.μ .= x.μ .+ K * (0 .- z)
-        Pnew = X_A_Xt(x.Σ, (I-K*H'))
-        copy!(x.Σ, Pnew)
-
-        z_after = h(x.μ)
-        # @info "Iteration" i z_before S z_after z_before ≈ z_after
-        # @assert abs(z_after) <= abs(z_before)
-        # @assert abs(z_after) <= abs(z_before) || S < eps(typeof(S))
-        if iszero(z_after) || S < eps(typeof(S)) break end
-        z_before = z_after
-    end
-    # error()
+    if iszero(meas.μ) return end
+    update!(x, x, meas, _H)
 end
 
 function measure!(integ, x_pred, t)
