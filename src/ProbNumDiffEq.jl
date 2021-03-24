@@ -85,6 +85,7 @@ include("solution_plotting.jl")
 
 # Utils
 include("jacobian.jl")
+include("manifolds.jl")
 include("numerics_tricks.jl")
 
 # Iterated Extended Kalman Smoother
