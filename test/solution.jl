@@ -79,6 +79,30 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         @test o == 10
     end
 
+    @testset "Sampling states from the solution" begin
+        samples = ProbNumDiffEq.sample_states(sol, 10)
+        dsamples, dts = ProbNumDiffEq.dense_sample_states(sol, 10)
+
+        @test samples isa Array
+
+        m, n, o = size(samples)
+        @test m == length(sol)
+        @test n == length(sol.u[1])*(sol.interp.q+1)
+        @test o == 10
+
+        x = ProbNumDiffEq.stack(mean(sol.x_smooth))
+        stds = sqrt.(ProbNumDiffEq.stack(diag.(sol.x_smooth.Σ)))
+        outlier_count = sum(abs.(x .- samples) .> 3stds)
+        @test outlier_count < 0.05 * m * n * o
+
+        # Dense sampling
+        dense_samples, dense_times = ProbNumDiffEq.dense_sample_states(sol, 10)
+        m, n, o = size(dense_samples)
+        @test m == length(dense_times)
+        @test n == length(sol.u[1])*(sol.interp.q+1)
+        @test o == 10
+    end
+
     @testset "Plotting" begin
         @test plot(sol) isa AbstractPlot
         @test plot(sol, denseplot=false) isa AbstractPlot
