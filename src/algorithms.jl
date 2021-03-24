@@ -26,6 +26,8 @@ Base.@kwdef struct EK0{G} <: AbstractEK where {G}
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
     manifold::G = nothing
+    mprojtime::Symbol = :after
+    mprojmaxiters::Int = 1
 end
 
 
