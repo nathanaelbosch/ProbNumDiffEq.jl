@@ -31,7 +31,6 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     @unpack A, Q = integ.cache
 
     tnew = t + dt
-    @info "New perform_step!" t dt
 
     # Coordinate change / preconditioning
     P = Precond(dt)
@@ -88,9 +87,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Project onto the manifold
     if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:after, :both)
-        @info "after update!" integ.alg.manifold(SolProj * PI * x_filt.μ) |> norm
         manifold_update!(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters, integ.alg.mprojtime==:both)
-        @info "after manifold_update! 2" integ.alg.manifold(SolProj * PI * x_filt.μ) |> norm
     end
 
     # Save
