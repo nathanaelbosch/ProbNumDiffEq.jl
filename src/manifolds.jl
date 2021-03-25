@@ -1,4 +1,4 @@
-function manifold_update!(x, h, maxiters=1, check=false)
+function manifold_update!(x, h, maxiters=1)
     result = DiffResults.GradientResult(x.μ)
     result = ForwardDiff.gradient!(result, h, x.μ)
     z = DiffResults.value(result)
