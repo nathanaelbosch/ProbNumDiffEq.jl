@@ -89,6 +89,20 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     copy!(x_out.Σ, X_A_Xt(P_p, (I-K*H)))
     return x_out
 end
+# Version with scalar measurement and vector measurement matrix
+function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
+                 H::AbstractVector, R=0)
+    @assert iszero(R)
+    z, S = measurement.μ, measurement.Σ
+    @assert isreal(z) && isreal(S)
+
+    m_p, P_p = x_pred.μ, x_pred.Σ
+    K = P_p * H / S
+
+    x_out.μ .= m_p .+ K * (0 .- z)
+    copy!(x_out.Σ, X_A_Xt(P_p, (I-K*H')))
+    return x_out
+end
 """
     update(x_pred, measurement, H, R=0)
 
