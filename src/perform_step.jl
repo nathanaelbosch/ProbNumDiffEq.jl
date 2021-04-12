@@ -47,9 +47,10 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         measure!(integ, x_pred, tnew)
 
         # Estimate diffusion
-        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
+        cache.local_diffusion, cache.global_diffusion =
+            estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
-        predict_cov!(x_pred, x, A, apply_diffusion(Q, integ.cache.diffusion))
+        predict_cov!(x_pred, x, A, apply_diffusion(Q, cache.global_diffusion))
         copy!(integ.cache.measurement.Σ, Matrix(X_A_Xt(x_pred.Σ, integ.cache.H)))
 
     else  # Vanilla filtering order: Predict, measure, calibrate
@@ -57,8 +58,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         predict!(x_pred, x, A, Q)
         mul!(u_pred, SolProj, PI*x_pred.μ)
         measure!(integ, x_pred, tnew)
-        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
-
+        cache.local_diffusion, cache.global_diffusion =
+            estimate_diffusion(cache.diffusionmodel, integ)
     end
 
     # Likelihood
@@ -136,13 +137,13 @@ end
 
 
 function estimate_errors(integ, cache::GaussianODEFilterCache)
-    @unpack diffusion, Q, H = integ.cache
+    @unpack local_diffusion, Q, H = cache
 
-    if diffusion isa Real && isinf(diffusion)
+    if local_diffusion isa Real && isinf(local_diffusion)
         return Inf
     end
 
-    error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
+    error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, local_diffusion), H))))
 
     return error_estimate
 end
