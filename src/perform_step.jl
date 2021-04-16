@@ -47,7 +47,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         # Proj
         if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
             error("It's a bit unclear how to properly handle dynamic diffusion and manifold projections")
-            manifold_update!(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters)
+            update!(x_filt, x_filt, (x) -> integ.alg.manifold(SolProj * PI * x))
         end
 
         # Measure
@@ -60,7 +60,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
         if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
             error("It's a bit unclear how to properly handle dynamic diffusion and manifold projections")
-            manifold_update!(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters)
+            update!(x_pred, x_pred, (x) -> integ.alg.manifold(SolProj * PI * x))
         end
 
         copy!(integ.cache.measurement.Σ, Matrix(X_A_Xt(x_pred.Σ, integ.cache.H)))
@@ -70,7 +70,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         predict!(x_pred, x, A, Q)
         # @info "after predict!" integ.alg.manifold(SolProj * PI * x_pred.μ) |> norm
         if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
-            manifold_update!(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x))
+            x_pred_new = iekf_update(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x))
+            copy!(x_pred, x_pred_new)
         end
         # @info "after manifold_update! 1" integ.alg.manifold(SolProj * PI * x_pred.μ) |> norm
         mul!(u_pred, SolProj, PI*x_pred.μ)
@@ -87,7 +88,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Project onto the manifold
     if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:after, :both)
-        manifold_update!(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x), integ.alg.mprojmaxiters, integ.alg.mprojtime==:both)
+        x_filt_new = iekf_update(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x))
+        copy!(x_filt, x_filt_new)
     end
 
     # Save

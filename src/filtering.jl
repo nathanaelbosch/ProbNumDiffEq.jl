@@ -116,6 +116,54 @@ function update(x_pred::Gaussian, measurement::Gaussian, H::AbstractMatrix, R=0)
 end
 
 
+
+
+function iekf_update(x::Gaussian, h::Function, z=0, R=0)
+
+    ϵ₁ = 1e-25
+    ϵ₂ = 1e-15
+
+    i=0
+    μ_i = copy(x.μ)
+    local K_i, S_i, H_i, h_i
+    result = DiffResults.GradientResult(μ_i)
+    for i in 1:100
+
+        # Measure
+        result = ForwardDiff.gradient!(result, h, μ_i)
+        h_i = DiffResults.value(result)
+        H_i = DiffResults.gradient(result)
+        H_i = reshape(H_i, (1, length(H_i)))
+
+        S_i_L = H_i*x.Σ.squareroot
+        S_i = S_i_L * S_i_L'
+        K_i = x.Σ * H_i' * inv(S_i)
+        μ_i_new = x.μ .+ K_i * (z .- h_i .- (H_i * (x.μ - μ_i)))
+
+        # @info "iekf" i h_i norm(μ_i_new .- μ_i) μ_i μ_i_new
+        # μ_i μ_i_new
+
+        if norm(μ_i_new .- μ_i) < ϵ₁ && abs(h_i) < ϵ₂
+            μ_i = μ_i_new
+            break
+        end
+
+        μ_i = μ_i_new
+    end
+    P_i = X_A_Xt(x.Σ, (I-K_i*H_i))
+    out = Gaussian(μ_i, P_i)
+
+    # if abs(h_i) > ϵ₂
+    #     @error "Quantity too large, but iteration done!" K_i S_i H_i h_i μ_i P_i
+    #     error()
+    # end
+
+    return out
+end
+
+
+
+
 """
     smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
 
