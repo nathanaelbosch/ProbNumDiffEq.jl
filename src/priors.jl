@@ -22,15 +22,21 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
             end
         end
     end
-    A!(A_base, 1.0)
+    A!(A_base, one(elType))
     @assert istriu(A_base)
     A_base = UpperTriangular(A_base)
 
     @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::Real)
         idx = 2 * q + 1 - row - col
-        fact_rw = factorial(q - row)
-        fact_cl = factorial(q - col)
-        return h / (idx * fact_rw * fact_cl)
+        if q > 10 || h isa BigFloat
+            fact_rw = factorial(big(q - row))
+            fact_cl = factorial(big(q - col))
+            return h / (idx * fact_rw * fact_cl)
+        else
+            fact_rw = factorial(q - row)
+            fact_cl = factorial(q - col)
+            return h / (idx * fact_rw * fact_cl)
+        end
     end
     @fastmath function Q!(Q::AbstractMatrix, h::Real, σ²::Real=1.0)
         val = one(h)
@@ -45,7 +51,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
         end
     end
 
-    Q!(Q_base, 1.0)
+    Q!(Q_base, one(elType))
     QL = cholesky(Q_base).L
     Q_psd = SRMatrix(QL)
 
