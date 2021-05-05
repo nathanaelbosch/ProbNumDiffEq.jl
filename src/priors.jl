@@ -22,7 +22,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
             end
         end
     end
-    A!(A_base, 1.0)
+    A!(A_base, one(elType))
     @assert istriu(A_base)
     A_base = UpperTriangular(A_base)
 
@@ -45,7 +45,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
         end
     end
 
-    Q!(Q_base, 1.0)
+    Q!(Q_base, one(elType))
     QL = cholesky(Q_base).L
     Q_psd = SRMatrix(QL)
 
