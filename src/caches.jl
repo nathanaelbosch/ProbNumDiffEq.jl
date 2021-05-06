@@ -85,6 +85,10 @@ function OrdinaryDiffEq.alg_cache(
     du = zeros(uElType, d)
     ddu = zeros(uElType, d, d)
     v, S = copy(h), copy(ddu)
+    if alg isa EK1 && alg.fdb_improved
+        H = zeros(uElType, 2d, D)
+        v, S = [v;v], [S S; S S]
+    end
     measurement = Gaussian(v, S)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)

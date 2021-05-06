@@ -81,7 +81,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 
     # Likelihood
-    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    # cache.log_likelihood = logpdf(cache.measurement, zero(cache.measurement.μ))
 
     # Update
     x_filt = update!(integ, x_pred)
@@ -122,7 +122,7 @@ end
 function measure!(integ, x_pred, t)
     @unpack f, p, dt, alg = integ
     @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
-    PI = inv(Precond(dt))
+    P = Precond(dt); PI = inv(P)
     E0, E1 = Proj(0), Proj(1)
 
     z, S = measurement.μ, measurement.Σ
@@ -130,7 +130,6 @@ function measure!(integ, x_pred, t)
     # Mean
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
-    z .= E1*PI*x_pred.μ .- du
 
     # Cov
     if alg isa EK1 || alg isa IEKS
@@ -138,13 +137,51 @@ function measure!(integ, x_pred, t)
             alg.linearize_at(t).μ : u_pred
         _eval_f_jac!(ddu, linearize_at, p, t, f)
         integ.destats.njacs += 1
-        mul!(H, (E1 .- ddu * E0), PI)
+        if !alg.fdb_improved
+            z .= E1*PI*x_pred.μ .- du
+            mul!(H, (E1 .- ddu * E0), PI)
+        else
+            E2 = Proj(2)
+            z2_ = z2(x_pred.μ, integ, t)
+            # @info "?" z2_ E2*PI*x_pred.μ .- ddu * du
+            @assert z2_ ≈ E2*PI*x_pred.μ .- ddu * du
+            z .= [E1*PI*x_pred.μ .- du;
+                  z2_
+                  # E2*PI*x_pred.μ .- ddu * du
+                  ]
+            # @info "measure!" du ddu
+            Jz2 = ForwardDiff.jacobian(Y -> z2(Y, integ, t), x_pred.μ)
+            H .= [(E1 .- ddu * E0) * PI;
+                  # E2 * PI
+                  E2 * PI .- ddu * ddu * E0 * PI
+                  # Jz2
+                  ]
+            # @info "are they all the same??" E2 * PI E2 * PI .- ddu * ddu * E0 * PI Jz2
+        end
+        # @info "measure!" z
     else
+        z .= E1*PI*x_pred.μ .- du
         mul!(H, E1, PI)
     end
     copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
 
     return measurement
+end
+
+function z2(Y, integ, t)
+    @unpack f, p, dt, alg = integ
+    @unpack d, Proj, Precond = integ.cache
+    P = Precond(dt); PI = inv(P)
+    E0, E1, E2 = Proj(0), Proj(1), Proj(2)
+
+    du = copy(E1*Y)
+    _eval_f!(du, E0*PI*Y, p, t, f)
+    ddu = zeros(eltype(Y), d, d)
+    _eval_f_jac!(ddu, E0*PI*Y, p, t, f)
+
+    z = E2*PI*Y .- ddu * du
+
+    return z
 end
 
 # The following functions are just there to handle both IIP and OOP easily
@@ -162,13 +199,18 @@ end
 
 
 function estimate_errors(integ, cache::GaussianODEFilterCache)
-    @unpack diffusion, Q, H = integ.cache
+    @unpack diffusion, Q, H, Precond, Proj, d = integ.cache
+    PI = inv(Precond(integ.dt))
+    E0 = Proj(0)
 
     if diffusion isa Real && isinf(diffusion)
         return Inf
     end
 
-    error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
+    _error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
+    error_estimate = _error_estimate[1:d]
+    # error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), E0*PI))))
+    # @info "estimate_errors" _error_estimate error_estimate
 
     return error_estimate
 end

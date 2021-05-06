@@ -22,7 +22,7 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
         return Inf
     end
 
-    diffusion_t = v' * inv(S) * v / d
+    diffusion_t = v' * (S \ v) / length(v)
 
     if integ.success_iter == 0
         @assert length(diffusions) == 0
@@ -75,7 +75,7 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     @unpack H, Q, measurement = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    σ² = z' * (Matrix(X_A_Xt(Q, H))\z) / d
+    σ² = z' * (Matrix(X_A_Xt(Q, H))\z) / length(z)
     return σ²
 end
 
