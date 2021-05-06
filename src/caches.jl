@@ -95,6 +95,7 @@ function OrdinaryDiffEq.alg_cache(
     covmatcache = copy(G)
 
     diffusion_models = Dict(
+        :dummy => DummyDiffusion(),
         :dynamic => DynamicDiffusion(),
         :dynamicMV => MVDynamicDiffusion(),
         :fixed => FixedDiffusion(),

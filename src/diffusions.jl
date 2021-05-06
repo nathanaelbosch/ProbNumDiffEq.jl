@@ -8,6 +8,10 @@ isdynamic(diffusion::AbstractDynamicDiffusion) = true
 initial_diffusion(diffusion::AbstractDiffusion, d, q, Eltype) = one(Eltype)
 
 
+struct DummyDiffusion <: AbstractStaticDiffusion end
+estimate_diffusion(rule::DummyDiffusion, integ) = one(eltype(integ.cache.measurement.μ))
+
+
 struct FixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::FixedDiffusion, integ)
     @unpack d, measurement = integ.cache
