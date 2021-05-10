@@ -105,9 +105,17 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     # Estimate error for adaptive steps
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(integ, integ.cache)
-        DiffEqBase.calculate_residuals!(
-            err_tmp, dt * err_est_unscaled, integ.u, u_filt,
-            integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        if integ.f isa DynamicalODEFunction # second order solver
+            DiffEqBase.calculate_residuals!(
+                err_tmp, dt * err_est_unscaled,
+                integ.u[2, :], u_filt[2, :],
+                integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        else
+            DiffEqBase.calculate_residuals!(
+                err_tmp, dt * err_est_unscaled,
+                integ.u, u_filt,
+                integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+        end
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
 
@@ -121,7 +129,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     # (t > 0) && error()
 end
 
-function measure!(integ, x_pred, t)
+function measure!(integ, x_pred, t, second_order::Val{false})
     @unpack f, p, dt, alg = integ
     @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
     P = Precond(dt); PI = inv(P)
@@ -186,6 +194,44 @@ function z2(Y, integ, t)
 
     return z
 end
+
+function measure!(integ, x_pred, t, second_order::Val{true})
+    @unpack f, p, dt, alg = integ
+    @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
+    @assert iszero(R)
+
+    PI = inv(Precond(dt))
+    E0, E1, E2 = Proj(0), Proj(1), Proj(2)
+
+    z, S = measurement.μ, measurement.Σ
+
+    # Mean
+    _u_pred = E0 * PI * x_pred.μ
+    _du_pred = E1 * PI * x_pred.μ
+    ddu = du
+    f.f1(ddu, _du_pred, _u_pred, p, t)
+    integ.destats.nf += 1
+    z .= E2*PI*x_pred.μ .- ddu
+
+    # Cov
+    if alg isa EK1
+        @assert !(alg isa IEKS)
+        Ju = ForwardDiff.jacobian((u) -> (tmp = copy(u); f.f1(tmp, _du_pred, u, p, t); tmp), _u_pred)
+        integ.destats.njacs += 1
+        # Jdu = ForwardDiff.jacobian((du) -> (tmp = copy(du); f.f1(tmp, du, _u_pred, p, t); tmp), _du_pred)
+        # integ.destats.njacs += 1
+        # mul!(H, (E2 .- Ju * E0 .- Jdu * E1), PI)
+        mul!(H, (E2 .- Ju * E0), PI)
+    else
+        mul!(H, E2, PI)
+    end
+
+    copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
+
+    return measurement
+end
+measure!(integ, x_pred, t) = measure!(
+    integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
 
 # The following functions are just there to handle both IIP and OOP easily
 _eval_f!(du, u, p, t, f::AbstractODEFunction{true}) = f(du, u, p, t)

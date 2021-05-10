@@ -149,11 +149,11 @@ set_smooth(p::GaussianODEFilterPosterior) = GaussianODEFilterPosterior(
     p.d, p.q, p.SolProj, p.A, p.Q, p.Precond, true)
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
-    d = length(u0)
+    d = u0 isa ArrayPartition ? length(u0) ÷ 2 : length(u0)
     q = alg.order
 
     Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-    SolProj = Proj(0)
+    SolProj = u0 isa ArrayPartition ? [Proj(1); Proj(0)] : Proj(0)
 
     A, Q = ibm(d, q, uElType)
     Precond = preconditioner(d, q)
