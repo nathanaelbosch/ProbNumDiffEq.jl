@@ -137,7 +137,7 @@ function measure!(integ, x_pred, t)
             alg.linearize_at(t).μ : u_pred
         _eval_f_jac!(ddu, linearize_at, p, t, f)
         integ.destats.njacs += 1
-        if !alg.fdb_improved
+        if alg.fdb_improved == 0
             z .= E1*PI*x_pred.μ .- du
             mul!(H, (E1 .- ddu * E0), PI)
         else
@@ -152,9 +152,10 @@ function measure!(integ, x_pred, t)
             # @info "measure!" du ddu
             Jz2 = ForwardDiff.jacobian(Y -> z2(Y, integ, t), x_pred.μ)
             H .= [(E1 .- ddu * E0) * PI;
-                  # E2 * PI
-                  E2 * PI .- ddu * ddu * E0 * PI
-                  # Jz2
+                  alg.fdb_improved == 1 ? E2 * PI :
+                      alg.fdb_improved == 2 ? E2 * PI .- ddu * ddu * E0 * PI :
+                      alg.fdb_improved == 3 ? Jz2 :
+                      error()
                   ]
             # @info "are they all the same??" E2 * PI E2 * PI .- ddu * ddu * E0 * PI Jz2
         end
@@ -215,6 +216,7 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
 
     _error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
     error_estimate = _error_estimate[1:d]
+    # error_estimate = integ.opts.internalnorm(_error_estimate, integ.t)
     # error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), E0*PI))))
     # @info "estimate_errors" _error_estimate error_estimate
 
