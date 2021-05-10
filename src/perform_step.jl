@@ -203,6 +203,12 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
     PI = inv(Precond(integ.dt))
     E0 = Proj(0)
 
+    @assert (cache.diffusionmodel isa DynamicDiffusion
+             || cache.diffusionmodel isa FixedDiffusion)
+    diffusion = estimate_diffusion(
+        isdynamic(cache.diffusionmodel) ? cache.diffusionmodel :
+            DynamicDiffusion(), integ)
+
     if diffusion isa Real && isinf(diffusion)
         return Inf
     end
