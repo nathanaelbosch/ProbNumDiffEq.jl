@@ -54,5 +54,6 @@ Base.@kwdef struct EK1{G} <: AbstractEK where {G}
     manifold::G = nothing
     mprojtime::Symbol = :after
     mprojmaxiters::Int = 1
+    mprojiekf::Bool = false
     fdb_improved::Int = 0
 end

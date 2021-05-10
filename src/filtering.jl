@@ -118,7 +118,9 @@ end
 
 
 
-function iekf_update(x::Gaussian, h::Function, z=0, R=0)
+function iekf_update(x::Gaussian, h::Function, z=0, R=0;
+                     maxiters=100)
+    # maxiters=1 basically makes it an EKF
 
     ϵ₁ = 1e-25
     ϵ₂ = 1e-15
@@ -127,7 +129,7 @@ function iekf_update(x::Gaussian, h::Function, z=0, R=0)
     μ_i = copy(x.μ)
     local K_i, S_i, H_i, h_i
     # result = DiffResults.GradientResult(μ_i)
-    for i in 1:100
+    for i in 1:maxiters
 
         # Measure
         # result = ForwardDiff.gradient!(result, h, μ_i)

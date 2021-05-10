@@ -70,7 +70,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         predict!(x_pred, x, A, Q)
         # @info "after predict!" integ.alg.manifold(SolProj * PI * x_pred.μ) |> norm
         if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
-            x_pred_new = iekf_update(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x))
+            x_pred_new = iekf_update(x_pred, (x) -> integ.alg.manifold(SolProj * PI * x),
+                                     maxiters=integ.alg.mprojiekf ? 100 : 1)
             copy!(x_pred, x_pred_new)
         end
         # @info "after manifold_update! 1" integ.alg.manifold(SolProj * PI * x_pred.μ) |> norm
@@ -88,7 +89,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
     # Project onto the manifold
     if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:after, :both)
-        x_filt_new = iekf_update(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x))
+        x_filt_new = iekf_update(x_filt, (x) -> integ.alg.manifold(SolProj * PI * x);
+                                 maxiters=integ.alg.mprojiekf ? 100 : 1)
         copy!(x_filt, x_filt_new)
     end
 
