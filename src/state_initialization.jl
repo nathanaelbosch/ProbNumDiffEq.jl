@@ -96,15 +96,16 @@ function initial_update!(x, u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
 
     set_variables("u", numvars=2d, order=q+1)
 
-    @warn "The second order initialization is probably wrong (not terribly wrong though)"
-    fp = taylor_expand(_f, stacked_u)
-    f_derivatives = [fp]
+    fp1 = taylor_expand(_f, stacked_u)
+    fp2 = taylor_expand(u -> u[1:d], stacked_u)
+    f_derivatives = [fp1]
     for o in 3:q
         _curr_f_deriv = f_derivatives[end]
-        dfdu = stack([derivative.(_curr_f_deriv, i) for i in 1:d])'
+        dfdu1 = stack([derivative.(_curr_f_deriv, i) for i in 1:d])'
+        dfdu2 = stack([derivative.(_curr_f_deriv, i) for i in d+1:2d])'
         # dfdt(u, p, t) = ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
         # df(u, p, t) = dfdu(u, p, t) * f(u, p, t) + dfdt(u, p, t)
-        df = dfdu * fp
+        df = dfdu1 * fp1 + dfdu2 * fp2
         push!(f_derivatives, df)
         condition_on!(x, Proj(o), evaluate(df))
     end
