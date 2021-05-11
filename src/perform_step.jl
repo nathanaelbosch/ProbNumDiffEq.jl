@@ -268,5 +268,8 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
     # error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), E0*PI))))
     # @info "estimate_errors" _error_estimate error_estimate
 
+    # x = integ.cache.x_filt
+    # filter_std = sqrt.(diag(Matrix(X_A_Xt(x.Σ, E0))))
+
     return error_estimate
 end
