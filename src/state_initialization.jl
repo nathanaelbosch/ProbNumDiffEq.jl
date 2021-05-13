@@ -9,7 +9,7 @@ function initial_update!(integ)
     f_derivatives = get_derivatives(u, f, p, t, q)
     @assert length(1:q) == length(f_derivatives)
     for (o, df) in zip(1:q, f_derivatives)
-        condition_on!(x, Proj(o), evaluate(df))
+        condition_on!(x, Proj(o), df)
     end
 end
 function get_derivatives(u, f, p, t, q)
@@ -38,7 +38,7 @@ function get_derivatives(u, f, p, t, q)
         push!(f_derivatives, df)
     end
 
-    return f_derivatives
+    return evaluate.(f_derivatives)
 end
 
 # TODO Either name texplicitly for the initial update, or think about how to use this in general
