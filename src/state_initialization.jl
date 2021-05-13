@@ -7,7 +7,8 @@ function initial_update!(integ)
     condition_on!(x, Proj(0), u)
 
     f_derivatives = get_derivatives(u, f, p, t, q)
-    for (o, df) in zip(2:q, f_derivatives)
+    @assert length(1:q) == length(f_derivatives)
+    for (o, df) in zip(1:q, f_derivatives)
         condition_on!(x, Proj(o), evaluate(df))
     end
 end
