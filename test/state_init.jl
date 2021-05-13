@@ -29,11 +29,9 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
 
 
 @testset "OOP state init" begin
-    x0 = Gaussian(zeros(D), SRMatrix(Matrix(1.0*I, D, D)))
-    ProbNumDiffEq.initial_update!(x0, prob.u0, prob.f, prob.p, prob.tspan[1], q)
-    m0, P0 = x0
-    @test m0 ≈ true_init_states
-    @test all(P0 .== 0)
+    dfs = ProbNumDiffEq.get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
+    @test length(dfs) == q
+    @test true_init_states[d+1:end] ≈ vcat(dfs...)
 end
 
 
@@ -41,9 +39,7 @@ end
     f!(du, u, p, t) = (du .= f(u, p, t))
     prob = ODEProblem(f!, u0, tspan)
 
-    x0 = Gaussian(zeros(D), SRMatrix(Matrix(1.0*I, D, D)))
-    ProbNumDiffEq.initial_update!(x0, prob.u0, prob.f, prob.p, prob.tspan[1], q)
-    m0, P0 = x0
-    @test m0 ≈ true_init_states
-    @test all(P0 .== 0)
+    dfs = ProbNumDiffEq.get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
+    @test length(dfs) == q
+    @test true_init_states[d+1:end] ≈ vcat(dfs...)
 end
