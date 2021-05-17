@@ -82,6 +82,11 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
 
+    if iszero(x_pred.Σ)
+        copy!(x_out, x_pred)
+        return x_out
+    end
+
     S_inv = inv(S)
     K = P_p * H' * S_inv
 
