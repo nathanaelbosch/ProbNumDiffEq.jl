@@ -196,8 +196,9 @@ end
 
 function measure!(integ, x_pred, t, second_order::Val{true})
     @unpack f, p, dt, alg = integ
-    @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
+    @unpack d, u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
     @assert iszero(R)
+    du2 = du
 
     PI = inv(Precond(dt))
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
@@ -205,21 +206,18 @@ function measure!(integ, x_pred, t, second_order::Val{true})
     z, S = measurement.μ, measurement.Σ
 
     # Mean
-    _u_pred = E0 * PI * x_pred.μ
-    _du_pred = E1 * PI * x_pred.μ
-    ddu = du
-    f.f1(ddu, _du_pred, _u_pred, p, t)
+    # _u_pred = E0 * PI * x_pred.μ
+    # _du_pred = E1 * PI * x_pred.μ
+    f.f1(du2, u_pred[1:d], u_pred[d+1:end], p, t)
     integ.destats.nf += 1
-    z .= E2*PI*x_pred.μ .- ddu
+    z .= E2*PI*x_pred.μ .- du2
 
     # Cov
     if alg isa EK1
         @assert !(alg isa IEKS)
-        Ju = ForwardDiff.jacobian((u) -> (tmp = copy(u); f.f1(tmp, _du_pred, u, p, t); tmp), _u_pred)
+        ForwardDiff.jacobian!(ddu, (du2, u) -> f.f1(du2, u_pred[1:d], u, p, t), du2, u_pred[d+1:end])
+        Ju = ddu
         integ.destats.njacs += 1
-        # Jdu = ForwardDiff.jacobian((du) -> (tmp = copy(du); f.f1(tmp, du, _u_pred, p, t); tmp), _du_pred)
-        # integ.destats.njacs += 1
-        # mul!(H, (E2 .- Ju * E0 .- Jdu * E1), PI)
         mul!(H, (E2 .- Ju * E0), PI)
     else
         mul!(H, E2, PI)
