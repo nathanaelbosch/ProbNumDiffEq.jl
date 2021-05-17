@@ -251,22 +251,23 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
 
     @assert (cache.diffusionmodel isa DynamicDiffusion
              || cache.diffusionmodel isa FixedDiffusion)
-    diffusion = estimate_diffusion(
-        isdynamic(cache.diffusionmodel) ? cache.diffusionmodel :
-            DynamicDiffusion(), integ)
+    diffusion = isdynamic(cache.diffusionmodel) ? cache.diffusion :
+        estimate_diffusion(DynamicDiffusion(), integ)
 
     if diffusion isa Real && isinf(diffusion)
         return Inf
     end
 
     _error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
+
     error_estimate = _error_estimate[1:d]
     # error_estimate = integ.opts.internalnorm(_error_estimate, integ.t)
-    # error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), E0*PI))))
-    # @info "estimate_errors" _error_estimate error_estimate
 
-    # x = integ.cache.x_filt
-    # filter_std = sqrt.(diag(Matrix(X_A_Xt(x.Σ, E0))))
+    # error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), E0*PI))))
+
+    # _Q = apply_diffusion(Q, diffusion)
+    # p_filt_local = X_A_Xt(_Q, I - H'H*_Q)
+    # error_estimate = sqrt.(diag(Matrix(X_A_Xt(p_filt_local, E0*PI))))
 
     return error_estimate
 end
