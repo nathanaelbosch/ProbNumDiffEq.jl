@@ -154,22 +154,21 @@ function measure!(integ, x_pred, t, second_order::Val{false})
             E2 = Proj(2)
             z2_ = z2(x_pred.μ, integ, t)
             # @info "?" z2_ E2*PI*x_pred.μ .- ddu * du
-            @assert z2_ ≈ E2*PI*x_pred.μ .- ddu * du
-            z .= [E1*PI*x_pred.μ .- du;
-                  z2_
-                  # E2*PI*x_pred.μ .- ddu * du
-                  ]
+            # @assert z2_ ≈ E2*PI*x_pred.μ .- ddu * du
+            z[1:d] .= E1*PI*x_pred.μ .- du
+            z[d+1:end] .= z2_
             # @info "measure!" du ddu
-            Jz2 = ForwardDiff.jacobian(Y -> z2(Y, integ, t), x_pred.μ)
-            H .= [(E1 .- ddu * E0) * PI;
-                  alg.fdb_improved == 1 ? E2 * PI :
-                      alg.fdb_improved == 2 ? E2 * PI .- ddu * ddu * E0 * PI :
-                      alg.fdb_improved == 3 ? Jz2 :
-                      error()
-                  ]
-            # @info "are they all the same??" E2 * PI E2 * PI .- ddu * ddu * E0 * PI Jz2
+
+            H[1:d, :] .= (E1 .- ddu * E0) * PI
+            if alg.fdb_improved==1
+                H[d+1:end, :] .= E2*PI
+            elseif alg.fdb_improved==2
+                H[d+1:end, :] .= E2 * PI .- ddu * ddu * E0 * PI
+            elseif alg.fdb_improved==3
+                Jz2 = ForwardDiff.jacobian(Y -> z2(Y, integ, t), x_pred.μ)
+                H[d+1:end, :] .= Jz2
+            end
         end
-        # @info "measure!" z
     else
         z .= E1*PI*x_pred.μ .- du
         mul!(H, E1, PI)
