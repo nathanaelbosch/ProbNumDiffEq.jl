@@ -33,7 +33,8 @@ mutable struct GaussianODEFilterCache{
     K::matType
     G::matType
     covmatcache::matType
-    diffusion::diffusionType
+    local_diffusion::diffusionType
+    global_diffusion::diffusionType
     err_tmp::duType
     log_likelihood::llType
 end
@@ -121,7 +122,7 @@ function OrdinaryDiffEq.alg_cache(
         copy(u0), copy(u0), copy(u0), copy(u0),
         copy(x0), copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,
-        H, du, ddu, K, G, covmatcache, initdiff,
+        H, du, ddu, K, G, covmatcache, initdiff, initdiff,
         copy(du),
         zero(uEltypeNoUnits),
     )

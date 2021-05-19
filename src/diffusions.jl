@@ -15,12 +15,12 @@ estimate_diffusion(rule::DummyDiffusion, integ) = one(eltype(integ.cache.measure
 struct FixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::FixedDiffusion, integ)
     @unpack d, measurement = integ.cache
-    diffusions = integ.sol.diffusions
+    sol_diffusions = integ.sol.diffusions
 
     v, S = measurement.μ, measurement.Σ
 
     if iszero(v)
-        return zero(integ.cache.diffusion)
+        return zero(integ.cache.global_diffusion)
     end
     if iszero(S)
         return Inf
@@ -29,13 +29,13 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
     diffusion_t = v' * (S \ v) / length(v)
 
     if integ.success_iter == 0
-        @assert length(diffusions) == 0
-        return diffusion_t
+        @assert length(sol_diffusions) == 0
+        return diffusion_t, diffusion_t
     else
-        @assert length(diffusions) == integ.success_iter
-        diffusion_prev = diffusions[end]
-        diffusion = diffusion_prev + (diffusion_t - diffusion_prev) / integ.success_iter
-        return diffusion
+        @assert length(sol_diffusions) == integ.success_iter
+        diffusion_prev = sol_diffusions[end]
+        global_diffusion = diffusion_prev + (diffusion_t - diffusion_prev) / integ.success_iter
+        return diffusion_t, global_diffusion
     end
 end
 
@@ -60,14 +60,14 @@ function estimate_diffusion(rule::MAPFixedDiffusion, integ)
     if integ.success_iter == 0
         @assert length(diffusions) == 0
         diffusion_t = (β + 1/2 * res_t) / (α + N*d/2 + 1)
-        return diffusion_t
+        return res_t, diffusion_t
     else
         @assert length(diffusions) == integ.success_iter
         diffusion_prev = diffusions[end]
         res_prev = (diffusion_prev * (α + (N-1)*d/2 + 1) - β) * 2
         res_sum_t = res_prev + res_t
         diffusion = (β + 1/2 * res_sum_t) / (α + N*d/2 + 1)
-        return diffusion
+        return res_t, diffusion
     end
 end
 
@@ -80,7 +80,7 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
     σ² = z' * (Matrix(X_A_Xt(Q, H))\z) / length(z)
-    return σ²
+    return σ², σ²
 end
 
 
@@ -112,7 +112,7 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     Σ_out = kron(Diagonal(ones(q+1)), Σ)
     @assert isdiag(Σ_out)
     # @info "MVDynamic diffusion" Σ Σ_out
-    return Σ_out
+    return Σ_out, Σ_out
 end
 
 
@@ -147,11 +147,11 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
 
     if integ.success_iter == 0
         @assert length(diffusions) == 0
-        return Σ_out
+        return Σ_out, Σ_out
     else
         @assert length(diffusions) == integ.success_iter
         diffusion_prev = diffusions[end]
         diffusion = diffusion_prev + (Σ_out - diffusion_prev) / integ.success_iter
-        return diffusion
+        return Σ_out, diffusion
     end
 end

@@ -3,13 +3,17 @@ function initial_update!(integ)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = integ.cache
     q = integ.alg.order
-    return initial_update!(x, u, f, p, t, q)
+
+    condition_on!(x, Proj(0), u)
+
+    f_derivatives = get_derivatives(u, f, p, t, q)
+    @assert length(1:q) == length(f_derivatives)
+    for (o, df) in zip(1:q, f_derivatives)
+        condition_on!(x, Proj(o), df)
+    end
 end
-function initial_update!(x, u, f, p, t, q)
+function get_derivatives(u, f, p, t, q)
     d = length(u)
-    # TODO: Find a proper place for `Proj` instead of duplicating it everywhere
-    Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
-        kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
 
     f_oop = isinplace(f) ? iip_to_oop(f) : f
 
@@ -20,9 +24,8 @@ function initial_update!(x, u, f, p, t, q)
     # Simplify further:
     _f(u) = f_oop(u, p, t)
 
-    # Condition on Proj(0)*x = u0
-    condition_on!(x, Proj(0), u)
-    condition_on!(x, Proj(1), _f(u))
+    u0 = u
+    du0 = _f(u)
 
     set_variables("u", numvars=d, order=q+1)
 
@@ -31,14 +34,11 @@ function initial_update!(x, u, f, p, t, q)
     for o in 2:q
         _curr_f_deriv = f_derivatives[end]
         dfdu = stack([TaylorSeries.derivative.(_curr_f_deriv, i) for i in 1:d])'
-        # dfdt(u, p, t) = ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
-        # df(u, p, t) = dfdu(u, p, t) * f(u, p, t) + dfdt(u, p, t)
         df = dfdu * fp
         push!(f_derivatives, df)
-        condition_on!(x, Proj(o), evaluate(df))
     end
 
-    return nothing
+    return evaluate.(f_derivatives)
 end
 
 # TODO Either name texplicitly for the initial update, or think about how to use this in general
@@ -70,45 +70,30 @@ end
 
 
 
-function initial_update!(x, u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
-    _du, _u = u[1, :], u[2, :]
-    stacked_u = [_du; _u]
-    f.f1, f.f2
+function get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
 
-    d = length(_u)
+    d = length(u[1,:])
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
         kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
 
     f_oop(du, u, p, t) = (ddu = copy(du); f.f1(ddu, du, u, p, t); return ddu)
 
     # Make sure that the vector field f does not depend on t
-    f_t_taylor = taylor_expand(_t -> f_oop(_du, _u, p, _t), t)
+    f_t_taylor = taylor_expand(_t -> f_oop(u[1:d], u[d+1:end], p, _t), t)
     @assert !(eltype(f_t_taylor) <: TaylorN) "The vector field depends on t; The code might not yet be able to handle these (but it should be easy to implement)"
-
-    # Simplify further:
-    _f(du, u) = f_oop(du, u, p, t)
-    _f(stacked_u) = _f(stacked_u[1:d], stacked_u[d+1:end])
-
-    # Condition on Proj(0)*x = u0
-    condition_on!(x, Proj(0), _u)
-    condition_on!(x, Proj(1), _du)
-    condition_on!(x, Proj(2), _f(_du, _u))
 
     set_variables("u", numvars=2d, order=q+1)
 
-    fp1 = taylor_expand(_f, stacked_u)
-    fp2 = taylor_expand(u -> u[1:d], stacked_u)
+    fp1 = taylor_expand(u -> f_oop(u[1:d], u[d+1:end], p, t), u[:])
+    fp2 = taylor_expand(u -> u[1:d], u[:])
     f_derivatives = [fp1]
     for o in 3:q
         _curr_f_deriv = f_derivatives[end]
         dfdu1 = stack([derivative.(_curr_f_deriv, i) for i in 1:d])'
         dfdu2 = stack([derivative.(_curr_f_deriv, i) for i in d+1:2d])'
-        # dfdt(u, p, t) = ForwardDiff.derivative(t -> _curr_f_deriv(u, p, t), t)
-        # df(u, p, t) = dfdu(u, p, t) * f(u, p, t) + dfdt(u, p, t)
         df = dfdu1 * fp1 + dfdu2 * fp2
         push!(f_derivatives, df)
-        condition_on!(x, Proj(o), evaluate(df))
     end
 
-    return nothing
+    return evaluate.(f_derivatives)
 end

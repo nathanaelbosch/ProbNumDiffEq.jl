@@ -54,9 +54,10 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         measure!(integ, x_pred, tnew)
 
         # Estimate diffusion
-        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
+        cache.local_diffusion, cache.global_diffusion =
+            estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
-        predict!(x_pred, x, A, apply_diffusion(Q, integ.cache.diffusion))
+        predict!(x_pred, x, A, apply_diffusion(Q, integ.cache.global_diffusion))
 
         if !isnothing(integ.alg.manifold) && integ.alg.mprojtime in (:before, :both)
             error("It's a bit unclear how to properly handle dynamic diffusion and manifold projections")
@@ -77,8 +78,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         # @info "after manifold_update! 1" integ.alg.manifold(SolProj * PI * x_pred.μ) |> norm
         mul!(u_pred, SolProj, PI*x_pred.μ)
         measure!(integ, x_pred, tnew)
-        integ.cache.diffusion = estimate_diffusion(cache.diffusionmodel, integ)
-
+        cache.local_diffusion, cache.global_diffusion =
+            estimate_diffusion(cache.diffusionmodel, integ)
     end
 
     # Likelihood
@@ -245,16 +246,11 @@ end
 
 
 function estimate_errors(integ, cache::GaussianODEFilterCache)
-    @unpack diffusion, Q, H, Precond, Proj, d = integ.cache
+    @unpack local_diffusion, Q, H, Precond, Proj, d = integ.cache
     PI = inv(Precond(integ.dt))
     E0 = Proj(0)
 
-    @assert (cache.diffusionmodel isa DynamicDiffusion
-             || cache.diffusionmodel isa FixedDiffusion)
-    diffusion = isdynamic(cache.diffusionmodel) ? cache.diffusion :
-        estimate_diffusion(DynamicDiffusion(), integ)
-
-    if diffusion isa Real && isinf(diffusion)
+    if local_diffusion isa Real && isinf(local_diffusion)
         return Inf
     end
 
