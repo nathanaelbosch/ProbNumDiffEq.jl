@@ -132,7 +132,7 @@ end
 
 function measure!(integ, x_pred, t, second_order::Val{false})
     @unpack f, p, dt, alg = integ
-    @unpack u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
+    @unpack d, u_pred, du, ddu, Proj, Precond, measurement, R, H = integ.cache
     P = Precond(dt); PI = inv(P)
     E0, E1 = Proj(0), Proj(1)
 
@@ -146,7 +146,8 @@ function measure!(integ, x_pred, t, second_order::Val{false})
     if alg isa EK1 || alg isa IEKS
         linearize_at = (alg isa IEKS && !isnothing(alg.linearize_at)) ?
             alg.linearize_at(t).μ : u_pred
-        _eval_f_jac!(ddu, linearize_at, p, t, f)
+        # _eval_f_jac!(ddu, linearize_at, p, t, f)
+        ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
         integ.destats.njacs += 1
         if alg.fdb_improved == 0
             z .= E1*PI*x_pred.μ .- du
@@ -254,7 +255,7 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
         return Inf
     end
 
-    _error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, diffusion), H))))
+    _error_estimate = sqrt.(diag(Matrix(X_A_Xt(apply_diffusion(Q, local_diffusion), H))))
 
     error_estimate = _error_estimate[1:d]
     # error_estimate = integ.opts.internalnorm(_error_estimate, integ.t)

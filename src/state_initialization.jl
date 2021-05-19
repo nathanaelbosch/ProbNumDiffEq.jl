@@ -4,13 +4,29 @@ function initial_update!(integ)
     @unpack d, x, Proj = integ.cache
     q = integ.alg.order
 
-    condition_on!(x, Proj(0), u)
-
     f_derivatives = get_derivatives(u, f, p, t, q)
-    @assert length(1:q) == length(f_derivatives)
-    for (o, df) in zip(1:q, f_derivatives)
-        condition_on!(x, Proj(o), df)
+
+    if length(u) == d
+        condition_on!(x, Proj(0), u)
+
+        @assert length(1:q) == length(f_derivatives)
+        for (o, df) in zip(1:q, f_derivatives)
+            condition_on!(x, Proj(o), df)
+        end
+
+    elseif u isa ArrayPartition
+        condition_on!(x, Proj(0), u[2,:])
+        condition_on!(x, Proj(1), u[1,:])
+
+        @assert length(2:q) == length(f_derivatives)
+        for (o, df) in zip(2:q, f_derivatives)
+            condition_on!(x, Proj(o), df)
+        end
+
+    else
+        error()
     end
+
 end
 function get_derivatives(u, f, p, t, q)
     d = length(u)

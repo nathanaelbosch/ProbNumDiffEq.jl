@@ -49,8 +49,8 @@ function OrdinaryDiffEq.alg_cache(
     end
 
     if (alg isa EK1 || alg isa IEKS) && isnothing(f.jac) && !(f isa DynamicalODEFunction)
-        error("EK1 requires the Jacobian. To automatically generate it with ",
-              "ModelingToolkit.jl use ProbNumDiffEq.remake_prob_with_jac(prob).")
+        # error("EK1 requires the Jacobian. To automatically generate it with ",
+        #       "ModelingToolkit.jl use ProbNumDiffEq.remake_prob_with_jac(prob).")
     end
 
     is_secondorder_ode = f isa DynamicalODEFunction
