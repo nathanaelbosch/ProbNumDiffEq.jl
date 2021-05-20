@@ -4,27 +4,15 @@ function initial_update!(integ)
     @unpack d, x, Proj = integ.cache
     q = integ.alg.order
 
-    f_derivatives = get_derivatives(u, f, p, t, q)
+    f_derivatives =
+        !isnothing(integ.alg.initial_derivatives) ?
+        integ.alg.initial_derivatives :
+        get_derivatives(u, f, p, t, q)
+    # f_derivatives includes the localtion u itself!
 
-    if length(u) == d
-        condition_on!(x, Proj(0), u)
-
-        @assert length(1:q) == length(f_derivatives)
-        for (o, df) in zip(1:q, f_derivatives)
-            condition_on!(x, Proj(o), df)
-        end
-
-    elseif u isa ArrayPartition
-        condition_on!(x, Proj(0), u[2,:])
-        condition_on!(x, Proj(1), u[1,:])
-
-        @assert length(2:q) == length(f_derivatives)
-        for (o, df) in zip(2:q, f_derivatives)
-            condition_on!(x, Proj(o), df)
-        end
-
-    else
-        error()
+    # @assert length(0:q) == length(f_derivatives)
+    for o in 0:q
+        condition_on!(x, Proj(o), f_derivatives[o+1])
     end
 
 end
@@ -54,7 +42,7 @@ function get_derivatives(u, f, p, t, q)
         push!(f_derivatives, df)
     end
 
-    return evaluate.(f_derivatives)
+    return [u, evaluate.(f_derivatives)...]
 end
 
 # TODO Either name texplicitly for the initial update, or think about how to use this in general
@@ -111,5 +99,5 @@ function get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
         push!(f_derivatives, df)
     end
 
-    return evaluate.(f_derivatives)
+    return [u[2,:], u[1,:], evaluate.(f_derivatives)...]
 end
