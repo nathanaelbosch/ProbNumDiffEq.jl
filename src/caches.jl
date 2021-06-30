@@ -72,7 +72,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
-    Precond = preconditioner(d, q)
+    Precond = preconditioner(uElType, d, q)
     A, Q = ibm(d, q, uElType)
 
     x0 = Gaussian(zeros(uElType, D), SRMatrix(Matrix(uElType(1.0)*I, D, D)))

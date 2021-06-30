@@ -156,7 +156,7 @@ function GaussianODEFilterPosterior(alg, u0)
     SolProj = Proj(0)
 
     A, Q = ibm(d, q, uElType)
-    Precond = preconditioner(d, q)
+    Precond = preconditioner(uElType, d, q)
     GaussianODEFilterPosterior(
         d, q, SolProj, A, Q, Precond, false)
 end
