@@ -111,7 +111,16 @@ function measure!(integ, x_pred, t)
     if alg isa EK1 || alg isa IEKS
         linearize_at = (alg isa IEKS && !isnothing(alg.linearize_at)) ?
             alg.linearize_at(t).μ : u_pred
-        _eval_f_jac!(ddu, linearize_at, p, t, f)
+
+        # Jacobian is now computed either with the given jac, or ForwardDiff
+        if !isnothing(f.jac)
+            _eval_f_jac!(ddu, linearize_at, p, t, f)
+        elseif isinplace(f)
+            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
+        else
+            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
+        end
+
         integ.destats.njacs += 1
         mul!(H, (E1 .- ddu * E0), PI)
     else
