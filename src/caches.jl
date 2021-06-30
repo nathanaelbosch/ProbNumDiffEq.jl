@@ -66,7 +66,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Projections
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
-        kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+        kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(uElType, d)))
     @assert f isa AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ? [Proj(0); Proj(1)] : Proj(0)
 
