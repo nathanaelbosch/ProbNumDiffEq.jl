@@ -27,7 +27,7 @@ prob = ProbNumDiffEq.remake_prob_with_jac(prob)
 
 
     # First test that they're both equivalent
-    P = ProbNumDiffEq.preconditioner(d, q)
+    P = ProbNumDiffEq.preconditioner(Float64, d, q)
     P, PI = P(h), inv(P(h))
     @test Qh_p ≈ P * Qh * P'
     @test Ah_p ≈ P * Ah * PI
