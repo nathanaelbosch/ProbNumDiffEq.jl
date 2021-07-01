@@ -1,5 +1,5 @@
-function preconditioner(d, q)
-    P_preallocated = Diagonal(zeros(d*(q+1)))
+function preconditioner(elType, d, q)
+    P_preallocated = Diagonal(zeros(elType, d*(q+1)))
 
     @fastmath @inbounds function P(h)
         val = h^(-q-1/2)

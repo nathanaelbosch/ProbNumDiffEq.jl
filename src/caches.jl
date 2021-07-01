@@ -66,13 +66,13 @@ function OrdinaryDiffEq.alg_cache(
 
     # Projections
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
-        kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+        kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(uElType, d)))
     @assert f isa AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ? [Proj(0); Proj(1)] : Proj(0)
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
-    Precond = preconditioner(d, q)
+    Precond = preconditioner(uElType, d, q)
     A, Q = ibm(d, q, uElType)
 
     x0 = Gaussian(zeros(uElType, D), SRMatrix(Matrix(uElType(1.0)*I, D, D)))

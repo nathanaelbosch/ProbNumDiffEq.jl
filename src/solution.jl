@@ -152,11 +152,11 @@ function GaussianODEFilterPosterior(alg, u0)
     d = length(u0)
     q = alg.order
 
-    Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    Proj(deriv) = kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(uElType, d)))
     SolProj = Proj(0)
 
     A, Q = ibm(d, q, uElType)
-    Precond = preconditioner(d, q)
+    Precond = preconditioner(uElType, d, q)
     GaussianODEFilterPosterior(
         d, q, SolProj, A, Q, Precond, false)
 end
