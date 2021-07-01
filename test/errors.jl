@@ -8,12 +8,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 import ProbNumDiffEq: remake_prob_with_jac
 
 
-@testset "EK1 requires Jac" begin
-    prob = prob_ode_lotkavoltera
-    @test_throws ErrorException solve(prob, EK1())
-    @test solve(remake_prob_with_jac(prob), EK1()) isa ProbNumDiffEq.ProbODESolution
-end
-
 @testset "One-dim problems don't work so far!" begin
     prob = prob_ode_linear
     @test_throws ErrorException solve(prob, EK0())
