@@ -161,10 +161,18 @@ function measure!(integ, x_pred, t, second_order::Val{true})
     # Cov
     if alg isa EK1
         @assert !(alg isa IEKS)
-        ForwardDiff.jacobian!(ddu, (du2, u) -> f.f1(du2, u_pred[1:d], u, p, t), du2, u_pred[d+1:end])
-        Ju = ddu
+
+        J0 = copy(ddu)
+        ForwardDiff.jacobian!(J0, (du2, u) -> f.f1(du2, view(u_pred, 1:d), u, p, t), du2,
+                              u_pred[d+1:2d])
+
+        J1 = copy(ddu)
+        ForwardDiff.jacobian!(J1, (du2, du) -> f.f1(du2, du, view(u_pred, d+1:2d),
+                                                   p, t), du2,
+                              u_pred[1:d])
+
         integ.destats.njacs += 1
-        mul!(H, (E2 .- Ju * E0), PI)
+        mul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
     else
         mul!(H, E2, PI)
     end

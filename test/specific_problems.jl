@@ -128,7 +128,7 @@ end
         appxsol = solve(prob, Tsit5())
         for alg in (EK0(), EK1())
             @test solve(prob, alg) isa ProbNumDiffEq.ProbODESolution
-            @test_broken solve(prob, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+            @test solve(prob, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
         end
     end
 
