@@ -3,7 +3,7 @@
 ########################################################################################
 abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, ProjType, SolProjType, FP, uType, xType, AType, QType, matType, diffusionType, diffModelType,
+    RType, ProjType, SolProjType, FP, uType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
     measType, llType,
 } <: ODEFiltersCache
     # Constants
@@ -28,14 +28,14 @@ mutable struct GaussianODEFilterCache{
     x_tmp2::xType
     measurement::measType
     H::matType
-    du::uType
+    du::duType
     ddu::matType
     K::matType
     G::matType
     covmatcache::matType
     local_diffusion::diffusionType
     global_diffusion::diffusionType
-    err_tmp::uType
+    err_tmp::duType
     log_likelihood::llType
 end
 
@@ -48,8 +48,13 @@ function OrdinaryDiffEq.alg_cache(
               "or a matrix) are currently not supported")
     end
 
+    is_secondorder_ode = f isa DynamicalODEFunction
+    if is_secondorder_ode
+        @warn "Assuming that the given ODE is a SecondOrderODE. If this is not the case, e.g. because it is some other dynamical ODE, the solver will probably run into errors!"
+    end
+
     q = alg.order
-    d = length(u)
+    d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d*(q+1)
 
     u0 = u
@@ -63,7 +68,7 @@ function OrdinaryDiffEq.alg_cache(
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
         kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(uElType, d)))
     @assert f isa AbstractODEFunction
-    SolProj = f isa DynamicalODEFunction ? [Proj(0); Proj(1)] : Proj(0)
+    SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
@@ -98,7 +103,7 @@ function OrdinaryDiffEq.alg_cache(
 
     return GaussianODEFilterCache{
         typeof(R), typeof(Proj), typeof(SolProj), typeof(Precond),
-        uType, typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
+        uType, typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
         typeof(diffmodel), typeof(measurement), uEltypeNoUnits,
     }(
         # Constants
@@ -108,7 +113,7 @@ function OrdinaryDiffEq.alg_cache(
         copy(x0), copy(x0), copy(x0), copy(x0), copy(x0),
         measurement,
         H, du, ddu, K, G, covmatcache, initdiff, initdiff,
-        copy(u0),
+        copy(du),
         zero(uEltypeNoUnits),
     )
 end

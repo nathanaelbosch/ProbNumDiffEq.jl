@@ -7,6 +7,7 @@ using LinearAlgebra
 using UnPack
 using ParameterizedFunctions
 using ForwardDiff
+using OrdinaryDiffEq
 
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
@@ -111,17 +112,39 @@ end
 end
 
 
-@testset "2nd Order ODE" begin
-    function vanderpol!(ddu, du, u, p, t)
-        μ = p[1]
-        @. ddu = μ * ((1-u^2) * du - u)
-    end
+@testset "SecondOrderODEProblem" begin
+
     du0 = [0.0]
     u0 = [2.0]
     tspan = (0.0, 6.3)
     p = [1e1]
-    prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
-    @test_broken solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
+
+    @testset "IIP" begin
+        function vanderpol!(ddu, du, u, p, t)
+            μ = p[1]
+            @. ddu = μ * ((1-u^2) * du - u)
+        end
+        prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
+        appxsol = solve(prob, Tsit5())
+        for alg in (EK0(), EK1())
+            @test solve(prob, alg) isa ProbNumDiffEq.ProbODESolution
+            @test_broken solve(prob, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+        end
+    end
+
+    @testset "OOP" begin
+        function vanderpol(du, u, p, t)
+            μ = p[1]
+            ddu = μ .* ((1 .- u .^ 2) .* du .- u)
+            return ddu
+        end
+        prob = SecondOrderODEProblem(vanderpol, du0, u0, tspan, p)
+        appxsol = solve(prob, Tsit5())
+        for alg in (EK0(), EK1())
+            @test_broken solve(prob, alg) isa ProbNumDiffEq.ProbODESolution
+            @test_broken solve(prob, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+        end
+    end
 end
 
 
