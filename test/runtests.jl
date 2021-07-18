@@ -51,6 +51,9 @@ end
     println("IEKS")
     @timedtestset "IEKS" begin include("ieks.jl") end
 
+    println("Automatic Differentiation")
+    @timedtestset "Automatic Differentiation" begin include("autodiff.jl") end
+
     println("Specific Problems")
     @timedtestset "Specific Problems" begin include("specific_problems.jl") end
 end
