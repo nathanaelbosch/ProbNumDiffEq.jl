@@ -119,30 +119,37 @@ end
     tspan = (0.0, 6.3)
     p = [1e1]
 
+    function vanderpol!(ddu, du, u, p, t)
+        μ = p[1]
+        @. ddu = μ * ((1-u^2) * du - u)
+    end
+    prob_iip = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
+
+    function vanderpol(du, u, p, t)
+        μ = p[1]
+        ddu = μ .* ((1 .- u .^ 2) .* du .- u)
+        return ddu
+    end
+    prob_oop = SecondOrderODEProblem(vanderpol, du0, u0, tspan, p)
+
+    appxsol = solve(prob_iip, Tsit5(), abstol=1e-7, reltol=1e-7)
+
     @testset "IIP" begin
-        function vanderpol!(ddu, du, u, p, t)
-            μ = p[1]
-            @. ddu = μ * ((1-u^2) * du - u)
-        end
-        prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
-        appxsol = solve(prob, Tsit5())
         for alg in (EK0(), EK1())
-            @test solve(prob, alg) isa ProbNumDiffEq.ProbODESolution
-            @test solve(prob, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+            @testset "$alg" begin
+                @test solve(prob_iip, alg) isa ProbNumDiffEq.ProbODESolution
+                @test solve(prob_iip, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+            end
         end
     end
 
     @testset "OOP" begin
-        function vanderpol(du, u, p, t)
-            μ = p[1]
-            ddu = μ .* ((1 .- u .^ 2) .* du .- u)
-            return ddu
-        end
-        prob = SecondOrderODEProblem(vanderpol, du0, u0, tspan, p)
         appxsol = solve(prob, Tsit5())
         for alg in (EK0(), EK1())
-            @test_broken solve(prob, alg) isa ProbNumDiffEq.ProbODESolution
-            @test_broken solve(prob, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+            @testset "$alg" begin
+                @test_broken solve(prob_oop, alg) isa ProbNumDiffEq.ProbODESolution
+                @test_broken solve(prob_oop, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+            end
         end
     end
 end
