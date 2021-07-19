@@ -77,6 +77,7 @@ include("integrator_utils.jl")
 include("filtering.jl")
 include("perform_step.jl")
 include("preconditioning.jl")
+include("projection.jl")
 include("smoothing.jl")
 
 include("solution.jl")

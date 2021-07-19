@@ -5,9 +5,6 @@
 
 Careful: Dimensions are ordered differently than in `probnum`!"""
 function ibm(d::Integer, q::Integer, elType=typeof(1.0))
-    F̃ = diagm(1 => ones(q))
-    I_d = diagm(0 => ones(d))
-    F = kron(F̃, I_d)  # In probnum the order is inverted
 
     A_base = diagm(0=>ones(elType, d*(q+1)))
     Q_base = zeros(elType, d*(q+1), d*(q+1))
@@ -61,9 +58,6 @@ end
 
 """Same as above, but without the automatic preconditioning"""
 function vanilla_ibm(d::Integer, q::Integer)
-    F̃ = diagm(1 => ones(q))
-    I_d = diagm(0 => ones(d))
-    F = kron(F̃, I_d)  # In probnum the order is inverted
 
     @fastmath function A!(A::AbstractMatrix, h::Real)
         # Assumes that A comes from a previous computation => zeros and one-diag
