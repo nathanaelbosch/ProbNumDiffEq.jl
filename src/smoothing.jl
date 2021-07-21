@@ -8,7 +8,7 @@ function smooth_all!(integ)
     @unpack x_smooth, t, diffusions = integ.sol
     x = x_smooth
 
-    for i in length(x)-1:-1:2
+    for i in length(x)-1:-1:1
         dt = t[i+1] - t[i]
         if iszero(dt)
             copy!(x[i], x[i+1])
