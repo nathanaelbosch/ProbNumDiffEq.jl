@@ -3,9 +3,11 @@ If you are unfamiliar with DifferentialEquations.jl, check out the
 [official tutorial](https://docs.sciml.ai/stable/tutorials/ode_example/)
 on how to solve ordinary differential equations.
 
+
 ## Step 1: Defining a problem
-First, we set up an `ODEProblem` to solve the
-[Fitzhugh-Nagumo model](https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model).
+To solve the
+[Fitzhugh-Nagumo model](https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model)
+we first set up an `ODEProblem`.
 ```@example 1
 using ProbNumDiffEq
 
@@ -17,18 +19,23 @@ end
 
 u0 = [-1.0; 1.0]
 tspan = (0., 20.)
-p = (0.2,0.2,3.0)
+p = (0.2, 0.2, 3.0)
 prob = ODEProblem(fitz, u0, tspan, p)
 nothing # hide
 ```
 
 ## Step 2: Solving a problem
-Currently, ProbNumDiffEq.jl implements two probabilistic numerical methods: `EK0` and `EK1`.
-In this example we solve the ODE with the default `EK0`, for high tolerance levels.
+To solve the `ODEProblem` we can use the `solve` interface that DifferentialEquations.jl defines.
+All we have to do is to select one of the PN algorithms: `EK0` or `EK1`.
+In this example we solve the ODE with the default `EK0` and high tolerance levels to visualize the resulting uncertainty
 ```@example 1
-sol = solve(prob, EK0(), abstol=1e-1, reltol=1e-2)
+sol = solve(prob, EK0(), abstol=1e-1, reltol=1e-1)
 nothing # hide
 ```
+
+Note that ProbNumDiffEq.jl supports many of DifferentialEquations.jl's
+[common solver options](https://diffeq.sciml.ai/stable/basics/common_solver_opts/).
+
 
 ## Step 3: Analyzing the solution
 Just as in DifferentialEquations.jl, the result of `solve` is a solution object, and we can access the (mean) values and timesteps as usual
@@ -58,8 +65,8 @@ By default, the posterior distribution can be evaluated for arbitrary points in 
 mean(sol(0.45))
 ```
 
-### Plotting Solutions
-Finally, we can conveniently visualize the result through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
+### Plotting
+The result can be conveniently visualized through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
 ```@example 1
 using Plots
 plot(sol, color=["#107D79" "#FF9933"])

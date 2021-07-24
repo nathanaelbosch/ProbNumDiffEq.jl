@@ -10,16 +10,18 @@
 <!-- [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac) -->
 
 
-**ProbNumDiffEq.jl provides _probabilistic numerical_ ODE solvers for the [DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.**
-
 ![Banner](./examples/banner.svg?raw=true)
 
-The field of
-[Probabilistic Numerics](http://probabilistic-numerics.org/en/latest/research.html)
-aims to quantify numerical uncertainty arising from finite computational resources.
-This package implements _ODE filters_, a class of probabilistic numerical methods for solving ordinary differential equations.
-By casting the solution of ODEs as a problem of Bayesian inference, they solve ODEs with methods of Bayesian filtering and smoothing.
-As a result, the solvers return a posterior probability distribution over ODE solutions and provide estimates of their own numerical approximation error.
+__ProbNumDiffEq.jl__ provides _probabilistic numerical_ ODE solvers to the
+[DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.
+The implemented _ODE filters_ solve differential equations via Bayesian filtering and smoothing and compute not just a single point estimate of the true solution, but a posterior distribution that contains an estimate of its numerical approximation error.
+
+
+---
+
+__For more probabilistic numerics also check out the [ProbNum](https://www.probabilistic-numerics.org/en/latest/) Python package.__ It also implements probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
+
+---
 
 
 ## Installation
@@ -29,7 +31,7 @@ The package can be installed directly with the Julia package manager:
 ```
 
 
-## Example
+## Example: Solving the FitzHugh-Nagumo ODE
 ```julia
 using ProbNumDiffEq
 
