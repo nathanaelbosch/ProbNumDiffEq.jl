@@ -1,7 +1,7 @@
 # ProbNumDiffEq.jl
 
 
-![Banner](./examples/banner.png?raw=true)
+![Banner](./examples/banner.svg?raw=true)
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/dev)
