@@ -62,7 +62,7 @@ mean(sol(0.45))
 Finally, we can conveniently visualize the result through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
 ```@example 1
 using Plots
-plot(sol)
+plot(sol, color=["#107D79" "#FF9933"])
 savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
 ```
 ![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg)
