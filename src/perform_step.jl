@@ -1,6 +1,10 @@
 # Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
 function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
-    @assert integ.opts.dense == integ.alg.smooth "`dense` and `smooth` should have the same value! "
+    if integ.opts.dense && !integ.alg.smooth
+        error("To use `dense=true` you need to set `smooth=true`!")
+    elseif !integ.opts.dense && integ.alg.smooth
+        @warn "If you set dense=false for efficiency, you might also want to set smooth=false."
+    end
     @assert integ.saveiter == 1
 
     # Update the initial state to the known (given or computed with AD) initial values
