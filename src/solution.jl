@@ -156,7 +156,8 @@ function GaussianODEFilterPosterior(alg, u0)
     SolProj = u0 isa ArrayPartition ? [Proj(1); Proj(0)] : Proj(0)
 
     A, Q = ibm(d, q, uElType)
-    Precond = preconditioner(uElType, d, q)
+    # Precond = preconditioner(uElType, d, q)
+    Precond = nothing
     GaussianODEFilterPosterior(
         d, q, SolProj, A, Q, Precond, false)
 end

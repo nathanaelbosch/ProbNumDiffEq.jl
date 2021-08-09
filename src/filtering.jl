@@ -24,25 +24,30 @@ function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh
     return x_out.μ
 end
 function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+    error("This should not actually get called")
     out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
     copy!(x_out.Σ, out_cov)
     return x_out.Σ
 end
 
 # SRMatrix Version of this - But, before using QR try it with Cholesky!
-function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix)
-    _L = [Ah*x_curr.Σ.squareroot Qh.squareroot]
-    out_cov = Symmetric(_L*_L')
-    chol = cholesky!(out_cov, check=false)
+function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix, cachemat::SRMatrix)
+    M, L = cachemat.mat, cachemat.squareroot
+    D, D = size(Qh.mat)
+
+    mul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
+    L[1:D, D+1:2D] .= Qh.squareroot
+    mul!(M, L, L')
+    chol = cholesky!(Symmetric(M), check=false)
 
     if issuccess(chol)
-        PpL = chol.L
-        copy!(x_out.Σ, SRMatrix(PpL))
+        copy!(x_out.Σ.squareroot, chol.U')
+        mul!(x_out.Σ.mat, chol.U', chol.U)
         return x_out.Σ
     else
-        _, R = qr(_L')
-        out_cov = SRMatrix(LowerTriangular(collect(R')))
-        copy!(x_out.Σ, out_cov)
+        _, R = qr(L')
+        copy!(x_out.Σ.squareroot, R')
+        mul!(x_out.Σ.mat, R', R)
         return x_out.Σ
     end
 end
@@ -77,16 +82,31 @@ Implemented in Joseph Form.
 See also: [`predict`](@ref)
 """
 function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
-                 H::AbstractMatrix, R=0)
+                 H::AbstractMatrix, R,
+                 K1::AbstractMatrix, K2::AbstractMatrix,
+                 M_cache::AbstractMatrix)
     @assert iszero(R)
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
+    D = length(m_p)
 
     S_inv = inv(S)
-    K = P_p * H' * S_inv
+    # @info "?" P_p H' S_inv K_cache
+    # K = P_p * H' * S_inv
+    K1 = mul!(K1, P_p, H')
+    K = mul!(K2, K1, S_inv)
 
-    x_out.μ .= m_p .+ K * (0 .- z)
-    copy!(x_out.Σ, X_A_Xt(P_p, (I-K*H)))
+    # x_out.μ .= m_p .+ K * (0 .- z)
+    x_out.μ .= m_p .- mul!(x_out.μ, K, z)
+
+    # M_cache .= I(D) .- mul!(M_cache, K, H)
+    mul!(M_cache, K, H, -1, 0)
+    @inbounds @simd for i in 1:D
+        M_cache[i, i] += 1
+    end
+
+    X_A_Xt!(x_out.Σ, P_p, M_cache)
+
     return x_out
 end
 """
@@ -117,6 +137,7 @@ P_n^S = (I - G*A(h)) P_n (I - G*A(h))^T + G * Q(h) * G + G * P_{n+1}^S * G
 ```
 """
 function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+    error("This should not get called?")
     x_pred = predict(x_curr, Ah, Qh)
 
     P_p = x_pred.Σ

@@ -37,6 +37,12 @@ Base.copy!(dst::SquarerootMatrix, src::SquarerootMatrix) =
 
 X_A_Xt(M::SquarerootMatrix, X::AbstractMatrix) =
     SquarerootMatrix(X*M.squareroot)
+X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, X::AbstractMatrix) = begin
+    mul!(out.squareroot, X, M.squareroot)
+    mul!(out.mat, out.squareroot, out.squareroot')
+    return out
+end
 
 
 Base.inv(M::SquarerootMatrix) = Base.inv(M.mat)
+LinearAlgebra.diag(M::SquarerootMatrix) = LinearAlgebra.diag(M.mat)

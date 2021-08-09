@@ -72,10 +72,11 @@ struct DynamicDiffusion <: AbstractDynamicDiffusion end
 function estimate_diffusion(kind::DynamicDiffusion, integ)
     @unpack dt = integ
     @unpack d, R = integ.cache
-    @unpack H, Q, measurement = integ.cache
+    @unpack H, Q, measurement, m_tmp = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    σ² = z' * (Matrix(X_A_Xt(Q, H))\z) / d
+    X_A_Xt!(m_tmp.Σ, Q, H)
+    σ² = z' * (m_tmp.Σ.mat \ z) / d
     return σ², σ²
 end
 

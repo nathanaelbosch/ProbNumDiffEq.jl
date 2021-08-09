@@ -4,7 +4,7 @@
 function smooth_all!(integ)
     integ.sol.x_smooth = copy(integ.sol.x_filt)
 
-    @unpack A, Q, Precond = integ.cache
+    @unpack A, Q = integ.cache
     @unpack x_smooth, t, diffusions = integ.sol
     x = x_smooth
 
@@ -15,8 +15,8 @@ function smooth_all!(integ)
             continue
         end
 
-        P = Precond(dt)
-        PI = inv(P)
+        make_preconditioners!(integ, dt)
+        P, PI = integ.cache.P, integ.cache.PI
 
         Qh = apply_diffusion(Q, diffusions[i])
 
@@ -33,28 +33,40 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = integ.cache
     @unpack x_tmp = integ.cache
+    @unpack C1, G1, G2, C2 = integ.cache
 
     # Prediction: t -> t+1
-    predict!(x_tmp, x_curr, Ah, Qh)
+    predict_mean!(x_tmp, x_curr, Ah, Qh)
+    predict_cov!(x_tmp, x_curr, Ah, Qh, C1)
 
     # Smoothing
     P_p = x_tmp.Σ
     P_p_inv = inv(P_p)
-    G = x_curr.Σ * Ah' * P_p_inv
+    # G = x_curr.Σ * Ah' * P_p_inv
+    G = mul!(G2, mul!(G1, x_curr.Σ, Ah'), P_p_inv)
     x_curr.μ .+= G * (x_next.μ .- x_tmp.μ)
 
     # Joseph-Form:
-    K_tilde = x_curr.Σ * Ah' * P_p_inv
-    # P_s = (
-    #     X_A_Xt(x_curr.Σ, (I - K_tilde*Ah))
-    #     + X_A_Xt(Qh, K_tilde)
-    #     + X_A_Xt(x_next.Σ, G)
-    # )
-    _R = [x_curr.Σ.squareroot' * (I - K_tilde*Ah)'
-          Qh.squareroot' * K_tilde'
-          x_next.Σ.squareroot' * G']
-    _, P_s_R = qr(_R)
-    copy!(x_curr.Σ, SRMatrix(P_s_R'))
+    M, L = C2.mat, C2.squareroot
+    D = length(x_tmp.μ)
+    mul!(view(L, 1:D, 1:D), (I-G*Ah), x_curr.Σ.squareroot)
+    mul!(view(L, 1:D, D+1:2D), G, Qh.squareroot)
+    mul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.squareroot)
+
+    mul!(M, L, L')
+    chol = cholesky!(Symmetric(M), check=false)
+
+    if issuccess(chol)
+        copy!(x_curr.Σ.squareroot, chol.U')
+        mul!(x_curr.Σ.mat, chol.U', chol.U)
+    else
+        _, R = qr(L')
+        copy!(x_curr.Σ.squareroot, R')
+        mul!(x_curr.Σ.mat, R', R)
+    end
+
+    # _, P_s_R = qr(_R)
+    # copy!(x_curr.Σ, SRMatrix(P_s_R'))
 
     assert_nonnegative_diagonal(x_curr.Σ)
     # PDMat(Symmetric(x_curr.Σ))
