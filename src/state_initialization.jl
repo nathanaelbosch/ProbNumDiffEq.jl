@@ -20,15 +20,18 @@ function get_derivatives(u, f, p, t, q)
 
     f_oop = isinplace(f) ? iip_to_oop(f) : f
 
-    # Make sure that the vector field f does not depend on t
-    f_t_taylor = taylor_expand(_t -> f_oop(u, p, _t), t)
-    @assert !(eltype(f_t_taylor) <: TaylorN) "The vector field depends on t; The code might not yet be able to handle these (but it should be easy to implement)"
-
     # Simplify further:
     _f(u) = f_oop(u, p, t)
 
     u0 = u
     du0 = _f(u)
+    if q == 1
+        return [u0, du0]
+    end
+
+    # Make sure that the vector field f does not depend on t
+    f_t_taylor = taylor_expand(_t -> f_oop(u, p, _t), t)
+    @assert !(eltype(f_t_taylor) <: TaylorN) "The vector field depends on t; The code might not yet be able to handle these (but it should be easy to implement)"
 
     set_variables("u", numvars=d, order=q+1)
 
