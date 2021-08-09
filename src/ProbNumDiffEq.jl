@@ -27,6 +27,7 @@ using ModelingToolkit
 using RecursiveArrayTools
 using StaticArrays
 using ForwardDiff
+using Tullio
 
 
 # @reexport using PSDMatrices
