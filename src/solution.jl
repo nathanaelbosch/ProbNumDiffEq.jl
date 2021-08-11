@@ -56,24 +56,27 @@ function DiffEqBase.build_solution(
     N = length((size(prob.u0)..., length(u)))
 
     d = length(prob.u0)
-    uEltype = eltype(prob.u0)
-    cov = SRMatrix(zeros(uEltype, d, d))
-    # cov = zeros(uEltype, d, d)
-    pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
-    x_filt = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
+    uElType = eltype(prob.u0)
+    D = d
+    pu_cov = alg isa EK0 ?
+        SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
+        SRMatrix(zeros(uElType, d, D))
+    x_cov = SRMatrix(zeros(uElType, d, d))
+    pu = StructArray{Gaussian{Vector{uElType}, typeof(pu_cov)}}(undef, 0)
+    x_filt = StructArray{Gaussian{Vector{uElType}, typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 
     if DiffEqBase.has_analytic(prob.f)
         u_analytic = Vector{typeof(prob.u0)}()
-        errors = Dict{Symbol,real(eltype(prob.u0))}()
+        errors = Dict{Symbol, real(uElType)}()
     else
         u_analytic = nothing
         errors = nothing
     end
 
-    ll = zero(uEltype)
+    ll = zero(uElType)
     return ProbODESolution{T, N}(
         u, pu, u_analytic, errors, t, [], x_filt, x_smooth, [], ll, prob, alg, interp, dense, 0, destats, retcode,
     )

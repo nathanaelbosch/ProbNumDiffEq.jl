@@ -15,7 +15,7 @@ catch
     import DiffEqBase.SciMLBase: interpret_vars, getsyms
 end
 
-import Base: copy, copy!, show, size, ndims
+import Base: copy, copy!, show, size, ndims, similar
 stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra

@@ -101,8 +101,8 @@ function OrdinaryDiffEq.alg_cache(
     H = zeros(uElType, d, D)
     du = zeros(uElType, d)
     ddu = zeros(uElType, d, d)
-    # v, S = copy(h), copy(ddu)
-    v = copy(h)
+    # v, S = similar(h), similar(ddu)
+    v = similar(h)
     S = alg isa EK0 ?
         SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
         SRMatrix(zeros(uElType, d, D))
@@ -111,7 +111,7 @@ function OrdinaryDiffEq.alg_cache(
     G = zeros(uElType, D, D)
     C1 = SRMatrix(zeros(uElType, D, 2D))
     C2 = SRMatrix(zeros(uElType, D, 3D))
-    covmatcache = copy(G)
+    covmatcache = similar(G)
 
     diffusion_models = Dict(
         :dynamic => DynamicDiffusion(),
@@ -136,12 +136,12 @@ function OrdinaryDiffEq.alg_cache(
         P, PI,
         E0, E1, E2,
         # Mutable stuff
-        copy(u0), copy(u0), copy(u0), copy(u0),
-        copy(x0), copy(x0), copy(x0), copy(x0), copy(x0),
-        measurement, copy(measurement),
-        H, du, ddu, K, copy(K), G, copy(G),
+        u0, similar(u0), similar(u0), similar(u0),
+        x0, similar(x0), similar(x0), similar(x0), similar(x0),
+        measurement, similar(measurement),
+        H, du, ddu, K, similar(K), G, similar(G),
         covmatcache, initdiff, initdiff,
-        copy(du),
+        similar(du),
         zero(uEltypeNoUnits),
         C1, C2,
     )

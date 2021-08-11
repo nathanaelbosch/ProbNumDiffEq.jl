@@ -4,6 +4,7 @@ const SRGaussian{T, S, M} = Gaussian{Vector{T}, SRMatrix{T, S, M}}
 const SRGaussianList{T, S, M} = StructArray{SRGaussian{T, S, M}}
 
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
+similar(P::Gaussian) = Gaussian(similar(P.μ), similar(P.Σ))
 copy!(dst::Gaussian, src::Gaussian) = (copy!(dst.μ, src.μ); copy!(dst.Σ, src.Σ); dst)
 RecursiveArrayTools.recursivecopy(P::Gaussian) = copy(P)
 show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")

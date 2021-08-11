@@ -33,6 +33,11 @@ Base.copy!(dst::SquarerootMatrix, src::SquarerootMatrix) =
         Base.copy!(dst.squareroot, src.squareroot);
         Base.copy!(dst.mat, src.mat);
         dst)
+Base.similar(M::SquarerootMatrix) = SquarerootMatrix(
+    M.squareroot isa LinearAlgebra.Adjoint ?
+        similar(M.squareroot')' : similar(M.squareroot),
+    similar(M.mat)
+)
 
 
 X_A_Xt(M::SquarerootMatrix, X::AbstractMatrix) =

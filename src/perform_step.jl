@@ -5,6 +5,9 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     elseif !integ.opts.dense && integ.alg.smooth
         @warn "If you set dense=false for efficiency, you might also want to set smooth=false."
     end
+    if !integ.opts.save_everystep && integ.alg.smooth
+        error("If you do not save all values, you do not need to smooth!")
+    end
     @assert integ.saveiter == 1
 
     # Update the initial state to the known (given or computed with AD) initial values
@@ -12,7 +15,8 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
-    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, cache.SolProj*cache.x)
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter,
+                                   mul!(cache.m_tmp, cache.SolProj, cache.x))
 end
 
 """Perform a step
