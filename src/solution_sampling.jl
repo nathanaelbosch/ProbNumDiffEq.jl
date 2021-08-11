@@ -24,7 +24,7 @@ end
 function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
     @assert length(diffusions)+1 == length(difftimes)
 
-    @unpack A, Q, d, q, Precond = posterior
+    @unpack A, Q, d, q = posterior
     E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     D = d*(q+1)
 
@@ -43,8 +43,8 @@ function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
         diffusion = diffusions[i_diffusion]
 
         Qh = apply_diffusion(Q, diffusion)
-        P = Precond(dt)
-        PI = inv(P)
+        make_preconditioners!(posterior, dt)
+        P, PI = posterior.P, posterior.PI
 
         for j in 1:n
             sample_p = P*sample_path[i+1, :, j]

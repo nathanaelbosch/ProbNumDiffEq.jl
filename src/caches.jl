@@ -7,7 +7,7 @@ mutable struct GaussianODEFilterCache{
     PType, PIType,
     EType,
     uType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
-    measType, llType,
+    measType, puType, llType,
     CType,
 } <: ODEFiltersCache
     # Constants
@@ -37,6 +37,7 @@ mutable struct GaussianODEFilterCache{
     x_tmp2::xType
     measurement::measType
     m_tmp::measType
+    pu_tmp::puType
     H::matType
     du::duType
     ddu::matType
@@ -107,6 +108,10 @@ function OrdinaryDiffEq.alg_cache(
         SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
         SRMatrix(zeros(uElType, d, D))
     measurement = Gaussian(v, S)
+    pu_tmp =
+        f isa DynamicalODEFunction ?
+        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, 2d, D))) :
+        similar(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     C1 = SRMatrix(zeros(uElType, D, 2D))
@@ -128,7 +133,7 @@ function OrdinaryDiffEq.alg_cache(
         typeof(P), typeof(PI),
         typeof(E0),
         uType, typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
-        typeof(diffmodel), typeof(measurement), uEltypeNoUnits,
+        typeof(diffmodel), typeof(measurement), typeof(pu_tmp), uEltypeNoUnits,
         typeof(C1),
     }(
         # Constants
@@ -137,8 +142,8 @@ function OrdinaryDiffEq.alg_cache(
         E0, E1, E2,
         # Mutable stuff
         u0, similar(u0), similar(u0), similar(u0),
-        x0, similar(x0), similar(x0), similar(x0), similar(x0),
-        measurement, similar(measurement),
+        x0, copy(x0), similar(x0), similar(x0), similar(x0),
+        measurement, similar(measurement), pu_tmp,
         H, du, ddu, K, similar(K), G, similar(G),
         covmatcache, initdiff, initdiff,
         similar(du),

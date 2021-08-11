@@ -40,6 +40,7 @@ include("squarerootmatrix.jl")
 const SRMatrix = SquarerootMatrix
 export SRMatrix
 X_A_Xt(A, X) = X*A*X'
+X_A_Xt!(out, A, X) = (out .= X*A*X')
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
 apply_diffusion(Q::SRMatrix, diffusion::Number) = SRMatrix(sqrt.(diffusion)*Q.squareroot)
 
@@ -63,13 +64,14 @@ include("state_initialization.jl")
 include("integrator_utils.jl")
 include("filtering.jl")
 include("perform_step.jl")
-include("preconditioning.jl")
 include("projection.jl")
 include("smoothing.jl")
 
 include("solution.jl")
 include("solution_sampling.jl")
 include("solution_plotting.jl")
+
+include("preconditioning.jl")
 
 # Utils
 include("jacobian.jl")

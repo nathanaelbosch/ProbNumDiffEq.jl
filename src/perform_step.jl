@@ -16,7 +16,7 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
     OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter,
-                                   mul!(cache.m_tmp, cache.SolProj, cache.x))
+                                   mul!(cache.pu_tmp, cache.SolProj, cache.x))
 end
 
 """Perform a step
@@ -228,7 +228,7 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
 
     if local_diffusion isa Diagonal
 
-        mul!(L, sqrt.(local_diffusion)*H, Q.squareroot)
+        mul!(L, H, sqrt.(local_diffusion) * Q.squareroot)
         error_estimate = sqrt.(diag(L*L'))
         return error_estimate
 

@@ -22,9 +22,13 @@ end
 end
 
 
-function make_preconditioners!(integ, dt)
-    dt = integ.dt
+function make_preconditioners!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK}, dt)
     @unpack P, PI, d, q = integ.cache
+    make_preconditioner!(P, dt, d, q)
+    make_preconditioner_inv!(PI, dt, d, q)
+end
+function make_preconditioners!(post::GaussianODEFilterPosterior, dt)
+    @unpack P, PI, d, q = post
     make_preconditioner!(P, dt, d, q)
     make_preconditioner_inv!(PI, dt, d, q)
 end

@@ -24,13 +24,12 @@ function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh
     return x_out.μ
 end
 function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-    error("This should not actually get called")
+    # error("This should not actually get called")
     out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
     copy!(x_out.Σ, out_cov)
     return x_out.Σ
 end
 
-# SRMatrix Version of this - But, before using QR try it with Cholesky!
 function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix, cachemat::SRMatrix)
     M, L = cachemat.mat, cachemat.squareroot
     D, D = size(Qh.mat)
@@ -50,6 +49,11 @@ function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
         mul!(x_out.Σ.mat, R', R)
         return x_out.Σ
     end
+end
+function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix)
+    D, D = size(Qh.mat)
+    cachemat = SRMatrix(zeros(D, 2D), zeros(D, D))
+    return predict_cov!(x_out, x_curr, Ah, Qh, cachemat)
 end
 
 
@@ -108,6 +112,15 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     return x_out
+end
+function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
+                 H::AbstractMatrix, R)
+    D = length(x_out.μ)
+    d = length(measurement.μ)
+    K1 = zeros(D, d)
+    K2 = zeros(D, d)
+    M_cache = zeros(D, D)
+    return update!(x_out, x_pred, measurement, H, R, K1, K2, M_cache)
 end
 """
     update(x_pred, measurement, H, R=0)

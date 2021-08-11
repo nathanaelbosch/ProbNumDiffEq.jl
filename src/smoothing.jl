@@ -42,28 +42,39 @@ function smooth!(x_curr, x_next, Ah, Qh, integ)
     # Smoothing
     P_p = x_tmp.Σ
     P_p_inv = inv(P_p)
-    # G = x_curr.Σ * Ah' * P_p_inv
-    G = mul!(G2, mul!(G1, x_curr.Σ, Ah'), P_p_inv)
+    G = x_curr.Σ * Ah' * P_p_inv
+    # G = mul!(G2, mul!(G1, x_curr.Σ, Ah'), P_p_inv)
     x_curr.μ .+= G * (x_next.μ .- x_tmp.μ)
 
     # Joseph-Form:
-    M, L = C2.mat, C2.squareroot
-    D = length(x_tmp.μ)
-    mul!(view(L, 1:D, 1:D), (I-G*Ah), x_curr.Σ.squareroot)
-    mul!(view(L, 1:D, D+1:2D), G, Qh.squareroot)
-    mul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.squareroot)
+    # M, L = C2.mat, C2.squareroot
+    # D = length(x_tmp.μ)
+    # mul!(view(L, 1:D, 1:D), (I-G*Ah), x_curr.Σ.squareroot)
+    # mul!(view(L, 1:D, D+1:2D), G, Qh.squareroot)
+    # mul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.squareroot)
 
-    mul!(M, L, L')
-    chol = cholesky!(Symmetric(M), check=false)
+    # mul!(M, L, L')
+    # chol = cholesky!(Symmetric(M), check=false)
 
-    if issuccess(chol)
-        copy!(x_curr.Σ.squareroot, chol.U')
-        mul!(x_curr.Σ.mat, chol.U', chol.U)
-    else
-        _, R = qr(L')
-        copy!(x_curr.Σ.squareroot, R')
-        mul!(x_curr.Σ.mat, R', R)
-    end
+    # if issuccess(chol)
+    #     copy!(x_curr.Σ.squareroot, chol.U')
+    #     mul!(x_curr.Σ.mat, chol.U', chol.U)
+    # else
+    #     _, R = qr(L')
+    #     copy!(x_curr.Σ.squareroot, R')
+    #     mul!(x_curr.Σ.mat, R', R)
+    # end
+
+
+    K_tilde = x_curr.Σ * Ah' * P_p_inv
+    _R = [x_curr.Σ.squareroot' * (I - K_tilde*Ah)'
+          Qh.squareroot' * K_tilde'
+          x_next.Σ.squareroot' * G']
+    _, P_s_R = qr(_R)
+    copy!(x_curr.Σ, SRMatrix(P_s_R'))
+
+
+
 
     # _, P_s_R = qr(_R)
     # copy!(x_curr.Σ, SRMatrix(P_s_R'))
