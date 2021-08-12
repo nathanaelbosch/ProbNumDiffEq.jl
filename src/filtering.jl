@@ -36,7 +36,7 @@ function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
 
     mul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
     mul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
-    mul!(M, L, L')
+    matmul!(M, L, L')
     chol = cholesky!(Symmetric(M), check=false)
 
     if issuccess(chol)
@@ -99,14 +99,14 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
 
     S_inv = inv(S)
     # K = P_p * H' * S_inv
-    K1 = mul!(K1, P_p, H')
-    K = mul!(K2, K1, S_inv)
+    K1 = matmul!(K1, P_p.mat, H')
+    K = matmul!(K2, K1, S_inv)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
-    x_out.μ .= m_p .- mul!(x_out.μ, K, z)
+    x_out.μ .= m_p .- matmul!(x_out.μ, K, z)
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
-    mul!(M_cache, K, H, -1, 0)
+    matmul!(M_cache, K, H, -1, 0)
     @inbounds @simd for i in 1:D
         M_cache[i, i] += 1
     end

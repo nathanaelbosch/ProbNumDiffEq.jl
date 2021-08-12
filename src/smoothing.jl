@@ -43,17 +43,17 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
     P_p = x_pred.Σ
     P_p_inv = inv(P_p)
     # G = x_curr.Σ * Ah' * P_p_inv
-    G = mul!(G2, mul!(G1, x_curr.Σ, Ah'), P_p_inv)
+    G = matmul!(G2, mul!(G1, x_curr.Σ, Ah'), P_p_inv)
     x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
 
     # Joseph-Form:
     M, L = C2.mat, C2.squareroot
     D = length(x_pred.μ)
-    mul!(view(L, 1:D, 1:D), (I-G*Ah), x_curr.Σ.squareroot)
+    matmul!(view(L, 1:D, 1:D), (I-G*Ah), x_curr.Σ.squareroot)
     mul!(view(L, 1:D, D+1:2D), G, sqrt.(diffusion) * Qh.squareroot)
-    mul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.squareroot)
+    matmul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.squareroot)
 
-    mul!(M, L, L')
+    matmul!(M, L, L')
     chol = cholesky!(Symmetric(M), check=false)
 
     if issuccess(chol)

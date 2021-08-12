@@ -47,9 +47,9 @@ function DiffEqBase.savevalues!(
         OrdinaryDiffEq.copyat_or_push!(integrator.sol.diffusions, integrator.saveiter, integrator.cache.global_diffusion)
     end
     if integrator.opts.save_everystep
-        OrdinaryDiffEq.copyat_or_push!(integrator.sol.pu, integrator.saveiter,
-                                       mul!(integrator.cache.pu_tmp,
-                                            integrator.cache.SolProj, integrator.cache.x))
+        OrdinaryDiffEq.copyat_or_push!(
+            integrator.sol.pu, integrator.saveiter,
+            mul!(integrator.cache.pu_tmp, integrator.cache.SolProj, integrator.cache.x))
     end
 
     return out

@@ -32,6 +32,11 @@ using RecursiveArrayTools
 using StaticArrays
 using ForwardDiff
 using Tullio
+import Octavian: matmul!
+matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) =
+    (C .= A .* B.diag')
+matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) =
+    (C .= A.diag .* B)
 
 
 # @reexport using PSDMatrices
