@@ -56,24 +56,27 @@ function DiffEqBase.build_solution(
     N = length((size(prob.u0)..., length(u)))
 
     d = length(prob.u0)
-    uEltype = eltype(prob.u0)
-    cov = SRMatrix(zeros(uEltype, d, d))
-    # cov = zeros(uEltype, d, d)
-    pu = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
-    x_filt = StructArray{Gaussian{Vector{eltype(prob.u0)}, typeof(cov)}}(undef, 0)
+    uElType = eltype(prob.u0)
+    D = d
+    pu_cov = alg isa EK0 && !(prob.f isa DynamicalODEFunction) ?
+        SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
+        SRMatrix(zeros(uElType, d, D))
+    x_cov = SRMatrix(zeros(uElType, d, d))
+    pu = StructArray{Gaussian{Vector{uElType}, typeof(pu_cov)}}(undef, 0)
+    x_filt = StructArray{Gaussian{Vector{uElType}, typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 
     if DiffEqBase.has_analytic(prob.f)
         u_analytic = Vector{typeof(prob.u0)}()
-        errors = Dict{Symbol,real(eltype(prob.u0))}()
+        errors = Dict{Symbol, real(uElType)}()
     else
         u_analytic = nothing
         errors = nothing
     end
 
-    ll = zero(uEltype)
+    ll = zero(uElType)
     return ProbODESolution{T, N}(
         u, pu, u_analytic, errors, t, [], x_filt, x_smooth, [], ll, prob, alg, interp, dense, 0, destats, retcode,
     )
@@ -142,29 +145,32 @@ struct GaussianODEFilterPosterior{SPType, AType, QType, PType} <: AbstractODEFil
     SolProj::SPType
     A::AType
     Q::QType
-    Precond::PType
+    P::PType
+    PI::PType
     smooth::Bool
 end
 set_smooth(p::GaussianODEFilterPosterior) = GaussianODEFilterPosterior(
-    p.d, p.q, p.SolProj, p.A, p.Q, p.Precond, true)
+    p.d, p.q, p.SolProj, p.A, p.Q, p.P, p.PI, true)
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = u0 isa ArrayPartition ? length(u0) ÷ 2 : length(u0)
     q = alg.order
+    D = d*(q+1)
 
     Proj = projection(d, q, uElType)
     SolProj = u0 isa ArrayPartition ? [Proj(1); Proj(0)] : Proj(0)
 
     A, Q = ibm(d, q, uElType)
-    Precond = preconditioner(uElType, d, q)
+    P = Diagonal(ones(uElType, D))
+    PI = Diagonal(ones(uElType, D))
     GaussianODEFilterPosterior(
-        d, q, SolProj, A, Q, Precond, false)
+        d, q, SolProj, A, Q, P, PI, false)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) = "Gaussian ODE Filter Posterior"
 
 function (posterior::GaussianODEFilterPosterior)(
     tval::Real, t, x_filt, x_smooth, diffusions; smoothed=posterior.smooth)
-    @unpack A, Q, d, q, Precond = posterior
+    @unpack A, Q, d, q = posterior
 
     if tval < t[1]
         error("Invalid t<t0")
@@ -182,8 +188,8 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Extrapolate
     h1 = tval - prev_t
-    P = Precond(h1)
-    PI = inv(P)
+    make_preconditioners!(posterior, h1)
+    P, PI = posterior.P, posterior.PI
     Qh = apply_diffusion(Q, diffusion)
     goal_pred = predict(P * prev_rv, A, Qh)
     goal_pred = PI * goal_pred
@@ -198,8 +204,8 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Smooth
     h2 = next_t - tval
-    P = Precond(h2)
-    PI = inv(P)
+    make_preconditioners!(posterior, h2)
+    P, PI = posterior.P, posterior.PI
     goal_pred = P * goal_pred
     next_smoothed = P * next_smoothed
     Qh = apply_diffusion(Q, diffusion)

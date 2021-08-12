@@ -4,10 +4,13 @@ function initial_update!(integ)
     @unpack d, x, Proj = integ.cache
     q = integ.alg.order
 
+    @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = integ.cache
+
     f_derivatives = get_derivatives(u, f, p, t, q)
     @assert length(0:q) == length(f_derivatives)
     for (o, df) in zip(0:q, f_derivatives)
-        condition_on!(x, Proj(o), df)
+
+        condition_on!(x, Proj(o), df, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
     end
 end
 
@@ -85,13 +88,26 @@ end
 
 
 # TODO Either name texplicitly for the initial update, or think about how to use this in general
-function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector)
-    z = H*x.μ
-    S = X_A_Xt(x.Σ, H)
-    K = x.Σ * H' * inv(S)
-    x.μ .+= K*(data - z)
-    newcov = X_A_Xt(x.Σ, I-K*H)
-    copy!(x.Σ, newcov)
+function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
+                       meascache, Kcache, Kcache2, covcache, Mcache)
+    z, S = meascache
+
+    mul!(z, H, x.μ)
+    X_A_Xt!(S, x.Σ, H)
+
+    mul!(Kcache, x.Σ, H')
+    K = mul!(Kcache2, Kcache, inv(S))
+
+    mul!(x.μ, K, data - z, 1, 1)
+    # x.μ .+= K*(data - z)
+
+    D = length(x.μ)
+    mul!(Mcache, K, H, -1, 0)
+    @inbounds @simd for i in 1:D
+        Mcache[i, i] += 1
+    end
+    X_A_Xt!(covcache, x.Σ, Mcache)
+    copy!(x.Σ, covcache)
     nothing
 end
 
