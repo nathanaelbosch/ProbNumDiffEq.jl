@@ -51,7 +51,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     if isdynamic(cache.diffusionmodel)  # Calibrate, then predict cov
 
         # Predict
-        predict_mean!(x_pred, x, A, Q)
+        predict_mean!(x_pred, x, A)
         mul!(u_pred, SolProj, mul!(x_tmp2.μ, PI, x_pred.μ))
 
         # Measure
@@ -61,30 +61,30 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
-        predict_cov!(x_pred, x, A, apply_diffusion(Q, cache.global_diffusion),
-                     cache.C1)
+        predict_cov!(x_pred, x, A, Q, cache.C1, cache.global_diffusion)
         X_A_Xt!(integ.cache.measurement.Σ, x_pred.Σ, integ.cache.H)
 
     else  # Vanilla filtering order: Predict, measure, calibrate
 
         predict!(x_pred, x, A, Q)
-        mul!(u_pred, SolProj, PI*x_pred.μ)
+        mul!(u_pred, SolProj, mul!(x_tmp2.μ, PI, x_pred.μ))
         measure!(integ, x_pred, tnew)
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
     end
 
     # Likelihood
-    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
     # Update
     x_filt = update!(integ, x_pred)
-    mul!(u_filt, SolProj, mul!(x_tmp2.μ, PI, x_filt.μ))
 
     # Undo the coordinate change / preconditioning
     mul!(integ.cache.x, PI, x)
     mul!(integ.cache.x_pred, PI, x_pred)
     mul!(integ.cache.x_filt, PI, x_filt)
+
+    mul!(u_filt, SolProj, x_filt.μ)
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive

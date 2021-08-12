@@ -15,11 +15,11 @@ P_{n+1}^P = A(h)*P_n*A(h) + Q(h)
 See also: [`predict`](@ref)
 """
 function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-    predict_mean!(x_out, x_curr, Ah, Qh)
+    predict_mean!(x_out, x_curr, Ah)
     predict_cov!(x_out, x_curr, Ah, Qh)
     return x_out
 end
-function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
     return x_out.μ
 end
@@ -29,25 +29,29 @@ function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh:
     return x_out.Σ
 end
 
-function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix, cachemat::SRMatrix)
+function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
+    Qh::SRMatrix, cachemat::SRMatrix, diffusion=1)
     M, L = cachemat.mat, cachemat.squareroot
     D, D = size(Qh.mat)
 
     mul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
-    L[1:D, D+1:2D] .= Qh.squareroot
+    mul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
     mul!(M, L, L')
     chol = cholesky!(Symmetric(M), check=false)
 
     if issuccess(chol)
         copy!(x_out.Σ.squareroot, chol.U')
         mul!(x_out.Σ.mat, chol.U', chol.U)
-        return x_out.Σ
+    elseif eltype(L) <: Union{Float16, Float32, Float64}
+        Q = lq!(L)
+        copy!(x_out.Σ.squareroot, Q.L)
+        mul!(x_out.Σ.mat, Q.L, Q.L')
     else
-        _, R = qr(L')
-        copy!(x_out.Σ.squareroot, R')
-        mul!(x_out.Σ.mat, R', R)
-        return x_out.Σ
+        Q = qr(L')
+        copy!(x_out.Σ.squareroot, Q.R')
+        mul!(x_out.Σ.mat, Q.R', Q.R)
     end
+    return x_out.Σ
 end
 function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix)
     D, D = size(Qh.mat)
