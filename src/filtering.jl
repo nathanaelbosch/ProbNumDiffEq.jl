@@ -36,7 +36,7 @@ function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
 
     mul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
     mul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
-    matmul!(M, L, L')
+    _matmul!(M, L, L')
     chol = cholesky!(Symmetric(M), check=false)
 
     if issuccess(chol)
