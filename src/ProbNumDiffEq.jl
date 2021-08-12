@@ -33,10 +33,13 @@ using StaticArrays
 using ForwardDiff
 using Tullio
 import Octavian: matmul!
+# Define some fallbacks
 matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) =
     (C .= A .* B.diag')
 matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) =
     (C .= A.diag .* B)
+matmul!(C::AbstractMatrix, A::AbstractMatrix, B::LowerTriangular) = mul!(C, A, B)
+matmul!(C::Diagonal, A::AbstractMatrix, B::AbstractMatrix) = mul!(C, A, B)
 
 
 # @reexport using PSDMatrices

@@ -40,8 +40,8 @@ Base.similar(M::SquarerootMatrix) = SquarerootMatrix(
 X_A_Xt(M::SquarerootMatrix, X::AbstractMatrix) =
     SquarerootMatrix(X*M.squareroot)
 X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, X::AbstractMatrix) = begin
-    mul!(out.squareroot, X, M.squareroot)
-    mul!(out.mat, out.squareroot, out.squareroot')
+    matmul!(out.squareroot, X, M.squareroot)
+    matmul!(out.mat, out.squareroot, out.squareroot')
     return out
 end
 
