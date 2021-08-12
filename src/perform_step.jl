@@ -34,12 +34,13 @@ Basically consists of the following steps
 """
 function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
     @unpack t, dt = integ
-    make_preconditioners!(integ, dt)
     @unpack d, SolProj = integ.cache
-    @unpack P, PI = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
     @unpack x_tmp, x_tmp2 = integ.cache
     @unpack A, Q = integ.cache
+
+    make_preconditioners!(integ, dt)
+    @unpack P, PI = integ.cache
 
     tnew = t + dt
 
@@ -62,7 +63,6 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         # Adjust prediction and measurement
         predict_cov!(x_pred, x, A, apply_diffusion(Q, cache.global_diffusion),
                      cache.C1)
-        # copy!(integ.cache.measurement.Σ, Matrix(X_A_Xt(x_pred.Σ, integ.cache.H)))
         X_A_Xt!(integ.cache.measurement.Σ, x_pred.Σ, integ.cache.H)
 
     else  # Vanilla filtering order: Predict, measure, calibrate
@@ -220,11 +220,7 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
         return Inf
     end
 
-    @unpack m_tmp = cache
-    M = m_tmp.Σ
-    L = M.squareroot
-    # X_A_Xt!(M, Q, sqrt.(local_diffusion)*H)
-    # error_estimate = sqrt.(diag(M.mat))
+    L = cache.m_tmp.Σ.squareroot
 
     if local_diffusion isa Diagonal
 

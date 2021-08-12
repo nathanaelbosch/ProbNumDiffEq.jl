@@ -5,7 +5,7 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
         # @warn "sol.log_likelihood is not correct for static diffusion models!"
         integ.sol.log_likelihood = NaN
         final_diff = integ.sol.diffusions[end]
-        for s in integ.sol.x_filt
+        @simd for s in integ.sol.x_filt
             # s.Σ .*= final_diff
             copy!(s.Σ, apply_diffusion(s.Σ, final_diff))
         end

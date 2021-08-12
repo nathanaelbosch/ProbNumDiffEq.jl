@@ -24,7 +24,6 @@ function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh
     return x_out.μ
 end
 function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-    # error("This should not actually get called")
     out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
     copy!(x_out.Σ, out_cov)
     return x_out.Σ
@@ -95,7 +94,6 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     D = length(m_p)
 
     S_inv = inv(S)
-    # @info "?" P_p H' S_inv K_cache
     # K = P_p * H' * S_inv
     K1 = mul!(K1, P_p, H')
     K = mul!(K2, K1, S_inv)
@@ -150,7 +148,6 @@ P_n^S = (I - G*A(h)) P_n (I - G*A(h))^T + G * Q(h) * G + G * P_{n+1}^S * G
 ```
 """
 function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-    error("This should not get called?")
     x_pred = predict(x_curr, Ah, Qh)
 
     P_p = x_pred.Σ
