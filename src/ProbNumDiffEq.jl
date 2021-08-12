@@ -51,6 +51,8 @@ matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (C .= A.diag .* B)
 matmul!(C::AbstractMatrix, A::AbstractMatrix, B::LowerTriangular) = mul!(C, A, B)
 matmul!(C::Diagonal, A::AbstractMatrix, B::AbstractMatrix) = mul!(C, A, B)
 
+matmul!(C::RecursiveArrayTools.ArrayPartition, A::AbstractMatrix, B::AbstractVector) = mul!(C, A, B)
+
 
 # @reexport using PSDMatrices
 # import PSDMatrices: X_A_Xt
