@@ -106,7 +106,7 @@ function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
 
     D = length(x.μ)
     _matmul!(Mcache, K, H, -1, 0)
-    @inbounds @simd for i in 1:D
+    @inbounds @simd ivdep for i in 1:D
         Mcache[i, i] += 1
     end
     X_A_Xt!(covcache, x.Σ, Mcache)

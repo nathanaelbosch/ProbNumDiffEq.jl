@@ -107,7 +107,7 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
     _matmul!(M_cache, K, H, -1, 0)
-    @inbounds @simd for i in 1:D
+    @inbounds @simd ivdep for i in 1:D
         M_cache[i, i] += 1
     end
 
