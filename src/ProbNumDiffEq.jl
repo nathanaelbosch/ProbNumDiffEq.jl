@@ -34,10 +34,20 @@ using ForwardDiff
 using Tullio
 import Octavian: matmul!
 # Define some fallbacks
-matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) =
-    (C .= A .* B.diag')
-matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) =
-    (C .= A.diag .* B)
+_matmul!(C::AbstractVecOrMat{T}, A::AbstractVecOrMat{T}, B::AbstractVecOrMat{T}) where {
+    T <: Union{Bool, Float16, Float32, Float64,
+               Int16, Int32, Int64, Int8, UInt16, UInt32, UInt64, UInt8}} =
+                   matmul!(C, A, B)
+_matmul!(C::AbstractVecOrMat{T}, A::AbstractVecOrMat{T}, B::AbstractVecOrMat{T},
+         a::T, b::T) where {T <: Union{
+             Bool, Float16, Float32, Float64,
+             Int16, Int32, Int64, Int8, UInt16, UInt32, UInt64, UInt8}} =
+                 matmul!(C, A, B, a, b)
+_matmul!(C, A, B) = mul!(C, A, B)
+_matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
+
+matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (C .= A .* B.diag')
+matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (C .= A.diag .* B)
 matmul!(C::AbstractMatrix, A::AbstractMatrix, B::LowerTriangular) = mul!(C, A, B)
 matmul!(C::Diagonal, A::AbstractMatrix, B::AbstractMatrix) = mul!(C, A, B)
 

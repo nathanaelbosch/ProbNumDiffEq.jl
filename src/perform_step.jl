@@ -52,7 +52,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
         # Predict
         predict_mean!(x_pred, x, A)
-        matmul!(u_pred, SolProj, matmul!(x_tmp2.μ, PI, x_pred.μ))
+        @. x_tmp2.μ = PI.diag * x_pred.μ
+        _matmul!(u_pred, SolProj, x_tmp2.μ)
 
         # Measure
         measure!(integ, x_pred, tnew)
@@ -67,7 +68,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     else  # Vanilla filtering order: Predict, measure, calibrate
 
         predict!(x_pred, x, A, Q)
-        matmul!(u_pred, SolProj, matmul!(x_tmp2.μ, PI, x_pred.μ))
+        @. x_tmp2.μ = PI.diag * x_pred.μ
+        _matmul!(u_pred, SolProj, x_tmp2.μ)
         measure!(integ, x_pred, tnew)
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
@@ -84,7 +86,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     mul!(integ.cache.x_pred, PI, x_pred)
     mul!(integ.cache.x_filt, PI, x_filt)
 
-    matmul!(u_filt, SolProj, x_filt.μ)
+    _matmul!(u_filt, SolProj, x_filt.μ)
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive
@@ -126,7 +128,7 @@ function measure!(integ, x_pred, t, second_order::Val{false})
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
     # z .= E1*PI*x_pred.μ .- du
-    matmul!(z, E1, mul!(integ.cache.x_tmp2.μ, PI, x_pred.μ))
+    _matmul!(z, E1, mul!(integ.cache.x_tmp2.μ, PI, x_pred.μ))
     z .-= du
 
     # Cov
@@ -144,9 +146,9 @@ function measure!(integ, x_pred, t, second_order::Val{false})
         end
 
         integ.destats.njacs += 1
-        matmul!(H, (E1 .- ddu * E0), PI)
+        _matmul!(H, (E1 .- ddu * E0), PI)
     else
-        matmul!(H, E1, PI)
+        _matmul!(H, E1, PI)
     end
     X_A_Xt!(S, x_pred.Σ, H)
 
@@ -186,9 +188,9 @@ function measure!(integ, x_pred, t, second_order::Val{true})
                               u_pred[1:d])
 
         integ.destats.njacs += 1
-        matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
+        _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
     else
-        matmul!(H, E2, PI)
+        _matmul!(H, E2, PI)
     end
 
     X_A_Xt!(S, x_pred.Σ, H)

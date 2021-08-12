@@ -99,14 +99,14 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
 
     S_inv = inv(S)
     # K = P_p * H' * S_inv
-    K1 = matmul!(K1, P_p.mat, H')
-    K = matmul!(K2, K1, S_inv)
+    K1 = _matmul!(K1, Matrix(P_p), H')
+    K = _matmul!(K2, K1, S_inv)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
-    x_out.μ .= m_p .- matmul!(x_out.μ, K, z)
+    x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
-    matmul!(M_cache, K, H, -1, 0)
+    _matmul!(M_cache, K, H, -1, 0)
     @inbounds @simd for i in 1:D
         M_cache[i, i] += 1
     end

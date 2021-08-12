@@ -44,8 +44,8 @@ function DiffEqBase.savevalues!(
     # It's not completely clear how to specify that though; They are also needed for sampling.
     if integrator.alg.smooth
         OrdinaryDiffEq.copyat_or_push!(integrator.sol.x_filt, integrator.saveiter, integrator.cache.x)
-        OrdinaryDiffEq.copyat_or_push!(integrator.sol.diffusions, integrator.saveiter, integrator.cache.global_diffusion)
     end
+    OrdinaryDiffEq.copyat_or_push!(integrator.sol.diffusions, integrator.saveiter, integrator.cache.global_diffusion)
     if integrator.opts.save_everystep
         OrdinaryDiffEq.copyat_or_push!(
             integrator.sol.pu, integrator.saveiter,
