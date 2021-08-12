@@ -78,13 +78,13 @@ end
 
     @testset "update!" begin
         ProbNumDiffEq.update!(x_out, x_pred, measurement, H, R)
-        @test m == x_out.μ
+        @test m ≈ x_out.μ
         @test P ≈ x_out.Σ
     end
 
-    @testset "update!" begin
+    @testset "update" begin
         x_out = ProbNumDiffEq.update(x_pred, measurement, H, R)
-        @test m == x_out.μ
+        @test m ≈ x_out.μ
         @test P ≈ x_out.Σ
     end
 
