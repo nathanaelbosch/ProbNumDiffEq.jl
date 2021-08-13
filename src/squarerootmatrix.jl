@@ -33,10 +33,20 @@ Base.copy!(dst::SquarerootMatrix, src::SquarerootMatrix) =
         Base.copy!(dst.squareroot, src.squareroot);
         Base.copy!(dst.mat, src.mat);
         dst)
+Base.similar(M::SquarerootMatrix) = SquarerootMatrix(
+    similar(M.squareroot), similar(M.mat))
 
 
 X_A_Xt(M::SquarerootMatrix, X::AbstractMatrix) =
     SquarerootMatrix(X*M.squareroot)
+X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, X::AbstractMatrix) = begin
+    _matmul!(out.squareroot, X, M.squareroot)
+    _matmul!(out.mat, out.squareroot, out.squareroot')
+    return out
+end
 
 
-Base.inv(M::SquarerootMatrix) = Base.inv(M.mat)
+Base.inv(M::SquarerootMatrix)= Base.inv(M.mat)
+LinearAlgebra.diag(M::SquarerootMatrix) = LinearAlgebra.diag(M.mat)
+LinearAlgebra.cholesky(M::SquarerootMatrix) = LinearAlgebra.cholesky(M.mat)
+LinearAlgebra.logdet(M::SquarerootMatrix) = LinearAlgebra.logdet(M.mat)

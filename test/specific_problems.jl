@@ -76,11 +76,8 @@ end
 
     function Callback()
         function affect!(integ)
-            @unpack dt = integ
-            @unpack x_filt, Proj, Precond = integ.cache
-            E0 = Proj(0)
+            @unpack x_filt, Proj, PI, E0 = integ.cache
 
-            PI = inv(Precond(dt))
             x = x_filt
 
             m, P = x.μ, x.Σ
@@ -143,7 +140,6 @@ end
     end
 
     @testset "OOP" begin
-        appxsol = solve(prob, Tsit5())
         for alg in (EK0(), EK1())
             @testset "$alg" begin
                 @test_broken solve(prob_oop, alg) isa ProbNumDiffEq.ProbODESolution
