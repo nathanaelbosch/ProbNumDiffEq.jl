@@ -1,10 +1,13 @@
 ########################################################################################
 # Integrated Brownian Motion
 ########################################################################################
-"""Generate the discrete dynamics for a q-IBM model. INCLUDES AUTOMATIC PRECONDITIONING!
+"""
+    ibm(d::Integer, q::Integer, elType=typeof(1.0))
+
+Generate the discrete dynamics for a q-IBM model. INCLUDES AUTOMATIC PRECONDITIONING!
 
 Careful: Dimensions are ordered differently than in `probnum`!"""
-function ibm(d::Integer, q::Integer, elType=typeof(1.0))
+function ibm_old(d::Integer, q::Integer, elType=typeof(1.0))
 
     A_base = diagm(0=>ones(elType, d*(q+1)))
     Q_base = zeros(elType, d*(q+1), d*(q+1))
@@ -53,6 +56,39 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     Q_psd = SRMatrix(QL)
 
     return A_base, Q_psd
+end
+
+
+function ibm(d::Integer, q::Integer, elType=typeof(1.0))
+    D = d*(q+1)
+
+    # Make A
+    A_breve = zeros(elType, q+1, q+1)
+    @simd ivdep for j in 1:q+1
+        @simd ivdep for i in 1:j
+            @inbounds A_breve[i, j] = binomial(q-i+1, q-j+1)
+        end
+    end
+    A = kron(A_breve, I(d))
+    @assert istriu(A)
+    A = UpperTriangular(A)
+
+    # Make Q
+    Q_breve = zeros(elType, q+1, q+1)
+    @fastmath _transdiff_ibm_element(row::Int, col::Int) =
+        one(elType) / (2 * q + 1 - row - col)
+    @simd for col in 0:q
+        @simd for row in col:q
+            val = _transdiff_ibm_element(row, col)
+            @inbounds Q_breve[1 + col, 1 + row] = val
+            @inbounds Q_breve[1 + row, 1 + col] = val
+        end
+    end
+    QL_breve = cholesky(Q_breve).L
+    QL = kron(QL_breve, I(d))
+    Q = SRMatrix(QL)
+
+    return A, Q
 end
 
 
