@@ -1,3 +1,10 @@
+function init_preconditioner(d, q, elType=typeof(1.0))
+    D = d*(q+1)
+    P = Diagonal(ones(elType, D))
+    PI = Diagonal(ones(elType, D))
+    return P, PI
+end
+
 @fastmath @inbounds function make_preconditioner!(P, h, d, q)
     val = h^(-q-1/2)
     @simd for j in 0:q
