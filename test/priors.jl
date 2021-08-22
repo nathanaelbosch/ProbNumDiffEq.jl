@@ -47,13 +47,13 @@ end
     A, Q = ProbNumDiffEq.ibm(d, q)
     Qh = Q * σ^2
 
-    AH_21_PRE = [1  1  0.5
+    AH_21_PRE = [1  2  1
                  0  1  1
                  0  0  1]
 
-    QH_21_PRE = σ^2 * [1/20 1/8 1/6
-                       1/8  1/3 1/2
-                       1/6  1/2 1]
+    QH_21_PRE = σ^2 * [1/5 1/4 1/3
+                       1/4  1/3 1/2
+                       1/3  1/2 1]
 
     @test AH_21_PRE ≈ A
     @test QH_21_PRE ≈ Qh
