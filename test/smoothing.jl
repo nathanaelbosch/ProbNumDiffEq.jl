@@ -1,3 +1,4 @@
+using ProbNumDiffEq
 using Test
 using LinearAlgebra
 using OrdinaryDiffEq
@@ -11,8 +12,8 @@ prob = ProbNumDiffEq.remake_prob_with_jac(prob)
 
 
 @testset "Smoothing for small dt and large q" begin
-    dt = 1e-4
-    q = 4
+    dt = 1e-5
+    q = 8
     @test solve(
         prob, EK0(order=q, smooth=true, diffusionmodel=:dynamic),
         adaptive=false,
