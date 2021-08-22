@@ -41,7 +41,8 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
 
     # Smoothing
     P_p = x_pred.Σ
-    P_p_inv = inv(P_p)
+    P_p_s_inv = inv(LowerTriangular(P_p.squareroot))
+    P_p_inv = mul!(x_pred.Σ.mat, P_p_s_inv', P_p_s_inv)
     # G = x_curr.Σ * Ah' * P_p_inv
     G = _matmul!(G2, mul!(G1, x_curr.Σ, Ah'), P_p_inv)
     x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
