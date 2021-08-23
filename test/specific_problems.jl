@@ -142,8 +142,8 @@ end
     @testset "OOP" begin
         for alg in (EK0(), EK1())
             @testset "$alg" begin
-                @test_broken solve(prob_oop, alg) isa ProbNumDiffEq.ProbODESolution
-                @test_broken solve(prob_oop, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+                @test solve(prob_oop, alg) isa ProbNumDiffEq.ProbODESolution
+                @test solve(prob_oop, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
             end
         end
     end

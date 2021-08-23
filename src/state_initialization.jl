@@ -60,7 +60,8 @@ function get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
         kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
 
-    f_oop(du, u, p, t) = (ddu = copy(du); f.f1(ddu, du, u, p, t); return ddu)
+    f_oop(du, u, p, t) = !isinplace(f.f1) ? f.f1(du, u, p, t) :
+        (ddu = copy(du); f.f1(ddu, du, u, p, t); return ddu)
 
     # Make sure that the vector field f does not depend on t
     f_t_taylor = taylor_expand(_t -> f_oop(u[1:d], u[d+1:end], p, _t), t)
