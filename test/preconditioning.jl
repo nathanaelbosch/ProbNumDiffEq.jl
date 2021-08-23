@@ -28,8 +28,7 @@ prob = ProbNumDiffEq.remake_prob_with_jac(prob)
 
     # First test that they're both equivalent
     D = d*(q+1)
-    P = Diagonal(ones(D))
-    PI = Diagonal(ones(D))
+    P, PI = ProbNumDiffEq.init_preconditioner(d, q)
     ProbNumDiffEq.make_preconditioner!(P, h, d, q)
     ProbNumDiffEq.make_preconditioner_inv!(PI, h, d, q)
     @test Qh_p ≈ P * Qh * P'

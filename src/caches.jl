@@ -87,8 +87,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
-    P = Diagonal(ones(uElType, D))
-    PI = Diagonal(ones(uElType, D))
+    P, PI = init_preconditioner(d, q, uElType)
 
     A, Q = ibm(d, q, uElType)
 
