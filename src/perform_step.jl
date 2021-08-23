@@ -181,17 +181,25 @@ function measure!(integ, x_pred, t, second_order::Val{true})
     if alg isa EK1
         @assert !(alg isa IEKS)
 
-        J0 = copy(ddu)
-        ForwardDiff.jacobian!(J0, (du2, u) -> f.f1(du2, view(u_pred, 1:d), u, p, t), du2,
-                              u_pred[d+1:2d])
+        if isinplace(f)
+            J0 = copy(ddu)
+            ForwardDiff.jacobian!(J0, (du2, u) -> f.f1(du2, view(u_pred, 1:d), u, p, t), du2,
+                                  u_pred[d+1:2d])
 
-        J1 = copy(ddu)
-        ForwardDiff.jacobian!(J1, (du2, du) -> f.f1(du2, du, view(u_pred, d+1:2d),
-                                                   p, t), du2,
-                              u_pred[1:d])
+            J1 = copy(ddu)
+            ForwardDiff.jacobian!(J1, (du2, du) -> f.f1(du2, du, view(u_pred, d+1:2d),
+                                                        p, t), du2,
+                                  u_pred[1:d])
 
-        integ.destats.njacs += 1
-        _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
+            integ.destats.njacs += 2
+
+            _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
+        else
+            J0 = ForwardDiff.jacobian((u) -> f.f1(view(u_pred, 1:d), u, p, t), u_pred[d+1:2d])
+            J1 = ForwardDiff.jacobian((du) -> f.f1(du, view(u_pred, d+1:2d), p, t), u_pred[1:d])
+            integ.destats.njacs += 2
+            _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
+        end
     else
         _matmul!(H, E2, PI)
     end
