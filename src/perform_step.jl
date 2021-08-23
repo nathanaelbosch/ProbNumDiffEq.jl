@@ -169,8 +169,11 @@ function measure!(integ, x_pred, t, second_order::Val{true})
     # Mean
     # _u_pred = E0 * PI * x_pred.μ
     # _du_pred = E1 * PI * x_pred.μ
-    @assert isinplace(f) "Currently the code only supports IIP `SecondOrderProblem`s"
-    f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
+    if isinplace(f)
+        f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
+    else
+        du2 .= f.f1(view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
+    end
     integ.destats.nf += 1
     z .= E2*PI*x_pred.μ .- du2
 
