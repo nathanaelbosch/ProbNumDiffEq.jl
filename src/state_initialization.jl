@@ -22,23 +22,26 @@ function get_derivatives(u, f, p, t, q)
     d = length(u)
 
     f_oop = isinplace(f) ? iip_to_oop(f) : f
+    f_oop = f_to_vector_valued(f_oop, u)
+
+    u_vec = u[:]
 
     # Simplify further:
     _f(u) = f_oop(u, p, t)
 
-    u0 = u
-    du0 = _f(u)
+    u0 = u_vec
+    du0 = _f(u_vec)
     if q == 1
         return [u0, du0]
     end
 
     # Make sure that the vector field f does not depend on t
-    f_t_taylor = taylor_expand(_t -> f_oop(u, p, _t), t)
+    f_t_taylor = taylor_expand(_t -> f_oop(u_vec, p, _t), t)
     @assert !(eltype(f_t_taylor) <: TaylorN) "The vector field depends on t; The code might not yet be able to handle these (but it should be easy to implement)"
 
     set_variables("u", numvars=d, order=q+1)
 
-    fp = taylor_expand(_f, u)
+    fp = taylor_expand(_f, u_vec)
     f_derivatives = [fp]
     for o in 2:q
         _curr_f_deriv = f_derivatives[end]
@@ -47,7 +50,16 @@ function get_derivatives(u, f, p, t, q)
         push!(f_derivatives, df)
     end
 
-    return [u, evaluate.(f_derivatives)...]
+    return [u_vec, evaluate.(f_derivatives)...]
+end
+
+function f_to_vector_valued(f, u)
+    u_template = copy(u)
+    function new_f(u, p, t)
+        du = f(reshape(u, size(u_template)), p, t)
+        return du[:]
+    end
+    return new_f
 end
 
 

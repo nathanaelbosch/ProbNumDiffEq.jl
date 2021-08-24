@@ -7,10 +7,12 @@ using LinearAlgebra
 using UnPack
 using ParameterizedFunctions
 using OrdinaryDiffEq
+using Plots
 
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_vanstiff
+import DiffEqProblemLibrary.ODEProblemLibrary:
+    prob_ode_fitzhughnagumo, prob_ode_vanstiff, prob_ode_2Dlinear, prob_ode_linear
 
 
 @testset "Smoothing with small constant steps" begin
@@ -36,8 +38,17 @@ end
     @test all(haskey.(Ref(sol.errors), (:l∞, :l2, :final)))
 end
 
-@testset "2d / matrix-valued problem" begin
-    @test_broken solve(prob_ode_2Dlinear, EK0()) isa ProbNumDiffEq.ProbODESolution
+
+@testset "Matrix-Valued Problem" begin
+    @testset "$alg" for alg in [EK0(), EK1()]
+        @test solve(prob_ode_2Dlinear, alg) isa ProbNumDiffEq.ProbODESolution
+        sol = solve(prob_ode_2Dlinear, alg)
+
+        @test length(sol.u[1]) == length(sol.pu.μ[1])
+        @test sol.u[1][:] == sol.pu.μ[1]
+        @test sol.u ≈ sol.u_analytic rtol=1e-4
+        @test plot(sol) isa AbstractPlot
+    end
 end
 
 
