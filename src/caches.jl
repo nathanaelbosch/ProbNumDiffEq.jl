@@ -6,7 +6,7 @@ mutable struct GaussianODEFilterCache{
     RType, ProjType, SolProjType,
     PType, PIType,
     EType,
-    uType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
+    uType, uVecType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
     measType, puType, llType,
     CType,
 } <: ODEFiltersCache
@@ -27,8 +27,8 @@ mutable struct GaussianODEFilterCache{
     E2::EType
     # Mutable stuff
     u::uType
-    u_pred::uType
-    u_filt::uType
+    u_vec_pred::uVecType
+    u_vec_filt::uVecType
     tmp::uType
     x::xType
     x_pred::xType
@@ -58,9 +58,8 @@ function OrdinaryDiffEq.alg_cache(
     alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
     initialize_derivatives=true
 
-    if !(u isa AbstractVector)
-        error("Problems which are not scalar- or vector-valued (e.g. u0 is a scalar ",
-              "or a matrix) are currently not supported")
+    if u isa Number
+        error("Scalar problems are currently not supported")
     end
 
     is_secondorder_ode = f isa DynamicalODEFunction
@@ -72,11 +71,11 @@ function OrdinaryDiffEq.alg_cache(
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d*(q+1)
 
-    u0 = u
+    u_vec = u[:]
     t0 = t
 
-    uType = typeof(u0)
-    uElType = eltype(u0)
+    uType = typeof(u)
+    uElType = eltype(u_vec)
     matType = Matrix{uElType}
 
     # Projections
@@ -131,7 +130,7 @@ function OrdinaryDiffEq.alg_cache(
         typeof(R), typeof(Proj), typeof(SolProj),
         typeof(P), typeof(PI),
         typeof(E0),
-        uType, typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
+        uType, typeof(u_vec), typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
         typeof(diffmodel), typeof(measurement), typeof(pu_tmp), uEltypeNoUnits,
         typeof(C1),
     }(
@@ -140,7 +139,7 @@ function OrdinaryDiffEq.alg_cache(
         P, PI,
         E0, E1, E2,
         # Mutable stuff
-        u0, similar(u0), similar(u0), similar(u0),
+        u, similar(u_vec), similar(u_vec), similar(u),
         x0, copy(x0), similar(x0), similar(x0), similar(x0),
         measurement, similar(measurement), pu_tmp,
         H, du, ddu, K, similar(K), G, similar(G),

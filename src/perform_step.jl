@@ -35,7 +35,7 @@ Basically consists of the following steps
 function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
-    @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
+    @unpack x, x_pred, u_vec_pred, x_filt, u_vec_filt, err_tmp = integ.cache
     @unpack x_tmp, x_tmp2 = integ.cache
     @unpack A, Q = integ.cache
 
@@ -53,7 +53,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         # Predict
         predict_mean!(x_pred, x, A)
         @. x_tmp2.μ = PI.diag * x_pred.μ
-        _matmul!(u_pred, SolProj, x_tmp2.μ)
+        _matmul!(u_vec_pred, SolProj, x_tmp2.μ)
 
         # Measure
         measure!(integ, x_pred, tnew)
@@ -69,7 +69,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
         predict!(x_pred, x, A, Q)
         @. x_tmp2.μ = PI.diag * x_pred.μ
-        _matmul!(u_pred, SolProj, x_tmp2.μ)
+        _matmul!(u_vec_pred, SolProj, x_tmp2.μ)
         measure!(integ, x_pred, tnew)
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
@@ -86,7 +86,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     mul!(integ.cache.x_pred, PI, x_pred)
     mul!(integ.cache.x_filt, PI, x_filt)
 
-    _matmul!(u_filt, SolProj, x_filt.μ)
+    _matmul!(u_vec_filt, SolProj, x_filt.μ)
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive
@@ -94,18 +94,18 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         if integ.f isa DynamicalODEFunction # second-order ODE
             DiffEqBase.calculate_residuals!(
                 err_tmp, dt * err_est_unscaled,
-                integ.u[1, :], u_filt[1, :],
+                integ.u[1, :], u_vec_filt[1, :],
                 integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         else # regular first-order ODE
             DiffEqBase.calculate_residuals!(
                 err_tmp, dt * err_est_unscaled,
-                integ.u, u_filt,
+                integ.u isa Number ? integ.u : integ.u[:], u_vec_filt,
                 integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         end
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
 
-    integ.u .= u_filt
+    integ.u[:] .= u_vec_filt
 
     # stuff that would normally be in apply_step!
     if !integ.opts.adaptive || integ.EEst < one(integ.EEst)
@@ -116,7 +116,7 @@ end
 
 function measure!(integ, x_pred, t, second_order::Val{false})
     @unpack f, p, dt, alg = integ
-    @unpack u_pred, du, ddu, measurement, R, H = integ.cache
+    @unpack u_vec_pred, du, ddu, measurement, R, H = integ.cache
     @unpack P, PI = integ.cache
     @assert iszero(R)
 
@@ -125,7 +125,7 @@ function measure!(integ, x_pred, t, second_order::Val{false})
     z, S = measurement.μ, measurement.Σ
 
     # Mean
-    _eval_f!(du, u_pred, p, t, f)
+    _eval_f!(du, u_vec_pred, p, t, f)
     integ.destats.nf += 1
     # z .= E1*PI*x_pred.μ .- du
     _matmul!(z, E1, mul!(integ.cache.x_tmp2.μ, PI, x_pred.μ))
@@ -134,15 +134,15 @@ function measure!(integ, x_pred, t, second_order::Val{false})
     # Cov
     if alg isa EK1 || alg isa IEKS
         linearize_at = (alg isa IEKS && !isnothing(alg.linearize_at)) ?
-            alg.linearize_at(t).μ : u_pred
+            alg.linearize_at(t).μ : u_vec_pred
 
         # Jacobian is now computed either with the given jac, or ForwardDiff
         if !isnothing(f.jac)
             _eval_f_jac!(ddu, linearize_at, p, t, f)
         elseif isinplace(f)
-            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
+            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_vec_pred)
         else
-            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
+            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_vec_pred)
         end
 
         integ.destats.njacs += 1
@@ -157,7 +157,7 @@ end
 
 function measure!(integ, x_pred, t, second_order::Val{true})
     @unpack f, p, dt, alg = integ
-    @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
+    @unpack d, u_vec_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
     du2 = du
 
@@ -170,9 +170,9 @@ function measure!(integ, x_pred, t, second_order::Val{true})
     # _u_pred = E0 * PI * x_pred.μ
     # _du_pred = E1 * PI * x_pred.μ
     if isinplace(f)
-        f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
+        f.f1(du2, view(u_vec_pred, 1:d), view(u_vec_pred, d+1:2d), p, t)
     else
-        du2 .= f.f1(view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
+        du2 .= f.f1(view(u_vec_pred, 1:d), view(u_vec_pred, d+1:2d), p, t)
     end
     integ.destats.nf += 1
     z .= E2*PI*x_pred.μ .- du2
@@ -183,20 +183,20 @@ function measure!(integ, x_pred, t, second_order::Val{true})
 
         if isinplace(f)
             J0 = copy(ddu)
-            ForwardDiff.jacobian!(J0, (du2, u) -> f.f1(du2, view(u_pred, 1:d), u, p, t), du2,
-                                  u_pred[d+1:2d])
+            ForwardDiff.jacobian!(J0, (du2, u) -> f.f1(du2, view(u_vec_pred, 1:d), u, p, t), du2,
+                                  u_vec_pred[d+1:2d])
 
             J1 = copy(ddu)
-            ForwardDiff.jacobian!(J1, (du2, du) -> f.f1(du2, du, view(u_pred, d+1:2d),
+            ForwardDiff.jacobian!(J1, (du2, du) -> f.f1(du2, du, view(u_vec_pred, d+1:2d),
                                                         p, t), du2,
-                                  u_pred[1:d])
+                                  u_vec_pred[1:d])
 
             integ.destats.njacs += 2
 
             _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
         else
-            J0 = ForwardDiff.jacobian((u) -> f.f1(view(u_pred, 1:d), u, p, t), u_pred[d+1:2d])
-            J1 = ForwardDiff.jacobian((du) -> f.f1(du, view(u_pred, d+1:2d), p, t), u_pred[1:d])
+            J0 = ForwardDiff.jacobian((u) -> f.f1(view(u_vec_pred, 1:d), u, p, t), u_vec_pred[d+1:2d])
+            J1 = ForwardDiff.jacobian((du) -> f.f1(du, view(u_vec_pred, d+1:2d), p, t), u_vec_pred[1:d])
             integ.destats.njacs += 2
             _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
         end
