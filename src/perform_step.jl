@@ -99,7 +99,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         else # regular first-order ODE
             DiffEqBase.calculate_residuals!(
                 err_tmp, dt * err_est_unscaled,
-                integ.u, u_vec_filt,
+                integ.u isa Number ? integ.u : integ.u[:], u_vec_filt,
                 integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         end
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
