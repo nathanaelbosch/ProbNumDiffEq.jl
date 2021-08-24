@@ -58,10 +58,6 @@ function OrdinaryDiffEq.alg_cache(
     alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
     initialize_derivatives=true
 
-    if u isa Number
-        error("Scalar problems are currently not supported")
-    end
-
     is_secondorder_ode = f isa DynamicalODEFunction
     if is_secondorder_ode
         @warn "Assuming that the given ODE is a SecondOrderODE. If this is not the case, e.g. because it is some other dynamical ODE, the solver will probably run into errors!"
@@ -71,7 +67,7 @@ function OrdinaryDiffEq.alg_cache(
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d*(q+1)
 
-    u_vec = u[:]
+    u_vec = u isa Number ? [u] : u[:]
     t0 = t
 
     uType = typeof(u)
@@ -82,7 +78,9 @@ function OrdinaryDiffEq.alg_cache(
     Proj = projection(d, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa AbstractODEFunction
-    SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
+    SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] :
+        u isa Number ? Proj(0)[:]' :
+        Proj(0)
 
     # Prior dynamics
     @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
@@ -139,7 +137,7 @@ function OrdinaryDiffEq.alg_cache(
         P, PI,
         E0, E1, E2,
         # Mutable stuff
-        u, similar(u_vec), similar(u_vec), similar(u),
+        u, similar(u_vec), similar(u_vec), copy(u),
         x0, copy(x0), similar(x0), similar(x0), similar(x0),
         measurement, similar(measurement), pu_tmp,
         H, du, ddu, K, similar(K), G, similar(G),

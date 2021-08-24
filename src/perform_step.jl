@@ -105,7 +105,11 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
 
-    integ.u[:] .= u_vec_filt
+    if integ.u isa Number
+        integ.u = u_vec_filt[1]
+    else
+        integ.u[:] .= u_vec_filt
+    end
 
     # stuff that would normally be in apply_step!
     if !integ.opts.adaptive || integ.EEst < one(integ.EEst)

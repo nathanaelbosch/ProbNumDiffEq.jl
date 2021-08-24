@@ -24,7 +24,7 @@ function get_derivatives(u, f, p, t, q)
     f_oop = isinplace(f) ? iip_to_oop(f) : f
     f_oop = f_to_vector_valued(f_oop, u)
 
-    u_vec = u[:]
+    u_vec = u isa Number ? [u] : u[:]
 
     # Simplify further:
     _f(u) = f_oop(u, p, t)
