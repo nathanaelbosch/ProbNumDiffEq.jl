@@ -152,8 +152,8 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
     # Mean
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
-    # z .= E1*x_pred.μ .- du
-    _matmul!(z, E1, x_pred.μ)
+    # z .= MM*E1*x_pred.μ .- du
+    _matmul!(z, f.mass_matrix*E1, x_pred.μ)
     z .-= du[:]
 
     # Cov
@@ -171,10 +171,11 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
         end
 
         integ.destats.njacs += 1
-        H .= E1
+        _matmul!(H, f.mass_matrix, E1)
         _matmul!(H, ddu, E0, -1.0, 1.0)
     else
         # H .= E1 # This is already the case!
+        _matmul!(H, f.mass_matrix, E1)
     end
 
     return measurement

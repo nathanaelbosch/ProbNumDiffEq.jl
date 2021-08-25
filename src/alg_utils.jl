@@ -24,3 +24,4 @@ OrdinaryDiffEq.beta1_default(alg::AbstractEK, beta2) = 7 // (10(alg.order + 1))
 # OrdinaryDiffEq.gamma_default(alg::AbstractEK) =
 
 # OrdinaryDiffEq.uses_uprev(alg::, adaptive::Bool) = adaptive
+OrdinaryDiffEq.is_mass_matrix_alg(alg::AbstractEK) = true
