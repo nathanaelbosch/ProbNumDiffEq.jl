@@ -24,13 +24,7 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
         end
         integ.sol.interp = set_smooth(integ.sol.interp)
         @assert (length(integ.sol.u) == length(integ.sol.pu))
-        if integ.u isa Number
-            @inbounds @simd ivdep for i in 1:length(integ.sol.u)
-                integ.sol.u[i] = integ.sol.pu.μ[i][1]
-            end
-        else
-            [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
-        end
+        [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
     end
 
 
