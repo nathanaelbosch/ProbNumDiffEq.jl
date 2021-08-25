@@ -6,7 +6,7 @@ mutable struct GaussianODEFilterCache{
     RType, ProjType, SolProjType,
     PType, PIType,
     EType,
-    uType, uVecType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
+    uType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
     measType, puType, llType,
     CType,
 } <: ODEFiltersCache
@@ -27,8 +27,8 @@ mutable struct GaussianODEFilterCache{
     E2::EType
     # Mutable stuff
     u::uType
-    u_vec_pred::uVecType
-    u_vec_filt::uVecType
+    u_pred::uType
+    u_filt::uType
     tmp::uType
     x::xType
     x_pred::xType
@@ -96,7 +96,7 @@ function OrdinaryDiffEq.alg_cache(
     # Pre-allocate a bunch of matrices
     h = zeros(uElType, d)
     H = zeros(uElType, d, D)
-    du = zeros(uElType, d)
+    du = similar(u)
     ddu = zeros(uElType, d, d)
     # v, S = similar(h), similar(ddu)
     v = similar(h)
@@ -128,7 +128,7 @@ function OrdinaryDiffEq.alg_cache(
         typeof(R), typeof(Proj), typeof(SolProj),
         typeof(P), typeof(PI),
         typeof(E0),
-        uType, typeof(u_vec), typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
+        uType, typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
         typeof(diffmodel), typeof(measurement), typeof(pu_tmp), uEltypeNoUnits,
         typeof(C1),
     }(
@@ -137,7 +137,7 @@ function OrdinaryDiffEq.alg_cache(
         P, PI,
         E0, E1, E2,
         # Mutable stuff
-        u, similar(u_vec), similar(u_vec), copy(u),
+        u, similar(u), similar(u), copy(u),
         x0, copy(x0), similar(x0), similar(x0), similar(x0),
         measurement, similar(measurement), pu_tmp,
         H, du, ddu, K, similar(K), G, similar(G),
