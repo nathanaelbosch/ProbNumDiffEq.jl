@@ -53,7 +53,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         # Predict
         predict_mean!(x_pred, x, A)
         @. x_tmp2.μ = PI.diag * x_pred.μ
-        _matmul!(view(u_pred, :), SolProj, x_tmp2.μ)
+        mul!(view(u_pred, :), SolProj, x_tmp2.μ)
 
         # Measure
         measure!(integ, x_pred, tnew)
@@ -86,7 +86,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     mul!(integ.cache.x_pred, PI, x_pred)
     mul!(integ.cache.x_filt, PI, x_filt)
 
-    _matmul!(view(u_filt, :), SolProj, x_filt.μ)
+    mul!(view(u_filt, :), SolProj, x_filt.μ)
 
     # Estimate error for adaptive steps
     if integ.opts.adaptive
@@ -179,7 +179,7 @@ function measure!(integ, x_pred, t, second_order::Val{true})
         du2 .= f.f1(view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     end
     integ.destats.nf += 1
-    z .= E2*PI*x_pred.μ .- du2
+    z .= E2*PI*x_pred.μ .- du2[:]
 
     # Cov
     if alg isa EK1

@@ -98,7 +98,7 @@ function OrdinaryDiffEq.alg_cache(
     # Pre-allocate a bunch of matrices
     h = zeros(uElType, d)
     H = zeros(uElType, d, D)
-    du = similar(u)
+    du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
     ddu = zeros(uElType, d, d)
     # v, S = similar(h), similar(ddu)
     v = similar(h)
