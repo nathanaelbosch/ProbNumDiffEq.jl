@@ -103,6 +103,7 @@ include("initialization/rungekutta.jl")
 
 include("integrator_utils.jl")
 include("filtering.jl")
+include("filtering/predict.jl")
 include("perform_step.jl")
 include("projection.jl")
 include("smoothing.jl")
