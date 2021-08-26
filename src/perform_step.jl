@@ -78,41 +78,48 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     # Likelihood
     # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
-    # Update
-    x_filt = update!(integ, x_pred)
 
-    # Undo the coordinate change / preconditioning
-    mul!(integ.cache.x, PI, x)
-    mul!(integ.cache.x_pred, PI, x_pred)
-    mul!(integ.cache.x_filt, PI, x_filt)
-
-    mul!(view(u_filt, :), SolProj, x_filt.μ)
-
-    # Estimate error for adaptive steps
+    # Estimate error for adaptive steps - can already be done before filtering
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(integ, integ.cache)
         if integ.f isa DynamicalODEFunction # second-order ODE
             DiffEqBase.calculate_residuals!(
                 err_tmp, dt * err_est_unscaled,
-                integ.u[1, :], u_filt[1, :],
+                integ.u[1, :], u_pred[1, :],
                 integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         else # regular first-order ODE
             DiffEqBase.calculate_residuals!(
                 err_tmp, dt * err_est_unscaled,
-                integ.u, u_filt,
+                integ.u, u_pred,
                 integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
         end
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
 
-    if integ.u isa Number
-        integ.u = u_filt[1]
-    else
-        integ.u .= u_filt
-    end
 
-    # stuff that would normally be in apply_step!
-    if !integ.opts.adaptive || integ.EEst < one(integ.EEst)
+    # If the step gets rejected, we don't even need to perform an update!
+    if integ.opts.adaptive && integ.EEst >= one(integ.EEst)
+        # Undo the coordinate change / preconditioning
+        mul!(integ.cache.x, PI, x)
+        mul!(integ.cache.x_pred, PI, x_pred)
+    else
+        # Update
+        x_filt = update!(integ, x_pred)
+
+        # Undo the coordinate change / preconditioning
+        mul!(integ.cache.x, PI, x)
+        mul!(integ.cache.x_pred, PI, x_pred)
+        mul!(integ.cache.x_filt, PI, x_filt)
+
+        # Save into u_filt and integ.u
+        mul!(view(u_filt, :), SolProj, x_filt.μ)
+        if integ.u isa Number
+            integ.u = u_filt[1]
+        else
+            integ.u .= u_filt
+        end
+
+        # Advance the state here
         copy!(integ.cache.x, integ.cache.x_filt)
         integ.sol.log_likelihood += integ.cache.log_likelihood
     end
