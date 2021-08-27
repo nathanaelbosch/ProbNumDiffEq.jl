@@ -70,17 +70,15 @@ end
 
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 function estimate_diffusion(kind::DynamicDiffusion, integ)
-    @unpack dt = integ
-    @unpack d, R = integ.cache
-    @unpack H, Q, measurement, m_tmp = integ.cache
+    @unpack d, R, H, Qh, measurement, m_tmp = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    X_A_Xt!(m_tmp.Σ, Q, H)
-    if m_tmp.Σ.mat isa Diagonal
-        σ² = dot(z ./ m_tmp.Σ.mat.diag, z) / d
+    HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
+    if HQH isa Diagonal
+        σ² = dot(z ./ HQH.mat.diag, z) / d
         return σ², σ²
     else
-        σ² = z' * (Symmetric(m_tmp.Σ.mat) \ z) / d
+        σ² = z' * (Symmetric(HQH.mat) \ z) / d
         return σ², σ²
     end
 end
@@ -90,20 +88,20 @@ struct MVDynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::MVDynamicDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
-    @unpack dt = integ
     @unpack d, q, R, P, PI, E1 = integ.cache
-    @unpack H, Q, measurement = integ.cache
+    @unpack H, Qh, measurement, m_tmp = integ.cache
     z = measurement.μ
 
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
 
     # Assert EK0
-    @assert all(H .== E1 * PI)
+    @assert all(H .== E1)
 
     # More safety checks
-    @assert isdiag(H*Q*H')
-    @assert length(unique(diag(H*Q*H'))) == 1
-    Q0_11 = diag(H*Q*H')[1]
+    HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
+    @assert isdiag(HQH)
+    @assert length(unique(diag(HQH))) == 1
+    Q0_11 = diag(HQH)[1]
 
     Σ_ii = z .^ 2 ./ Q0_11
     Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
@@ -120,14 +118,13 @@ struct MVFixedDiffusion <: AbstractStaticDiffusion end
 initial_diffusion(diffusion::MVFixedDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
 function estimate_diffusion(kind::MVFixedDiffusion, integ)
-    @unpack dt = integ
     @unpack d, q, R, P, PI, E1 = integ.cache
     @unpack measurement, H = integ.cache
     @unpack d, measurement = integ.cache
     diffusions = integ.sol.diffusions
 
     # Assert EK0
-    @assert all(H .== E1 * PI)
+    @assert all(H .== E1)
 
     @unpack measurement = integ.cache
     v, S = measurement.μ, measurement.Σ

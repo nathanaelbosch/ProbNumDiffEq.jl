@@ -15,6 +15,8 @@ mutable struct GaussianODEFilterCache{
     q::Int                  # Order of the prior
     A::AType
     Q::QType
+    Ah::AType
+    Qh::QType
     diffusionmodel::diffModelType
     R::RType
     Proj::ProjType
@@ -97,7 +99,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Pre-allocate a bunch of matrices
     h = zeros(uElType, d)
-    H = zeros(uElType, d, D)
+    H = f isa DynamicalODEFunction ? copy(E2) : copy(E1)
     du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
     ddu = zeros(uElType, d, d)
     # v, S = similar(h), similar(ddu)
@@ -135,7 +137,7 @@ function OrdinaryDiffEq.alg_cache(
         typeof(C1),
     }(
         # Constants
-        d, q, A, Q, diffmodel, R, Proj, SolProj,
+        d, q, A, Q, copy(A), copy(Q), diffmodel, R, Proj, SolProj,
         P, PI,
         E0, E1, E2,
         # Mutable stuff
