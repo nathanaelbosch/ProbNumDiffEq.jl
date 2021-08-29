@@ -98,18 +98,10 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
 
     # If the step gets rejected, we don't even need to perform an update!
-    if integ.opts.adaptive && integ.EEst >= one(integ.EEst)
-        # Undo the coordinate change / preconditioning
-        mul!(integ.cache.x, PI, x)
-        mul!(integ.cache.x_pred, PI, x_pred)
-    else
+    reject = integ.opts.adaptive && integ.EEst >= one(integ.EEst)
+    if !reject
         # Update
         x_filt = update!(integ, x_pred)
-
-        # Undo the coordinate change / preconditioning
-        mul!(integ.cache.x, PI, x)
-        mul!(integ.cache.x_pred, PI, x_pred)
-        mul!(integ.cache.x_filt, PI, x_filt)
 
         # Save into u_filt and integ.u
         mul!(view(u_filt, :), SolProj, x_filt.μ)
