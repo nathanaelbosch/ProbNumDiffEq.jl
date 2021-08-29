@@ -37,23 +37,22 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     @unpack d, SolProj = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
     @unpack x_tmp, x_tmp2 = integ.cache
-    @unpack A, Q = integ.cache
+    @unpack A, Q, Ah, Qh = integ.cache
 
     make_preconditioners!(integ, dt)
     @unpack P, PI = integ.cache
 
     tnew = t + dt
 
-    # Coordinate change / preconditioning
-    # x = P * x
-    x = mul!(x_tmp, P, x)
+    # Build the correct matrices
+    @. Ah = PI.diag .* A .* P.diag'
+    X_A_Xt!(Qh, Q, PI)
 
     if isdynamic(cache.diffusionmodel)  # Calibrate, then predict cov
 
         # Predict
-        predict_mean!(x_pred, x, A)
-        @. x_tmp2.μ = PI.diag * x_pred.μ
-        mul!(view(u_pred, :), SolProj, x_tmp2.μ)
+        predict_mean!(x_pred, x, Ah)
+        mul!(view(u_pred, :), SolProj, x_pred.μ)
 
         # Measure
         evaluate_ode!(integ, x_pred, tnew)
@@ -62,16 +61,15 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
-        predict_cov!(x_pred, x, A, Q, cache.C1, cache.global_diffusion)
+        predict_cov!(x_pred, x, Ah, Qh, cache.C1, cache.global_diffusion)
 
         # Compute measurement covariance only now
         compute_measurement_covariance!(cache)
 
     else  # Vanilla filtering order: Predict, measure, calibrate
 
-        predict!(x_pred, x, A, Q)
-        @. x_tmp2.μ = PI.diag * x_pred.μ
-        _matmul!(u_pred, SolProj, x_tmp2.μ)
+        predict!(x_pred, x, Ah, Qh)
+        _matmul!(u_pred, SolProj, x_pred.μ)
         evaluate_ode!(integ, x_pred, tnew)
         compute_measurement_covariance!(cache)
         cache.local_diffusion, cache.global_diffusion =
@@ -81,10 +79,9 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     # Likelihood
     # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
-
     # Estimate error for adaptive steps - can already be done before filtering
     if integ.opts.adaptive
-        err_est_unscaled = estimate_errors(integ, integ.cache)
+        err_est_unscaled = estimate_errors(cache)
         if integ.f isa DynamicalODEFunction # second-order ODE
             DiffEqBase.calculate_residuals!(
                 err_tmp, dt * err_est_unscaled,
@@ -101,18 +98,10 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
 
 
     # If the step gets rejected, we don't even need to perform an update!
-    if integ.opts.adaptive && integ.EEst >= one(integ.EEst)
-        # Undo the coordinate change / preconditioning
-        mul!(integ.cache.x, PI, x)
-        mul!(integ.cache.x_pred, PI, x_pred)
-    else
+    reject = integ.opts.adaptive && integ.EEst >= one(integ.EEst)
+    if !reject
         # Update
         x_filt = update!(integ, x_pred)
-
-        # Undo the coordinate change / preconditioning
-        mul!(integ.cache.x, PI, x)
-        mul!(integ.cache.x_pred, PI, x_pred)
-        mul!(integ.cache.x_filt, PI, x_filt)
 
         # Save into u_filt and integ.u
         mul!(view(u_filt, :), SolProj, x_filt.μ)
@@ -131,7 +120,6 @@ end
 function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
     @unpack f, p, dt, alg = integ
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
-    @unpack P, PI = integ.cache
     @assert iszero(R)
 
     @unpack E0, E1 = integ.cache
@@ -141,8 +129,8 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
     # Mean
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
-    # z .= E1*PI*x_pred.μ .- du
-    _matmul!(z, E1, mul!(integ.cache.x_tmp2.μ, PI, x_pred.μ))
+    # z .= E1*x_pred.μ .- du
+    _matmul!(z, E1, x_pred.μ)
     z .-= du[:]
 
     # Cov
@@ -160,9 +148,11 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
         end
 
         integ.destats.njacs += 1
-        _matmul!(H, (E1 .- ddu * E0), PI)
+        _matmul!(H, ddu, -E0)
+        H .= E1
+        _matmul!(H, ddu, E0, -1, 1)
     else
-        _matmul!(H, E1, PI)
+        # H .= E1 # This is already the case!
     end
 
     return measurement
@@ -174,21 +164,20 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
     @assert iszero(R)
     du2 = du
 
-    @unpack P, PI = integ.cache
     @unpack E0, E1, E2 = integ.cache
 
     z, S = measurement.μ, measurement.Σ
 
     # Mean
-    # _u_pred = E0 * PI * x_pred.μ
-    # _du_pred = E1 * PI * x_pred.μ
+    # _u_pred = E0 * x_pred.μ
+    # _du_pred = E1 * x_pred.μ
     if isinplace(f)
         f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     else
         du2 .= f.f1(view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     end
     integ.destats.nf += 1
-    z .= E2*PI*x_pred.μ .- du2[:]
+    z .= E2*x_pred.μ .- du2[:]
 
     # Cov
     if alg isa EK1
@@ -206,15 +195,15 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
 
             integ.destats.njacs += 2
 
-            _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
+            H .= E2 .- J0 * E0 .- J1 * E1
         else
             J0 = ForwardDiff.jacobian((u) -> f.f1(view(u_pred, 1:d), u, p, t), u_pred[d+1:2d])
             J1 = ForwardDiff.jacobian((du) -> f.f1(du, view(u_pred, d+1:2d), p, t), u_pred[1:d])
             integ.destats.njacs += 2
-            _matmul!(H, (E2 .- J0 * E0 .- J1 * E1), PI)
+            H .= E2 .- J0 * E0 .- J1 * E1
         end
     else
-        _matmul!(H, E2, PI)
+        # H .= E2 # This is already the case!
     end
 
     return measurement
@@ -240,8 +229,8 @@ function update!(integ, prediction)
 end
 
 
-function estimate_errors(integ, cache::GaussianODEFilterCache)
-    @unpack local_diffusion, Q, H = cache
+function estimate_errors(cache::GaussianODEFilterCache)
+    @unpack local_diffusion, Qh, H = cache
 
     if local_diffusion isa Real && isinf(local_diffusion)
         return Inf
@@ -251,13 +240,13 @@ function estimate_errors(integ, cache::GaussianODEFilterCache)
 
     if local_diffusion isa Diagonal
 
-        mul!(L, H, sqrt.(local_diffusion) * Q.squareroot)
+        mul!(L, H, sqrt.(local_diffusion) * Qh.squareroot)
         error_estimate = sqrt.(diag(L*L'))
         return error_estimate
 
     elseif local_diffusion isa Number
 
-        mul!(L, H, Q.squareroot)
+        mul!(L, H, Qh.squareroot)
         # error_estimate = local_diffusion .* diag(L*L')
         @tullio error_estimate[i] := L[i,j]*L[i,j]
         error_estimate .*= local_diffusion
