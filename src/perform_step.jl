@@ -56,21 +56,24 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         mul!(view(u_pred, :), SolProj, x_tmp2.μ)
 
         # Measure
-        measure!(integ, x_pred, tnew)
+        evaluate_ode!(integ, x_pred, tnew)
 
         # Estimate diffusion
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
         predict_cov!(x_pred, x, A, Q, cache.C1, cache.global_diffusion)
-        X_A_Xt!(integ.cache.measurement.Σ, x_pred.Σ, integ.cache.H)
+
+        # Compute measurement covariance only now
+        compute_measurement_covariance!(cache)
 
     else  # Vanilla filtering order: Predict, measure, calibrate
 
         predict!(x_pred, x, A, Q)
         @. x_tmp2.μ = PI.diag * x_pred.μ
         _matmul!(u_pred, SolProj, x_tmp2.μ)
-        measure!(integ, x_pred, tnew)
+        evaluate_ode!(integ, x_pred, tnew)
+        compute_measurement_covariance!(cache)
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
     end
@@ -125,7 +128,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     end
 end
 
-function measure!(integ, x_pred, t, second_order::Val{false})
+function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
     @unpack f, p, dt, alg = integ
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
     @unpack P, PI = integ.cache
@@ -161,12 +164,11 @@ function measure!(integ, x_pred, t, second_order::Val{false})
     else
         _matmul!(H, E1, PI)
     end
-    X_A_Xt!(S, x_pred.Σ, H)
 
     return measurement
 end
 
-function measure!(integ, x_pred, t, second_order::Val{true})
+function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
     @unpack f, p, dt, alg = integ
     @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
@@ -215,11 +217,9 @@ function measure!(integ, x_pred, t, second_order::Val{true})
         _matmul!(H, E2, PI)
     end
 
-    X_A_Xt!(S, x_pred.Σ, H)
-
     return measurement
 end
-measure!(integ, x_pred, t) = measure!(
+evaluate_ode!(integ, x_pred, t) = evaluate_ode!(
     integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
 
 # The following functions are just there to handle both IIP and OOP easily
@@ -227,6 +227,9 @@ _eval_f!(du, u, p, t, f::AbstractODEFunction{true}) = f(du, u, p, t)
 _eval_f!(du, u, p, t, f::AbstractODEFunction{false}) = (du .= f(u, p, t))
 _eval_f_jac!(ddu, u, p, t, f::AbstractODEFunction{true}) = f.jac(ddu, u, p, t)
 _eval_f_jac!(ddu, u, p, t, f::AbstractODEFunction{false}) = (ddu .= f.jac(u, p, t))
+
+compute_measurement_covariance!(cache) =
+    X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
 
 function update!(integ, prediction)
     @unpack measurement, H, R, x_filt = integ.cache
