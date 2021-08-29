@@ -23,7 +23,7 @@ dldu0 = [0.6500925873857853, -0.004812245513746423]
 
 @testset "ForwardDiff.jl" begin
     @test ForwardDiff.gradient(param_to_loss, prob.p) ≈ dldp
-    @test ForwardDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0
+    @test ForwardDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0 rtol=1e-7
 end
 
 @testset "ReverseDiff.jl" begin
