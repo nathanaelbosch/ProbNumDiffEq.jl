@@ -11,7 +11,7 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     @assert integ.saveiter == 1
 
     # Update the initial state to the known (given or computed with AD) initial values
-    initial_update!(integ)
+    initial_update!(integ, cache, integ.alg.initialization)
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)

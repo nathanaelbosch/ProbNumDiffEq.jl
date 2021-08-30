@@ -25,6 +25,7 @@ Base.@kwdef struct EK0 <: AbstractEK
     order::Int = 3
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    initialization = TaylorModeInit()
 end
 
 
@@ -48,4 +49,5 @@ Base.@kwdef struct EK1 <: AbstractEK
     order::Int = 3
     diffusionmodel::Symbol = :dynamic
     smooth::Bool = true
+    initialization = TaylorModeInit()
 end
