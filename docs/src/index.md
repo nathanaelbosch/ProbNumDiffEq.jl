@@ -1,7 +1,7 @@
 # ProbNumDiffEq.jl: Probabilistic Numerical Solvers for Differential Equations
 
 
-![Banner](../../examples/banner.svg)
+![Banner](https://raw.githubusercontent.com/nathanaelbosch/ProbNumDiffEq.jl/main/examples/banner.svg)
 
 
 __ProbNumDiffEq.jl__ provides _probabilistic numerical_ ODE solvers to the
@@ -15,6 +15,7 @@ __For more probabilistic numerics check out the [ProbNum](https://www.probabilis
 It implements probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
 
 ---
+
 
 
 ## Installation
@@ -38,6 +39,10 @@ To quickly try out ProbNumDiffEq.jl check out the "[Getting Started](@ref)" tuto
 - Automatic differentiation via ForwardDiff.jl
 - Supports arbitrary precision numbers via BigFloats.jl
 - Specialized solvers for second-order ODEs
+
+## Benchmarks
+- [Multi-Language Wrapper Benchmark](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/benchmarks/benchmarks/multi-language-benchmark.ipynb):
+  ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
 
 ## References
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
