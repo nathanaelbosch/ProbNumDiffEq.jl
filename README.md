@@ -62,3 +62,9 @@ for i in 1:100
 end
 ```
 ![Fitzhugh-Nagumo Solution](./docs/src/figures/fitzhugh_nagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
+
+
+## Benchmarks
+
+- [Multi-Language Wrapper Benchmark](./benchmarks/multi-language-benchmark.ipynb):
+  ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
