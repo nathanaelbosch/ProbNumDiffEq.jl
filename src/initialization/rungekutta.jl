@@ -6,12 +6,13 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     @unpack du, x_tmp, x_tmp2, m_tmp, K1, K2 = cache
 
     t0 = integ.sol.prob.tspan[1]
-    dt = 0.1
+    dt = 0.01
     nsteps = q + 1
     tmax = t0 + nsteps*dt
     tstops = t0:dt:tmax
+    alg = integ.alg isa EK0 ? Vern9()  : Rodas5()
     sol = solve(remake(integ.sol.prob, tspan=(t0, tmax)),
-                Vern9(), adaptive=false, dense=false, tstops=tstops, save_start=false)
+                alg, adaptive=false, dense=false, tstops=tstops, save_start=false)
 
     # Initialize on u0
     condition_on!(x, Proj(0), u, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
