@@ -4,6 +4,7 @@ mutable struct IEKS <: AbstractEK
     order::Int
     diffusionmodel::Symbol
     smooth::Bool
+    initialization = TaylorModeInit()
     linearize_at
 end
 
