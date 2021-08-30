@@ -24,8 +24,10 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     end
     condition_on!(x, Proj(1), du, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
 
-    # Filter & smooth to fit these values!
-    rk_init_improve(integ, cache, sol.t, sol.u, dt)
+    if q > 1
+        # Filter & smooth to fit these values!
+        rk_init_improve(integ, cache, sol.t, sol.u, dt)
+    end
 
 end
 
