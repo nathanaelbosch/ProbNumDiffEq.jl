@@ -39,6 +39,10 @@ To quickly try out ProbNumDiffEq.jl check out the "[Getting Started](@ref)" tuto
 - Supports arbitrary precision numbers via BigFloats.jl
 - Specialized solvers for second-order ODEs
 
+## Benchmarks
+- [Multi-Language Wrapper Benchmark](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/benchmarks/benchmarks/multi-language-benchmark.ipynb):
+  ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
+
 ## References
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 - F. Tronarp, S. Särkkä, and P. Hennig: **Bayesian ODE Solvers: The Maximum A Posteriori Estimate** (2021)
