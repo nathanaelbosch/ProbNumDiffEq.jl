@@ -3,6 +3,9 @@ using ProbNumDiffEq
 using LinearAlgebra
 using Test
 
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_pleiades
+
 
 d = 2
 q = 6
@@ -42,4 +45,26 @@ end
     dfs = ProbNumDiffEq.get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
     @test length(dfs) == q+1
     @test true_init_states ≈ vcat(dfs...)
+end
+
+
+@testset "RK-Init on the high-dimensional Pleiades problem" begin
+	  # This has not worked before with the Taylor-Mode init!
+    # The high dimensions made the runtimes explode
+
+    prob = prob_ode_pleiades
+    d = length(prob.u0)
+
+    integ = init(prob, EK0(order=3));
+    tm_init = integ.cache.x.μ
+
+    for o in (4, 5)
+        integ = init(prob, EK0(order=o, initialization=RungeKuttaInit()));
+        rk_init = integ.cache.x.μ
+
+        @test tm_init[1:d] ≈ rk_init[1:d]
+        @test tm_init[d+1:2d] ≈ rk_init[d+1:2d]
+        @test tm_init[2d+1:3d] ≈ rk_init[2d+1:3d] rtol=1e-2
+        @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=1e-1
+    end
 end
