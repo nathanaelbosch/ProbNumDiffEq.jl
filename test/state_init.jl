@@ -32,7 +32,7 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
 
 
 @testset "OOP state init" begin
-    dfs = ProbNumDiffEq.get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
+    dfs = ProbNumDiffEq.taylormode_get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
     @test length(dfs) == q+1
     @test true_init_states ≈ vcat(dfs...)
 end
@@ -42,7 +42,7 @@ end
     f!(du, u, p, t) = (du .= f(u, p, t))
     prob = ODEProblem(f!, u0, tspan)
 
-    dfs = ProbNumDiffEq.get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
+    dfs = ProbNumDiffEq.taylormode_get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
     @test length(dfs) == q+1
     @test true_init_states ≈ vcat(dfs...)
 end

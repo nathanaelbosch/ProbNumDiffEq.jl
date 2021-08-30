@@ -6,7 +6,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
 
     @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = cache
 
-    f_derivatives = get_derivatives(u, f, p, t, q)
+    f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     @assert length(0:q) == length(f_derivatives)
     for (o, df) in zip(0:q, f_derivatives)
 
@@ -18,7 +18,7 @@ end
 """
     Compute initial derivatives of an ODEProblem with TaylorSeries.jl
 """
-function get_derivatives(u, f, p, t, q)
+function taylormode_get_derivatives(u, f, p, t, q)
     d = length(u)
 
     f_oop = isinplace(f) ? iip_to_oop(f) : f
@@ -56,7 +56,7 @@ end
 """
     Compute initial derivatives of a SecondOrderODE with TaylorSeries.jl
 """
-function get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
+function taylormode_get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
 
     d = length(u[1,:])
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
