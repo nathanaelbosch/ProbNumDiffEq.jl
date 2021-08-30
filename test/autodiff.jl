@@ -10,11 +10,13 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
 prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_fitzhughnagumo)
 
 function param_to_loss(p)
-    sol = solve(remake(prob, p=p), EK1(order=3))
+    sol = solve(remake(prob, p=p), EK1(order=3),
+                sensealg=SensitivityADPassThrough())
     return norm(sol.u[end])  # Dummy loss
 end
 function startval_to_loss(u0)
-    sol = solve(remake(prob, u0=u0), EK1(order=3))
+    sol = solve(remake(prob, u0=u0), EK1(order=3),
+                sensealg=SensitivityADPassThrough())
     return norm(sol.u[end])  # Dummy loss
 end
 
