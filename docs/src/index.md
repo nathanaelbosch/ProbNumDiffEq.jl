@@ -1,7 +1,7 @@
 # ProbNumDiffEq.jl: Probabilistic Numerical Solvers for Differential Equations
 
 
-![Banner](../../examples/banner.svg)
+![Banner](https://raw.githubusercontent.com/nathanaelbosch/ProbNumDiffEq.jl/main/examples/banner.svg)
 
 
 __ProbNumDiffEq.jl__ provides _probabilistic numerical_ ODE solvers to the
@@ -15,6 +15,7 @@ __For more probabilistic numerics check out the [ProbNum](https://www.probabilis
 It implements probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
 
 ---
+
 
 
 ## Installation
