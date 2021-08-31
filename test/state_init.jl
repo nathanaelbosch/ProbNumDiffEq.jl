@@ -74,7 +74,7 @@ end
         (o == 5) && @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=6e-1
         (5 > o > 3) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-3
         (o == 5) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-2
-        (o == 5) && @test tm_init[5d+1:6d] ≈ rk_init[5d+1:6d] rtol=3e-1
+        (o == 5) && @test tm_init[5d+1:6d] ≈ rk_init[5d+1:6d] rtol=4e-1
 
 
         # Test if the covariance reflects the true error
