@@ -39,7 +39,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
     @unpack x_tmp, x_tmp2 = integ.cache
     @unpack A, Q, Ah, Qh = integ.cache
 
-    make_preconditioners!(integ, dt)
+    make_preconditioners!(cache, dt)
     @unpack P, PI = integ.cache
 
     tnew = t + dt

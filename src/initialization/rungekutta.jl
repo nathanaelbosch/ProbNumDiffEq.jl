@@ -65,7 +65,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
     @unpack x, x_pred, x_filt, measurement = cache
 
     # Predict forward:
-    make_preconditioners!(integ, dt)
+    make_preconditioners!(cache, dt)
     @unpack P, PI = cache
 
     mul!(x, P, x)

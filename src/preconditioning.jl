@@ -29,8 +29,8 @@ end
 end
 
 
-function make_preconditioners!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK}, dt)
-    @unpack P, PI, d, q = integ.cache
+function make_preconditioners!(cache::GaussianODEFilterCache, dt)
+    @unpack P, PI, d, q = cache
     make_preconditioner!(P, dt, d, q)
     make_preconditioner_inv!(PI, dt, d, q)
 end
