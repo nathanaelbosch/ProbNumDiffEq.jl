@@ -88,23 +88,11 @@ end
 end
 
 
-@testset "RK-Init on the high-dimensional Pleiades problem" begin
-	  # This has not worked before with the Taylor-Mode init!
-    # The high dimensions made the runtimes explode
-
+@testset "RK-Init enables solving the high-dimensional Pleiades problem with order 5" begin
+	  # This has not worked before with the Taylor-Mode init, it simply took too long!
     prob = prob_ode_pleiades
-    d = length(prob.u0)
-
-    integ = init(prob, EK0(order=3));
-    tm_init = integ.cache.x.μ
-
-    for o in (4, 5)
-        integ = init(prob, EK0(order=o, initialization=RungeKuttaInit()));
-        rk_init = integ.cache.x.μ
-
-        @test tm_init[1:d] ≈ rk_init[1:d]
-        @test tm_init[d+1:2d] ≈ rk_init[d+1:2d]
-        @test tm_init[2d+1:3d] ≈ rk_init[2d+1:3d] rtol=1e-2
-        @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=1e-1
-    end
+    sol1 = solve(prob, Vern9(), abstol=1e-10, reltol=1e-10, save_everystep=false)
+    sol2 = solve(prob, EK1(order=5, smooth=false, initialization=RungeKuttaInit()),
+                 abstol=1e-6, reltol=1e-6, save_everystep=false)
+    @test sol1.u[end] ≈ sol2.u[end]
 end
