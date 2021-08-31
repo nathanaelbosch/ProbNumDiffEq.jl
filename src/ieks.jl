@@ -1,10 +1,10 @@
 # Iterated extended Kalman smoothing
-mutable struct IEKS <: AbstractEK
+mutable struct IEKS{IT} <: AbstractEK
     prior::Symbol
     order::Int
     diffusionmodel::Symbol
     smooth::Bool
-    initialization
+    initialization::IT
     linearize_at
 end
 
