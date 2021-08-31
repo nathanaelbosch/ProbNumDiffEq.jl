@@ -37,21 +37,24 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     if q<2 return end
 
     # Use a jac or autodiff to initialize on ddu0
-    @warn "RungeKuttaInit() assumes that the vector field is autonomous!"
     if isinplace(f)
+        dfdt = copy(u)
+        ForwardDiff.derivative!(dfdt, (du, t) -> f(du, u, p, t), du, t)
+
         if !isnothing(f.jac)
             f.jac(ddu, du, u, p, t)
         else
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
     else
+        dfdt = ForwardDiff.derivative((t) -> f(u, p, t), t)
         if !isnothing(f.jac)
             ddu .= f.jac(du, u, p, t)
         else
             ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
         end
     end
-    condition_on!(x, Proj(2), ddu * du, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(2), ddu * du + dfdt, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q<3 return end
 
