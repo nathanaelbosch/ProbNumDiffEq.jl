@@ -4,12 +4,12 @@ mutable struct IEKS <: AbstractEK
     order::Int
     diffusionmodel::Symbol
     smooth::Bool
-    initialization = TaylorModeInit()
+    initialization
     linearize_at
 end
 
 """
-    IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, linearize_at=nothing)
+    IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, initialization=TaylorModeInit(), linearize_at=nothing)
 
 **Gaussian ODE filtering with iterated extended Kalman smoothing.**
 
@@ -29,15 +29,17 @@ See also: [`EK0`](@ref), [`EK1`](@ref), [`solve_ieks`](@ref)
 # References:
 - F. Tronarp, S. Särkkä, and P. Hennig: **Bayesian ODE Solvers: The Maximum A Posteriori Estimate**
 """
-function IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, linearize_at=nothing)
+function IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic,
+              initialization=TaylorModeInit(), linearize_at=nothing)
     if !isnothing(linearize_at)
         @assert linearize_at isa ProbODESolution
         @assert linearize_at.alg.prior == prior
         @assert linearize_at.alg.order == order
         @assert linearize_at.alg.diffusionmodel == diffusionmodel
+        @assert linearize_at.alg.initialization == initialization
         @assert linearize_at.alg.smooth == true
     end
-    return IEKS(prior, order, diffusionmodel, true, linearize_at)
+    return IEKS(prior, order, diffusionmodel, true, initialization, linearize_at)
 end
 
 
