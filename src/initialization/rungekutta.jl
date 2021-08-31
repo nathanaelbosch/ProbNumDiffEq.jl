@@ -3,16 +3,25 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     @unpack d, x, Proj = cache
     q = integ.alg.order
 
-    @unpack du, x_tmp, x_tmp2, m_tmp, K1, K2 = cache
+    if q > 5
+        @warn "RungeKuttaInit might be unstable for high orders"
+    end
+
+    @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1, K2 = cache
 
     t0 = integ.sol.prob.tspan[1]
     dt = 0.01
     nsteps = q + 1
     tmax = t0 + nsteps*dt
     tstops = t0:dt:tmax
-    alg = integ.alg isa EK0 ? Vern9()  : Rodas5()
+    alg = integ.alg isa EK0 ? Vern9() : Rodas5()
     sol = solve(remake(integ.sol.prob, tspan=(t0, tmax)),
-                alg, adaptive=false, dense=false, tstops=tstops, save_start=false)
+                alg, dense=false, save_start=false,
+                # adaptive=false, tstops=tstops,
+                abstol=integ.opts.abstol/100, reltol=integ.opts.reltol/100,
+                saveat=tstops,
+                # tstops=tstops,
+                )
 
     # Initialize on u0
     condition_on!(x, Proj(0), u, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
@@ -25,10 +34,29 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     end
     condition_on!(x, Proj(1), du, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
 
-    if q > 1
-        # Filter & smooth to fit these values!
-        rk_init_improve(integ, cache, sol.t, sol.u, dt)
+    if q<2 return end
+
+    # Use a jac or autodiff to initialize on ddu0
+    @warn "RungeKuttaInit() assumes that the vector field is autonomous!"
+    if isinplace(f)
+        if !isnothing(f.jac)
+            f.jac(ddu, du, u, p, t)
+        else
+            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
+        end
+    else
+        if !isnothing(f.jac)
+            ddu .= f.jac(du, u, p, t)
+        else
+            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
+        end
     end
+    condition_on!(x, Proj(2), ddu * du, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+
+    if q<3 return end
+
+    # Filter & smooth to fit these values!
+    rk_init_improve(integ, cache, sol.t, sol.u, dt)
 
 end
 
