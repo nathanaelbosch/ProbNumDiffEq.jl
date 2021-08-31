@@ -74,15 +74,14 @@ end
         (o == 5) && @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=6e-1
         (5 > o > 3) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-3
         (o == 5) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-2
-        (6 > o > 4) && @test tm_init[5d+1:6d] ≈ rk_init[5d+1:6d] rtol=2e-1
+        (o == 5) && @test tm_init[5d+1:6d] ≈ rk_init[5d+1:6d] rtol=2e-1
 
 
         # Test if the covariance reflects the true error
         Cs = integ.cache.x.Σ.squareroot[3d+1:end, 3d+1:end]
         err = (rk_init .- tm_init[1:length(rk_init)])[3d+1:end]
         whitened_err = Cs \ err
-        _l = length(whitened_err)
-        # `whitened_err` should be standard gaussian, so let's just check that they're small
+        # `whitened_err` should be standard gaussian; so, let's check that they're small
         @test all(abs.(whitened_err) .< 2e-1)
 
     end
