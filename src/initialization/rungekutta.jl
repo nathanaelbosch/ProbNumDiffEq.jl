@@ -42,7 +42,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
         ForwardDiff.derivative!(dfdt, (du, t) -> f(du, u, p, t), du, t)
 
         if !isnothing(f.jac)
-            f.jac(ddu, du, u, p, t)
+            f.jac(ddu, u, p, t)
         else
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
