@@ -16,7 +16,7 @@ function smooth_all!(integ)
             continue
         end
 
-        make_preconditioners!(integ, dt)
+        make_preconditioners!(integ.cache, dt)
         P, PI = integ.cache.P, integ.cache.PI
 
         mul!(x_tmp, P, x[i])

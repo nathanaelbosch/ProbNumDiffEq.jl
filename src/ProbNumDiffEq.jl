@@ -70,11 +70,18 @@ include("gaussians.jl")
 include("priors.jl")
 include("diffusions.jl")
 
+include("initialization/common.jl")
+export TaylorModeInit, RungeKuttaInit
+
 include("algorithms.jl")
 export EK0, EK1
+
 include("alg_utils.jl")
 include("caches.jl")
-include("state_initialization.jl")
+
+include("initialization/taylormode.jl")
+include("initialization/rungekutta.jl")
+
 include("integrator_utils.jl")
 include("filtering.jl")
 include("perform_step.jl")

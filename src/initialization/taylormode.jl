@@ -1,12 +1,12 @@
 """initialize x0 up to the provided order"""
-function initial_update!(integ)
+function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack u, f, p, t = integ
-    @unpack d, x, Proj = integ.cache
+    @unpack d, x, Proj = cache
     q = integ.alg.order
 
-    @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = integ.cache
+    @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = cache
 
-    f_derivatives = get_derivatives(u, f, p, t, q)
+    f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     @assert length(0:q) == length(f_derivatives)
     for (o, df) in zip(0:q, f_derivatives)
 
@@ -18,7 +18,7 @@ end
 """
     Compute initial derivatives of an ODEProblem with TaylorSeries.jl
 """
-function get_derivatives(u, f, p, t, q)
+function taylormode_get_derivatives(u, f, p, t, q)
     d = length(u)
 
     f_oop = isinplace(f) ? iip_to_oop(f) : f
@@ -53,20 +53,10 @@ function get_derivatives(u, f, p, t, q)
     return [u_vec, evaluate.(f_derivatives)...]
 end
 
-function f_to_vector_valued(f, u)
-    u_template = copy(u)
-    function new_f(u, p, t)
-        du = f(reshape(u, size(u_template)), p, t)
-        return du[:]
-    end
-    return new_f
-end
-
-
 """
     Compute initial derivatives of a SecondOrderODE with TaylorSeries.jl
 """
-function get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
+function taylormode_get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
 
     d = length(u[1,:])
     Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
@@ -93,47 +83,4 @@ function get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
     end
 
     return [u[2,:], u[1,:], evaluate.(f_derivatives)...]
-end
-
-
-
-
-
-
-# TODO Either name texplicitly for the initial update, or think about how to use this in general
-function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
-                       meascache, Kcache, Kcache2, covcache, Mcache)
-    z, S = meascache
-
-    _matmul!(z, H, x.μ)
-    X_A_Xt!(S, x.Σ, H)
-    @assert isdiag(S)
-    S = Diagonal(S)
-
-    _matmul!(Kcache, x.Σ.mat, H')
-    Kcache2 .= Kcache ./ S.diag'
-    K = Kcache2
-
-    _matmul!(x.μ, K, data - z, 1, 1)
-    # x.μ .+= K*(data - z)
-
-    D = length(x.μ)
-    _matmul!(Mcache, K, H, -1, 0)
-    @inbounds @simd ivdep for i in 1:D
-        Mcache[i, i] += 1
-    end
-    X_A_Xt!(covcache, x.Σ, Mcache)
-    copy!(x.Σ, covcache)
-    nothing
-end
-
-
-"""Quick and dirty wrapper to make IIP functions OOP"""
-function iip_to_oop(f!)
-    function f(u, p, t)
-        du = copy(u)
-        f!(du, u, p, t)
-        return du
-    end
-    return f
 end
