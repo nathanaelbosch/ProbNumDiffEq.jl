@@ -21,7 +21,7 @@ abstract type AbstractEK <: GaussianODEFilter end
 """
 Base.@kwdef struct EK0{DT,IT} <: AbstractEK
     order::Int = 3
-    diffusionmodel::DT = DynamicDiffusion()
+    diffusionmodel::DT = DynamicMVDiffusion()
     smooth::Bool = true
     initialization::IT = TaylorModeInit()
 end
