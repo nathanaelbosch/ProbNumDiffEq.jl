@@ -4,16 +4,15 @@ using DiffEqDevTools
 
 
 # Simple linear problem
-prob = ODEProblem(
-    ODEFunction(
-        (u, p, t) -> 1.01 .* u,
-        jac=(u, p, t) -> 1.01;
-        analytic=(u0, p, t) -> u0 .* exp(1.01*t),
-    ), [big(1/2)], big.((0.0, 1.0)))
+linear(u,p,t) = p.*u
+linear_jac(u,p,t) = p
+linear_analytic(u0,p,t) = @. u0*exp(p*t)
+prob = ODEProblem(ODEFunction(linear, jac=linear_jac, analytic=linear_analytic),
+                  [big(1/2)], big.((0.0, 1.0)), big(1.01))
 
 # Step-sizes
-dts1 = 1 .//2 .^(7:-1:4)
-dts2 = 1 .//2 .^(10:-1:8)
+dts1 = 1 .// 2 .^ (7:-1:4)
+dts2 = 1 .// 2 .^ (10:-1:8)
 
 
 @testset "EK0(order=$q) convergence" for q in 1:5
