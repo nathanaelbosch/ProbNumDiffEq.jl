@@ -91,6 +91,9 @@ function OrdinaryDiffEq.perform_step!(
     # Likelihood
     # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
+    # Update
+    x_filt = update!(integ, x_pred)
+
     # Estimate error for adaptive steps - can already be done before filtering
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(cache)
@@ -123,8 +126,6 @@ function OrdinaryDiffEq.perform_step!(
     # If the step gets rejected, we don't even need to perform an update!
     reject = integ.opts.adaptive && integ.EEst >= one(integ.EEst)
     if !reject
-        # Update
-        x_filt = update!(integ, x_pred)
 
         # Save into u_filt and integ.u
         mul!(view(u_filt, :), SolProj, x_filt.μ)
@@ -307,6 +308,10 @@ function estimate_errors(cache::GaussianODEFilterCache)
         # error_estimate = local_diffusion .* diag(L*L')
         @tullio error_estimate[i] := L[i, j] * L[i, j]
         error_estimate .*= local_diffusion
+
+        # @info "it's small anyways I guess?" error_estimate cache.measurement.μ .^ 2
+        # error_estimate .+= cache.measurement.μ .^ 2
+
         error_estimate .= sqrt.(error_estimate)
         return error_estimate
     end
