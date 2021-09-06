@@ -10,22 +10,29 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1, K2 = cache
 
     t0 = integ.sol.prob.tspan[1]
-    dt = 0.01
+    dt = 10 * OrdinaryDiffEq.ode_determine_initdt(
+        u, t, 1, integ.opts.dtmax, integ.opts.abstol, integ.opts.reltol,
+        integ.opts.internalnorm, integ.sol.prob, integ)
+
     nsteps = q + 2
-    tmax = t0 + nsteps * dt
+    tmax = t0 + nsteps*dt
     tstops = t0:dt:tmax
-    alg = integ.alg isa EK0 ? Vern9() : Rodas5()  # Maybe let the user specify the solver
-    sol = solve(
-        remake(integ.sol.prob, tspan=(t0, tmax)),
-        alg,
-        dense=false,
-        save_start=false,
-        # adaptive=false, tstops=tstops,
-        abstol=integ.opts.abstol / 100,
-        reltol=integ.opts.reltol / 100,
-        saveat=tstops,
-        # tstops=tstops,
-    )
+    alg = integ.alg isa EK0 ? Vern9() : Rodas5() # Maybe rather let the user specify the solver
+    sol = solve(remake(integ.sol.prob, tspan=(t0, tmax)),
+                alg, dense=false, save_start=false,
+                # adaptive=false, tstops=tstops,
+                abstol=integ.opts.abstol/100, reltol=integ.opts.reltol/100,
+                saveat=tstops,
+                # tstops=tstops,
+                )
+    # This is necessary in order to fairly account for the cost of initialization!
+    # integ.destats.nf = sol.destats.nf
+    # integ.destats.njacs = sol.destats.njacs
+    # integ.destats.nsolve = sol.destats.nsolve
+    # integ.destats.nw = sol.destats.nw
+    # integ.destats.nnonliniter = sol.destats.nnonliniter
+    # integ.destats.nnonlinconvfail = sol.destats.nnonlinconvfail
+    # integ.destats.ncondition = sol.destats.ncondition
 
     # Initialize on u0
     condition_on!(x, Proj(0), view(u, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)

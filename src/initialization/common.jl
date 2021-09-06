@@ -37,6 +37,10 @@ function condition_on!(
     _matmul!(z, H, x.μ)
     X_A_Xt!(S, x.Σ, H)
     @assert isdiag(S)
+    S = Diagonal(S)
+    if any(iszero.(S.diag))
+        S += 1e-20I
+    end
 
     _matmul!(Kcache, x.Σ.mat, H')
     Kcache2 .= Kcache ./ diag(S)'

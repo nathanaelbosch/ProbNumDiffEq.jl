@@ -119,10 +119,8 @@ function OrdinaryDiffEq.alg_cache(
 
     A, Q = ibm(d, q, uElType)
 
-    x0 = Gaussian(
-        zeros(uElType, D),
-        SRMatrix(Matrix(uElType(1.0) * I, D, D), Matrix(uElType(1.0) * I, D, D)),
-    )
+    initial_variance = 1.0 * ones(uElType, D)
+    x0 = Gaussian(zeros(uElType, D), SRMatrix(Matrix(Diagonal(sqrt.(initial_variance)))))
 
     # Measurement model
     R = zeros(uElType, d, d)
