@@ -11,10 +11,10 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
 
     t0 = integ.sol.prob.tspan[1]
     dt = 0.01
-    nsteps = q + 1
+    nsteps = q + 2
     tmax = t0 + nsteps*dt
     tstops = t0:dt:tmax
-    alg = integ.alg isa EK0 ? Vern9() : Rodas5()
+    alg = integ.alg isa EK0 ? Vern9() : Rodas5()  # Maybe let the user specify the solver
     sol = solve(remake(integ.sol.prob, tspan=(t0, tmax)),
                 alg, dense=false, save_start=false,
                 # adaptive=false, tstops=tstops,
