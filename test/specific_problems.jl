@@ -176,6 +176,10 @@ end
             end
         end
     end
+
+    @testset "RungeKuttaInit for SecondOrderODEProblems" begin
+        @test_broken solve(prob_iip, EK1(initialization=RungeKuttaInit())) isa ProbNumDiffEq.ProbODESolution
+    end
 end
 
 
