@@ -72,7 +72,7 @@ end
         # Test if the others are correct, up to order 5
         (5 > o > 2) && @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=1e-2
         (o == 5) && @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=6e-1
-        (5 > o > 3) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-3
+        (5 > o > 3) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-2
         (o == 5) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-2
         (o == 5) && @test tm_init[5d+1:6d] ≈ rk_init[5d+1:6d] rtol=8e-1
         # 8e-1 is only because of macOS, on linux this test should be much tighter
