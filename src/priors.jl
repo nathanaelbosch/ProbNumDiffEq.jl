@@ -69,7 +69,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
             @inbounds A_breve[i, j] = binomial(q-i+1, q-j+1)
         end
     end
-    A = kron(A_breve, I(d))
+    A = kron(I(d), A_breve)
     @assert istriu(A)
     A = UpperTriangular(A)
 
@@ -85,7 +85,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
         end
     end
     QL_breve = cholesky(Q_breve).L
-    QL = kron(QL_breve, I(d))
+    QL = kron(I(d), QL_breve)
     Q = SRMatrix(QL)
 
     return A, Q
