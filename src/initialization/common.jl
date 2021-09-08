@@ -16,7 +16,7 @@ function iip_to_oop(f!)
 end
 
 """To handle matrix-valued vector fields"""
-function f_to_vector_valued(f, u)
+function f_to_vector_valued(f::AbstractODEFunction{false}, u)
     u_template = copy(u)
     function new_f(u, p, t)
         du = f(reshape(u, size(u_template)), p, t)

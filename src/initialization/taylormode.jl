@@ -16,18 +16,19 @@ end
 
 
 """
-    Compute initial derivatives of an ODEProblem with TaylorSeries.jl
+    Compute initial derivatives of an OOP ODEProblem with TaylorSeries.jl
+
+    Warning: The OOP version is much slower than the IIP version!
 """
-function taylormode_get_derivatives(u, f, p, t, q)
+function taylormode_get_derivatives(u, f::AbstractODEFunction{false}, p, t, q)
     d = length(u)
 
-    f_oop = isinplace(f) ? iip_to_oop(f) : f
-    f_oop = f_to_vector_valued(f_oop, u)
+    f_vec = f_to_vector_valued(f, u)
 
     u_vec = u[:]
 
     # Simplify further:
-    _f(u) = f_oop(u, p, t)
+    _f(u) = f_vec(u, p, t)
 
     u0 = u_vec
     du0 = _f(u_vec)
@@ -36,7 +37,7 @@ function taylormode_get_derivatives(u, f, p, t, q)
     end
 
     # Make sure that the vector field f does not depend on t
-    f_t_taylor = taylor_expand(_t -> f_oop(u_vec, p, _t), t)
+    f_t_taylor = taylor_expand(_t -> f_vec(u_vec, p, _t), t)
     @assert !(eltype(f_t_taylor) <: TaylorN) "The vector field depends on t; The code might not yet be able to handle these (but it should be easy to implement)"
 
     set_variables("u", numvars=d, order=q+1)
@@ -51,6 +52,22 @@ function taylormode_get_derivatives(u, f, p, t, q)
     end
 
     return [u_vec, evaluate.(f_derivatives)...]
+end
+"""
+    Compute initial derivatives of an IIP ODEProblem with TaylorIntegration.jl
+"""
+function taylormode_get_derivatives(u, f::AbstractODEFunction{true}, p, t, q)
+
+    # f = f_to_vector_valued(f, u)
+    # u_vec = u[:]
+
+    tT = Taylor1(typeof(t), q)
+    tT[0] = t
+    uT = Taylor1.(u, tT.order)
+    duT = zero.(Taylor1.(u, tT.order))
+    uauxT = similar(uT)
+    TaylorIntegration.jetcoeffs!(f, tT, uT, duT, uauxT, p)
+    return [evaluate.(differentiate.(uT, i)) for i in 0:q]
 end
 
 """

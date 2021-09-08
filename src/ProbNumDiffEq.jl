@@ -24,6 +24,7 @@ import LinearAlgebra: mul!
 LinearAlgebra.mul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) =
     (C .= A .* B.diag')
 using TaylorSeries
+using TaylorIntegration
 @reexport using StructArrays
 using UnPack
 using RecipesBase
