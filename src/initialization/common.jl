@@ -14,6 +14,13 @@ function iip_to_oop(f!)
     end
     return f
 end
+function oop_to_iip(f)
+    function f!(du, u, p, t)
+        du .= f(u, p, t)
+        return nothing
+    end
+    return f!
+end
 
 """To handle matrix-valued vector fields"""
 function f_to_vector_valued(f::AbstractODEFunction{false}, u)
