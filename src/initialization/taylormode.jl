@@ -10,7 +10,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     @assert length(0:q) == length(f_derivatives)
     for (o, df) in zip(0:q, f_derivatives)
 
-        condition_on!(x, Proj(o), df, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+        condition_on!(x, Proj(o), view(df, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
     end
 end
 
@@ -35,10 +35,6 @@ end
     Compute initial derivatives of an IIP ODEProblem with TaylorIntegration.jl
 """
 function taylormode_get_derivatives(u, f::AbstractODEFunction{true}, p, t, q)
-
-    # f = f_to_vector_valued(f, u)
-    # u_vec = u[:]
-
     tT = Taylor1(typeof(t), q)
     tT[0] = t
     uT = Taylor1.(u, tT.order)

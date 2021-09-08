@@ -22,16 +22,6 @@ function oop_to_iip(f)
     return f!
 end
 
-"""To handle matrix-valued vector fields"""
-function f_to_vector_valued(f::AbstractODEFunction{false}, u)
-    u_template = copy(u)
-    function new_f(u, p, t)
-        du = f(reshape(u, size(u_template)), p, t)
-        return du[:]
-    end
-    return new_f
-end
-
 """Basically an Kalman update"""
 function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
                        meascache, Kcache, Kcache2, covcache, Mcache)
