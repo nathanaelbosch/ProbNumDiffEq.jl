@@ -119,14 +119,7 @@ function OrdinaryDiffEq.alg_cache(
     C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
     covmatcache = similar(G)
 
-    diffusion_models = Dict(
-        :dynamic => DynamicDiffusion(),
-        :dynamicMV => MVDynamicDiffusion(),
-        :fixed => FixedDiffusion(),
-        :fixedMV => MVFixedDiffusion(),
-        :fixedMAP => MAPFixedDiffusion(),
-    )
-    diffmodel = diffusion_models[alg.diffusionmodel]
+    diffmodel = alg.diffusionmodel
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
 
     return GaussianODEFilterCache{
