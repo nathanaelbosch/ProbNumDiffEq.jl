@@ -92,7 +92,8 @@ function OrdinaryDiffEq.alg_cache(
 
     A, Q = ibm(d, q, uElType)
 
-    x0 = Gaussian(zeros(uElType, D), SRMatrix(Matrix(uElType(1.0)*I, D, D)))
+    x0 = Gaussian(zeros(uElType, D),
+                  SRMatrix(Matrix(uElType(1.0)*I, D, D), Matrix(uElType(1.0)*I, D, D)))
 
     # Measurement model
     R = zeros(uElType, d, d)
@@ -106,7 +107,7 @@ function OrdinaryDiffEq.alg_cache(
     v = similar(h)
     S = alg isa EK0 ?
         SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D))
+        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
     measurement = Gaussian(v, S)
     pu_tmp =
         f isa DynamicalODEFunction ?
@@ -114,20 +115,30 @@ function OrdinaryDiffEq.alg_cache(
         similar(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
-    C1 = SRMatrix(zeros(uElType, D, 2D))
-    C2 = SRMatrix(zeros(uElType, D, 3D))
+    C1 = SRMatrix(zeros(uElType, D, 2D), zeros(uElType, D, D))
+    C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
     covmatcache = similar(G)
 
-    diffusion_models = Dict(
-        :dynamic => DynamicDiffusion(),
-        :dynamicMV => MVDynamicDiffusion(),
-        :fixed => FixedDiffusion(),
-        :fixedMV => MVFixedDiffusion(),
-        :fixedMAP => MAPFixedDiffusion(),
-    )
-    diffmodel = diffusion_models[alg.diffusionmodel]
+    diffmodel = alg.diffusionmodel == :dynamic ? DynamicDiffusion() :
+        alg.diffusionmodel == :fixed ? FixedDiffusion() :
+        alg.diffusionmodel == :dynamicMV ? MVDynamicDiffusion() :
+        alg.diffusionmodel == :fixedMV ? MVFixedDiffusion() :
+        error("The specified diffusion could not be recognized! Use e.g. `:dynamic`.")
+
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
 
+    Ah, Qh = copy(A), copy(Q)
+    u_pred = similar(u)
+    u_filt = similar(u)
+    tmp = similar(u)
+    x_pred = copy(x0)
+    x_filt = similar(x0)
+    x_tmp = similar(x0)
+    x_tmp2 = similar(x0)
+    m_tmp = similar(measurement)
+    K2 = similar(K)
+    G2 = similar(G)
+    err_tmp = similar(du)
     return GaussianODEFilterCache{
         typeof(R), typeof(Proj), typeof(SolProj),
         typeof(P), typeof(PI),
@@ -137,16 +148,16 @@ function OrdinaryDiffEq.alg_cache(
         typeof(C1),
     }(
         # Constants
-        d, q, A, Q, copy(A), copy(Q), diffmodel, R, Proj, SolProj,
+        d, q, A, Q, Ah, Qh, diffmodel, R, Proj, SolProj,
         P, PI,
         E0, E1, E2,
         # Mutable stuff
-        u, similar(u), similar(u), copy(u),
-        x0, copy(x0), similar(x0), similar(x0), similar(x0),
-        measurement, similar(measurement), pu_tmp,
-        H, du, ddu, K, similar(K), G, similar(G),
+        u, u_pred, u_filt, tmp,
+        x0, x_pred, x_filt, x_tmp, x_tmp2,
+        measurement, m_tmp, pu_tmp,
+        H, du, ddu, K, K2, G, G2,
         covmatcache, initdiff, initdiff,
-        similar(du),
+        err_tmp,
         zero(uEltypeNoUnits),
         C1, C2,
     )

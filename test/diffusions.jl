@@ -33,10 +33,10 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         @test sol.u[end] ≈ true_sol.(sol.t)[end]
     end
 
-    @testset "Time-Fixed Diffusion MAP" begin
-        sol = solve(prob, EK0(diffusionmodel=:fixedMAP, smooth=false),
-                    dense=false, adaptive=false, dt=1e-4)
-        @test sol.u[end] ≈ true_sol.(sol.t)[end]
-    end
+    # @testset "Time-Fixed Diffusion MAP" begin
+    #     sol = solve(prob, EK0(diffusionmodel=:fixedMAP, smooth=false),
+    #                 dense=false, adaptive=false, dt=1e-4)
+    #     @test sol.u[end] ≈ true_sol.(sol.t)[end]
+    # end
 
 end

@@ -44,9 +44,16 @@ X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, X::AbstractMatrix) = begin
     _matmul!(out.mat, out.squareroot, out.squareroot')
     return out
 end
+X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, D::Diagonal) = begin
+    # Basically just to optimize PI*Q*PI
+    out.squareroot .= D.diag .* M.squareroot
+    out.mat .= D.diag .* M.mat .* D.diag'
+    return out
+end
 
 
 Base.inv(M::SquarerootMatrix)= Base.inv(M.mat)
 LinearAlgebra.diag(M::SquarerootMatrix) = LinearAlgebra.diag(M.mat)
 LinearAlgebra.cholesky(M::SquarerootMatrix) = LinearAlgebra.cholesky(M.mat)
+LinearAlgebra.cholesky!(M::SquarerootMatrix) = LinearAlgebra.cholesky!(M.mat)
 LinearAlgebra.logdet(M::SquarerootMatrix) = LinearAlgebra.logdet(M.mat)

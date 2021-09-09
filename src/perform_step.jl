@@ -148,9 +148,8 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
         end
 
         integ.destats.njacs += 1
-        _matmul!(H, ddu, -E0)
         H .= E1
-        _matmul!(H, ddu, E0, -1, 1)
+        _matmul!(H, ddu, E0, -1.0, 1.0)
     else
         # H .= E1 # This is already the case!
     end
@@ -222,8 +221,8 @@ compute_measurement_covariance!(cache) =
 
 function update!(integ, prediction)
     @unpack measurement, H, R, x_filt = integ.cache
-    @unpack K1, K2, x_tmp2 = integ.cache
-    update!(x_filt, prediction, measurement, H, R, K1, K2, x_tmp2.Σ.mat)
+    @unpack K1, K2, x_tmp2, m_tmp = integ.cache
+    update!(x_filt, prediction, measurement, H, R, K1, K2, x_tmp2.Σ.mat, m_tmp)
     # assert_nonnegative_diagonal(x_filt.Σ)
     return x_filt
 end

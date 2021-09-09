@@ -34,8 +34,8 @@ function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
     M, L = cachemat.mat, cachemat.squareroot
     D, D = size(Qh.mat)
 
-    mul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
-    mul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
+    _matmul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
+    _matmul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
     _matmul!(M, L, L')
     chol = cholesky!(Symmetric(M), check=false)
 
@@ -91,22 +91,22 @@ See also: [`predict`](@ref)
 function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
                  H::AbstractMatrix, R,
                  K1::AbstractMatrix, K2::AbstractMatrix,
-                 M_cache::AbstractMatrix)
+                 M_cache::AbstractMatrix, m_tmp)
     @assert iszero(R)
-    z, S = measurement.μ, measurement.Σ
+    z, S = measurement.μ, copy!(m_tmp.Σ, measurement.Σ)
     m_p, P_p = x_pred.μ, x_pred.Σ
     D = length(m_p)
 
-    S_inv = inv(S)
-    # K = P_p * H' * S_inv
-    K1 = _matmul!(K1, Matrix(P_p), H')
-    K = _matmul!(K2, K1, S_inv)
+    # K = P_p * H' / S
+    S_chol = cholesky!(S)
+    K = _matmul!(K1, Matrix(P_p), H')
+    rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
-    _matmul!(M_cache, K, H, -1, 0)
+    _matmul!(M_cache, K, H, -1.0, 0.0)
     @inbounds @simd ivdep for i in 1:D
         M_cache[i, i] += 1
     end
@@ -122,7 +122,8 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     K1 = zeros(D, d)
     K2 = zeros(D, d)
     M_cache = zeros(D, D)
-    return update!(x_out, x_pred, measurement, H, R, K1, K2, M_cache)
+    m_tmp = copy(measurement)
+    return update!(x_out, x_pred, measurement, H, R, K1, K2, M_cache, m_tmp)
 end
 """
     update(x_pred, measurement, H, R=0)

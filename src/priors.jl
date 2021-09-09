@@ -16,20 +16,19 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     end
     A = kron(I(d), A_breve)
     @assert istriu(A)
-    A = UpperTriangular(A)
+    # A = UpperTriangular(A)
 
     # Make Q
     Q_breve = zeros(elType, q+1, q+1)
     @fastmath _transdiff_ibm_element(row::Int, col::Int) =
         one(elType) / (2 * q + 1 - row - col)
     @simd ivdep for col in 0:q
-        @simd ivdep for row in col:q
+        @simd ivdep for row in 0:q
             val = _transdiff_ibm_element(row, col)
-            @inbounds Q_breve[1 + col, 1 + row] = val
             @inbounds Q_breve[1 + row, 1 + col] = val
         end
     end
-    QL_breve = cholesky(Q_breve).L
+    QL_breve = cholesky!(Q_breve).L
     QL = kron(I(d), QL_breve)
     Q = SRMatrix(QL)
 
