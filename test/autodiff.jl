@@ -1,7 +1,7 @@
 using ProbNumDiffEq
 using Test
 using LinearAlgebra
-using ForwardDiff, Zygote, ReverseDiff
+using FiniteDiff, ForwardDiff, Zygote, ReverseDiff
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
@@ -20,12 +20,12 @@ function startval_to_loss(u0)
     return norm(sol.u[end])  # Dummy loss
 end
 
-dldp = [0.026680212891877435, -0.028019989130281753, 0.3169977494388167, 0.6749351039218744]
-dldu0 = [0.6500925873857853, -0.004812245513746423]
+dldp = FiniteDiff.finite_difference_gradient(param_to_loss, prob.p)
+dldu0 = FiniteDiff.finite_difference_gradient(startval_to_loss, prob.u0)
 
 @testset "ForwardDiff.jl" begin
-    @test ForwardDiff.gradient(param_to_loss, prob.p) ≈ dldp
-    @test ForwardDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0 rtol=1e-7
+    @test ForwardDiff.gradient(param_to_loss, prob.p) ≈ dldp rtol=1e-4
+    @test ForwardDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0 rtol=5e-4
 end
 
 @testset "ReverseDiff.jl" begin
