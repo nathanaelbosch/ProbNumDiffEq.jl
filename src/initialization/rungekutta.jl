@@ -24,7 +24,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
                 )
 
     # Initialize on u0
-    condition_on!(x, Proj(0), u, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
 
     # Initialize on du0
     if isinplace(f)
@@ -32,7 +32,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     else
         du .= f(u, p, t)
     end
-    condition_on!(x, Proj(1), du, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q<2 return end
 
@@ -54,12 +54,13 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
             ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
         end
     end
-    condition_on!(x, Proj(2), ddu * du + dfdt, m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(2), ddu * view(du, :) + view(dfdt, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q<3 return end
 
     # Filter & smooth to fit these values!
-    rk_init_improve(integ, cache, sol.t, sol.u, dt)
+    us = [view(u, :) for u in sol.u]
+    rk_init_improve(integ, cache, sol.t, us, dt)
 
 end
 

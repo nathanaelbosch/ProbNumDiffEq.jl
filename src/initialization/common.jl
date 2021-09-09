@@ -14,15 +14,12 @@ function iip_to_oop(f!)
     end
     return f
 end
-
-"""To handle matrix-valued vector fields"""
-function f_to_vector_valued(f, u)
-    u_template = copy(u)
-    function new_f(u, p, t)
-        du = f(reshape(u, size(u_template)), p, t)
-        return du[:]
+function oop_to_iip(f)
+    function f!(du, u, p, t)
+        du .= f(u, p, t)
+        return nothing
     end
-    return new_f
+    return f!
 end
 
 """Basically an Kalman update"""
