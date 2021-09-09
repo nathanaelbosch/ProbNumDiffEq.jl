@@ -119,7 +119,12 @@ function OrdinaryDiffEq.alg_cache(
     C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
     covmatcache = similar(G)
 
-    diffmodel = alg.diffusionmodel
+    diffmodel = alg.diffusionmodel == :dynamic ? DynamicDiffusion() :
+        alg.diffusionmodel == :fixed ? FixedDiffusion() :
+        alg.diffusionmodel == :dynamicMV ? MVDynamicDiffusion() :
+        alg.diffusionmodel == :fixedMV ? MVFixedDiffusion() :
+        error("The specified diffusion could not be recognized! Use e.g. `:dynamic`.")
+
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
 
     Ah, Qh = copy(A), copy(Q)
