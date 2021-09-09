@@ -122,7 +122,8 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     K1 = zeros(D, d)
     K2 = zeros(D, d)
     M_cache = zeros(D, D)
-    return update!(x_out, x_pred, measurement, H, R, K1, K2, M_cache)
+    m_tmp = copy(measurement)
+    return update!(x_out, x_pred, measurement, H, R, K1, K2, M_cache, m_tmp)
 end
 """
     update(x_pred, measurement, H, R=0)
