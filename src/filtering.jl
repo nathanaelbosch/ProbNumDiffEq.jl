@@ -40,16 +40,19 @@ function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
     chol = cholesky!(Symmetric(M), check=false)
 
     if issuccess(chol)
-        copy!(x_out.Σ.squareroot, chol.U')
-        mul!(x_out.Σ.mat, chol.U', chol.U)
+        QL = Matrix(chol.U)'
+        copy!(x_out.Σ.squareroot, QL)
+        _matmul!(x_out.Σ.mat, QL, QL')
     elseif eltype(L) <: Union{Float16, Float32, Float64}
         Q = lq!(L)
-        copy!(x_out.Σ.squareroot, Q.L)
-        mul!(x_out.Σ.mat, Q.L, Q.L')
+        QL = Q.L
+        copy!(x_out.Σ.squareroot, QL)
+        _matmul!(x_out.Σ.mat, QL, QL')
     else
         Q = qr(L')
-        copy!(x_out.Σ.squareroot, Q.R')
-        mul!(x_out.Σ.mat, Q.R', Q.R)
+        QL = Q.R'
+        copy!(x_out.Σ.squareroot, QL)
+        _matmul!(x_out.Σ.mat, QL, QL')
     end
     return x_out.Σ
 end

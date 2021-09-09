@@ -75,7 +75,8 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     z = measurement.μ
     HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
     if HQH.mat isa Diagonal
-        σ² = dot(z ./ HQH.mat.diag, z) / d
+        m_tmp.μ .= z ./ HQH.mat.diag
+        σ² = dot(m_tmp.μ, z) / d
         return σ², σ²
     else
         C = cholesky!(HQH.mat)

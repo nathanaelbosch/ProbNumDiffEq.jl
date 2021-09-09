@@ -22,7 +22,6 @@ function smooth_all!(integ)
         mul!(x_tmp, P, x[i])
         mul!(x_tmp2, P, x[i+1])
         smooth!(x_tmp, x_tmp2, A, Q, integ, diffusions[i])
-        @assert !(any(isnan.(x_tmp.μ)) || any(isnan.(x_tmp.Σ))) "NaNs after smoothing"
         mul!(x[i], PI, x_tmp)
     end
 end
@@ -40,37 +39,41 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
     predict_cov!(x_pred, x_curr, Ah, Qh, C1, diffusion)
 
     # Smoothing
-    P_p = x_pred.Σ
-    P_p_s_inv = inv(LowerTriangular(P_p.squareroot))
-    P_p_inv = mul!(x_pred.Σ.mat, P_p_s_inv', P_p_s_inv)
+    # TODO Change the following to `_matmul!`
     # G = x_curr.Σ * Ah' * P_p_inv
-    G = _matmul!(G2, mul!(G1, x_curr.Σ, Ah'), P_p_inv)
+    P_p_chol = Cholesky(x_pred.Σ.squareroot, :L, 0)
+    G = rdiv!(_matmul!(G1, x_curr.Σ.mat, Ah'), P_p_chol)
+
     x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
 
     # Joseph-Form:
     M, L = C2.mat, C2.squareroot
     D = length(x_pred.μ)
-    _matmul!(view(L, 1:D, 1:D), (I-G*Ah), x_curr.Σ.squareroot)
-    mul!(view(L, 1:D, D+1:2D), G, sqrt.(diffusion) * Qh.squareroot)
+
+    _matmul!(G2, G, Ah)
+    copy!(view(L, 1:D, 1:D), x_curr.Σ.squareroot)
+    _matmul!(view(L, 1:D, 1:D), G2, x_curr.Σ.squareroot, -1.0, 1.0)
+
+    _matmul!(view(L, 1:D, D+1:2D), _matmul!(G2, G, sqrt.(diffusion)), Qh.squareroot)
     _matmul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.squareroot)
 
-    _matmul!(M, L, L')
-    chol = cholesky!(Symmetric(M), check=false)
+    # _matmul!(M, L, L')
+    # chol = cholesky!(Symmetric(M), check=false)
 
-    if issuccess(chol)
+    if false && issuccess(chol)
         copy!(x_curr.Σ.squareroot, chol.U')
         mul!(x_curr.Σ.mat, chol.U', chol.U)
     elseif eltype(L) <: Union{Float16, Float32, Float64}
         Q = lq!(L)
-        copy!(x_curr.Σ.squareroot, Q.L)
-        mul!(x_curr.Σ.mat, Q.L, Q.L')
+        QL = Q.L
+        copy!(x_curr.Σ.squareroot, QL)
+        _matmul!(x_curr.Σ.mat, QL, QL')
     else
         Q = qr(L')
-        copy!(x_curr.Σ.squareroot, Q.R')
-        mul!(x_curr.Σ.mat, Q.R', Q.R)
+        QL = Q.R'
+        copy!(x_curr.Σ.squareroot, QL)
+        _matmul!(x_curr.Σ.mat, QL, QL')
     end
-
-    assert_nonnegative_diagonal(x_curr.Σ)
 
     return nothing
 end
