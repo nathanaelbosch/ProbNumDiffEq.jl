@@ -23,7 +23,7 @@ for (prob, probname) in [
         for Alg in (EK0, EK1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             init in [TaylorModeInit(), RungeKuttaInit()],
-            q in [1, 3, 5]
+            q in [2, 3, 5]
 
             if Alg == EK1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
@@ -53,7 +53,7 @@ for (prob, probname) in [
         for Alg in (EK0, EK1),
             diffusion in [:fixed, :dynamic, :fixedMAP, :fixedMV, :dynamicMV],
             init in [TaylorModeInit(), RungeKuttaInit()],
-            q in [2, 4, 6]
+            q in [2, 3, 5]
 
             if Alg == EK1 && diffusion in (:fixedMV, :dynamicMV) continue end
 
