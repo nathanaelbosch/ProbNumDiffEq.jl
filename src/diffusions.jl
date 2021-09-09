@@ -78,7 +78,9 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
         σ² = dot(z ./ HQH.mat.diag, z) / d
         return σ², σ²
     else
-        σ² = z' * (Symmetric(HQH.mat) \ z) / d
+        C = cholesky!(HQH.mat)
+        e = ldiv!(m_tmp.μ, C, z)
+        σ² = dot(z, e) / d
         return σ², σ²
     end
 end
