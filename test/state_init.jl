@@ -32,20 +32,21 @@ ddddddu(t) = [a^6*u0[1] * exp(a*t), (b)^6 * u0[2] * exp(b*t)]
 true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddddddu(t0)]
 
 
-@testset "OOP state init" begin
-    dfs = ProbNumDiffEq.taylormode_get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
-    @test length(dfs) == q+1
-    @test true_init_states ≈ vcat(dfs...)
-end
+@testset "Taylormode initialization" begin
+    @testset "OOP" begin
+        dfs = ProbNumDiffEq.taylormode_get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
+        @test length(dfs) == q+1
+        @test true_init_states ≈ vcat(dfs...)
+    end
 
+    @testset "IIP" begin
+        f!(du, u, p, t) = (du .= f(u, p, t))
+        prob = ODEProblem(f!, u0, tspan)
 
-@testset "IIP state init" begin
-    f!(du, u, p, t) = (du .= f(u, p, t))
-    prob = ODEProblem(f!, u0, tspan)
-
-    dfs = ProbNumDiffEq.taylormode_get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
-    @test length(dfs) == q+1
-    @test true_init_states ≈ vcat(dfs...)
+        dfs = ProbNumDiffEq.taylormode_get_derivatives(prob.u0, prob.f, prob.p, prob.tspan[1], q)
+        @test length(dfs) == q+1
+        @test true_init_states ≈ vcat(dfs...)
+    end
 end
 
 
@@ -57,33 +58,40 @@ end
     prob = prob_ode_fitzhughnagumo
     d = length(prob.u0)
 
-    integ = init(prob, EK0(order=8));
-    tm_init = integ.cache.x.μ
+    integ1 = init(prob, EK0(order=8));
+    tm_init = integ1.cache.x.μ
+    Proj1 = ProbNumDiffEq.projection(integ1.cache.d, integ1.cache.q)
 
     @testset "Order $o" for o in (3, 4, 5, 6, 7)
-        integ = init(prob, EK0(order=o, initialization=RungeKuttaInit()));
-        rk_init = integ.cache.x.μ
+        integ2 = init(prob, EK0(order=o, initialization=RungeKuttaInit()));
+        rk_init = integ2.cache.x.μ
+        Proj2 = ProbNumDiffEq.projection(integ2.cache.d, integ2.cache.q)
+
+        # @info "how do things look?" tm_init rk_init
+        # error()
 
         # These are fit via the initial values + autodiff, and should be good
-        @test tm_init[1:d] ≈ rk_init[1:d]
-        @test tm_init[d+1:2d] ≈ rk_init[d+1:2d]
-        (o > 1) && @test tm_init[2d+1:3d] ≈ rk_init[2d+1:3d]
+        @test Proj1(0) * tm_init ≈ Proj2(0) * rk_init
+        @test Proj1(1) * tm_init ≈ Proj2(1) * rk_init
+        (o > 1) && @test Proj1(2) * tm_init ≈ Proj2(2) * rk_init
 
-        # Test if the others are correct, up to order 5
-        (5 > o > 2) && @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=1e-2
-        (o == 5) && @test tm_init[3d+1:4d] ≈ rk_init[3d+1:4d] rtol=6e-1
-        (5 > o > 3) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-2
-        (o == 5) && @test tm_init[4d+1:5d] ≈ rk_init[4d+1:5d] rtol=1e-2
-        (o == 5) && @test tm_init[5d+1:6d] ≈ rk_init[5d+1:6d] rtol=8e-1
+        # # Test if the others are correct, up to order 5
+        (5 > o > 2) && @test Proj1(3) * tm_init ≈ Proj2(3) * rk_init rtol=1e-2
+        (5 > o > 3) && @test Proj1(4) * tm_init ≈ Proj2(4) * rk_init rtol=1e-2
+        # (o == 5) && @test Proj1(3) * tm_init ≈ Proj2(3) * rk_init rtol=6e-1
+        # (o == 5) && @test Proj1(4) * tm_init ≈ Proj2(4) * rk_init rtol=2e-2
+        # (o == 5) && @test Proj1(5) * tm_init ≈ Proj2(5) * rk_init rtol=8e-1
         # 8e-1 is only because of macOS, on linux this test should be much tighter
 
 
-        # Test if the covariance reflects the true error
-        Cs = integ.cache.x.Σ.squareroot[3d+1:end, 3d+1:end]
-        err = (rk_init .- tm_init[1:length(rk_init)])[3d+1:end]
-        whitened_err = Cs \ err
-        # `whitened_err` should be standard gaussian; so, let's check that they're small
-        @test all(abs.(whitened_err) .< 4e-1)
+        # Test if the covariance covers the true error
+        for i in 3:o
+            err = (Proj2(i) * rk_init .- Proj1(i) * tm_init)
+            C = ProbNumDiffEq.X_A_Xt(integ2.cache.x.Σ, Proj2(i))
+            @assert isdiag(C)
+            whitened_err = err ./ sqrt.(diag(C.mat))
+            @test all(abs.(whitened_err) .< 4e-1)
+        end
 
     end
 end
