@@ -91,16 +91,16 @@ See also: [`predict`](@ref)
 function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
                  H::AbstractMatrix, R,
                  K1::AbstractMatrix, K2::AbstractMatrix,
-                 M_cache::AbstractMatrix)
+                 M_cache::AbstractMatrix, m_tmp)
     @assert iszero(R)
-    z, S = measurement.μ, measurement.Σ
+    z, S = measurement.μ, copy!(m_tmp.Σ, measurement.Σ)
     m_p, P_p = x_pred.μ, x_pred.Σ
     D = length(m_p)
 
-    S_inv = inv(S)
-    # K = P_p * H' * S_inv
-    K1 = _matmul!(K1, Matrix(P_p), H')
-    K = _matmul!(K2, K1, S_inv)
+    # K = P_p * H' / S
+    S_chol = cholesky!(S.mat)
+    K = _matmul!(K1, Matrix(P_p), H')
+    rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
