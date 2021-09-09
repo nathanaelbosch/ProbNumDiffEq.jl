@@ -149,7 +149,7 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
 
         integ.destats.njacs += 1
         H .= E1
-        _matmul!(H, ddu, E0, -1, 1)
+        _matmul!(H, ddu, E0, -1.0, 1.0)
     else
         # H .= E1 # This is already the case!
     end

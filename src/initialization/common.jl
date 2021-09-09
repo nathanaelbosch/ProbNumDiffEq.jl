@@ -36,11 +36,11 @@ function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
     Kcache2 .= Kcache ./ S.diag'
     K = Kcache2
 
-    _matmul!(x.μ, K, data - z, 1, 1)
+    _matmul!(x.μ, K, data - z, 1.0, 1.0)
     # x.μ .+= K*(data - z)
 
     D = length(x.μ)
-    _matmul!(Mcache, K, H, -1, 0)
+    _matmul!(Mcache, K, H, -1.0, 0.0)
     @inbounds @simd ivdep for i in 1:D
         Mcache[i, i] += 1
     end
