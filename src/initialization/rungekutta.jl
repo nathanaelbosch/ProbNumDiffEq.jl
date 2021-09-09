@@ -89,7 +89,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
         update!(x_filt, x_pred, measurement, H, 0,
-                cache.K1, cache.K2, cache.x_tmp2.Σ.mat)
+                cache.K1, cache.K2, cache.x_tmp2.Σ.mat, cache.m_tmp)
         push!(filts, copy(x_filt))
 
         x = x_filt
