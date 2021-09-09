@@ -5,63 +5,8 @@
     ibm(d::Integer, q::Integer, elType=typeof(1.0))
 
 Generate the discrete dynamics for a q-IBM model. INCLUDES AUTOMATIC PRECONDITIONING!
-
-Careful: Dimensions are ordered differently than in `probnum`!"""
-function ibm_old(d::Integer, q::Integer, elType=typeof(1.0))
-
-    A_base = diagm(0=>ones(elType, d*(q+1)))
-    Q_base = zeros(elType, d*(q+1), d*(q+1))
-
-    @fastmath function A!(A::AbstractMatrix, h::Real)
-        # Assumes that A comes from a previous computation => zeros and one-diag
-        val = one(h)
-        for i in 1:q
-            val = val / i
-            for j in 1:d*(q+1-i)
-                @inbounds A[j,j+(d*i)] = val
-            end
-        end
-    end
-    A!(A_base, one(elType))
-    @assert istriu(A_base)
-    A_base = UpperTriangular(A_base)
-
-    @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::Real)
-        idx = 2 * q + 1 - row - col
-        if q > 10 || h isa BigFloat
-            fact_rw = factorial(big(q - row))
-            fact_cl = factorial(big(q - col))
-            return h / (idx * fact_rw * fact_cl)
-        else
-            fact_rw = factorial(q - row)
-            fact_cl = factorial(q - col)
-            return h / (idx * fact_rw * fact_cl)
-        end
-    end
-    @fastmath function Q!(Q::AbstractMatrix, h::Real, σ²::Real=1.0)
-        val = one(h)
-        @simd for col in 0:q
-            @simd for row in col:q
-                val = _transdiff_ibm_element(row, col, h) * σ²
-                @simd for i in 0:d-1
-                    @inbounds Q[1 + col*d + i,1 + row*d + i] = val
-                    @inbounds Q[1 + row*d + i,1 + col*d + i] = val
-                end
-            end
-        end
-    end
-
-    Q!(Q_base, one(elType))
-    QL = cholesky(Q_base).L
-    Q_psd = SRMatrix(QL)
-
-    return A_base, Q_psd
-end
-
-
+"""
 function ibm(d::Integer, q::Integer, elType=typeof(1.0))
-    D = d*(q+1)
-
     # Make A
     A_breve = zeros(elType, q+1, q+1)
     @simd ivdep for j in 1:q+1
@@ -77,8 +22,8 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     Q_breve = zeros(elType, q+1, q+1)
     @fastmath _transdiff_ibm_element(row::Int, col::Int) =
         one(elType) / (2 * q + 1 - row - col)
-    @simd for col in 0:q
-        @simd for row in col:q
+    @simd ivdep for col in 0:q
+        @simd ivdep for row in col:q
             val = _transdiff_ibm_element(row, col)
             @inbounds Q_breve[1 + col, 1 + row] = val
             @inbounds Q_breve[1 + row, 1 + col] = val
@@ -100,8 +45,10 @@ function vanilla_ibm(d::Integer, q::Integer)
         val = one(h)
         for i in 1:q
             val = val * h / i
-            for j in 1:d*(q+1-i)
-                @inbounds A[j,j+(d*i)] = val
+            for k in 0:d-1
+                for j in 1:q+1-i
+                    @inbounds A[j + k*(q+1), j + k*(q+1) + i] = val
+                end
             end
         end
     end
@@ -118,8 +65,8 @@ function vanilla_ibm(d::Integer, q::Integer)
             @simd for row in col:q
                 val = _transdiff_ibm_element(row, col, h) * σ²
                 @simd for i in 0:d-1
-                    @inbounds Q[1 + col*d + i,1 + row*d + i] = val
-                    @inbounds Q[1 + row*d + i,1 + col*d + i] = val
+                    @inbounds Q[1 + col + i*(q+1),1 + row + i*(q+1)] = val
+                    @inbounds Q[1 + row + i*(q+1),1 + col + i*(q+1)] = val
                 end
             end
         end
