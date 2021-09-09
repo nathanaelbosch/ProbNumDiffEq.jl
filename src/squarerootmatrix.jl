@@ -6,12 +6,11 @@ future, but having this here allowed for easier development.
 """
 
 
-abstract type AbstractSquarerootMatrix{T<:Real} <: AbstractMatrix{T} end
-struct SquarerootMatrix{T<:Real, S<:AbstractMatrix, M<:AbstractMatrix} <: AbstractSquarerootMatrix{T}
+struct SquarerootMatrix{T<:Real, S<:AbstractMatrix{T}, M<:AbstractMatrix{T}} <: AbstractMatrix{T}
     squareroot::S
     mat::M
 end
-SquarerootMatrix(S::AbstractMatrix{T}, mat::AbstractMatrix) where {T} =
+SquarerootMatrix(S::AbstractMatrix{T}, mat::AbstractMatrix{T}) where {T} =
     SquarerootMatrix{T, typeof(S), typeof(mat)}(S, mat)
 SquarerootMatrix(S) = SquarerootMatrix(S, S*S')
 
