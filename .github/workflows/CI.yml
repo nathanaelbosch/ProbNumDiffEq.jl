@@ -10,17 +10,13 @@ jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
     runs-on: ${{ matrix.os }}
-    continue-on-error: ${{ matrix.julia-version == 'nightly' }}
     strategy:
       fail-fast: false
       matrix:
         version:
           - '1'
-          - 'nightly'
         os:
           - ubuntu-latest
-          - windows-latest
-          - macOS-latest
         arch:
           - x64
     steps:
@@ -40,11 +36,8 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
-        continue-on-error: ${{ matrix.version == 'nightly' }}
       - uses: julia-actions/julia-runtest@v1
-        continue-on-error: ${{ matrix.version == 'nightly' }}
       - uses: julia-actions/julia-processcoverage@v1
-        continue-on-error: ${{ matrix.version == 'nightly' }}
       - uses: codecov/codecov-action@v1
         with:
           file: lcov.info
@@ -55,7 +48,7 @@ jobs:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
         with:
-          version: '1.5'
+          version: '1'
       - run: |
           julia --project=docs -e '
             using Pkg
