@@ -122,6 +122,18 @@ function OrdinaryDiffEq.alg_cache(
     diffmodel = alg.diffusionmodel
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
 
+    Ah, Qh = copy(A), copy(Q)
+    u_pred = similar(u)
+    u_filt = similar(u)
+    tmp = similar(u)
+    x_pred = copy(x0)
+    x_filt = similar(x0)
+    x_tmp = similar(x0)
+    x_tmp2 = similar(x0)
+    m_tmp = similar(measurement)
+    K2 = similar(K)
+    G2 = similar(G)
+    err_tmp = similar(du)
     return GaussianODEFilterCache{
         typeof(R), typeof(Proj), typeof(SolProj),
         typeof(P), typeof(PI),
@@ -131,16 +143,16 @@ function OrdinaryDiffEq.alg_cache(
         typeof(C1),
     }(
         # Constants
-        d, q, A, Q, copy(A), copy(Q), diffmodel, R, Proj, SolProj,
+        d, q, A, Q, Ah, Qh, diffmodel, R, Proj, SolProj,
         P, PI,
         E0, E1, E2,
         # Mutable stuff
-        u, similar(u), similar(u), copy(u),
-        x0, copy(x0), similar(x0), similar(x0), similar(x0),
-        measurement, similar(measurement), pu_tmp,
-        H, du, ddu, K, similar(K), G, similar(G),
+        u, u_pred, u_filt, tmp,
+        x0, x_pred, x_filt, x_tmp, x_tmp2,
+        measurement, m_tmp, pu_tmp,
+        H, du, ddu, K, K2, G, G2,
         covmatcache, initdiff, initdiff,
-        similar(du),
+        err_tmp,
         zero(uEltypeNoUnits),
         C1, C2,
     )
