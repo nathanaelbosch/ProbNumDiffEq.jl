@@ -98,7 +98,7 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
     D = length(m_p)
 
     # K = P_p * H' / S
-    S_chol = cholesky!(S.mat)
+    S_chol = cholesky!(S)
     K = _matmul!(K1, Matrix(P_p), H')
     rdiv!(K, S_chol)
 

@@ -55,4 +55,5 @@ end
 Base.inv(M::SquarerootMatrix)= Base.inv(M.mat)
 LinearAlgebra.diag(M::SquarerootMatrix) = LinearAlgebra.diag(M.mat)
 LinearAlgebra.cholesky(M::SquarerootMatrix) = LinearAlgebra.cholesky(M.mat)
+LinearAlgebra.cholesky!(M::SquarerootMatrix) = LinearAlgebra.cholesky!(M.mat)
 LinearAlgebra.logdet(M::SquarerootMatrix) = LinearAlgebra.logdet(M.mat)
