@@ -40,7 +40,7 @@ function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
     # x.μ .+= K*(data - z)
 
     D = length(x.μ)
-    _matmul!(Mcache, K, H, -1.0, 0.0)
+    mul!(Mcache, K, H, -1.0, 0.0)
     @inbounds @simd ivdep for i in 1:D
         Mcache[i, i] += 1
     end
