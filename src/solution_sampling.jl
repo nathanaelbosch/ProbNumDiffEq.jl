@@ -17,15 +17,14 @@ function sample_states(sol::ProbODESolution, n::Int=1)
     sample_states(sol.t, sol.x_filt, sol.diffusions, sol.t, sol.interp, n)
 end
 function sample(sol::ProbODESolution, n::Int=1)
-    d = sol.interp.d
+    d, q = sol.interp.d, sol.interp.q
     sample_path = sample_states(sol, n)
-    return sample_path[:, 1:d, :]
+    return sample_path[:, 1:q+1:d*(q+1), :]
 end
 function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
     @assert length(diffusions)+1 == length(difftimes)
 
     @unpack A, Q, d, q = posterior
-    E0 = kron([i==1 ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
     D = d*(q+1)
 
     x = xs[end]
@@ -69,6 +68,6 @@ function dense_sample_states(sol::ProbODESolution, n::Int=1)
 end
 function dense_sample(sol::ProbODESolution, n::Int=1)
     samples, times = dense_sample_states(sol, n)
-    d = sol.interp.d
-    return samples[:, 1:d, :], times
+    d, q = sol.interp.d, sol.interp.q
+    return samples[:, 1:q+1:d*(q+1), :], times
 end
