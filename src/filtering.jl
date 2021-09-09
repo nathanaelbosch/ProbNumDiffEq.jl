@@ -34,8 +34,8 @@ function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
     M, L = cachemat.mat, cachemat.squareroot
     D, D = size(Qh.mat)
 
-    mul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
-    mul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
+    _matmul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
+    _matmul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
     _matmul!(M, L, L')
     chol = cholesky!(Symmetric(M), check=false)
 
