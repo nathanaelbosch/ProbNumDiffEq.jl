@@ -35,11 +35,22 @@ using ForwardDiff
 using Tullio
 import Octavian: matmul!
 # Define some fallbacks
-_matmul!(C::VecOrMat{T}, A::VecOrMat{T}, B::VecOrMat{T}) where {
+const OctavianCompatibleMatrices{T} = Union{
+    VecOrMat{T},
+    Adjoint{T, Matrix{T}},
+    Adjoint{T, Vector{T}},
+    SubArray{T, 2, Matrix{T}},
+    SubArray{T, 1, Vector{T}},
+}
+_matmul!(C::OctavianCompatibleMatrices{T},
+         A::OctavianCompatibleMatrices{T},
+         B::OctavianCompatibleMatrices{T}) where {
     T <: Union{Bool, Float16, Float32, Float64,
                Int16, Int32, Int64, Int8, UInt16, UInt32, UInt64, UInt8}} =
                    matmul!(C, A, B)
-_matmul!(C::VecOrMat{T}, A::VecOrMat{T}, B::VecOrMat{T}, a::T, b::T) where {T <: Union{
+_matmul!(C::OctavianCompatibleMatrices{T},
+         A::OctavianCompatibleMatrices{T},
+         B::OctavianCompatibleMatrices{T}, a::T, b::T) where {T <: Union{
              Bool, Float16, Float32, Float64,
              Int16, Int32, Int64, Int8, UInt16, UInt32, UInt64, UInt8}} =
                  matmul!(C, A, B, a, b)
