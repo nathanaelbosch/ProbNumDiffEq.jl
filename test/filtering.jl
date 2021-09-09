@@ -11,11 +11,11 @@ using LinearAlgebra
     # Setup
     d = 5
     m = rand(d)
-    L_p = LowerTriangular(rand(d,d))
+    L_p = Matrix(LowerTriangular(rand(d,d)))
     P = L_p*L_p'
 
     A = rand(d,d)
-    L_Q = LowerTriangular(rand(d,d))
+    L_Q = Matrix(LowerTriangular(rand(d,d)))
     Q = L_Q*L_Q'
 
     # PREDICT
@@ -53,7 +53,7 @@ end
     # Setup
     d = 5
     m_p = rand(d)
-    L_P_p = LowerTriangular(rand(d,d))
+    L_P_p = Matrix(LowerTriangular(rand(d,d)))
     P_p = L_P_p * L_P_p'
 
     # Measure
@@ -95,11 +95,11 @@ end
     # Setup
     d = 5
     m, m_s = rand(d), rand(d)
-    L_P, L_P_s = LowerTriangular(rand(d,d)), LowerTriangular(rand(d,d))
+    L_P, L_P_s = Matrix(LowerTriangular(rand(d,d))), Matrix(LowerTriangular(rand(d,d)))
     P, P_s = L_P*L_P', L_P_s*L_P_s'
 
     A = rand(d,d)
-    L_Q = LowerTriangular(rand(d,d))
+    L_Q = Matrix(LowerTriangular(rand(d,d)))
     Q = L_Q*L_Q'
     Q_SR = SRMatrix(L_Q)
 
