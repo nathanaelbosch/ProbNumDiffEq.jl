@@ -86,7 +86,7 @@ end
 
 struct MVDynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::MVDynamicDiffusion, d, q, Eltype) =
-    kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
+    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q+1)))
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack d, q, R, P, PI, E1 = integ.cache
     @unpack H, Qh, measurement, m_tmp = integ.cache
@@ -107,7 +107,7 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 
-    Σ_out = kron(I(q+1), Σ)
+    Σ_out = kron(Σ, I(q+1))
     @assert isdiag(Σ_out)
     # @info "MVDynamic diffusion" Σ Σ_out
     return Σ_out, Σ_out
@@ -116,7 +116,7 @@ end
 
 struct MVFixedDiffusion <: AbstractStaticDiffusion end
 initial_diffusion(diffusion::MVFixedDiffusion, d, q, Eltype) =
-    kron(Diagonal(ones(Eltype, q+1)), Diagonal(ones(Eltype, d)))
+    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q+1)))
 function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack d, q, R, P, PI, E1 = integ.cache
     @unpack measurement, H = integ.cache
@@ -136,7 +136,7 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
-    Σ_out = kron(I(q+1), Σ)
+    Σ_out = kron(Σ, I(q+1))
     @assert isdiag(Σ_out)
     # @info "MV-MLE-Diffusion" v S Σ Σ_out
 

@@ -11,8 +11,6 @@ h = rand()
 
 
 @testset "Test vanilla (ie. non-preconditioned) IBM (d=2,q=2)" begin
-    # Tests are broken, because there is no option right now to get A and Q without
-    # the preconditioning
     d, q = 2, 2
 
     A!, Q! = ProbNumDiffEq.vanilla_ibm(d, q)
@@ -22,41 +20,47 @@ h = rand()
     Q!(Qh, h, σ^2)
 
 
-    AH_22_IBM = [1 0 h 0 h^2/2 0;
-                 0 1 0 h 0 h^2/2;
-                 0 0 1 0 h 0;
-                 0 0 0 1 0 h;
-                 0 0 0 0 1 0;
+    AH_22_IBM = [1 h h^2/2 0 0 0;
+                 0 1 h 0 0 0;
+                 0 0 1 0 0 0;
+                 0 0 0 1 h h^2/2;
+                 0 0 0 0 1 h;
                  0 0 0 0 0 1]
     @test AH_22_IBM ≈ Ah
 
-    QH_22_IBM = σ^2 .* [h^5/20  0       h^4/8  0      h^3/6  0;
-                        0       h^5/20  0      h^4/8  0      h^3/6;
-                        h^4/8   0       h^3/3  0      h^2/2  0;
-                        0       h^4/8   0      h^3/3  0      h^2/2;
-                        h^3/6   0       h^2/2  0      h      0;
-                        0       h^3/6   0      h^2/2  0      h]
+    QH_22_IBM = σ^2 .* [h^5/20  h^4/8   h^3/6  0      0      0;
+                        h^4/8   h^3/3   h^2/2  0      0      0;
+                        h^3/6   h^2/2   h      0      0      0;
+                        0       0       0      h^5/20 h^4/8  h^3/6;
+                        0       0       0      h^4/8  h^3/3  h^2/2;
+                        0       0       0      h^3/6  h^2/2  h]
     @test QH_22_IBM ≈ Qh
 end
 
 
 
 @testset "Test IBM with preconditioning (d=1,q=2)" begin
-    d, q = 1, 2
+    d, q = 2, 2
 
     A, Q = ProbNumDiffEq.ibm(d, q)
     Qh = Q * σ^2
 
-    AH_21_PRE = [1  2  1
-                 0  1  1
-                 0  0  1]
+    AH_22_PRE = [1 2 1 0 0 0
+                 0 1 1 0 0 0
+                 0 0 1 0 0 0
+                 0 0 0 1 2 1
+                 0 0 0 0 1 1
+                 0 0 0 0 0 1]
 
-    QH_21_PRE = σ^2 * [1/5 1/4 1/3
-                       1/4  1/3 1/2
-                       1/3  1/2 1]
+    QH_22_PRE = σ^2 * [1/5  1/4  1/3  0    0    0
+                       1/4  1/3  1/2  0    0    0
+                       1/3  1/2  1/1  0    0    0
+                       0    0    0    1/5  1/4  1/3
+                       0    0    0    1/4  1/3  1/2
+                       0    0    0    1/3  1/2  1/1]
 
-    @test AH_21_PRE ≈ A
-    @test QH_21_PRE ≈ Qh
+    @test AH_22_PRE ≈ A
+    @test QH_22_PRE ≈ Qh
 end
 
 
