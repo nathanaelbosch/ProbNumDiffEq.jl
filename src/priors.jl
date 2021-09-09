@@ -16,7 +16,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     end
     A = kron(I(d), A_breve)
     @assert istriu(A)
-    A = UpperTriangular(A)
+    # A = UpperTriangular(A)
 
     # Make Q
     Q_breve = zeros(elType, q+1, q+1)
