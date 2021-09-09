@@ -92,7 +92,8 @@ function OrdinaryDiffEq.alg_cache(
 
     A, Q = ibm(d, q, uElType)
 
-    x0 = Gaussian(zeros(uElType, D), SRMatrix(Matrix(uElType(1.0)*I, D, D)))
+    x0 = Gaussian(zeros(uElType, D),
+                  SRMatrix(Matrix(uElType(1.0)*I, D, D), Matrix(uElType(1.0)*I, D, D)))
 
     # Measurement model
     R = zeros(uElType, d, d)
@@ -106,7 +107,7 @@ function OrdinaryDiffEq.alg_cache(
     v = similar(h)
     S = alg isa EK0 ?
         SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D))
+        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
     measurement = Gaussian(v, S)
     pu_tmp =
         f isa DynamicalODEFunction ?
@@ -114,8 +115,8 @@ function OrdinaryDiffEq.alg_cache(
         similar(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
-    C1 = SRMatrix(zeros(uElType, D, 2D))
-    C2 = SRMatrix(zeros(uElType, D, 3D))
+    C1 = SRMatrix(zeros(uElType, D, 2D), zeros(uElType, D, D))
+    C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
     covmatcache = similar(G)
 
     diffusion_models = Dict(
