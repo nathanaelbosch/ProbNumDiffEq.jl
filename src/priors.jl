@@ -21,7 +21,7 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     # Make Q
     Q_breve = zeros(elType, q+1, q+1)
     @fastmath _transdiff_ibm_element(row::Int, col::Int) =
-        1 / (2 * q + 1 - row - col)
+        one(elType) / (2 * q + 1 - row - col)
     @simd ivdep for col in 0:q
         @simd ivdep for row in 0:q
             val = _transdiff_ibm_element(row, col)
