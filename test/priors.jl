@@ -34,7 +34,6 @@ h = rand()
                         0       0       0      h^5/20 h^4/8  h^3/6;
                         0       0       0      h^4/8  h^3/3  h^2/2;
                         0       0       0      h^3/6  h^2/2  h]
-    @info "??" QH_22_IBM Qh
     @test QH_22_IBM ≈ Qh
 end
 
