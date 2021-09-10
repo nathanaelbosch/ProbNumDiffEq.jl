@@ -39,7 +39,6 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
     predict_cov!(x_pred, x_curr, Ah, Qh, C1, diffusion)
 
     # Smoothing
-    # TODO Change the following to `_matmul!`
     # G = x_curr.Σ * Ah' * P_p_inv
     P_p_chol = Cholesky(x_pred.Σ.squareroot, :L, 0)
     G = rdiv!(_matmul!(G1, x_curr.Σ.mat, Ah'), P_p_chol)
