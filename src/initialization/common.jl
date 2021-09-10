@@ -30,10 +30,9 @@ function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
     _matmul!(z, H, x.μ)
     X_A_Xt!(S, x.Σ, H)
     @assert isdiag(S)
-    S = Diagonal(S)
 
     _matmul!(Kcache, x.Σ.mat, H')
-    Kcache2 .= Kcache ./ S.diag'
+    Kcache2 .= Kcache ./ diag(S)'
     K = Kcache2
 
     _matmul!(x.μ, K, data - z, 1.0, 1.0)
