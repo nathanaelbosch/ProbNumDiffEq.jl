@@ -105,7 +105,6 @@ include("preconditioning.jl")
 
 # Utils
 include("jacobian.jl")
-include("numerics_tricks.jl")
 
 # Iterated Extended Kalman Smoother
 include("ieks.jl")
