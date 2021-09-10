@@ -60,12 +60,12 @@ end
 
     integ1 = init(prob, EK0(order=8));
     tm_init = integ1.cache.x.μ
-    Proj1 = ProbNumDiffEq.projection(integ1.cache.d, integ1.cache.q)
+    Proj1 = integ1.cache.Proj
 
-    @testset "Order $o" for o in (3, 4, 5, 6, 7)
+    @testset "Order $o" for o in (3, 4, 5)
         integ2 = init(prob, EK0(order=o, initialization=RungeKuttaInit()));
         rk_init = integ2.cache.x.μ
-        Proj2 = ProbNumDiffEq.projection(integ2.cache.d, integ2.cache.q)
+        Proj2 = integ2.cache.Proj
 
         # @info "how do things look?" tm_init rk_init
         # error()
@@ -86,7 +86,9 @@ end
 
         # Test if the covariance covers the true error
         for i in 3:o
-            err = (Proj2(i) * rk_init .- Proj1(i) * tm_init)
+            _rk = Proj2(i) * rk_init
+            _tm = Proj1(i) * tm_init
+            err = _rk .- _tm
             C = ProbNumDiffEq.X_A_Xt(integ2.cache.x.Σ, Proj2(i))
             @assert isdiag(C)
             whitened_err = err ./ sqrt.(diag(C.mat))
