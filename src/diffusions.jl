@@ -26,7 +26,7 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
 
     # diffusion_t = v' * inv(S) * v / d
     cholesky!(_S)
-    ldiv!(e, _S, z)
+    ldiv!(e, _S, v)
     diffusion_t = dot(v, e) / d
 
     if integ.success_iter == 0
