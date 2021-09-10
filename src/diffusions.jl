@@ -10,10 +10,12 @@ initial_diffusion(diffusion::AbstractDiffusion, d, q, Eltype) = one(Eltype)
 
 struct FixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::FixedDiffusion, integ)
-    @unpack d, measurement = integ.cache
+    @unpack d, measurement, m_tmp = integ.cache
     sol_diffusions = integ.sol.diffusions
 
     v, S = measurement.μ, measurement.Σ
+    e, _ = m_tmp.μ, m_tmp.Σ.mat
+    _S = copy!(m_tmp.Σ.mat, S.mat)
 
     if iszero(v)
         return zero(integ.cache.global_diffusion)
@@ -22,7 +24,10 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
         return Inf
     end
 
-    diffusion_t = v' * inv(S) * v / d
+    # diffusion_t = v' * inv(S) * v / d
+    cholesky!(_S)
+    ldiv!(e, _S, z)
+    diffusion_t = dot(v, e) / d
 
     if integ.success_iter == 0
         @assert length(sol_diffusions) == 0
