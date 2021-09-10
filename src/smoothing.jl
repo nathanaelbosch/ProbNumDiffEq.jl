@@ -59,20 +59,11 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
     # _matmul!(M, L, L')
     # chol = cholesky!(Symmetric(M), check=false)
 
-    if false && issuccess(chol)
-        copy!(x_curr.Σ.squareroot, chol.U')
-        mul!(x_curr.Σ.mat, chol.U', chol.U)
-    elseif eltype(L) <: Union{Float16, Float32, Float64}
-        Q = lq!(L)
-        QL = Q.L
-        copy!(x_curr.Σ.squareroot, QL)
-        _matmul!(x_curr.Σ.mat, QL, QL')
-    else
-        Q = qr(L')
-        QL = Q.R'
-        copy!(x_curr.Σ.squareroot, QL)
-        _matmul!(x_curr.Σ.mat, QL, QL')
-    end
+    QL = false && issuccess(chol) ? Matrix(chol.U)' :
+        eltype(L) <: Union{Float16, Float32, Float64} ? lq!(L).L :
+        qr(L').R'
+    copy!(x_curr.Σ.squareroot, QL)
+    _matmul!(x_curr.Σ.mat, QL, QL')
 
     return nothing
 end
