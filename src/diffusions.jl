@@ -73,14 +73,15 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     @unpack d, R, H, Qh, measurement, m_tmp = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
+    e, HQH = m_tmp.μ, m_tmp.Σ
+    X_A_Xt!(HQH, Qh, H)
     if HQH.mat isa Diagonal
-        m_tmp.μ .= z ./ HQH.mat.diag
-        σ² = dot(m_tmp.μ, z) / d
+        e .= z ./ HQH.mat.diag
+        σ² = dot(e, z) / d
         return σ², σ²
     else
         C = cholesky!(HQH.mat)
-        e = ldiv!(m_tmp.μ, C, z)
+        ldiv!(e, C, z)
         σ² = dot(z, e) / d
         return σ², σ²
     end
