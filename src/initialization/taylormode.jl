@@ -47,9 +47,7 @@ end
 """
 function taylormode_get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
     d = length(u[1, :])
-    Proj(deriv) =
-        deriv > q ? error("Projection called for non-modeled derivative") :
-        kron([i == (deriv + 1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
+    Proj = projection(d, q, eltype(u))
 
     f_oop(du, u, p, t) =
         !isinplace(f.f1) ? f.f1(du, u, p, t) :
