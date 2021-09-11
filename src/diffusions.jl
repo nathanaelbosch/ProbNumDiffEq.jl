@@ -10,10 +10,12 @@ initial_diffusion(diffusion::AbstractDiffusion, d, q, Eltype) = one(Eltype)
 
 struct FixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::FixedDiffusion, integ)
-    @unpack d, measurement = integ.cache
+    @unpack d, measurement, m_tmp = integ.cache
     sol_diffusions = integ.sol.diffusions
 
     v, S = measurement.μ, measurement.Σ
+    e, _ = m_tmp.μ, m_tmp.Σ.mat
+    _S = copy!(m_tmp.Σ.mat, S.mat)
 
     if iszero(v)
         return zero(integ.cache.global_diffusion)
@@ -22,7 +24,14 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
         return Inf
     end
 
-    diffusion_t = v' * inv(S) * v / d
+    # diffusion_t = v' * inv(S) * v / d
+    if _S isa Diagonal
+        e .= v ./ _S.diag
+    else
+        S_chol = cholesky!(_S)
+        ldiv!(e, S_chol, v)
+    end
+    diffusion_t = dot(v, e) / d
 
     if integ.success_iter == 0
         @assert length(sol_diffusions) == 0
@@ -73,13 +82,15 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     @unpack d, R, H, Qh, measurement, m_tmp = integ.cache
     # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
     z = measurement.μ
-    HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
+    e, HQH = m_tmp.μ, m_tmp.Σ
+    X_A_Xt!(HQH, Qh, H)
     if HQH.mat isa Diagonal
-        σ² = dot(z ./ HQH.mat.diag, z) / d
+        e .= z ./ HQH.mat.diag
+        σ² = dot(e, z) / d
         return σ², σ²
     else
         C = cholesky!(HQH.mat)
-        e = ldiv!(m_tmp.μ, C, z)
+        ldiv!(e, C, z)
         σ² = dot(z, e) / d
         return σ², σ²
     end

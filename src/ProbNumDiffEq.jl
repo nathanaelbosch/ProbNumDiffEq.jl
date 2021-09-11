@@ -54,7 +54,7 @@ _matmul!(C::AbstractMatrix{T}, A::Diagonal{T}, B::AbstractMatrix{T}
          ) where T <: OctavianCompatibleEltypes = (C .= A.diag .* B)
 _matmul!(C::Diagonal{T}, A::AbstractMatrix{T}, B::AbstractMatrix{T}
          ) where T <: OctavianCompatibleEltypes =
-             mul!(C, A, B)
+             @tullio C[i, i] = A[i,j]*B[j,i]
 
 
 # @reexport using PSDMatrices
@@ -105,7 +105,6 @@ include("preconditioning.jl")
 
 # Utils
 include("jacobian.jl")
-include("numerics_tricks.jl")
 
 # Iterated Extended Kalman Smoother
 include("ieks.jl")
