@@ -5,7 +5,7 @@ mutable struct IEKS{IT} <: AbstractEK
     diffusionmodel::Symbol
     smooth::Bool
     initialization::IT
-    linearize_at
+    linearize_at::Any
 end
 
 """
@@ -29,8 +29,13 @@ See also: [`EK0`](@ref), [`EK1`](@ref), [`solve_ieks`](@ref)
 # References:
 - F. Tronarp, S. Särkkä, and P. Hennig: **Bayesian ODE Solvers: The Maximum A Posteriori Estimate**
 """
-function IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic,
-              initialization=TaylorModeInit(), linearize_at=nothing)
+function IEKS(;
+    prior=:ibm,
+    order=1,
+    diffusionmodel=:dynamic,
+    initialization=TaylorModeInit(),
+    linearize_at=nothing,
+)
     if !isnothing(linearize_at)
         @assert linearize_at isa ProbODESolution
         @assert linearize_at.alg.prior == prior
@@ -42,7 +47,6 @@ function IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic,
     return IEKS(prior, order, diffusionmodel, true, initialization, linearize_at)
 end
 
-
 """
     solve_ieks(prob::AbstractODEProblem, alg::IEKS, args...; iterations=10, kwargs...)
 
@@ -53,8 +57,13 @@ passing `args...` and `kwargs...`.
 Currently, this method is very simplistic - it iterates for a fixed numer of times and does
 not use a stopping criterion.
 """
-function solve_ieks(prob::DiffEqBase.AbstractODEProblem, alg::IEKS, args...;
-                    iterations=10, kwargs...)
+function solve_ieks(
+    prob::DiffEqBase.AbstractODEProblem,
+    alg::IEKS,
+    args...;
+    iterations=10,
+    kwargs...,
+)
     sol = nothing
     for i in 1:iterations
         alg.linearize_at = sol

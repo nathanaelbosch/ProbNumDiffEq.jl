@@ -15,8 +15,11 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
-    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter,
-                                   mul!(cache.pu_tmp, cache.SolProj, cache.x))
+    return OrdinaryDiffEq.copyat_or_push!(
+        integ.sol.pu,
+        integ.saveiter,
+        mul!(cache.pu_tmp, cache.SolProj, cache.x),
+    )
 end
 
 """Perform a step
@@ -32,7 +35,11 @@ Basically consists of the following steps
 - Error estimation
 - Undo the coordinate change / Predonditioning
 """
-function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
+function OrdinaryDiffEq.perform_step!(
+    integ,
+    cache::GaussianODEFilterCache,
+    repeat_step=false,
+)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
@@ -66,8 +73,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         # Compute measurement covariance only now
         compute_measurement_covariance!(cache)
 
-    else  # Vanilla filtering order: Predict, measure, calibrate
-
+    else
         predict!(x_pred, x, Ah, Qh)
         _matmul!(u_pred, SolProj, x_pred.μ)
         evaluate_ode!(integ, x_pred, tnew)
@@ -84,18 +90,29 @@ function OrdinaryDiffEq.perform_step!(integ, cache::GaussianODEFilterCache, repe
         err_est_unscaled = estimate_errors(cache)
         if integ.f isa DynamicalODEFunction # second-order ODE
             DiffEqBase.calculate_residuals!(
-                err_tmp, dt * err_est_unscaled,
-                integ.u[1, :], u_pred[1, :],
-                integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+                err_tmp,
+                dt * err_est_unscaled,
+                integ.u[1, :],
+                u_pred[1, :],
+                integ.opts.abstol,
+                integ.opts.reltol,
+                integ.opts.internalnorm,
+                t,
+            )
         else # regular first-order ODE
             DiffEqBase.calculate_residuals!(
-                err_tmp, dt * err_est_unscaled,
-                integ.u, u_pred,
-                integ.opts.abstol, integ.opts.reltol, integ.opts.internalnorm, t)
+                err_tmp,
+                dt * err_est_unscaled,
+                integ.u,
+                u_pred,
+                integ.opts.abstol,
+                integ.opts.reltol,
+                integ.opts.internalnorm,
+                t,
+            )
         end
         integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
     end
-
 
     # If the step gets rejected, we don't even need to perform an update!
     reject = integ.opts.adaptive && integ.EEst >= one(integ.EEst)
@@ -135,8 +152,8 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
 
     # Cov
     if alg isa EK1 || alg isa IEKS
-        linearize_at = (alg isa IEKS && !isnothing(alg.linearize_at)) ?
-            alg.linearize_at(t).μ : u_pred
+        linearize_at =
+            (alg isa IEKS && !isnothing(alg.linearize_at)) ? alg.linearize_at(t).μ : u_pred
 
         # Jacobian is now computed either with the given jac, or ForwardDiff
         if !isnothing(f.jac)
@@ -176,7 +193,7 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
         du2 .= f.f1(view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     end
     integ.destats.nf += 1
-    z .= E2*x_pred.μ .- du2[:]
+    z .= E2 * x_pred.μ .- du2[:]
 
     # Cov
     if alg isa EK1
@@ -184,20 +201,33 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
 
         if isinplace(f)
             J0 = copy(ddu)
-            ForwardDiff.jacobian!(J0, (du2, u) -> f.f1(du2, view(u_pred, 1:d), u, p, t), du2,
-                                  u_pred[d+1:2d])
+            ForwardDiff.jacobian!(
+                J0,
+                (du2, u) -> f.f1(du2, view(u_pred, 1:d), u, p, t),
+                du2,
+                u_pred[d+1:2d],
+            )
 
             J1 = copy(ddu)
-            ForwardDiff.jacobian!(J1, (du2, du) -> f.f1(du2, du, view(u_pred, d+1:2d),
-                                                        p, t), du2,
-                                  u_pred[1:d])
+            ForwardDiff.jacobian!(
+                J1,
+                (du2, du) -> f.f1(du2, du, view(u_pred, d+1:2d), p, t),
+                du2,
+                u_pred[1:d],
+            )
 
             integ.destats.njacs += 2
 
             H .= E2 .- J0 * E0 .- J1 * E1
         else
-            J0 = ForwardDiff.jacobian((u) -> f.f1(view(u_pred, 1:d), u, p, t), u_pred[d+1:2d])
-            J1 = ForwardDiff.jacobian((du) -> f.f1(du, view(u_pred, d+1:2d), p, t), u_pred[1:d])
+            J0 = ForwardDiff.jacobian(
+                (u) -> f.f1(view(u_pred, 1:d), u, p, t),
+                u_pred[d+1:2d],
+            )
+            J1 = ForwardDiff.jacobian(
+                (du) -> f.f1(du, view(u_pred, d+1:2d), p, t),
+                u_pred[1:d],
+            )
             integ.destats.njacs += 2
             H .= E2 .- J0 * E0 .- J1 * E1
         end
@@ -207,8 +237,8 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
 
     return measurement
 end
-evaluate_ode!(integ, x_pred, t) = evaluate_ode!(
-    integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
+evaluate_ode!(integ, x_pred, t) =
+    evaluate_ode!(integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
 
 # The following functions are just there to handle both IIP and OOP easily
 _eval_f!(du, u, p, t, f::AbstractODEFunction{true}) = f(du, u, p, t)
@@ -227,7 +257,6 @@ function update!(integ, prediction)
     return x_filt
 end
 
-
 function estimate_errors(cache::GaussianODEFilterCache)
     @unpack local_diffusion, Qh, H = cache
 
@@ -238,19 +267,16 @@ function estimate_errors(cache::GaussianODEFilterCache)
     L = cache.m_tmp.Σ.squareroot
 
     if local_diffusion isa Diagonal
-
         mul!(L, H, sqrt.(local_diffusion) * Qh.squareroot)
-        error_estimate = sqrt.(diag(L*L'))
+        error_estimate = sqrt.(diag(L * L'))
         return error_estimate
 
     elseif local_diffusion isa Number
-
         mul!(L, H, Qh.squareroot)
         # error_estimate = local_diffusion .* diag(L*L')
-        @tullio error_estimate[i] := L[i,j]*L[i,j]
+        @tullio error_estimate[i] := L[i, j] * L[i, j]
         error_estimate .*= local_diffusion
         error_estimate .= sqrt.(error_estimate)
         return error_estimate
-
     end
 end

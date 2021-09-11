@@ -28,7 +28,6 @@ Base.@kwdef struct EK0{IT} <: AbstractEK
     initialization::IT = TaylorModeInit()
 end
 
-
 """
     EK1(; prior=:ibm, order=3, diffusionmodel=:dynamic, smooth=true)
 

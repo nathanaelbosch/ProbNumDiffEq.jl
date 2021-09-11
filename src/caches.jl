@@ -3,11 +3,23 @@
 ########################################################################################
 abstract type ODEFiltersCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct GaussianODEFilterCache{
-    RType, ProjType, SolProjType,
-    PType, PIType,
+    RType,
+    ProjType,
+    SolProjType,
+    PType,
+    PIType,
     EType,
-    uType, duType, xType, AType, QType, matType, diffusionType, diffModelType,
-    measType, puType, llType,
+    uType,
+    duType,
+    xType,
+    AType,
+    QType,
+    matType,
+    diffusionType,
+    diffModelType,
+    measType,
+    puType,
+    llType,
     CType,
 } <: ODEFiltersCache
     # Constants
@@ -57,8 +69,23 @@ mutable struct GaussianODEFilterCache{
 end
 
 function OrdinaryDiffEq.alg_cache(
-    alg::GaussianODEFilter, u, rate_prototype, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits, uprev, uprev2, f, t, dt, reltol, p, calck, IIP)
-    initialize_derivatives=true
+    alg::GaussianODEFilter,
+    u,
+    rate_prototype,
+    uEltypeNoUnits,
+    uBottomEltypeNoUnits,
+    tTypeNoUnits,
+    uprev,
+    uprev2,
+    f,
+    t,
+    dt,
+    reltol,
+    p,
+    calck,
+    IIP,
+)
+    initialize_derivatives = true
 
     if u isa Number
         error("We currently don't support scalar-valued problems")
@@ -71,7 +98,7 @@ function OrdinaryDiffEq.alg_cache(
 
     q = alg.order
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
-    D = d*(q+1)
+    D = d * (q + 1)
 
     u_vec = u[:]
     t0 = t
@@ -92,8 +119,10 @@ function OrdinaryDiffEq.alg_cache(
 
     A, Q = ibm(d, q, uElType)
 
-    x0 = Gaussian(zeros(uElType, D),
-                  SRMatrix(Matrix(uElType(1.0)*I, D, D), Matrix(uElType(1.0)*I, D, D)))
+    x0 = Gaussian(
+        zeros(uElType, D),
+        SRMatrix(Matrix(uElType(1.0) * I, D, D), Matrix(uElType(1.0) * I, D, D)),
+    )
 
     # Measurement model
     R = zeros(uElType, d, d)
@@ -105,21 +134,21 @@ function OrdinaryDiffEq.alg_cache(
     ddu = zeros(uElType, d, d)
     # v, S = similar(h), similar(ddu)
     v = similar(h)
-    S = alg isa EK0 ?
-        SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
+    S =
+        alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
         SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
     measurement = Gaussian(v, S)
     pu_tmp =
         f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, 2d, D))) :
-        similar(measurement)
+        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, 2d, D))) : similar(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     C1 = SRMatrix(zeros(uElType, D, 2D), zeros(uElType, D, D))
     C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
     covmatcache = similar(G)
 
-    diffmodel = alg.diffusionmodel == :dynamic ? DynamicDiffusion() :
+    diffmodel =
+        alg.diffusionmodel == :dynamic ? DynamicDiffusion() :
         alg.diffusionmodel == :fixed ? FixedDiffusion() :
         alg.diffusionmodel == :dynamicMV ? MVDynamicDiffusion() :
         alg.diffusionmodel == :fixedMV ? MVFixedDiffusion() :
@@ -140,25 +169,67 @@ function OrdinaryDiffEq.alg_cache(
     G2 = similar(G)
     err_tmp = similar(du)
     return GaussianODEFilterCache{
-        typeof(R), typeof(Proj), typeof(SolProj),
-        typeof(P), typeof(PI),
+        typeof(R),
+        typeof(Proj),
+        typeof(SolProj),
+        typeof(P),
+        typeof(PI),
         typeof(E0),
-        uType, typeof(du), typeof(x0), typeof(A), typeof(Q), matType, typeof(initdiff),
-        typeof(diffmodel), typeof(measurement), typeof(pu_tmp), uEltypeNoUnits,
+        uType,
+        typeof(du),
+        typeof(x0),
+        typeof(A),
+        typeof(Q),
+        matType,
+        typeof(initdiff),
+        typeof(diffmodel),
+        typeof(measurement),
+        typeof(pu_tmp),
+        uEltypeNoUnits,
         typeof(C1),
     }(
         # Constants
-        d, q, A, Q, Ah, Qh, diffmodel, R, Proj, SolProj,
-        P, PI,
-        E0, E1, E2,
+        d,
+        q,
+        A,
+        Q,
+        Ah,
+        Qh,
+        diffmodel,
+        R,
+        Proj,
+        SolProj,
+        P,
+        PI,
+        E0,
+        E1,
+        E2,
         # Mutable stuff
-        u, u_pred, u_filt, tmp,
-        x0, x_pred, x_filt, x_tmp, x_tmp2,
-        measurement, m_tmp, pu_tmp,
-        H, du, ddu, K, K2, G, G2,
-        covmatcache, initdiff, initdiff,
+        u,
+        u_pred,
+        u_filt,
+        tmp,
+        x0,
+        x_pred,
+        x_filt,
+        x_tmp,
+        x_tmp2,
+        measurement,
+        m_tmp,
+        pu_tmp,
+        H,
+        du,
+        ddu,
+        K,
+        K2,
+        G,
+        G2,
+        covmatcache,
+        initdiff,
+        initdiff,
         err_tmp,
         zero(uEltypeNoUnits),
-        C1, C2,
+        C1,
+        C2,
     )
 end
