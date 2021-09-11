@@ -60,7 +60,7 @@ end
 
     z_data = zeros(o)
     z = H * m_p
-    S = H * P_p * H' + R
+    S = Symmetric(H * P_p * H' + R)
 
     # UPDATE
     S_inv = inv(S)
