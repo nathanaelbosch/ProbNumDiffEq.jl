@@ -3,11 +3,9 @@ using ProbNumDiffEq
 using TimerOutputs
 const to = TimerOutput()
 macro timedtestset(name, code)
-    return esc(:(
-        println("Start testset: ", $name);
-        @timeit to $name @testset $name $code;
-        println("Done.");
-    ))
+    return esc(:(println("Start testset: ", $name);
+    @timeit to $name @testset $name $code;
+    println("Done.")))
 end
 
 @testset "ProbNumDiffEq" begin
