@@ -22,10 +22,7 @@ stack(x) = copy(reduce(hcat, x)')
 using LinearAlgebra
 import LinearAlgebra: mul!
 # patch diagonal matrices:
-LinearAlgebra.mul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) =
-    (C .=
-    A .*
-    B.diag')
+LinearAlgebra.mul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (C .= A .* B.diag')
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays
@@ -132,13 +129,7 @@ let
             return du[3] = u[1] * u[2] - (8 / 3) * u[3]
         end
 
-
-
-
-
-
-
-        lorenzprob = ODEProblem(lorenz,[1.0;0.0;0.0],(0.0,1.0))
+        lorenzprob = ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
         solve(lorenzprob, EK0())
         solve(lorenzprob, EK1())
         break
