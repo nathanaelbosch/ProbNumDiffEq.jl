@@ -6,23 +6,22 @@ using Test
 using ProbNumDiffEq
 using LinearAlgebra
 
-
 @testset "PREDICT" begin
     # Setup
     d = 5
     m = rand(d)
-    L_p = Matrix(LowerTriangular(rand(d,d)))
-    P = L_p*L_p'
+    L_p = Matrix(LowerTriangular(rand(d, d)))
+    P = L_p * L_p'
 
-    A = rand(d,d)
-    L_Q = Matrix(LowerTriangular(rand(d,d)))
-    Q = L_Q*L_Q'
+    A = rand(d, d)
+    L_Q = Matrix(LowerTriangular(rand(d, d)))
+    Q = L_Q * L_Q'
 
     # PREDICT
-    m_p = A*m
-    P_p = A*P*A' + Q
+    m_p = A * m
+    P_p = A * P * A' + Q
 
-    x_curr = Gaussian(m,P)
+    x_curr = Gaussian(m, P)
     x_out = copy(x_curr)
 
     @testset "predict!" begin
@@ -44,33 +43,30 @@ using LinearAlgebra
         @test m_p == x_out.μ
         @test P_p ≈ x_out.Σ
     end
-
 end
-
-
 
 @testset "UPDATE" begin
     # Setup
     d = 5
     m_p = rand(d)
-    L_P_p = Matrix(LowerTriangular(rand(d,d)))
+    L_P_p = Matrix(LowerTriangular(rand(d, d)))
     P_p = L_P_p * L_P_p'
 
     # Measure
     o = 3
     H = rand(o, d)
-    L_R = 0.0*rand(o, o)
-    R = L_R*L_R'
+    L_R = 0.0 * rand(o, o)
+    R = L_R * L_R'
 
     z_data = zeros(o)
-    z = H*m_p
-    S = H*P_p*H' + R
+    z = H * m_p
+    S = Symmetric(H * P_p * H' + R)
 
     # UPDATE
     S_inv = inv(S)
     K = P_p * H' * S_inv
     m = m_p + K * (z_data .- z)
-    P = P_p - K*S*K'
+    P = P_p - K * S * K'
 
     x_pred = Gaussian(m_p, P_p)
     x_out = copy(x_pred)
@@ -87,25 +83,23 @@ end
         @test m ≈ x_out.μ
         @test P ≈ x_out.Σ
     end
-
 end
-
 
 @testset "SMOOTH" begin
     # Setup
     d = 5
     m, m_s = rand(d), rand(d)
-    L_P, L_P_s = Matrix(LowerTriangular(rand(d,d))), Matrix(LowerTriangular(rand(d,d)))
-    P, P_s = L_P*L_P', L_P_s*L_P_s'
+    L_P, L_P_s = Matrix(LowerTriangular(rand(d, d))), Matrix(LowerTriangular(rand(d, d)))
+    P, P_s = L_P * L_P', L_P_s * L_P_s'
 
-    A = rand(d,d)
-    L_Q = Matrix(LowerTriangular(rand(d,d)))
-    Q = L_Q*L_Q'
+    A = rand(d, d)
+    L_Q = Matrix(LowerTriangular(rand(d, d)))
+    Q = L_Q * L_Q'
     Q_SR = SRMatrix(L_Q)
 
     # PREDICT first
-    m_p = A*m
-    P_p = A*P*A' + Q
+    m_p = A * m
+    P_p = A * P * A' + Q
 
     # SMOOTH
     G = P * A' * inv(P_p)
@@ -120,5 +114,4 @@ end
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ x_out.Σ
     end
-
 end

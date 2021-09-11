@@ -1,6 +1,5 @@
 """Gaussian filtering and smoothing"""
 
-
 """
     predict!(x_out, x_curr, Ah, Qh)
 
@@ -23,14 +22,25 @@ function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
     return x_out.μ
 end
-function predict_cov!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+function predict_cov!(
+    x_out::Gaussian,
+    x_curr::Gaussian,
+    Ah::AbstractMatrix,
+    Qh::AbstractMatrix,
+)
     out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
     copy!(x_out.Σ, out_cov)
     return x_out.Σ
 end
 
-function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
-    Qh::SRMatrix, cachemat::SRMatrix, diffusion=1)
+function predict_cov!(
+    x_out::SRGaussian,
+    x_curr::SRGaussian,
+    Ah::AbstractMatrix,
+    Qh::SRMatrix,
+    cachemat::SRMatrix,
+    diffusion=1,
+)
     M, L = cachemat.mat, cachemat.squareroot
     D, D = size(Qh.mat)
 
@@ -41,18 +51,21 @@ function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix,
 
     QL =
         issuccess(chol) ? Matrix(chol.U)' :
-        eltype(L) <: Union{Float16, Float32, Float64} ? lq!(L).L :
-        qr(L').R'
+        eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
     copy!(x_out.Σ.squareroot, QL)
     _matmul!(x_out.Σ.mat, QL, QL')
     return x_out.Σ
 end
-function predict_cov!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix)
+function predict_cov!(
+    x_out::SRGaussian,
+    x_curr::SRGaussian,
+    Ah::AbstractMatrix,
+    Qh::SRMatrix,
+)
     D, D = size(Qh.mat)
     cachemat = SRMatrix(zeros(D, 2D), zeros(D, D))
     return predict_cov!(x_out, x_curr, Ah, Qh, cachemat)
 end
-
 
 """
     predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
@@ -64,7 +77,6 @@ function predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
     predict!(x_out, x_curr, Ah, Qh)
     return x_out
 end
-
 
 """
     update!(x_out, x_pred, measurement, H, R=0)
@@ -82,10 +94,17 @@ Implemented in Joseph Form.
 
 See also: [`predict`](@ref)
 """
-function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
-                 H::AbstractMatrix, R,
-                 K1::AbstractMatrix, K2::AbstractMatrix,
-                 M_cache::AbstractMatrix, m_tmp)
+function update!(
+    x_out::Gaussian,
+    x_pred::Gaussian,
+    measurement::Gaussian,
+    H::AbstractMatrix,
+    R,
+    K1::AbstractMatrix,
+    K2::AbstractMatrix,
+    M_cache::AbstractMatrix,
+    m_tmp,
+)
     @assert iszero(R)
     z, S = measurement.μ, copy!(m_tmp.Σ, measurement.Σ)
     m_p, P_p = x_pred.μ, x_pred.Σ
@@ -109,8 +128,13 @@ function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
 
     return x_out
 end
-function update!(x_out::Gaussian, x_pred::Gaussian, measurement::Gaussian,
-                 H::AbstractMatrix, R)
+function update!(
+    x_out::Gaussian,
+    x_pred::Gaussian,
+    measurement::Gaussian,
+    H::AbstractMatrix,
+    R,
+)
     D = length(x_out.μ)
     d = length(measurement.μ)
     K1 = zeros(D, d)
@@ -131,7 +155,6 @@ function update(x_pred::Gaussian, measurement::Gaussian, H::AbstractMatrix, R=0)
     return x_out
 end
 
-
 """
     smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
 
@@ -146,7 +169,12 @@ m_n^S = m_n + G * (m_{n+1}^S - m_{n+1}^P)
 P_n^S = (I - G*A(h)) P_n (I - G*A(h))^T + G * Q(h) * G + G * P_{n+1}^S * G
 ```
 """
-function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+function smooth(
+    x_curr::Gaussian,
+    x_next_smoothed::Gaussian,
+    Ah::AbstractMatrix,
+    Qh::AbstractMatrix,
+)
     x_pred = predict(x_curr, Ah, Qh)
 
     P_p = x_pred.Σ
@@ -155,15 +183,17 @@ function smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix,
     G = x_curr.Σ * Ah' * P_p_inv
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
-    smoothed_cov = (
-        X_A_Xt(x_curr.Σ, (I - G*Ah))
-        + X_A_Xt(Qh, G)
-        + X_A_Xt(x_next_smoothed.Σ, G)
-    )
+    smoothed_cov =
+        (X_A_Xt(x_curr.Σ, (I - G * Ah)) + X_A_Xt(Qh, G) + X_A_Xt(x_next_smoothed.Σ, G))
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, G
 end
-function smooth(x_curr::SRGaussian, x_next_smoothed::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix)
+function smooth(
+    x_curr::SRGaussian,
+    x_next_smoothed::SRGaussian,
+    Ah::AbstractMatrix,
+    Qh::SRMatrix,
+)
     x_pred = predict(x_curr, Ah, Qh)
 
     P_p = x_pred.Σ
@@ -173,9 +203,11 @@ function smooth(x_curr::SRGaussian, x_next_smoothed::SRGaussian, Ah::AbstractMat
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
 
-    _R = [x_curr.Σ.squareroot' * (I - G*Ah)'
-          Qh.squareroot' * G'
-          x_next_smoothed.Σ.squareroot' * G']
+    _R = [
+        x_curr.Σ.squareroot' * (I - G * Ah)'
+        Qh.squareroot' * G'
+        x_next_smoothed.Σ.squareroot' * G'
+    ]
     _, P_s_R = qr(_R)
     smoothed_cov = SRMatrix(P_s_R')
 

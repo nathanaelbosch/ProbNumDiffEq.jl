@@ -9,11 +9,9 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     @assert length(0:q) == length(f_derivatives)
     for (o, df) in zip(0:q, f_derivatives)
-
         condition_on!(x, Proj(o), view(df, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
     end
 end
-
 
 """
     Compute initial derivatives of an OOP ODEProblem with TaylorSeries.jl
@@ -48,19 +46,18 @@ end
     Compute initial derivatives of a SecondOrderODE with TaylorSeries.jl
 """
 function taylormode_get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, p, t, q)
+    d = length(u[1, :])
+    Proj = projection(d, q, eltype(u))
 
-    d = length(u[1,:])
-    Proj(deriv) = deriv > q ? error("Projection called for non-modeled derivative") :
-        kron([i==(deriv+1) ? 1 : 0 for i in 1:q+1]', diagm(0 => ones(d)))
-
-    f_oop(du, u, p, t) = !isinplace(f.f1) ? f.f1(du, u, p, t) :
+    f_oop(du, u, p, t) =
+        !isinplace(f.f1) ? f.f1(du, u, p, t) :
         (ddu = copy(du); f.f1(ddu, du, u, p, t); return ddu)
 
     # Make sure that the vector field f does not depend on t
     f_t_taylor = taylor_expand(_t -> f_oop(u[1:d], u[d+1:end], p, _t), t)
     @assert !(eltype(f_t_taylor) <: TaylorN) "The vector field depends on t; The code might not yet be able to handle these (but it should be easy to implement)"
 
-    set_variables("u", numvars=2d, order=q+1)
+    set_variables("u", numvars=2d, order=q + 1)
 
     fp1 = taylor_expand(u -> f_oop(u[1:d], u[d+1:end], p, t), u[:])
     fp2 = taylor_expand(u -> u[1:d], u[:])
@@ -73,5 +70,5 @@ function taylormode_get_derivatives(u::ArrayPartition, f::DynamicalODEFunction, 
         push!(f_derivatives, df)
     end
 
-    return [u[2,:], u[1,:], evaluate.(f_derivatives)...]
+    return [u[2, :], u[1, :], evaluate.(f_derivatives)...]
 end

@@ -9,35 +9,40 @@ using ParameterizedFunctions
 using OrdinaryDiffEq
 using Plots
 
-
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
+importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary:
     prob_ode_fitzhughnagumo, prob_ode_vanstiff, prob_ode_2Dlinear, prob_ode_linear
 
-
 @testset "Smoothing with small constant steps" begin
     prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_fitzhughnagumo)
-    @test solve(prob, EK0(order=4, diffusionmodel=:fixed, smooth=true),
-                adaptive=false, dt=1e-3) isa ProbNumDiffEq.ProbODESolution
-    @test solve(prob, EK1(order=4, diffusionmodel=:fixed, smooth=true),
-                adaptive=false, dt=1e-3) isa ProbNumDiffEq.ProbODESolution
+    @test solve(
+        prob,
+        EK0(order=4, diffusionmodel=:fixed, smooth=true),
+        adaptive=false,
+        dt=1e-3,
+    ) isa ProbNumDiffEq.ProbODESolution
+    @test solve(
+        prob,
+        EK1(order=4, diffusionmodel=:fixed, smooth=true),
+        adaptive=false,
+        dt=1e-3,
+    ) isa ProbNumDiffEq.ProbODESolution
 end
 
-
 @testset "Problem with analytic solution" begin
-    linear(u,p,t) = p.*u
-    linear_analytic(u0,p,t) = @. u0*exp(p*t)
-    prob = ODEProblem(
-        ODEFunction(linear, analytic=linear_analytic),
-        [1/2], (0.0, 1.0), 1.01)
+    linear(u, p, t) = p .* u
+    linear_analytic(u0, p, t) = @. u0 * exp(p * t)
+    prob =
+        ODEProblem(ODEFunction(linear, analytic=linear_analytic), [1 / 2], (0.0, 1.0), 1.01)
 
     @test solve(prob, EK0()) isa ProbNumDiffEq.ProbODESolution
-    @test solve(ProbNumDiffEq.remake_prob_with_jac(prob), EK1()) isa ProbNumDiffEq.ProbODESolution
+    @test solve(ProbNumDiffEq.remake_prob_with_jac(prob), EK1()) isa
+          ProbNumDiffEq.ProbODESolution
     sol = solve(prob, EK0())
     @test sol.errors isa Dict
     @test all(haskey.(Ref(sol.errors), (:l∞, :l2, :final)))
 end
-
 
 @testset "Matrix-Valued Problem" begin
     prob = prob_ode_2Dlinear
@@ -51,11 +56,10 @@ end
 
         @test length(sol.u[1]) == length(sol.pu.μ[1])
         @test sol.u[1][:] == sol.pu.μ[1]
-        @test sol.u ≈ sol.u_analytic rtol=1e-4
+        @test sol.u ≈ sol.u_analytic rtol = 1e-4
         @test plot(sol) isa AbstractPlot
     end
 end
-
 
 @testset "scalar-valued problem" begin
     @testset "$alg" for alg in [EK0(), EK1()]
@@ -69,12 +73,10 @@ end
     end
 end
 
-
 @testset "Stiff Vanderpol" begin
     prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_vanstiff)
     @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
-
 
 @testset "Big Float" begin
     prob = prob_ode_fitzhughnagumo
@@ -86,7 +88,6 @@ end
     @test sol isa ProbNumDiffEq.ProbODESolution
 end
 
-
 @testset "OOP problem definition" begin
     prob = ODEProblem((u, p, t) -> ([p[1] * u[1] .* (1 .- u[1])]), [1e-1], (0.0, 5), [3.0])
     @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
@@ -94,14 +95,13 @@ end
     @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
 end
 
-
 @testset "Callback: Harmonic Oscillator with condition on E=2" begin
     u0 = ones(2)
-    function harmonic_oscillator(du,u,p,t)
+    function harmonic_oscillator(du, u, p, t)
         du[1] = u[2]
-        du[2] = -u[1]
+        return du[2] = -u[1]
     end
-    prob = ODEProblem(harmonic_oscillator, u0, (0.0,100.0))
+    prob = ODEProblem(harmonic_oscillator, u0, (0.0, 100.0))
 
     function Callback()
         function affect!(integ)
@@ -111,34 +111,32 @@ end
 
             m, P = x.μ, x.Σ
 
-            m0, P0 = E0*m, ProbNumDiffEq.X_A_Xt(P, E0)
+            m0, P0 = E0 * m, ProbNumDiffEq.X_A_Xt(P, E0)
 
             e = m0'm0
             H = 2m0'E0
-            S = H*P*H'
+            S = H * P * H'
 
             S_inv = inv(S)
             K = P * H' * S_inv
 
             mnew = m + K * (2 .- e)
-            Pnew = ProbNumDiffEq.X_A_Xt(P, (I-K*H)) # + X_A_Xt(R, K)
+            Pnew = ProbNumDiffEq.X_A_Xt(P, (I - K * H)) # + X_A_Xt(R, K)
 
             # @info m P e S K mnew
             copy!(m, mnew)
-            copy!(P, Pnew)
+            return copy!(P, Pnew)
         end
-        condtion = (t,u,integrator) -> true
+        condtion = (t, u, integrator) -> true
         save_positions = (true, true)
-        DiscreteCallback(condtion,affect!,save_positions=save_positions)
+        return DiscreteCallback(condtion, affect!, save_positions=save_positions)
     end
 
     @test solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
     @test solve(prob, EK0(order=3), callback=Callback()) isa ProbNumDiffEq.ProbODESolution
 end
 
-
 @testset "SecondOrderODEProblem" begin
-
     du0 = [0.0]
     u0 = [2.0]
     tspan = (0.0, 6.3)
@@ -146,7 +144,7 @@ end
 
     function vanderpol!(ddu, du, u, p, t)
         μ = p[1]
-        @. ddu = μ * ((1-u^2) * du - u)
+        @. ddu = μ * ((1 - u^2) * du - u)
     end
     prob_iip = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
 
@@ -163,7 +161,7 @@ end
         for alg in (EK0(), EK1())
             @testset "$alg" begin
                 @test solve(prob_iip, alg) isa ProbNumDiffEq.ProbODESolution
-                @test solve(prob_iip, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+                @test solve(prob_iip, alg).u[end] ≈ appxsol.u[end] rtol = 1e-3
             end
         end
     end
@@ -172,25 +170,25 @@ end
         for alg in (EK0(), EK1())
             @testset "$alg" begin
                 @test solve(prob_oop, alg) isa ProbNumDiffEq.ProbODESolution
-                @test solve(prob_oop, alg).u[end] ≈ appxsol.u[end] rtol=1e-3
+                @test solve(prob_oop, alg).u[end] ≈ appxsol.u[end] rtol = 1e-3
             end
         end
     end
 
     @testset "RungeKuttaInit for SecondOrderODEProblems" begin
-        @test_broken solve(prob_iip, EK1(initialization=RungeKuttaInit())) isa ProbNumDiffEq.ProbODESolution
+        @test_broken solve(prob_iip, EK1(initialization=RungeKuttaInit())) isa
+                     ProbNumDiffEq.ProbODESolution
     end
 end
 
-
 @testset "Problem definition with ParameterizedFunctions.jl" begin
     f = @ode_def LotkaVolterra begin
-        dx = a*x - b*x*y
-        dy = -c*y + d*x*y
+        dx = a * x - b * x * y
+        dy = -c * y + d * x * y
     end a b c d
-    p = [1.5,1,3,1]
-    tspan = (0.0,10.0)
-    u0 = [1.0,1.0]
-    prob = ODEProblem(f,u0,tspan,p)
+    p = [1.5, 1, 3, 1]
+    tspan = (0.0, 10.0)
+    u0 = [1.0, 1.0]
+    prob = ODEProblem(f, u0, tspan, p)
     @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end

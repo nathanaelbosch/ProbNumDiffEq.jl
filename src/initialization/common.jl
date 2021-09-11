@@ -2,7 +2,6 @@ abstract type InitializationScheme end
 struct TaylorModeInit <: InitializationScheme end
 struct RungeKuttaInit <: InitializationScheme end
 
-
 ########################################################################
 # Some utilities below
 """Quick and dirty wrapper to make IIP functions OOP"""
@@ -23,8 +22,16 @@ function oop_to_iip(f)
 end
 
 """Basically an Kalman update"""
-function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
-                       meascache, Kcache, Kcache2, covcache, Mcache)
+function condition_on!(
+    x::SRGaussian,
+    H::AbstractMatrix,
+    data::AbstractVector,
+    meascache,
+    Kcache,
+    Kcache2,
+    covcache,
+    Mcache,
+)
     z, S = meascache
 
     _matmul!(z, H, x.μ)
@@ -45,5 +52,5 @@ function condition_on!(x::SRGaussian, H::AbstractMatrix, data::AbstractVector,
     end
     X_A_Xt!(covcache, x.Σ, Mcache)
     copy!(x.Σ, covcache)
-    nothing
+    return nothing
 end

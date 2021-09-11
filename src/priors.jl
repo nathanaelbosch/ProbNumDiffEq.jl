@@ -8,10 +8,10 @@ Generate the discrete dynamics for a q-IBM model. INCLUDES AUTOMATIC PRECONDITIO
 """
 function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     # Make A
-    A_breve = zeros(elType, q+1, q+1)
+    A_breve = zeros(elType, q + 1, q + 1)
     @simd ivdep for j in 1:q+1
         @simd ivdep for i in 1:j
-            @inbounds A_breve[i, j] = binomial(q-i+1, q-j+1)
+            @inbounds A_breve[i, j] = binomial(q - i + 1, q - j + 1)
         end
     end
     A = kron(I(d), A_breve)
@@ -19,13 +19,13 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     # A = UpperTriangular(A)
 
     # Make Q
-    Q_breve = zeros(elType, q+1, q+1)
+    Q_breve = zeros(elType, q + 1, q + 1)
     @fastmath _transdiff_ibm_element(row::Int, col::Int) =
         one(elType) / (2 * q + 1 - row - col)
     @simd ivdep for col in 0:q
         @simd ivdep for row in 0:q
             val = _transdiff_ibm_element(row, col)
-            @inbounds Q_breve[1 + row, 1 + col] = val
+            @inbounds Q_breve[1+row, 1+col] = val
         end
     end
     QL_breve = cholesky!(Q_breve).L
@@ -35,10 +35,8 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
     return A, Q
 end
 
-
 """Same as above, but without the automatic preconditioning"""
 function vanilla_ibm(d::Integer, q::Integer)
-
     @fastmath function A!(A::AbstractMatrix, h::Real)
         # Assumes that A comes from a previous computation => zeros and one-diag
         val = one(h)
@@ -46,7 +44,7 @@ function vanilla_ibm(d::Integer, q::Integer)
             val = val * h / i
             for k in 0:d-1
                 for j in 1:q+1-i
-                    @inbounds A[j + k*(q+1), j + k*(q+1) + i] = val
+                    @inbounds A[j+k*(q+1), j+k*(q+1)+i] = val
                 end
             end
         end
@@ -64,8 +62,8 @@ function vanilla_ibm(d::Integer, q::Integer)
             @simd for row in col:q
                 val = _transdiff_ibm_element(row, col, h) * σ²
                 @simd for i in 0:d-1
-                    @inbounds Q[1 + col + i*(q+1),1 + row + i*(q+1)] = val
-                    @inbounds Q[1 + row + i*(q+1),1 + col + i*(q+1)] = val
+                    @inbounds Q[1+col+i*(q+1), 1+row+i*(q+1)] = val
+                    @inbounds Q[1+row+i*(q+1), 1+col+i*(q+1)] = val
                 end
             end
         end

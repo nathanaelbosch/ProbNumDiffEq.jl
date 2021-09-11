@@ -7,7 +7,6 @@ isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 initial_diffusion(diffusion::AbstractDiffusion, d, q, Eltype) = one(Eltype)
 
-
 struct FixedDiffusion <: AbstractStaticDiffusion end
 function estimate_diffusion(rule::FixedDiffusion, integ)
     @unpack d, measurement, m_tmp = integ.cache
@@ -39,11 +38,11 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
     else
         @assert length(sol_diffusions) == integ.success_iter
         diffusion_prev = sol_diffusions[end]
-        global_diffusion = diffusion_prev + (diffusion_t - diffusion_prev) / integ.success_iter
+        global_diffusion =
+            diffusion_prev + (diffusion_t - diffusion_prev) / integ.success_iter
         return diffusion_t, global_diffusion
     end
 end
-
 
 """Maximum a-posteriori Diffusion estimate when using an InverseGamma(1/2,1/2) prior
 
@@ -61,21 +60,20 @@ function estimate_diffusion(rule::MAPFixedDiffusion, integ)
     v, S = measurement.μ, measurement.Σ
     res_t = v' * inv(S) * v / d
 
-    α, β = 1/2, 1/2
+    α, β = 1 / 2, 1 / 2
     if integ.success_iter == 0
         @assert length(diffusions) == 0
-        diffusion_t = (β + 1/2 * res_t) / (α + N*d/2 + 1)
+        diffusion_t = (β + 1 / 2 * res_t) / (α + N * d / 2 + 1)
         return res_t, diffusion_t
     else
         @assert length(diffusions) == integ.success_iter
         diffusion_prev = diffusions[end]
-        res_prev = (diffusion_prev * (α + (N-1)*d/2 + 1) - β) * 2
+        res_prev = (diffusion_prev * (α + (N - 1) * d / 2 + 1) - β) * 2
         res_sum_t = res_prev + res_t
-        diffusion = (β + 1/2 * res_sum_t) / (α + N*d/2 + 1)
+        diffusion = (β + 1 / 2 * res_sum_t) / (α + N * d / 2 + 1)
         return res_t, diffusion
     end
 end
-
 
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 function estimate_diffusion(kind::DynamicDiffusion, integ)
@@ -96,10 +94,9 @@ function estimate_diffusion(kind::DynamicDiffusion, integ)
     end
 end
 
-
 struct MVDynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::MVDynamicDiffusion, d, q, Eltype) =
-    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q+1)))
+    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     @unpack d, q, R, P, PI, E1 = integ.cache
     @unpack H, Qh, measurement, m_tmp = integ.cache
@@ -120,16 +117,15 @@ function estimate_diffusion(kind::MVDynamicDiffusion, integ)
     Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 
-    Σ_out = kron(Σ, I(q+1))
+    Σ_out = kron(Σ, I(q + 1))
     @assert isdiag(Σ_out)
     # @info "MVDynamic diffusion" Σ Σ_out
     return Σ_out, Σ_out
 end
 
-
 struct MVFixedDiffusion <: AbstractStaticDiffusion end
 initial_diffusion(diffusion::MVFixedDiffusion, d, q, Eltype) =
-    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q+1)))
+    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 function estimate_diffusion(kind::MVFixedDiffusion, integ)
     @unpack d, q, R, P, PI, E1 = integ.cache
     @unpack measurement, H = integ.cache
@@ -149,7 +145,7 @@ function estimate_diffusion(kind::MVFixedDiffusion, integ)
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
-    Σ_out = kron(Σ, I(q+1))
+    Σ_out = kron(Σ, I(q + 1))
     @assert isdiag(Σ_out)
     # @info "MV-MLE-Diffusion" v S Σ Σ_out
 

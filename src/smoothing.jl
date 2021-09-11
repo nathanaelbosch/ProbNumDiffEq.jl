@@ -26,7 +26,6 @@ function smooth_all!(integ)
     end
 end
 
-
 function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
@@ -59,9 +58,9 @@ function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
     # _matmul!(M, L, L')
     # chol = cholesky!(Symmetric(M), check=false)
 
-    QL = false && issuccess(chol) ? Matrix(chol.U)' :
-        eltype(L) <: Union{Float16, Float32, Float64} ? lq!(L).L :
-        qr(L').R'
+    QL =
+        false && issuccess(chol) ? Matrix(chol.U)' :
+        eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
     copy!(x_curr.Σ.squareroot, QL)
     _matmul!(x_curr.Σ.mat, QL, QL')
 

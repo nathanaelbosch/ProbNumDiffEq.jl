@@ -4,9 +4,10 @@ using Plots
 using LinearAlgebra
 using OrdinaryDiffEq
 using Statistics
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems; importodeproblems()
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
-
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
+importodeproblems();
+import DiffEqProblemLibrary.ODEProblemLibrary:
+    prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
 @testset "Solution" begin
     prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_lotkavoltera)
@@ -91,7 +92,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
 
         m, n, o = size(samples)
         @test m == length(sol)
-        @test n == length(sol.u[1])*(sol.interp.q+1)
+        @test n == length(sol.u[1]) * (sol.interp.q + 1)
         @test o == n_samples
 
         x = ProbNumDiffEq.stack(mean(sol.x_smooth))
@@ -103,14 +104,14 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinea
         dense_samples, dense_times = ProbNumDiffEq.dense_sample_states(sol, n_samples)
         m, n, o = size(dense_samples)
         @test m == length(dense_times)
-        @test n == length(sol.u[1])*(sol.interp.q+1)
+        @test n == length(sol.u[1]) * (sol.interp.q + 1)
         @test o == n_samples
     end
 
     @testset "Plotting" begin
         @test plot(sol) isa AbstractPlot
         @test plot(sol, denseplot=false) isa AbstractPlot
-        @test plot(sol, vars=(1,2)) isa AbstractPlot
+        @test plot(sol, vars=(1, 2)) isa AbstractPlot
     end
 
     @testset "Mean Solution" begin

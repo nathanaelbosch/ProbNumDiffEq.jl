@@ -12,16 +12,20 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     t0 = integ.sol.prob.tspan[1]
     dt = 0.01
     nsteps = q + 2
-    tmax = t0 + nsteps*dt
+    tmax = t0 + nsteps * dt
     tstops = t0:dt:tmax
     alg = integ.alg isa EK0 ? Vern9() : Rodas5()  # Maybe let the user specify the solver
-    sol = solve(remake(integ.sol.prob, tspan=(t0, tmax)),
-                alg, dense=false, save_start=false,
-                # adaptive=false, tstops=tstops,
-                abstol=integ.opts.abstol/100, reltol=integ.opts.reltol/100,
-                saveat=tstops,
-                # tstops=tstops,
-                )
+    sol = solve(
+        remake(integ.sol.prob, tspan=(t0, tmax)),
+        alg,
+        dense=false,
+        save_start=false,
+        # adaptive=false, tstops=tstops,
+        abstol=integ.opts.abstol / 100,
+        reltol=integ.opts.reltol / 100,
+        saveat=tstops,
+        # tstops=tstops,
+    )
 
     # Initialize on u0
     condition_on!(x, Proj(0), view(u, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
@@ -34,7 +38,9 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     end
     condition_on!(x, Proj(1), view(du, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
 
-    if q<2 return end
+    if q < 2
+        return
+    end
 
     # Use a jac or autodiff to initialize on ddu0
     if isinplace(f)
@@ -54,14 +60,24 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
             ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
         end
     end
-    condition_on!(x, Proj(2), ddu * view(du, :) + view(dfdt, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(
+        x,
+        Proj(2),
+        ddu * view(du, :) + view(dfdt, :),
+        m_tmp,
+        K1,
+        K2,
+        x_tmp.Σ,
+        x_tmp2.Σ.mat,
+    )
 
-    if q<3 return end
+    if q < 3
+        return
+    end
 
     # Filter & smooth to fit these values!
     us = [view(u, :) for u in sol.u]
-    rk_init_improve(integ, cache, sol.t, us, dt)
-
+    return rk_init_improve(integ, cache, sol.t, us, dt)
 end
 
 function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
@@ -79,7 +95,6 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
 
     # Filter through the data forwards
     for (i, (t, u)) in enumerate(zip(ts, us))
-
         predict_mean!(x_pred, x, A)
         predict_cov!(x_pred, x, A, Q)
         push!(preds, copy(x_pred))
@@ -88,12 +103,20 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         measurement.μ .= H * x_pred.μ .- u
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
-        update!(x_filt, x_pred, measurement, H, 0,
-                cache.K1, cache.K2, cache.x_tmp2.Σ.mat, cache.m_tmp)
+        update!(
+            x_filt,
+            x_pred,
+            measurement,
+            H,
+            0,
+            cache.K1,
+            cache.K2,
+            cache.x_tmp2.Σ.mat,
+            cache.m_tmp,
+        )
         push!(filts, copy(x_filt))
 
         x = x_filt
-
     end
 
     # Smooth backwards
