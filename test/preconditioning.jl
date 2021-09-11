@@ -34,7 +34,7 @@ prob = ProbNumDiffEq.remake_prob_with_jac(prob)
     @test Ah_p ≈ P * Ah * PI
 
     # Check that the preconditioning actually helps
-    @info "Condition numbers" cond(Qh) cond(Matrix(Qh_p)) cond(Ah) cond(Ah_p)
+    # @info "Condition numbers" cond(Qh) cond(Matrix(Qh_p)) cond(Ah) cond(Ah_p)
     @test cond(Qh) > cond(Matrix(Qh_p))
     @test cond(Qh) > cond(Matrix(Qh_p))^2
 end
