@@ -60,6 +60,10 @@ end
     @timedtestset "Specific Problems" begin
         include("specific_problems.jl")
     end
+
+    @timedtestset "DiffEqDevTools.jl Compatibility" begin
+        include("diffeqdevtools.jl")
+    end
 end
 
 println("\nTimer Summary:")
