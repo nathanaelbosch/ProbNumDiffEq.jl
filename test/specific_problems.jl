@@ -64,12 +64,6 @@ end
 @testset "scalar-valued problem" begin
     @testset "$alg" for alg in [EK0(), EK1()]
         @test_broken solve(prob_ode_linear, alg) isa ProbNumDiffEq.ProbODESolution
-        # sol = solve(prob_ode_linear, alg)
-
-        # @test length(sol.u[1]) == length(sol.pu.μ[1])
-        # @test sol.u[1] == sol.pu.μ[1][1]
-        # @test sol.u ≈ sol.u_analytic rtol=1e-4
-        # @test plot(sol) isa AbstractPlot
     end
 end
 
