@@ -10,6 +10,10 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     end
     @assert integ.saveiter == 1
 
+    integ.kshortsize = 1
+    resize!(integ.k, integ.kshortsize)
+    integ.k[1] = integ.u
+
     # Update the initial state to the known (given or computed with AD) initial values
     initial_update!(integ, cache, integ.alg.initialization)
 
