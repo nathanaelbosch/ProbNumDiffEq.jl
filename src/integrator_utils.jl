@@ -1,13 +1,11 @@
 # Calibration, smoothing, then jump to the OrdinaryDiffEq._postamble!
 function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
-
     OrdinaryDiffEq._postamble!(integ)
     # For some unknown reason, the following is necessary
-    copyat_or_push!(integ.sol.k,integ.saveiter_dense,integ.k)
+    copyat_or_push!(integ.sol.k, integ.saveiter_dense, integ.k)
 
     # Add the final timepoint to the solution
     pn_solution_endpoint_match_cur_integrator!(integ)
-
 
     if isstatic(integ.cache.diffusionmodel) # Calibrate
         # @warn "sol.log_likelihood is not correct for static diffusion models!"
@@ -41,9 +39,12 @@ end
 function pn_solution_endpoint_match_cur_integrator!(integ)
     # Inspired from OrdinaryDiffEq.solution_match_cur_integrator!
     if integ.opts.save_end
-
         if integ.alg.smooth
-            OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter_dense, integ.cache.x)
+            OrdinaryDiffEq.copyat_or_push!(
+                integ.sol.x_filt,
+                integ.saveiter_dense,
+                integ.cache.x,
+            )
         end
 
         OrdinaryDiffEq.copyat_or_push!(
@@ -67,11 +68,7 @@ function DiffEqBase.savevalues!(
     # TODO If we don't want dense output, we might not want to save these!
     # It's not completely clear how to specify that though; They are also needed for sampling.
     if integ.alg.smooth
-        OrdinaryDiffEq.copyat_or_push!(
-            integ.sol.x_filt,
-            integ.saveiter,
-            integ.cache.x,
-        )
+        OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, integ.cache.x)
     end
     OrdinaryDiffEq.copyat_or_push!(
         integ.sol.diffusions,
