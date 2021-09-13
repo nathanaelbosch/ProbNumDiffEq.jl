@@ -41,7 +41,7 @@ To quickly try out ProbNumDiffEq.jl check out the "[Getting Started](@ref)" tuto
 - Specialized solvers for second-order ODEs
 
 ## Benchmarks
-- [Multi-Language Wrapper Benchmark](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/benchmarks/benchmarks/multi-language-benchmark.ipynb):
+- [Multi-Language Wrapper Benchmark](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/benchmarks/benchmarks/multi-language-wrappers.ipynb):
   ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
 
 ## References

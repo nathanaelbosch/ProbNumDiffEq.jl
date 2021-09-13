@@ -6,6 +6,7 @@ using Reexport
 @reexport using DiffEqBase
 import DiffEqBase: check_error!, AbstractODEFunction
 using OrdinaryDiffEq
+using DiffEqDevTools
 
 # Current working solution to depending on functions that moved from DiffEqBase to SciMLBase
 try
@@ -118,6 +119,8 @@ include("jacobian.jl")
 # Iterated Extended Kalman Smoother
 include("ieks.jl")
 export IEKS, solve_ieks
+
+include("devtools.jl")
 
 # Do as they do here:
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/v5.61.1/src/OrdinaryDiffEq.jl#L175-L193
