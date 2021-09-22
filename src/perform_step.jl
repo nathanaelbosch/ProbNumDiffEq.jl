@@ -79,7 +79,7 @@ function OrdinaryDiffEq.perform_step!(
 
     else
         predict!(x_pred, x, Ah, Qh)
-        _matmul!(u_pred, SolProj, x_pred.μ)
+        mul!(view(u_pred, :), SolProj, x_pred.μ)
         evaluate_ode!(integ, x_pred, tnew)
         compute_measurement_covariance!(cache)
         cache.local_diffusion, cache.global_diffusion =
