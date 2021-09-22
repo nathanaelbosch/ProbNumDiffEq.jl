@@ -173,6 +173,10 @@ end
         @test_broken solve(prob_iip, EK1(initialization=RungeKuttaInit())) isa
                      ProbNumDiffEq.ProbODESolution
     end
+
+    @testset "Fixed Diffusion" begin
+        @test solve(prob_iip, EK0(diffusionmodel=:fixed)) isa ProbNumDiffEq.ProbODESolution
+    end
 end
 
 @testset "Problem definition with ParameterizedFunctions.jl" begin
