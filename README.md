@@ -66,5 +66,5 @@ end
 
 ## Benchmarks
 
-- [Multi-Language Wrapper Benchmark](./benchmarks/multi-language-benchmark.ipynb):
+- [Multi-Language Wrapper Benchmark](./benchmarks/multi-language-wrappers.ipynb):
   ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
