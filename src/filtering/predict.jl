@@ -1,4 +1,22 @@
 """
+    predict(x, A, Q)
+
+PREDICT step in Kalman filtering for linear dynamics models:
+```math
+m_{n+1}^P = A*m_n
+C_{n+1}^P = A*C_n*A^T + Q
+```
+
+This function provides a very simple PREDICT implementation.
+In the solvers, we recommend to use the non-allocating [`predict!`](@ref).
+"""
+predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
+    Gaussian(predict_mean(x, A), predict_cov(x, A, Q))
+predict_mean(x::Gaussian, A::AbstractMatrix) = A*x.μ
+predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A*x.Σ*A' + Q
+
+
+"""
     predict!(x_out, x_curr, Ah, Qh)
 
 PREDICT step in Kalman filtering for linear dynamics models.
@@ -63,15 +81,4 @@ function predict_cov!(
     D, D = size(Qh.mat)
     cachemat = SRMatrix(zeros(D, 2D), zeros(D, D))
     return predict_cov!(x_out, x_curr, Ah, Qh, cachemat)
-end
-
-"""
-    predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-
-See also: [`predict!`](@ref)
-"""
-function predict(x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
-    x_out = copy(x_curr)
-    predict!(x_out, x_curr, Ah, Qh)
-    return x_out
 end
