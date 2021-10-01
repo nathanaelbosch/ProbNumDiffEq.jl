@@ -1,4 +1,30 @@
 """
+    update(x, measurement, H)
+
+UPDATE step in Kalman filtering for linear dynamics models:
+```math
+K = P_{n+1}^P * H^T * S^{-1}
+m_{n+1} = m_{n+1}^P + K * (0 - z)
+P_{n+1} = P_{n+1}^P - K*S*K^T
+```
+
+This function provides a very simple UPDATE implementation.
+In the solvers, we recommend to use the non-allocating [`update!`](@ref).
+"""
+function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
+
+    m, C = x
+    z, S = measurement
+
+    K = C * H' * inv(S)
+    m_new = m - K * z
+    C_new = C - K * S * K'
+
+    return Gaussian(m_new, C_new)
+end
+
+
+"""
     update!(x_out, x_pred, measurement, H, R=0)
 
 UPDATE step in Kalman filtering for linear dynamics models, given a measurement `Z=N(z, S)`.
@@ -19,8 +45,7 @@ function update!(
     x_pred::Gaussian,
     measurement::Gaussian,
     H::AbstractMatrix,
-    K1::AbstractMatrix,
-    K2::AbstractMatrix,
+    K_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
     m_tmp,
 )
@@ -31,7 +56,7 @@ function update!(
 
     # K = P_p * H' / S
     S_chol = cholesky!(S)
-    K = _matmul!(K1, Matrix(P_p), H')
+    K = _matmul!(K_cache, Matrix(P_p), H')
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
@@ -45,31 +70,5 @@ function update!(
 
     X_A_Xt!(x_out.Σ, P_p, M_cache)
 
-    return x_out
-end
-function update!(
-    x_out::Gaussian,
-    x_pred::Gaussian,
-    measurement::Gaussian,
-    H::AbstractMatrix,
-    R,
-)
-    D = length(x_out.μ)
-    d = length(measurement.μ)
-    K1 = zeros(D, d)
-    K2 = zeros(D, d)
-    M_cache = zeros(D, D)
-    m_tmp = copy(measurement)
-    return update!(x_out, x_pred, measurement, H, R, K1, K2, M_cache, m_tmp)
-end
-"""
-    update(x_pred, measurement, H, R=0)
-
-See also: [`update!`](@ref)
-"""
-function update(x_pred::Gaussian, measurement::Gaussian, H::AbstractMatrix, R=0)
-    @assert iszero(R)
-    x_out = copy(x_pred)
-    update!(x_out, x_pred, measurement, H, R)
     return x_out
 end

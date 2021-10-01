@@ -81,7 +81,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
 end
 
 function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
-    @unpack A, Q, Ah, Qh = cache
+    @unpack A, Q = cache
     @unpack x, x_pred, x_filt, measurement = cache
 
     # Predict forward:
@@ -96,7 +96,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
     # Filter through the data forwards
     for (i, (t, u)) in enumerate(zip(ts, us))
         predict_mean!(x_pred, x, A)
-        predict_cov!(x_pred, x, A, Q)
+        predict_cov!(x_pred, x, A, Q, cache.C1, cache.global_diffusion)
         push!(preds, copy(x_pred))
 
         H = cache.E0 * PI
@@ -108,9 +108,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
             x_pred,
             measurement,
             H,
-            0,
             cache.K1,
-            cache.K2,
             cache.x_tmp2.Σ.mat,
             cache.m_tmp,
         )

@@ -16,8 +16,13 @@ predict_mean(x::Gaussian, A::AbstractMatrix) = A*x.μ
 predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A*x.Σ*A' + Q
 
 
+"""Square-root implementation of [`predict_cov!`](@ref)."""
+predict_cov(x::SRGaussian, A::AbstractMatrix, Q::SRMatrix) =
+    SRMatrix(qr([A * x.Σ.squareroot Q.squareroot]').R')
+
+
 """
-    predict!(x_out, x_curr, Ah, Qh)
+    predict!(x_out, x_curr, Ah, Qh, cachemat)
 
 PREDICT step in Kalman filtering for linear dynamics models.
 In-place implementation of [`predict`](@ref), saving the result in `x_out`.
@@ -29,24 +34,17 @@ P_{n+1}^P = A(h)*P_n*A(h) + Q(h)
 
 See also: [`predict`](@ref)
 """
-function predict!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+function predict!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix,
+                  cachemat::SRMatrix,
+                  diffusion=1,
+                  )
     predict_mean!(x_out, x_curr, Ah)
-    predict_cov!(x_out, x_curr, Ah, Qh)
+    predict_cov!(x_out, x_curr, Ah, Qh, cachemat, diffusion)
     return x_out
 end
 function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix)
     mul!(x_out.μ, Ah, x_curr.μ)
     return x_out.μ
-end
-function predict_cov!(
-    x_out::Gaussian,
-    x_curr::Gaussian,
-    Ah::AbstractMatrix,
-    Qh::AbstractMatrix,
-)
-    out_cov = X_A_Xt(x_curr.Σ, Ah) + Qh
-    copy!(x_out.Σ, out_cov)
-    return x_out.Σ
 end
 
 function predict_cov!(
@@ -71,14 +69,4 @@ function predict_cov!(
     copy!(x_out.Σ.squareroot, QL)
     _matmul!(x_out.Σ.mat, QL, QL')
     return x_out.Σ
-end
-function predict_cov!(
-    x_out::SRGaussian,
-    x_curr::SRGaussian,
-    Ah::AbstractMatrix,
-    Qh::SRMatrix,
-)
-    D, D = size(Qh.mat)
-    cachemat = SRMatrix(zeros(D, 2D), zeros(D, D))
-    return predict_cov!(x_out, x_curr, Ah, Qh, cachemat)
 end
