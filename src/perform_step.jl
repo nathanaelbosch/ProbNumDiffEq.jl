@@ -257,7 +257,7 @@ compute_measurement_covariance!(cache) =
 function update!(integ, prediction)
     @unpack measurement, H, R, x_filt = integ.cache
     @unpack K1, K2, x_tmp2, m_tmp = integ.cache
-    update!(x_filt, prediction, measurement, H, R, K1, K2, x_tmp2.Σ.mat, m_tmp)
+    update!(x_filt, prediction, measurement, H, K1, K2, x_tmp2.Σ.mat, m_tmp)
     # assert_nonnegative_diagonal(x_filt.Σ)
     return x_filt
 end

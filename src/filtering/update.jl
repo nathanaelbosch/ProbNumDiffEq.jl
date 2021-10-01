@@ -19,13 +19,12 @@ function update!(
     x_pred::Gaussian,
     measurement::Gaussian,
     H::AbstractMatrix,
-    R,
     K1::AbstractMatrix,
     K2::AbstractMatrix,
     M_cache::AbstractMatrix,
     m_tmp,
 )
-    @assert iszero(R)
+
     z, S = measurement.μ, copy!(m_tmp.Σ, measurement.Σ)
     m_p, P_p = x_pred.μ, x_pred.Σ
     D = length(m_p)
