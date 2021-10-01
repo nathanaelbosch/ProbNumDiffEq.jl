@@ -19,11 +19,8 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
-    return OrdinaryDiffEq.copyat_or_push!(
-        integ.sol.pu,
-        integ.saveiter,
-        mul!(cache.pu_tmp, cache.SolProj, cache.x),
-    )
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, mul!(cache.pu_tmp, cache.SolProj, cache.x))
+    return nothing
 end
 
 """Perform a step
