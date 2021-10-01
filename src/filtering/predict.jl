@@ -12,14 +12,12 @@ In the solvers, we recommend to use the non-allocating [`predict!`](@ref).
 """
 predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
     Gaussian(predict_mean(x, A), predict_cov(x, A, Q))
-predict_mean(x::Gaussian, A::AbstractMatrix) = A*x.μ
-predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A*x.Σ*A' + Q
-
+predict_mean(x::Gaussian, A::AbstractMatrix) = A * x.μ
+predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A * x.Σ * A' + Q
 
 """Square-root implementation of [`predict_cov!`](@ref)."""
 predict_cov(x::SRGaussian, A::AbstractMatrix, Q::SRMatrix) =
     SRMatrix(qr([A * x.Σ.squareroot Q.squareroot]').R')
-
 
 """
     predict!(x_out, x_curr, Ah, Qh, cachemat)
@@ -34,10 +32,14 @@ P_{n+1}^P = A(h)*P_n*A(h) + Q(h)
 
 See also: [`predict`](@ref)
 """
-function predict!(x_out::SRGaussian, x_curr::SRGaussian, Ah::AbstractMatrix, Qh::SRMatrix,
-                  cachemat::SRMatrix,
-                  diffusion=1,
-                  )
+function predict!(
+    x_out::SRGaussian,
+    x_curr::SRGaussian,
+    Ah::AbstractMatrix,
+    Qh::SRMatrix,
+    cachemat::SRMatrix,
+    diffusion=1,
+)
     predict_mean!(x_out, x_curr, Ah)
     predict_cov!(x_out, x_curr, Ah, Qh, cachemat, diffusion)
     return x_out

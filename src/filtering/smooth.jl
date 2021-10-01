@@ -58,7 +58,6 @@ function smooth(
     return x_curr_smoothed, G
 end
 
-
 function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing

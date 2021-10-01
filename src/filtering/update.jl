@@ -12,7 +12,6 @@ This function provides a very simple UPDATE implementation.
 In the solvers, we recommend to use the non-allocating [`update!`](@ref).
 """
 function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
-
     m, C = x
     z, S = measurement
 
@@ -22,7 +21,6 @@ function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
 
     return Gaussian(m_new, C_new)
 end
-
 
 """
     update!(x_out, x_pred, measurement, H, R=0)
@@ -49,7 +47,6 @@ function update!(
     M_cache::AbstractMatrix,
     m_tmp,
 )
-
     z, S = measurement.μ, copy!(m_tmp.Σ, measurement.Σ)
     m_p, P_p = x_pred.μ, x_pred.Σ
     D = length(m_p)
