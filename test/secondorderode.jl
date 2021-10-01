@@ -1,7 +1,6 @@
 using ProbNumDiffEq
 using Test
 
-
 du0 = [0.0]
 u0 = [2.0]
 tspan = (0.0, 6.3)
@@ -42,7 +41,7 @@ end
 
 @testset "RungeKuttaInit for SecondOrderODEProblems" begin
     @test_broken solve(prob_iip, EK1(initialization=RungeKuttaInit())) isa
-    ProbNumDiffEq.ProbODESolution
+                 ProbNumDiffEq.ProbODESolution
 end
 
 @testset "Fixed Diffusion" begin
