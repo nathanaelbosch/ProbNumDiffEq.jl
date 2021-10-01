@@ -16,7 +16,13 @@ prob = ProbNumDiffEq.remake_prob_with_jac(prob)
     q = 8
     @test solve(
         prob,
-        EK0(order=q, smooth=true, diffusionmodel=:dynamic),
+        EK0(order=q, smooth=true, diffusionmodel=:fixed),
+        adaptive=false,
+        dt=dt,
+    ) isa DiffEqBase.AbstractODESolution
+    @test solve(
+        prob,
+        EK1(order=q, smooth=true, diffusionmodel=:fixed),
         adaptive=false,
         dt=dt,
     ) isa DiffEqBase.AbstractODESolution

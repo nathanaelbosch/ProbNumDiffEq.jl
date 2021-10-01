@@ -14,22 +14,6 @@ importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary:
     prob_ode_fitzhughnagumo, prob_ode_vanstiff, prob_ode_2Dlinear, prob_ode_linear
 
-@testset "Smoothing with small constant steps" begin
-    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_fitzhughnagumo)
-    @test solve(
-        prob,
-        EK0(order=4, diffusionmodel=:fixed, smooth=true),
-        adaptive=false,
-        dt=1e-3,
-    ) isa ProbNumDiffEq.ProbODESolution
-    @test solve(
-        prob,
-        EK1(order=4, diffusionmodel=:fixed, smooth=true),
-        adaptive=false,
-        dt=1e-3,
-    ) isa ProbNumDiffEq.ProbODESolution
-end
-
 @testset "Problem with analytic solution" begin
     linear(u, p, t) = p .* u
     linear_analytic(u0, p, t) = @. u0 * exp(p * t)
