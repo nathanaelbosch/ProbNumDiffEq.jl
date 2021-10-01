@@ -268,12 +268,12 @@ function estimate_errors(cache::GaussianODEFilterCache)
     L = cache.m_tmp.Σ.squareroot
 
     if local_diffusion isa Diagonal
-        mul!(L, H, sqrt.(local_diffusion) * Qh.squareroot)
+        _matmul!(L, H, sqrt.(local_diffusion) * Qh.squareroot)
         error_estimate = sqrt.(diag(L * L'))
         return error_estimate
 
     elseif local_diffusion isa Number
-        mul!(L, H, Qh.squareroot)
+        _matmul!(L, H, Qh.squareroot)
         # error_estimate = local_diffusion .* diag(L*L')
         @tullio error_estimate[i] := L[i, j] * L[i, j]
         error_estimate .*= local_diffusion
