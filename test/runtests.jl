@@ -57,6 +57,10 @@ end
         include("autodiff.jl")
     end
 
+    @timedtestset "Second order ODEs" begin
+        include("secondorderode.jl")
+    end
+
     @timedtestset "Specific Problems" begin
         include("specific_problems.jl")
     end

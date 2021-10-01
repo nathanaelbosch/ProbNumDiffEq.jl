@@ -130,55 +130,6 @@ end
     @test solve(prob, EK0(order=3), callback=Callback()) isa ProbNumDiffEq.ProbODESolution
 end
 
-@testset "SecondOrderODEProblem" begin
-    du0 = [0.0]
-    u0 = [2.0]
-    tspan = (0.0, 6.3)
-    p = [1e1]
-
-    function vanderpol!(ddu, du, u, p, t)
-        μ = p[1]
-        @. ddu = μ * ((1 - u^2) * du - u)
-    end
-    prob_iip = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
-
-    function vanderpol(du, u, p, t)
-        μ = p[1]
-        ddu = μ .* ((1 .- u .^ 2) .* du .- u)
-        return ddu
-    end
-    prob_oop = SecondOrderODEProblem(vanderpol, du0, u0, tspan, p)
-
-    appxsol = solve(prob_iip, Tsit5(), abstol=1e-7, reltol=1e-7)
-
-    @testset "IIP" begin
-        for alg in (EK0(), EK1())
-            @testset "$alg" begin
-                @test solve(prob_iip, alg) isa ProbNumDiffEq.ProbODESolution
-                @test solve(prob_iip, alg).u[end] ≈ appxsol.u[end] rtol = 1e-3
-            end
-        end
-    end
-
-    @testset "OOP" begin
-        for alg in (EK0(), EK1())
-            @testset "$alg" begin
-                @test solve(prob_oop, alg) isa ProbNumDiffEq.ProbODESolution
-                @test solve(prob_oop, alg).u[end] ≈ appxsol.u[end] rtol = 1e-3
-            end
-        end
-    end
-
-    @testset "RungeKuttaInit for SecondOrderODEProblems" begin
-        @test_broken solve(prob_iip, EK1(initialization=RungeKuttaInit())) isa
-                     ProbNumDiffEq.ProbODESolution
-    end
-
-    @testset "Fixed Diffusion" begin
-        @test solve(prob_iip, EK0(diffusionmodel=:fixed)) isa ProbNumDiffEq.ProbODESolution
-    end
-end
-
 @testset "Problem definition with ParameterizedFunctions.jl" begin
     f = @ode_def LotkaVolterra begin
         dx = a * x - b * x * y
