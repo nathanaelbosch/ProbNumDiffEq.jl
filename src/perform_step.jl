@@ -91,6 +91,9 @@ function OrdinaryDiffEq.perform_step!(
     # Likelihood
     # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
 
+    # Update
+    x_filt = update!(integ, x_pred)
+
     # Estimate error for adaptive steps - can already be done before filtering
     if integ.opts.adaptive
         err_est_unscaled = estimate_errors(cache)
@@ -123,8 +126,6 @@ function OrdinaryDiffEq.perform_step!(
     # If the step gets rejected, we don't even need to perform an update!
     reject = integ.opts.adaptive && integ.EEst >= one(integ.EEst)
     if !reject
-        # Update
-        x_filt = update!(integ, x_pred)
 
         # Save into u_filt and integ.u
         mul!(view(u_filt, :), SolProj, x_filt.μ)
@@ -152,8 +153,16 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
     # Mean
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
-    # z .= E1*x_pred.μ .- du
-    _matmul!(z, E1, x_pred.μ)
+    # z .= MM*E1*x_pred.μ .- du
+    if f.mass_matrix == I
+        H .= E1
+    elseif f.mass_matrix isa UniformScaling
+        H .= f.mass_matrix.λ .* E1
+    else
+        _matmul!(H, f.mass_matrix, E1)
+    end
+
+    _matmul!(z, H, x_pred.μ)
     z .-= du[:]
 
     # Cov
@@ -169,12 +178,12 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
         else
             ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
         end
-
         integ.destats.njacs += 1
-        H .= E1
+
+        # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
         _matmul!(H, ddu, E0, -1.0, 1.0)
     else
-        # H .= E1 # This is already the case!
+        # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
     end
 
     return measurement
@@ -306,6 +315,10 @@ function estimate_errors(cache::GaussianODEFilterCache)
         # error_estimate = local_diffusion .* diag(L*L')
         @tullio error_estimate[i] := L[i, j] * L[i, j]
         error_estimate .*= local_diffusion
+
+        # @info "it's small anyways I guess?" error_estimate cache.measurement.μ .^ 2
+        # error_estimate .+= cache.measurement.μ .^ 2
+
         error_estimate .= sqrt.(error_estimate)
         return error_estimate
     end

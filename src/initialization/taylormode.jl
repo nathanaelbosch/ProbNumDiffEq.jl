@@ -13,7 +13,8 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             @assert df isa ArrayPartition
             df = df[2, :]
         end
-        condition_on!(x, Proj(o), view(df, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+        pmat = f.mass_matrix * Proj(o)
+        condition_on!(x, pmat, view(df, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
     end
 end
 
