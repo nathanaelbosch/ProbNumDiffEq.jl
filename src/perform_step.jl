@@ -154,7 +154,15 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
     # z .= MM*E1*x_pred.μ .- du
-    _matmul!(z, f.mass_matrix*E1, x_pred.μ)
+    if f.mass_matrix == I
+        H .= E1
+    elseif f.mass_matrix isa UniformScaling
+        H .= f.mass_matrix.λ .* E1
+    else
+        _matmul!(H, f.mass_matrix, E1)
+    end
+
+    _matmul!(z, H, x_pred.μ)
     z .-= du[:]
 
     # Cov
@@ -170,13 +178,12 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
         else
             ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
         end
-
         integ.destats.njacs += 1
-        _matmul!(H, f.mass_matrix, E1)
+
+        # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
         _matmul!(H, ddu, E0, -1.0, 1.0)
     else
-        # H .= E1 # This is already the case!
-        _matmul!(H, f.mass_matrix, E1)
+        # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
     end
 
     return measurement

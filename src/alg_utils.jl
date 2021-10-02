@@ -21,8 +21,8 @@ OrdinaryDiffEq.ispredictive(alg::AbstractEK) = false # not sure, maybe Gustafsso
 
 # OrdinaryDiffEq.qmin_default(alg::AbstractEK) =
 # OrdinaryDiffEq.qmax_default(alg::AbstractEK) =
-# OrdinaryDiffEq.beta2_default(alg::AbstractEK) = 2//(5(alg.order+1))
-# OrdinaryDiffEq.beta1_default(alg::AbstractEK, beta2) = 7//(10(alg.order+1))
+# OrdinaryDiffEq.beta2_default(alg::AbstractEK) = 2 // (5(alg.order + 1))
+# OrdinaryDiffEq.beta1_default(alg::AbstractEK, beta2) = 7 // (10(alg.order + 1))
 # OrdinaryDiffEq.gamma_default(alg::AbstractEK) =
 
 # OrdinaryDiffEq.uses_uprev(alg::, adaptive::Bool) = adaptive
