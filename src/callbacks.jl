@@ -14,6 +14,7 @@ function ManifoldUpdate(residualf)
 
         x_out = update(x, Gaussian(z, S), J)
         copy!(x, x_out)
+        return nothing
     end
-    DiscreteCallback(condition, affect!)
+    return DiscreteCallback(condition, affect!)
 end

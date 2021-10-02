@@ -126,7 +126,8 @@ end
     E(u) = [dot(u, u) - 2]
 
     @test solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
-    @test solve(prob, EK0(order=3), callback=ManifoldUpdate(E)) isa ProbNumDiffEq.ProbODESolution
+    @test solve(prob, EK0(order=3), callback=ManifoldUpdate(E)) isa
+          ProbNumDiffEq.ProbODESolution
 end
 
 @testset "Problem definition with ParameterizedFunctions.jl" begin

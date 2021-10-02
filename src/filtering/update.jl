@@ -28,7 +28,7 @@ function update(x::SRGaussian, measurement::SRGaussian, H::AbstractMatrix)
 
     K = C * H' * inv(S)
     m_new = m - K * z
-    C_new = X_A_Xt(C, (I - K*H))
+    C_new = X_A_Xt(C, (I - K * H))
 
     return Gaussian(m_new, C_new)
 end
