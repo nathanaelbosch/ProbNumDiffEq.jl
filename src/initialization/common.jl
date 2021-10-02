@@ -28,7 +28,6 @@ function condition_on!(
     data::AbstractVector,
     meascache,
     Kcache,
-    Kcache2,
     covcache,
     Mcache,
 )
@@ -43,8 +42,7 @@ function condition_on!(
     end
 
     _matmul!(Kcache, x.Σ.mat, H')
-    Kcache2 .= Kcache ./ diag(S)'
-    K = Kcache2
+    K = Kcache ./= diag(S)'
 
     _matmul!(x.μ, K, data - z, 1.0, 1.0)
     # x.μ .+= K*(data - z)

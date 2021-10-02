@@ -7,7 +7,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
         @warn "RungeKuttaInit might be unstable for high orders"
     end
 
-    @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1, K2 = cache
+    @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
 
     t0 = integ.sol.prob.tspan[1]
     dt = 10 * OrdinaryDiffEq.ode_determine_initdt(
@@ -35,7 +35,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     # integ.destats.ncondition = sol.destats.ncondition
 
     # Initialize on u0
-    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
     # Initialize on du0
     if isinplace(f)
@@ -43,7 +43,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     else
         du .= f(u, p, t)
     end
-    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, K2, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q < 2
         return
@@ -67,16 +67,8 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
             ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
         end
     end
-    condition_on!(
-        x,
-        Proj(2),
-        ddu * view(du, :) + view(dfdt, :),
-        m_tmp,
-        K1,
-        K2,
-        x_tmp.Σ,
-        x_tmp2.Σ.mat,
-    )
+    ddfddu = ddu * view(du, :) + view(dfdt, :)
+    condition_on!(x, Proj(2), ddfddu, m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q < 3
         return
