@@ -21,6 +21,17 @@ function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
 
     return Gaussian(m_new, C_new)
 end
+function update(x::SRGaussian, measurement::SRGaussian, H::AbstractMatrix)
+    """In Joseph form"""
+    m, C = x
+    z, S = measurement
+
+    K = C * H' * inv(S)
+    m_new = m - K * z
+    C_new = X_A_Xt(C, (I - K*H))
+
+    return Gaussian(m_new, C_new)
+end
 
 """
     update!(x_out, x_pred, measurement, H, R=0)
