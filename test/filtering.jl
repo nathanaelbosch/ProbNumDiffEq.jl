@@ -24,12 +24,6 @@ using LinearAlgebra
     x_curr = Gaussian(m, P)
     x_out = copy(x_curr)
 
-    @testset "predict!" begin
-        ProbNumDiffEq.predict!(x_out, x_curr, A, Q)
-        @test m_p == x_out.μ
-        @test P_p == x_out.Σ
-    end
-
     @testset "predict" begin
         x_out = ProbNumDiffEq.predict(x_curr, A, Q)
         @test m_p == x_out.μ
@@ -39,7 +33,9 @@ using LinearAlgebra
     @testset "predict! with SRMatrix" begin
         x_curr = Gaussian(m, SRMatrix(L_p))
         x_out = copy(x_curr)
-        ProbNumDiffEq.predict!(x_out, x_curr, A, SRMatrix(L_Q))
+        Q_SR = SRMatrix(L_Q)
+        cache = SRMatrix(zeros(d, 2d))
+        ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, cache)
         @test m_p == x_out.μ
         @test P_p ≈ x_out.Σ
     end
@@ -72,14 +68,17 @@ end
     x_out = copy(x_pred)
     measurement = Gaussian(z, S)
 
-    @testset "update!" begin
-        ProbNumDiffEq.update!(x_out, x_pred, measurement, H, R)
+    @testset "update" begin
+        x_out = ProbNumDiffEq.update(x_pred, measurement, H)
         @test m ≈ x_out.μ
         @test P ≈ x_out.Σ
     end
 
-    @testset "update" begin
-        x_out = ProbNumDiffEq.update(x_pred, measurement, H, R)
+    @testset "update!" begin
+        K_cache = copy(K)
+        M_cache = zeros(d, d)
+        m_tmp = copy(measurement)
+        ProbNumDiffEq.update!(x_out, x_pred, measurement, H, K_cache, M_cache, m_tmp)
         @test m ≈ x_out.μ
         @test P ≈ x_out.Σ
     end

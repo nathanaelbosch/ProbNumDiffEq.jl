@@ -102,10 +102,11 @@ include("initialization/taylormode.jl")
 include("initialization/rungekutta.jl")
 
 include("integrator_utils.jl")
-include("filtering.jl")
+include("filtering/predict.jl")
+include("filtering/update.jl")
+include("filtering/smooth.jl")
 include("perform_step.jl")
 include("projection.jl")
-include("smoothing.jl")
 
 include("solution.jl")
 include("solution_sampling.jl")
