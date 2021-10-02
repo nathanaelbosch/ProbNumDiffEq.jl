@@ -36,13 +36,13 @@ function condition_on!(
     _matmul!(z, H, x.μ)
     X_A_Xt!(S, x.Σ, H)
     @assert isdiag(S)
-    S = Diagonal(S)
-    if any(iszero.(S.diag))
-        S += 1e-20I
+    S_diag = diag(S)
+    if any(iszero.(S_diag)) # could happen with a singular mass-matrix
+        S_diag .+= 1e-20
     end
 
     _matmul!(Kcache, x.Σ.mat, H')
-    K = Kcache ./= diag(S)'
+    K = Kcache ./= S_diag'
 
     _matmul!(x.μ, K, data - z, 1.0, 1.0)
     # x.μ .+= K*(data - z)
