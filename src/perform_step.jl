@@ -167,16 +167,16 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
 
     # Cov
     if alg isa EK1 || alg isa IEKS
-        linearize_at =
+        u_lin =
             (alg isa IEKS && !isnothing(alg.linearize_at)) ? alg.linearize_at(t).μ : u_pred
 
-        # Jacobian is now computed either with the given jac, or ForwardDiff
+        # Jacobian is computed either with the given jac, or ForwardDiff
         if !isnothing(f.jac)
-            _eval_f_jac!(ddu, linearize_at, p, t, f)
+            _eval_f_jac!(ddu, u_lin, p, t, f)
         elseif isinplace(f)
-            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
+            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_lin)
         else
-            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
+            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_lin)
         end
         integ.destats.njacs += 1
 
@@ -186,7 +186,7 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
         # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
     end
 
-    return measurement
+    return nothing
 end
 
 function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
@@ -212,7 +212,7 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
 
     # Cov
     if alg isa EK1
-        @assert !(alg isa IEKS)
+        (alg isa IEKS) && error("IEKS is currently not supported for SecondOrderODEProbems")
 
         if isinplace(f)
             J0 = copy(ddu)
