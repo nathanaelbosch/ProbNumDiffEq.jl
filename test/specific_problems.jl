@@ -114,6 +114,22 @@ end
     @test solve(prob, EK0(order=3), callback=Callback()) isa ProbNumDiffEq.ProbODESolution
 end
 
+@testset "ManifoldUpdate callback test" begin
+    # Again: Harmonic Oscillator with condition on E=2
+    u0 = ones(2)
+    function harmonic_oscillator(du, u, p, t)
+        du[1] = u[2]
+        return du[2] = -u[1]
+    end
+    prob = ODEProblem(harmonic_oscillator, u0, (0.0, 100.0))
+
+    E(u) = [dot(u, u) - 2]
+
+    @test solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
+    @test solve(prob, EK0(order=3), callback=ManifoldUpdate(E)) isa
+          ProbNumDiffEq.ProbODESolution
+end
+
 @testset "Problem definition with ParameterizedFunctions.jl" begin
     f = @ode_def LotkaVolterra begin
         dx = a * x - b * x * y
