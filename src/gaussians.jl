@@ -27,7 +27,7 @@ function mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
 end
 
 var(p::SRGaussian{T}) where {T} = diag(p.Σ)
-std(p::SRGaussian{T}) where {T} = sqrt.(diag(p.Σ))
+std(p::SRGaussian{T}) where {T} = sqrt.(var(p))
 mean(s::SRGaussianList{T}) where {T} = s.μ
 var(s::SRGaussianList{T}) where {T} = diag.(s.Σ)
-std(s::SRGaussianList{T}) where {T} = map(v -> sqrt.(v), (diag.(s.Σ)))
+std(s::SRGaussianList{T}) where {T} = map(std, s)
