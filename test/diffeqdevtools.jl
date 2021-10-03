@@ -19,6 +19,12 @@ test_sol = TestSolution(solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14)
     @test :L2 in keys(appxsol.errors)
     @test :l∞ in keys(appxsol.errors)
     @test :L∞ in keys(appxsol.errors)
+
+    appxsol = appxtrue(solve(prob, EK1(smooth=false), dense=false), test_sol)
+    @test appxsol.errors isa Dict
+    @test :final in keys(appxsol.errors)
+    @test :l2 in keys(appxsol.errors)
+    @test :l∞ in keys(appxsol.errors)
 end
 
 @testset "WorkPrecision" begin
