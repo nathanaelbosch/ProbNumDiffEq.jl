@@ -122,12 +122,20 @@ end
         return du[2] = -u[1]
     end
     prob = ODEProblem(harmonic_oscillator, u0, (0.0, 100.0))
+    appxsol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
 
     E(u) = [dot(u, u) - 2]
 
-    @test solve(prob, EK0(order=3)) isa ProbNumDiffEq.ProbODESolution
-    @test solve(prob, EK0(order=3), callback=ManifoldUpdate(E)) isa
-          ProbNumDiffEq.ProbODESolution
+    sol1 = solve(prob, EK0(order=3))
+    @test sol1 isa ProbNumDiffEq.ProbODESolution
+    sol2 = solve(prob, EK0(order=3), callback=ManifoldUpdate(E))
+    @test sol2 isa ProbNumDiffEq.ProbODESolution
+
+    @test E(sol1[end]) .^ 2 > E(sol2[end]) .^ 2
+
+    err1 = sol1[end] .- appxsol[end]
+    err2 = sol2[end] .- appxsol[end]
+    @test all(err1 .^2 > err2 .^ 2)
 end
 
 @testset "Problem definition with ParameterizedFunctions.jl" begin
