@@ -3,18 +3,31 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
     q = integ.alg.order
+    D = d * (q + 1)
 
     @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = cache
 
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     @assert length(0:q) == length(f_derivatives)
+    m_cache = Gaussian(
+        zeros(eltype(u), d),
+        SRMatrix(zeros(eltype(u), d, D), zeros(eltype(u), d, d)),
+    )
     for (o, df) in zip(0:q, f_derivatives)
         if f isa DynamicalODEFunction
             @assert df isa ArrayPartition
             df = df[2, :]
         end
         pmat = f.mass_matrix * Proj(o)
-        condition_on!(x, pmat, view(df, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        condition_on!(
+            x,
+            pmat,
+            view(df, :),
+            m_cache,
+            view(K1, :, 1:d),
+            x_tmp.Σ,
+            x_tmp2.Σ.mat,
+        )
     end
 end
 

@@ -50,3 +50,12 @@ Base.@kwdef struct EK1{IT} <: AbstractEK
     smooth::Bool = true
     initialization::IT = TaylorModeInit()
 end
+
+Base.@kwdef struct EK1FDB{IT} <: AbstractEK
+    prior::Symbol = :ibm
+    order::Int = 3
+    diffusionmodel::Symbol = :dynamic
+    smooth::Bool = true
+    initialization::IT = TaylorModeInit()
+    jac_quality::Int = 1
+end

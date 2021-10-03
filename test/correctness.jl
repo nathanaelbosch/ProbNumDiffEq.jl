@@ -21,12 +21,15 @@ for (prob, probname) in [
         true_sol =
             solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
-        for Alg in (EK0, EK1),
+        EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
+        EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
+        EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
+        for Alg in (EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3),
             diffusion in [:fixed, :dynamic, :fixedMV, :dynamicMV],
             init in [TaylorModeInit(), RungeKuttaInit()],
             q in [2, 3, 5]
 
-            if Alg == EK1 && diffusion in (:fixedMV, :dynamicMV)
+            if diffusion in (:fixedMV, :dynamicMV) && Alg != EK0
                 continue
             end
 
@@ -55,12 +58,15 @@ for (prob, probname) in [
             solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
         true_dense_vals = true_sol.(t_eval)
 
-        for Alg in (EK0, EK1),
+        EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
+        EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
+        EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
+        for Alg in (EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3),
             diffusion in [:fixed, :dynamic, :fixedMV, :dynamicMV],
             init in [TaylorModeInit(), RungeKuttaInit()],
             q in [2, 3, 5]
 
-            if Alg == EK1 && diffusion in (:fixedMV, :dynamicMV)
+            if diffusion in (:fixedMV, :dynamicMV) && Alg != EK0
                 continue
             end
 
