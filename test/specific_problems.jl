@@ -70,12 +70,13 @@ end
     f(du, u, p, t) = (du[1] = p[1] * u[1] .* (1 .- u[1]))
     prob = ODEProblem(f, [1e-1], (0.0, 5), [3.0])
     @testset "without jacobian" begin
-        @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         # first without defined jac
+        @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
+        @test solve(prob, EK0(initialization=RungeKuttaInit())) isa ProbNumDiffEq.ProbODESolution
     end
     @testset "with jacobian" begin
         # now with defined jac
@@ -84,6 +85,7 @@ end
         @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
+        @test solve(prob, EK0(initialization=RungeKuttaInit())) isa ProbNumDiffEq.ProbODESolution
     end
 end
 
