@@ -70,7 +70,7 @@ end
     tm_init = integ1.cache.x.μ
     Proj1 = integ1.cache.Proj
 
-    @testset "Order $o" for o in (3, 4, 5)
+    @testset "Order $o" for o in (1, 2, 3, 4, 5)
         integ2 = init(prob, EK0(order=o, initialization=RungeKuttaInit()))
         rk_init = integ2.cache.x.μ
         Proj2 = integ2.cache.Proj
