@@ -129,11 +129,7 @@ function OrdinaryDiffEq.perform_step!(
 
         # Save into u_filt and integ.u
         mul!(view(u_filt, :), SolProj, x_filt.μ)
-        if integ.u isa Number
-            integ.u = u_filt[1]
-        else
-            integ.u .= u_filt
-        end
+        integ.u .= u_filt
 
         # Advance the state here
         copy!(integ.cache.x, integ.cache.x_filt)
