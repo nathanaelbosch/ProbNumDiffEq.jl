@@ -135,7 +135,7 @@ end
 
     err1 = sol1[end] .- appxsol[end]
     err2 = sol2[end] .- appxsol[end]
-    @test all(err1 .^2 > err2 .^ 2)
+    @test all(err1 .^ 2 > err2 .^ 2)
 end
 
 @testset "Problem definition with ParameterizedFunctions.jl" begin
