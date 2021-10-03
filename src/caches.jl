@@ -145,6 +145,14 @@ function OrdinaryDiffEq.alg_cache(
     C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
     covmatcache = similar(G)
 
+    if alg isa EK1FDB
+        H = [E1; E2]
+        v = [v; v]
+        S = SRMatrix(zeros(uElType, 2d, D), zeros(uElType, 2d, 2d))
+        measurement = Gaussian(v, S)
+        K = zeros(uElType, D, 2d)
+    end
+
     diffmodel =
         alg.diffusionmodel == :dynamic ? DynamicDiffusion() :
         alg.diffusionmodel == :fixed ? FixedDiffusion() :

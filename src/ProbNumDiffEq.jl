@@ -93,7 +93,7 @@ include("initialization/common.jl")
 export TaylorModeInit, RungeKuttaInit
 
 include("algorithms.jl")
-export EK0, EK1
+export EK0, EK1, EK1FDB
 
 include("alg_utils.jl")
 include("caches.jl")

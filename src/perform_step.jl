@@ -141,12 +141,17 @@ function OrdinaryDiffEq.perform_step!(
     end
 end
 
-function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
+function evaluate_ode!(
+    integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
+    x_pred,
+    t,
+    second_order::Val{false},
+)
     @unpack f, p, dt, alg = integ
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
-    @unpack E0, E1 = integ.cache
+    @unpack E0, E1, E2 = integ.cache
 
     z, S = measurement.μ, measurement.Σ
 
@@ -189,7 +194,79 @@ function evaluate_ode!(integ, x_pred, t, second_order::Val{false})
     return nothing
 end
 
-function evaluate_ode!(integ, x_pred, t, second_order::Val{true})
+function evaluate_ode!(
+    integ::OrdinaryDiffEq.ODEIntegrator{<:EK1FDB},
+    x_pred,
+    t,
+    second_order::Val{false},
+)
+    @unpack f, p, dt, alg = integ
+    @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
+    @assert iszero(R)
+
+    @unpack E0, E1, E2 = integ.cache
+
+    z, S = measurement.μ, measurement.Σ
+
+    (f.mass_matrix != I) && error("EK1FDB does not support mass-matrices right now")
+
+    # Mean
+    _eval_f!(du, u_pred, p, t, f)
+    integ.destats.nf += 1
+    # z .= MM*E1*x_pred.μ .- du
+    H1, H2 = view(H, 1:d, :), view(H, d+1:2d, :)
+    z1, z2 = view(z, 1:d), view(z, d+1:2d)
+
+    H1 .= E1
+    _matmul!(z1, H1, x_pred.μ)
+    z1 .-= du[:]
+
+    # Cov
+    u_lin = u_pred
+    if !isnothing(f.jac)
+        _eval_f_jac!(ddu, u_lin, p, t, f)
+    elseif isinplace(f)
+        ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_lin)
+    else
+        ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_lin)
+    end
+    integ.destats.njacs += 1
+    _matmul!(H1, ddu, E0, -1.0, 1.0)
+
+    z2 .= (E2 * x_pred.μ .- ddu * du)
+    if integ.alg.jac_quality == 1
+        # EK0-type approach
+        H2 .= E2
+    elseif integ.alg.jac_quality == 2
+        H2 .= E2 - ddu * ddu * E0
+    elseif integ.alg.jac_quality == 3
+        _z2(m) = begin
+            u_pred = E0 * m
+            du = zeros(eltype(m), d)
+            ddu = zeros(eltype(m), d, d)
+            _eval_f!(du, u_pred, p, t, f)
+            if !isnothing(f.jac)
+                _eval_f_jac!(ddu, u_pred, p, t, f)
+            elseif isinplace(f)
+                ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
+            else
+                ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
+            end
+            return (E2 * m .- ddu * du)
+        end
+        H2 .= ForwardDiff.jacobian(_z2, x_pred.μ)
+    else
+        error("EK1FDB's `jac_quality` has to be in [1,2,3]")
+    end
+    return nothing
+end
+
+function evaluate_ode!(
+    integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
+    x_pred,
+    t,
+    second_order::Val{true},
+)
     @unpack f, p, dt, alg = integ
     @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
@@ -297,7 +374,7 @@ function smooth_all!(integ)
 end
 
 function estimate_errors(cache::GaussianODEFilterCache)
-    @unpack local_diffusion, Qh, H = cache
+    @unpack local_diffusion, Qh, H, d = cache
 
     if local_diffusion isa Real && isinf(local_diffusion)
         return Inf
@@ -308,7 +385,7 @@ function estimate_errors(cache::GaussianODEFilterCache)
     if local_diffusion isa Diagonal
         _matmul!(L, H, sqrt.(local_diffusion) * Qh.squareroot)
         error_estimate = sqrt.(diag(L * L'))
-        return error_estimate
+        return view(error_estimate, 1:d)
 
     elseif local_diffusion isa Number
         _matmul!(L, H, Qh.squareroot)
@@ -320,6 +397,6 @@ function estimate_errors(cache::GaussianODEFilterCache)
         # error_estimate .+= cache.measurement.μ .^ 2
 
         error_estimate .= sqrt.(error_estimate)
-        return error_estimate
+        return view(error_estimate, 1:d)
     end
 end
