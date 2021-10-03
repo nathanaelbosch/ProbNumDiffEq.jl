@@ -109,6 +109,13 @@ end
     x_smoothed = Gaussian(m_s, SRMatrix(L_P_s))
 
     @testset "smooth" begin
+        x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q)
+        @test m_smoothed ≈ x_out.μ
+        @test P_smoothed ≈ x_out.Σ
+    end
+    @testset "smooth with SRMatrix" begin
+        x_curr = Gaussian(m, SRMatrix(L_P))
+        x_smoothed = Gaussian(m_s, SRMatrix(L_P_s))
         x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q_SR)
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ x_out.Σ
