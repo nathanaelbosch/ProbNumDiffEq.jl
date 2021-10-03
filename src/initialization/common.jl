@@ -4,15 +4,7 @@ struct RungeKuttaInit <: InitializationScheme end
 
 ########################################################################
 # Some utilities below
-"""Quick and dirty wrapper to make IIP functions OOP"""
-function iip_to_oop(f!)
-    function f(u, p, t)
-        du = copy(u)
-        f!(du, u, p, t)
-        return du
-    end
-    return f
-end
+"""Quick and dirty wrapper to make OOP functions IIP"""
 function oop_to_iip(f)
     function f!(du, u, p, t)
         du .= f(u, p, t)
