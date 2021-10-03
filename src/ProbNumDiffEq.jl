@@ -22,8 +22,6 @@ stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
 import LinearAlgebra: mul!
-# patch diagonal matrices:
-LinearAlgebra.mul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (C .= A .* B.diag')
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays

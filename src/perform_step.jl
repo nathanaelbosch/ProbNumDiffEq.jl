@@ -129,11 +129,7 @@ function OrdinaryDiffEq.perform_step!(
 
         # Save into u_filt and integ.u
         mul!(view(u_filt, :), SolProj, x_filt.μ)
-        if integ.u isa Number
-            integ.u = u_filt[1]
-        else
-            integ.u .= u_filt
-        end
+        integ.u .= u_filt
 
         # Advance the state here
         copy!(integ.cache.x, integ.cache.x_filt)
@@ -170,7 +166,7 @@ function evaluate_ode!(
     _matmul!(z, H, x_pred.μ)
     z .-= du[:]
 
-    # Cov
+    # If EK1, evaluate the Jacobian and adjust H
     if alg isa EK1 || alg isa IEKS
         u_lin =
             (alg isa IEKS && !isnothing(alg.linearize_at)) ? alg.linearize_at(t).μ : u_pred
@@ -187,8 +183,6 @@ function evaluate_ode!(
 
         # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
         _matmul!(H, ddu, E0, -1.0, 1.0)
-    else
-        # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
     end
 
     return nothing
@@ -221,7 +215,7 @@ function evaluate_ode!(
     _matmul!(z1, H1, x_pred.μ)
     z1 .-= du[:]
 
-    # Cov
+    # If EK1, evaluate the Jacobian and adjust H
     u_lin = u_pred
     if !isnothing(f.jac)
         _eval_f_jac!(ddu, u_lin, p, t, f)
@@ -323,8 +317,6 @@ function evaluate_ode!(
             integ.destats.njacs += 2
             H .= E2 .- J0 * E0 .- J1 * E1
         end
-    else
-        # H .= E2 # This is already the case!
     end
 
     return measurement

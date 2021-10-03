@@ -5,28 +5,6 @@ function init_preconditioner(d, q, elType=typeof(1.0))
     return P, PI
 end
 
-@fastmath @inbounds function make_preconditioner_old!(P, h, d, q)
-    val = h^(-q - 1 / 2)
-    for j in 0:q
-        @simd for i in 1:d
-            P[j*d+i, j*d+i] = val
-        end
-        val *= h
-    end
-    return P
-end
-
-@fastmath @inbounds function make_preconditioner_old_inv!(PI, h, d, q)
-    val = h^(q + 1 / 2)
-    for j in 0:q
-        @simd for i in 1:d
-            PI[j*d+i, j*d+i] = val
-        end
-        val /= h
-    end
-    return PI
-end
-
 function make_preconditioners!(cache::GaussianODEFilterCache, dt)
     @unpack P, PI, d, q = cache
     make_preconditioner!(P, dt, d, q)

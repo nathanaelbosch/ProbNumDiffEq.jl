@@ -21,8 +21,8 @@ function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
 
     return Gaussian(m_new, C_new)
 end
+"""UPDATE step in Joseph-form, with square-root matrix inputs"""
 function update(x::SRGaussian, measurement::SRGaussian, H::AbstractMatrix)
-    """In Joseph form"""
     m, C = x
     z, S = measurement
 
