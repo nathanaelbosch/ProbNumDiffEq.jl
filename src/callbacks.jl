@@ -1,4 +1,4 @@
-function ManifoldUpdate(residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
+function ManifoldUpdate(residualf, args...; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15, kwargs...)
     condition(u, t, integ) = true
 
     function affect!(integ)
@@ -27,5 +27,5 @@ function ManifoldUpdate(residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
 
         return nothing
     end
-    return DiscreteCallback(condition, affect!)
+    return DiscreteCallback(condition, affect!, args...; kwargs...)
 end
