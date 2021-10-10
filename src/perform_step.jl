@@ -213,7 +213,7 @@ function evaluate_ode!(
 
     H1 .= E1
     _matmul!(z1, H1, x_pred.μ)
-    z1 .-= du[:]
+    z1 .-= @view du[:]
 
     # If EK1, evaluate the Jacobian and adjust H
     u_lin = u_pred
