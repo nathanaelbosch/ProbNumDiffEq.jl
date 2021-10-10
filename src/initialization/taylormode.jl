@@ -8,6 +8,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = cache
 
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
+    integ.destats.nf += q
     @assert length(0:q) == length(f_derivatives)
     m_cache = Gaussian(
         zeros(eltype(u), d),

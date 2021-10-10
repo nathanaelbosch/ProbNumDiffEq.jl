@@ -176,8 +176,10 @@ function evaluate_ode!(
             _eval_f_jac!(ddu, u_lin, p, t, f)
         elseif isinplace(f)
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_lin)
+            integ.destats.nf += 1
         else
             ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_lin)
+            integ.destats.nf += 1
         end
         integ.destats.njacs += 1
 
@@ -221,8 +223,10 @@ function evaluate_ode!(
         _eval_f_jac!(ddu, u_lin, p, t, f)
     elseif isinplace(f)
         ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_lin)
+        integ.destats.nf += 1
     else
         ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_lin)
+        integ.destats.nf += 1
     end
     integ.destats.njacs += 1
     _matmul!(H1, ddu, E0, -1.0, 1.0)
@@ -243,9 +247,12 @@ function evaluate_ode!(
                 _eval_f_jac!(ddu, u_pred, p, t, f)
             elseif isinplace(f)
                 ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
+                # integ.destats.nf += 1
             else
                 ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
+                # integ.destats.nf += 1
             end
+            # integ.destats.njacs += 1
             return (E2 * m .- ddu * du)
         end
         H2 .= ForwardDiff.jacobian(_z2, x_pred.μ)
