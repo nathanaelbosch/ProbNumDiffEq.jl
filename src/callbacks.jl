@@ -1,8 +1,7 @@
 function manifoldupdate!(integ, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
     @unpack x, SolProj = integ.cache
     f(m) = residualf(SolProj * m)
-    copy!(x, manifoldupdate(x, f; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂))
-
+    return copy!(x, manifoldupdate(x, f; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂))
 end
 
 function manifoldupdate(x, f; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
@@ -27,8 +26,6 @@ end
 
 function ManifoldUpdate(residualf, args...; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15, kwargs...)
     condition(u, t, integ) = true
-    affect!(integ) =  manifoldupdate!(integ, residualf;
-                                      maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂
-                                      )
+    affect!(integ) = manifoldupdate!(integ, residualf; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂)
     return DiscreteCallback(condition, affect!, args...; kwargs...)
 end
