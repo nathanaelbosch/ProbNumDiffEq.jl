@@ -279,43 +279,34 @@ function evaluate_ode!(
         du2 .= f.f1(view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     end
     integ.destats.nf += 1
-    z .= E2 * x_pred.μ .- du2[:]
+    _matmul!(z, E2, x_pred.μ)
+    z .-= @view du2[:]
 
     # Cov
     if alg isa EK1
         (alg isa IEKS) && error("IEKS is currently not supported for SecondOrderODEProbems")
 
         if isinplace(f)
-            J0 = copy(ddu)
+            H .= E2
+
+            J = ddu
             ForwardDiff.jacobian!(
-                J0,
-                (du2, u) -> f.f1(du2, view(u_pred, 1:d), u, p, t),
+                J,
+                (du2, du_u) -> f.f1(du2, view(du_u, 1:d), view(du_u, d+1:2d), p, t),
                 du2,
-                u_pred[d+1:2d],
+                u_pred,
             )
-
-            J1 = copy(ddu)
-            ForwardDiff.jacobian!(
-                J1,
-                (du2, du) -> f.f1(du2, du, view(u_pred, d+1:2d), p, t),
-                du2,
-                u_pred[1:d],
-            )
-
-            integ.destats.njacs += 2
-
-            H .= E2 .- J0 * E0 .- J1 * E1
+            integ.destats.nf += 1
+            integ.destats.njacs += 1
+            _matmul!(H, J, integ.cache.SolProj, -1.0, 1.0)
         else
-            J0 = ForwardDiff.jacobian(
-                (u) -> f.f1(view(u_pred, 1:d), u, p, t),
-                u_pred[d+1:2d],
+            J = ForwardDiff.jacobian(
+                (du_u) -> f.f1(view(du_u, 1:d), view(du_u, d+1:2d), p, t),
+                u_pred,
             )
-            J1 = ForwardDiff.jacobian(
-                (du) -> f.f1(du, view(u_pred, d+1:2d), p, t),
-                u_pred[1:d],
-            )
-            integ.destats.njacs += 2
-            H .= E2 .- J0 * E0 .- J1 * E1
+            integ.destats.nf += 1
+            integ.destats.njacs += 1
+            H .= E2 .- J * integ.cache.SolProj
         end
     end
 

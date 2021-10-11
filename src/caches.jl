@@ -129,8 +129,8 @@ function OrdinaryDiffEq.alg_cache(
     h = zeros(uElType, d)
     H = f isa DynamicalODEFunction ? copy(E2) : copy(E1)
     du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
-    ddu = zeros(uElType, d, d)
-    # v, S = similar(h), similar(ddu)
+    ddu = f isa DynamicalODEFunction ? zeros(uElType, d, 2d) : zeros(uElType, d, d)
+    v, S = similar(h), similar(ddu)
     v = similar(h)
     S =
         alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
