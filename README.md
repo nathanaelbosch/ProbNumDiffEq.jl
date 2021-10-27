@@ -15,7 +15,7 @@
 
 __ProbNumDiffEq.jl__ provides _probabilistic numerical_ ODE solvers to the
 [DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.
-The implemented _ODE filters_ solve differential equations via Bayesian filtering and smoothing and compute not just a single point estimate of the true solution, but a posterior distribution that contains an estimate of its numerical approximation error.
+The implemented _ODE filters_ solve differential equations via Bayesian filtering and smoothing. The filters compute not just a single point estimate of the true solution, but a posterior distribution that contains an estimate of its numerical approximation error.
 
 
 ---
