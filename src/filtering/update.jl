@@ -22,7 +22,7 @@ function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
     return Gaussian(m_new, C_new)
 end
 """UPDATE step in Joseph-form, with square-root matrix inputs"""
-function update(x::SRGaussian, measurement::SRGaussian, H::AbstractMatrix)
+function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix)
     m, C = x
     z, S = measurement
 
