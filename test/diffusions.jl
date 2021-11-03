@@ -1,4 +1,5 @@
 using Test
+using ProbNumDiffEq
 using OrdinaryDiffEq
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
