@@ -1,6 +1,9 @@
 abstract type InitializationScheme end
 struct TaylorModeInit <: InitializationScheme end
-struct RungeKuttaInit <: InitializationScheme end
+Base.@kwdef struct RungeKuttaInit{ALG} <: InitializationScheme
+    alg::ALG = Tsit5()
+    init_on_du::Bool = false
+end
 
 ########################################################################
 # Some utilities below

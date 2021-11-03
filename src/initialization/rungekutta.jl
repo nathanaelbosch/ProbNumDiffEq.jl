@@ -9,6 +9,49 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
 
     @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
 
+    # Initialize on u0
+    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+
+    # Initialize on du0
+    if isinplace(f)
+        f(du, u, p, t)
+    else
+        du .= f(u, p, t)
+    end
+    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+
+    if q < 2
+        return
+    end
+
+    # Use a jac or autodiff to initialize on ddu0
+    if integ.alg.initialization.init_on_du
+        if isinplace(f)
+            dfdt = copy(u)
+            ForwardDiff.derivative!(dfdt, (du, t) -> f(du, u, p, t), du, t)
+
+            if !isnothing(f.jac)
+                f.jac(ddu, u, p, t)
+            else
+                ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
+            end
+        else
+            dfdt = ForwardDiff.derivative((t) -> f(u, p, t), t)
+            if !isnothing(f.jac)
+                ddu .= f.jac(du, u, p, t)
+            else
+                ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
+            end
+        end
+        ddfddu = ddu * view(du, :) + view(dfdt, :)
+        condition_on!(x, Proj(2), ddfddu, m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        if q < 3
+            return
+        end
+    end
+
+    # Compute the other parts with classic solvers
+
     t0 = integ.sol.prob.tspan[1]
     dt =
         10 * OrdinaryDiffEq.ode_determine_initdt(
@@ -26,7 +69,7 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
     nsteps = q + 2
     tmax = t0 + nsteps * dt
     tstops = t0:dt:tmax
-    alg = integ.alg isa EK0 ? Vern9() : Rodas5() # Maybe rather let the user specify the solver
+    alg = integ.alg.initialization.alg
     sol = solve(
         remake(integ.sol.prob, tspan=(t0, tmax)),
         alg,
@@ -37,53 +80,13 @@ function initial_update!(integ, cache, init::RungeKuttaInit)
         saveat=tstops,
     )
     # This is necessary in order to fairly account for the cost of initialization!
-    # integ.destats.nf = sol.destats.nf
-    # integ.destats.njacs = sol.destats.njacs
-    # integ.destats.nsolve = sol.destats.nsolve
-    # integ.destats.nw = sol.destats.nw
-    # integ.destats.nnonliniter = sol.destats.nnonliniter
-    # integ.destats.nnonlinconvfail = sol.destats.nnonlinconvfail
-    # integ.destats.ncondition = sol.destats.ncondition
-
-    # Initialize on u0
-    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-
-    # Initialize on du0
-    if isinplace(f)
-        f(du, u, p, t)
-    else
-        du .= f(u, p, t)
-    end
-    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-
-    if q < 2
-        return
-    end
-
-    # Use a jac or autodiff to initialize on ddu0
-    if isinplace(f)
-        dfdt = copy(u)
-        ForwardDiff.derivative!(dfdt, (du, t) -> f(du, u, p, t), du, t)
-
-        if !isnothing(f.jac)
-            f.jac(ddu, u, p, t)
-        else
-            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
-        end
-    else
-        dfdt = ForwardDiff.derivative((t) -> f(u, p, t), t)
-        if !isnothing(f.jac)
-            ddu .= f.jac(du, u, p, t)
-        else
-            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
-        end
-    end
-    ddfddu = ddu * view(du, :) + view(dfdt, :)
-    condition_on!(x, Proj(2), ddfddu, m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-
-    if q < 3
-        return
-    end
+    integ.destats.nf = sol.destats.nf
+    integ.destats.njacs = sol.destats.njacs
+    integ.destats.nsolve = sol.destats.nsolve
+    integ.destats.nw = sol.destats.nw
+    integ.destats.nnonliniter = sol.destats.nnonliniter
+    integ.destats.nnonlinconvfail = sol.destats.nnonlinconvfail
+    integ.destats.ncondition = sol.destats.ncondition
 
     # Filter & smooth to fit these values!
     us = [view(u, :) for u in sol.u]
