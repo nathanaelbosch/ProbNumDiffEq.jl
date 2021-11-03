@@ -32,39 +32,28 @@ using RecursiveArrayTools
 using StaticArrays
 using ForwardDiff
 using Tullio
-# import Octavian: matmul!
-# Define some fallbacks
+# By default use mul!
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
-# const OctavianCompatibleEltypes =
-#     Union{Bool,Float16,Float32,Float64,Int16,Int32,Int64,Int8,UInt16,UInt32,UInt64,UInt8}
-# _matmul!(
-#     C::AbstractVecOrMat{T},
-#     A::AbstractVecOrMat{T},
-#     B::AbstractVecOrMat{T},
-# ) where {T<:OctavianCompatibleEltypes} = matmul!(C, A, B)
-# _matmul!(
-#     C::AbstractVecOrMat{T},
-#     A::AbstractVecOrMat{T},
-#     B::AbstractVecOrMat{T},
-#     a::T,
-#     b::T,
-# ) where {T<:OctavianCompatibleEltypes} = matmul!(C, A, B, a, b)
-# _matmul!(
-#     C::AbstractMatrix{T},
-#     A::AbstractMatrix{T},
-#     B::Diagonal{T},
-# ) where {T<:OctavianCompatibleEltypes} = (C .= A .* B.diag')
-# _matmul!(
-#     C::AbstractMatrix{T},
-#     A::Diagonal{T},
-#     B::AbstractMatrix{T},
-# ) where {T<:OctavianCompatibleEltypes} = (C .= A.diag .* B)
-# _matmul!(
-#     C::Diagonal{T},
-#     A::AbstractMatrix{T},
-#     B::AbstractMatrix{T},
-# ) where {T<:OctavianCompatibleEltypes} = @tullio C[i, i] = A[i, j] * B[j, i]
+# Some special cases
+_matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (C .= A .* B.diag')
+_matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (C .= A.diag .* B)
+_matmul!(C::Diagonal{Float64}, A::AbstractMatrix{Float64}, B::AbstractMatrix{Float64}) =
+    @tullio C[i, i] = A[i, j] * B[j, i]
+# Use Octavian's matmul! when the types are very specific
+import Octavian: matmul!
+_matmul!(
+    C::AbstractVecOrMat{Float64},
+    A::AbstractVecOrMat{Float64},
+    B::AbstractVecOrMat{Float64},
+) = matmul!(C, A, B)
+_matmul!(
+    C::AbstractVecOrMat{Float64},
+    A::AbstractVecOrMat{Float64},
+    B::AbstractVecOrMat{Float64},
+    a::Float64,
+    b::Float64,
+) = matmul!(C, A, B, a, b)
 
 # @reexport using PSDMatrices
 # import PSDMatrices: X_A_Xt
