@@ -21,6 +21,10 @@ mutable struct GaussianODEFilterCache{
     puType,
     llType,
     CType,
+    rateType,
+    UF,
+    JC,
+    uNoUnitsType,
 } <: ODEFiltersCache
     # Constants
     d::Int                  # Dimension of the problem
@@ -44,6 +48,7 @@ mutable struct GaussianODEFilterCache{
     u_pred::uType
     u_filt::uType
     tmp::uType
+    atmp::uNoUnitsType
     x::xType
     x_pred::xType
     x_filt::xType
@@ -66,6 +71,9 @@ mutable struct GaussianODEFilterCache{
     log_likelihood::llType
     C1::CType
     C2::CType
+    du1::rateType
+    uf::UF
+    jac_config::JC
 end
 
 function OrdinaryDiffEq.alg_cache(
@@ -174,6 +182,14 @@ function OrdinaryDiffEq.alg_cache(
     K2 = similar(K)
     G2 = similar(G)
     err_tmp = similar(du)
+
+    # Things for calc_J
+    uf = OrdinaryDiffEq.UJacobianWrapper(f, t, p)
+    du1 = similar(rate_prototype)
+    dw1 = zero(u)
+    jac_config = OrdinaryDiffEq.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
+    atmp = similar(u, uEltypeNoUnits)
+
     return GaussianODEFilterCache{
         typeof(R),
         typeof(Proj),
@@ -193,6 +209,10 @@ function OrdinaryDiffEq.alg_cache(
         typeof(pu_tmp),
         uEltypeNoUnits,
         typeof(C1),
+        typeof(du1),
+        typeof(uf),
+        typeof(jac_config),
+        typeof(atmp),
     }(
         # Constants
         d,
@@ -215,6 +235,7 @@ function OrdinaryDiffEq.alg_cache(
         u_pred,
         u_filt,
         tmp,
+        atmp,
         x0,
         x_pred,
         x_filt,
@@ -237,5 +258,8 @@ function OrdinaryDiffEq.alg_cache(
         zero(uEltypeNoUnits),
         C1,
         C2,
+        du1,
+        uf,
+        jac_config,
     )
 end
