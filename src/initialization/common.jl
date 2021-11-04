@@ -1,6 +1,6 @@
 abstract type InitializationScheme end
 struct TaylorModeInit <: InitializationScheme end
-Base.@kwdef struct RungeKuttaInit{ALG} <: InitializationScheme
+Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG = Tsit5()
     init_on_du::Bool = false
 end

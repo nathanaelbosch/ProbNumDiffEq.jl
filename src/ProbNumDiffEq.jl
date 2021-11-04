@@ -79,7 +79,7 @@ include("priors.jl")
 include("diffusions.jl")
 
 include("initialization/common.jl")
-export TaylorModeInit, RungeKuttaInit
+export TaylorModeInit, ClassicSolverInit
 
 include("algorithms.jl")
 export EK0, EK1, EK1FDB

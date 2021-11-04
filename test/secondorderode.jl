@@ -39,8 +39,8 @@ end
     end
 end
 
-@testset "RungeKuttaInit for SecondOrderODEProblems" begin
-    @test_broken solve(prob_iip, EK1(initialization=RungeKuttaInit())) isa
+@testset "ClassicSolverInit for SecondOrderODEProblems" begin
+    @test_broken solve(prob_iip, EK1(initialization=ClassicSolverInit())) isa
                  ProbNumDiffEq.ProbODESolution
 end
 

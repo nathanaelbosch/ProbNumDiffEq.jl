@@ -26,7 +26,7 @@ for (prob, probname) in [
         EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
         for Alg in (EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3),
             diffusion in [:fixed, :dynamic, :fixedMV, :dynamicMV],
-            init in [TaylorModeInit(), RungeKuttaInit()],
+            init in [TaylorModeInit(), ClassicSolverInit()],
             q in [2, 3, 5]
 
             if diffusion in (:fixedMV, :dynamicMV) && Alg != EK0
@@ -63,7 +63,7 @@ for (prob, probname) in [
         EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
         for Alg in (EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3),
             diffusion in [:fixed, :dynamic, :fixedMV, :dynamicMV],
-            init in [TaylorModeInit(), RungeKuttaInit()],
+            init in [TaylorModeInit(), ClassicSolverInit()],
             q in [2, 3, 5]
 
             if diffusion in (:fixedMV, :dynamicMV) && Alg != EK0

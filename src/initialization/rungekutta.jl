@@ -1,10 +1,10 @@
-function initial_update!(integ, cache, init::RungeKuttaInit)
+function initial_update!(integ, cache, init::ClassicSolverInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
     q = integ.alg.order
 
     if q > 5
-        @warn "RungeKuttaInit might be unstable for high orders"
+        @warn "ClassicSolverInit might be unstable for high orders"
     end
 
     @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
