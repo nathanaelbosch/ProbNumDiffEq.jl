@@ -174,12 +174,17 @@ function evaluate_ode!(
         # Jacobian is computed either with the given jac, or ForwardDiff
         if !isnothing(f.jac)
             _eval_f_jac!(ddu, u_lin, p, t, f)
-        elseif isinplace(f)
-            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_lin)
-            integ.destats.nf += 1
         else
-            ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_lin)
-            integ.destats.nf += 1
+            !isnothing(f.jac)
+            @unpack du1, uf, jac_config = integ.cache
+            uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
+            uf.t = t
+            uf.p = p
+            if isinplace(f)
+                OrdinaryDiffEq.jacobian!(ddu, uf, u_lin, du1, integ, jac_config)
+            else
+                ddu .= OrdinaryDiffEq.jacobian(uf, u_lin, integ)
+            end
         end
         integ.destats.njacs += 1
 
