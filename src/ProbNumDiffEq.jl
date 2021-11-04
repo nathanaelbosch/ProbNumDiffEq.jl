@@ -88,7 +88,7 @@ include("alg_utils.jl")
 include("caches.jl")
 
 include("initialization/taylormode.jl")
-include("initialization/rungekutta.jl")
+include("initialization/classicsolverinit.jl")
 
 include("integrator_utils.jl")
 include("filtering/predict.jl")
