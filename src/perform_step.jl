@@ -183,7 +183,7 @@ function evaluate_ode!(
             if isinplace(f)
                 OrdinaryDiffEq.jacobian!(ddu, uf, u_lin, du1, integ, jac_config)
             else
-                ddu .= jacobian(uf, u_lin, integ)
+                ddu .= OrdinaryDiffEq.jacobian(uf, u_lin, integ)
             end
         end
         integ.destats.njacs += 1
