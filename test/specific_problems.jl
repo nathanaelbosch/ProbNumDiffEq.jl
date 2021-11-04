@@ -92,7 +92,7 @@ end
 end
 
 @testset "OOP problem" begin
-    f(u, p, t) = ([p[1] * u[1] .* (1 .- u[1])])
+    f(u, p, t) = p .* u .* (1 .- u)
     prob = ODEProblem(f, [1e-1], (0.0, 5), [3.0])
     @testset "without jacobian" begin
         # first without defined jac
@@ -210,4 +210,20 @@ end
     sol1 = solve(prob, EK1(order=3))
     sol2 = solve(prob, RadauIIA5())
     @test sol1[end] ≈ sol2[end] rtol = 1e-5
+end
+
+@testset "EK1 Jacobian computation" begin
+    prob = prob_ode_fitzhughnagumo
+    @assert isnothing(prob.f.jac)
+
+    # make sure that the kwarg works
+    sol1 = solve(prob, EK1())
+    sol2 = solve(prob, EK1(autodiff=false))
+    @test sol2 isa ProbNumDiffEq.ProbODESolution
+
+    # check that forwarddiff leads to a smaller nf than finite diff
+    @test sol1.destats.nf < sol2.destats.nf
+
+    # use the EK1 on a non-forwarddiffable function
+    # TODO
 end
