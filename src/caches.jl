@@ -92,7 +92,7 @@ function OrdinaryDiffEq.alg_cache(
     p,
     calck,
     ::Val{IIP},
-) where IIP
+) where {IIP}
     initialize_derivatives = true
 
     if u isa Number
@@ -184,8 +184,8 @@ function OrdinaryDiffEq.alg_cache(
     err_tmp = similar(du)
 
     # Things for calc_J
-    uf = IIP == true ?
-        OrdinaryDiffEq.UJacobianWrapper(f, t, p) :
+    uf =
+        IIP == true ? OrdinaryDiffEq.UJacobianWrapper(f, t, p) :
         OrdinaryDiffEq.UDerivativeWrapper(f, t, p)
     du1 = similar(rate_prototype)
     dw1 = zero(u)
