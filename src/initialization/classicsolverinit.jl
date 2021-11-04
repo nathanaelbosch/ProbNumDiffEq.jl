@@ -1,4 +1,4 @@
-function initial_update!(integ, cache, init::ClassicSolverInit)
+function initialize_higher_orders!(integ, cache, init::ClassicSolverInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
     q = integ.alg.order
@@ -8,49 +8,6 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     end
 
     @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
-
-    # Initialize on u0
-    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-
-    # Initialize on du0
-    if isinplace(f)
-        f(du, u, p, t)
-    else
-        du .= f(u, p, t)
-    end
-    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-
-    if q < 2
-        return
-    end
-
-    # Use a jac or autodiff to initialize on ddu0
-    if integ.alg.initialization.init_on_du
-        if isinplace(f)
-            dfdt = copy(u)
-            ForwardDiff.derivative!(dfdt, (du, t) -> f(du, u, p, t), du, t)
-
-            if !isnothing(f.jac)
-                f.jac(ddu, u, p, t)
-            else
-                ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
-            end
-        else
-            dfdt = ForwardDiff.derivative((t) -> f(u, p, t), t)
-            if !isnothing(f.jac)
-                ddu .= f.jac(du, u, p, t)
-            else
-                ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
-            end
-        end
-        ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-        if q < 3
-            return
-        end
-    end
-
-    # Compute the other parts with classic solvers
 
     t0 = integ.sol.prob.tspan[1]
     dt =
