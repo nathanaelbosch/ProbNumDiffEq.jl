@@ -1,5 +1,5 @@
 """initialize x0 up to the provided order"""
-function initialize_higher_orders!(integ, cache, init::TaylorModeInit)
+function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
     q = integ.alg.order
