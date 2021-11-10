@@ -16,6 +16,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     else
         du .= f(u, p, t)
     end
+    integ.destats.nf += 1
     condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q < 2
@@ -62,6 +63,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
             integ.sol.prob,
             integ,
         )
+    integ.destats.nf += 2
 
     nsteps = q + 2
     tmax = t0 + nsteps * dt
@@ -77,13 +79,13 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
         saveat=tstops,
     )
     # This is necessary in order to fairly account for the cost of initialization!
-    integ.destats.nf = sol.destats.nf
-    integ.destats.njacs = sol.destats.njacs
-    integ.destats.nsolve = sol.destats.nsolve
-    integ.destats.nw = sol.destats.nw
-    integ.destats.nnonliniter = sol.destats.nnonliniter
-    integ.destats.nnonlinconvfail = sol.destats.nnonlinconvfail
-    integ.destats.ncondition = sol.destats.ncondition
+    integ.destats.nf += sol.destats.nf
+    integ.destats.njacs += sol.destats.njacs
+    integ.destats.nsolve += sol.destats.nsolve
+    integ.destats.nw += sol.destats.nw
+    integ.destats.nnonliniter += sol.destats.nnonliniter
+    integ.destats.nnonlinconvfail += sol.destats.nnonlinconvfail
+    integ.destats.ncondition += sol.destats.ncondition
 
     # Filter & smooth to fit these values!
     us = [view(u, :) for u in sol.u]
