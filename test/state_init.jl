@@ -59,7 +59,7 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
     end
 end
 
-@testset "Compare TaylorModeInit and RungeKuttaInit" begin
+@testset "Compare TaylorModeInit and ClassicSolverInit" begin
     # This has not worked before with the Taylor-Mode init!
     # The high dimensions made the runtimes explode
 
@@ -71,7 +71,7 @@ end
     Proj1 = integ1.cache.Proj
 
     @testset "Order $o" for o in (1, 2, 3, 4, 5)
-        integ2 = init(prob, EK0(order=o, initialization=RungeKuttaInit()))
+        integ2 = init(prob, EK0(order=o, initialization=ClassicSolverInit(init_on_du=true)))
         rk_init = integ2.cache.x.μ
         Proj2 = integ2.cache.Proj
 
@@ -104,13 +104,17 @@ end
     end
 end
 
-@testset "RK-Init enables solving the high-dimensional Pleiades problem with order 5" begin
+@testset "ClassicSolverInit enables solving Pleiades with order 5" begin
     # This has not worked before with the Taylor-Mode init, it simply took too long!
     prob = prob_ode_pleiades
     sol1 = solve(prob, Vern9(), abstol=1e-10, reltol=1e-10, save_everystep=false)
     sol2 = solve(
         prob,
-        EK1(order=5, smooth=false, initialization=RungeKuttaInit()),
+        EK1(
+            order=5,
+            smooth=false,
+            initialization=ClassicSolverInit(alg=Rosenbrock32(), init_on_du=true),
+        ),
         abstol=1e-6,
         reltol=1e-6,
         save_everystep=false,

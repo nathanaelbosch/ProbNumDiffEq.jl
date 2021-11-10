@@ -76,7 +76,7 @@ end
         @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK0(initialization=RungeKuttaInit())) isa
+        @test solve(prob, EK0(initialization=ClassicSolverInit())) isa
               ProbNumDiffEq.ProbODESolution
     end
     @testset "with jacobian" begin
@@ -86,7 +86,7 @@ end
         @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK0(initialization=RungeKuttaInit())) isa
+        @test solve(prob, EK0(initialization=ClassicSolverInit())) isa
               ProbNumDiffEq.ProbODESolution
     end
 end

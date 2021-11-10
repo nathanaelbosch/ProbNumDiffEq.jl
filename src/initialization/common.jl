@@ -1,6 +1,13 @@
 abstract type InitializationScheme end
 struct TaylorModeInit <: InitializationScheme end
-struct RungeKuttaInit <: InitializationScheme end
+Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
+    alg::ALG = Tsit5()
+    init_on_du::Bool = false
+end
+
+function initial_update!(integ, cache)
+    return initial_update!(integ, cache, integ.alg.initialization)
+end
 
 ########################################################################
 # Some utilities below
