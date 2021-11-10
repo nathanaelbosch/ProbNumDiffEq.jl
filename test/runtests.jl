@@ -29,6 +29,10 @@ end
         include("solution.jl")
     end
 
+    @timedtestset "DE-stats" begin
+        include("destats.jl")
+    end
+
     @timedtestset "Diffusions" begin
         include("diffusions.jl")
     end
