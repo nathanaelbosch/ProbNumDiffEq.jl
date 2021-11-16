@@ -16,9 +16,10 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
             copy!(s.Σ, apply_diffusion(s.Σ, final_diff))
         end
 
-        @simd ivdep for s in integ.sol.pu
-            copy!(s.Σ, apply_diffusion(s.Σ, final_diff))
+        for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
+            mul!(pu, integ.cache.SolProj, x)
         end
+        [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
 
         if isempty(size(final_diff))
             integ.sol.diffusions .= final_diff
