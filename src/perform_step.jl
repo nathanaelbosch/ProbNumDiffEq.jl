@@ -73,7 +73,7 @@ function OrdinaryDiffEq.perform_step!(
         cache.local_diffusion, cache.global_diffusion =
             estimate_diffusion(cache.diffusionmodel, integ)
         # Adjust prediction and measurement
-        predict_cov!(x_pred, x, Ah, Qh, cache.C1, cache.global_diffusion)
+        predict_cov!(x_pred, x, Ah, Qh, cache.C1, cache.local_diffusion)
 
         # Compute measurement covariance only now
         compute_measurement_covariance!(cache)
