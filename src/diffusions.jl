@@ -107,8 +107,11 @@ function estimate_diffusion(kind::DynamicMVDiffusion, integ)
     return Σ_out, Σ_out
 end
 
-struct FixedMVDiffusion <: AbstractStaticDiffusion end
+Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
+    initial_diffusion::T = 1.0
+end
 initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype) =
+    diffusionmodel.initial_diffusion .*
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 function estimate_diffusion(kind::FixedMVDiffusion, integ)
     @unpack d, q, R, P, PI, E1 = integ.cache

@@ -77,10 +77,9 @@ function OrdinaryDiffEq.perform_step!(
 
         # Compute measurement covariance only now
         compute_measurement_covariance!(cache)
-
     else
         predict_mean!(x_pred, x, Ah)
-        predict_cov!(x_pred, x, Ah, Qh, cache.C1)
+        predict_cov!(x_pred, x, Ah, Qh, cache.C1, cache.diffusionmodel.initial_diffusion)
         mul!(view(u_pred, :), SolProj, x_pred.μ)
         evaluate_ode!(integ, x_pred, tnew)
         compute_measurement_covariance!(cache)
