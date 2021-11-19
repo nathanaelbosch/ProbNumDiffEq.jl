@@ -7,23 +7,36 @@ isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 initial_diffusion(diffusion::AbstractDiffusion, d, q, Eltype) = one(Eltype)
 
-struct FixedDiffusion <: AbstractStaticDiffusion end
+"""
+    FixedDiffusion(; initial_diffusion=1.0, calibrate=True)
+
+Time-fixed diffusion model with or without calibration.
+The initial diffusion can be set via `initial_diffusion`; it will be used for each
+prediction during the solve.
+With calibration, this model accumulates the quasi-MLE during the forward solve of the ODE
+and the filtering states are then calibrated correspondingly.
+Without calibration, the model has a constant diffusion of `initial_diffusion`.
+In addition, a local diffusion estimate is computed as in [`DynamicDiffusion`](@ref), which
+is used for local error estimation and step-size adaptation.
+"""
+Base.@kwdef struct FixedDiffusion{T} <: AbstractStaticDiffusion
+    initial_diffusion::T = 1.0
+    calibrate::Bool = true
+end
+initial_diffusion(diffusionmodel::FixedDiffusion, d, q, Eltype) =
+    diffusionmodel.initial_diffusion * one(Eltype)
 function estimate_diffusion(rule::FixedDiffusion, integ)
     @unpack d, measurement, m_tmp = integ.cache
     sol_diffusions = integ.sol.diffusions
 
+    local_diffusion, _ = estimate_diffusion(DynamicDiffusion(), integ)
+    if !rule.calibrate == false
+        return local_diffusion, local_diffusion
+    end
+
     v, S = measurement.μ, measurement.Σ
     e, _ = m_tmp.μ, m_tmp.Σ.mat
     _S = copy!(m_tmp.Σ.mat, S.mat)
-
-    if iszero(v)
-        return zero(integ.cache.global_diffusion)
-    end
-    if iszero(S)
-        return Inf
-    end
-
-    # diffusion_t = v' * inv(S) * v / d
     if _S isa Diagonal
         e .= v ./ _S.diag
     else
@@ -34,44 +47,15 @@ function estimate_diffusion(rule::FixedDiffusion, integ)
 
     if integ.success_iter == 0
         @assert length(sol_diffusions) == 0
-        return diffusion_t, diffusion_t
+        global_diffusion = diffusion_t
+        return local_diffusion, global_diffusion
     else
-        @assert length(sol_diffusions) == integ.success_iter
+        # @assert length(sol_diffusions) == integ.success_iter
         diffusion_prev = sol_diffusions[end]
         global_diffusion =
             diffusion_prev + (diffusion_t - diffusion_prev) / integ.success_iter
-        return diffusion_t, global_diffusion
-    end
-end
-
-"""Maximum a-posteriori Diffusion estimate when using an InverseGamma(1/2,1/2) prior
-
-The mode of an InverseGamma(α,β) distribution is given by β/(α+1)
-To compute this in an on-line basis from the previous Diffusion, we reverse the computation to
-get the previous sum of residuals from Diffusion, and then modify that sum and compute the new
-Diffusion.
-"""
-struct MAPFixedDiffusion <: AbstractStaticDiffusion end
-function estimate_diffusion(rule::MAPFixedDiffusion, integ)
-    @unpack d, measurement = integ.cache
-    diffusions = integ.sol.diffusions
-
-    N = integ.success_iter + 1
-    v, S = measurement.μ, measurement.Σ
-    res_t = v' * inv(S) * v / d
-
-    α, β = 1 / 2, 1 / 2
-    if integ.success_iter == 0
-        @assert length(diffusions) == 0
-        diffusion_t = (β + 1 / 2 * res_t) / (α + N * d / 2 + 1)
-        return res_t, diffusion_t
-    else
-        @assert length(diffusions) == integ.success_iter
-        diffusion_prev = diffusions[end]
-        res_prev = (diffusion_prev * (α + (N - 1) * d / 2 + 1) - β) * 2
-        res_sum_t = res_prev + res_t
-        diffusion = (β + 1 / 2 * res_sum_t) / (α + N * d / 2 + 1)
-        return res_t, diffusion
+        # @info "compute diffusion" diffusion_prev global_diffusion
+        return local_diffusion, global_diffusion
     end
 end
 
