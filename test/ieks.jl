@@ -8,6 +8,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode
 
 @testset "Smoothing with small constant steps" begin
     prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_fitzhughnagumo)
-    @test solve_ieks(prob, IEKS(order=4, diffusionmodel=:fixed)) isa
+    @test solve_ieks(prob, IEKS(order=4, diffusionmodel=FixedDiffusion())) isa
           ProbNumDiffEq.ProbODESolution
 end

@@ -13,7 +13,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     @testset "Time-Varying Diffusion" begin
         sol = solve(
             prob,
-            EK0(diffusionmodel=:dynamic, smooth=false),
+            EK0(diffusionmodel=DynamicDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
             dt=1e-4,
@@ -24,7 +24,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     @testset "Time-Fixed Diffusion" begin
         sol = solve(
             prob,
-            EK0(diffusionmodel=:fixed, smooth=false),
+            EK0(diffusionmodel=FixedDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
             dt=1e-4,
@@ -35,7 +35,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     @testset "Time-Varying Diagonal Diffusion" begin
         sol = solve(
             prob,
-            EK0(diffusionmodel=:dynamicMV, smooth=false),
+            EK0(diffusionmodel=DynamicMVDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
             dt=1e-4,
@@ -46,18 +46,11 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     @testset "Time-Fixed Diagonal Diffusion" begin
         sol = solve(
             prob,
-            EK0(diffusionmodel=:fixedMV, smooth=false),
+            EK0(diffusionmodel=FixedMVDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
             dt=1e-4,
         )
         @test sol.u[end] ≈ true_sol.(sol.t)[end]
     end
-
-    # @testset "Time-Fixed Diffusion MAP" begin
-    #     sol = solve(prob, EK0(diffusionmodel=:fixedMAP, smooth=false),
-    #                 dense=false, adaptive=false, dt=1e-4)
-    #     @test sol.u[end] ≈ true_sol.(sol.t)[end]
-    # end
-
 end

@@ -161,13 +161,7 @@ function OrdinaryDiffEq.alg_cache(
         K = zeros(uElType, D, 2d)
     end
 
-    diffmodel =
-        alg.diffusionmodel == :dynamic ? DynamicDiffusion() :
-        alg.diffusionmodel == :fixed ? FixedDiffusion() :
-        alg.diffusionmodel == :dynamicMV ? MVDynamicDiffusion() :
-        alg.diffusionmodel == :fixedMV ? MVFixedDiffusion() :
-        error("The specified diffusion could not be recognized! Use e.g. `:dynamic`.")
-
+    diffmodel = alg.diffusionmodel
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
 
     Ah, Qh = copy(A), copy(Q)

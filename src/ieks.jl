@@ -1,15 +1,15 @@
 # Iterated extended Kalman smoothing
-mutable struct IEKS{IT} <: AbstractEK
+mutable struct IEKS{DT,IT} <: AbstractEK
     prior::Symbol
     order::Int
-    diffusionmodel::Symbol
+    diffusionmodel::DT
     smooth::Bool
     initialization::IT
     linearize_at::Any
 end
 
 """
-    IEKS(; prior=:ibm, order=1, diffusionmodel=:dynamic, initialization=TaylorModeInit(), linearize_at=nothing)
+    IEKS(; prior=:ibm, order=1, diffusionmodel=DynamicDiffusion(), initialization=TaylorModeInit(), linearize_at=nothing)
 
 **Gaussian ODE filtering with iterated extended Kalman smoothing.**
 
@@ -21,7 +21,7 @@ since it is implemented as an outer loop around the solver.
 
 Currently, only the integrated Brownian motion prior `:ibm` is supported.
 For the diffusionmodel, chose one of
-`[:dynamic, :dynamicMV, :fixed, :fixedMV, :fixedMAP]`.
+`[DynamicDiffusion, DynamicMVDiffusion, FixedDiffusion, FixedMVDiffusion]`.
 Just like the [`EK1`](@ref) it requires that the Jacobian of the rhs function is available.
 
 See also: [`EK0`](@ref), [`EK1`](@ref), [`solve_ieks`](@ref)
@@ -32,7 +32,7 @@ See also: [`EK0`](@ref), [`EK1`](@ref), [`solve_ieks`](@ref)
 function IEKS(;
     prior=:ibm,
     order=1,
-    diffusionmodel=:dynamic,
+    diffusionmodel=DynamicDiffusion(),
     initialization=TaylorModeInit(),
     linearize_at=nothing,
 )
