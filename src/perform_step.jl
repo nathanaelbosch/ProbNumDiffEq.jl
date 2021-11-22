@@ -27,18 +27,21 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     return nothing
 end
 
-"""Perform a step
+"""
+    perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
 
+Performs an ODE solver step.
 Not necessarily successful! For that, see `step!(integ)`.
 
 Basically consists of the following steps
-- Coordinate change / Predonditioning
-- Prediction step
-- Measurement: Evaluate f and Jf; Build z, S, H
-- Calibration; Adjust prediction / measurement covs if the diffusion model "dynamic"
-- Update step
-- Error estimation
-- Undo the coordinate change / Predonditioning
+- Compute the current transition and diffusion matrices
+- Predict mean
+- Evaluate the ODE (and Jacobian) at the predicted mean; Build measurement mean `z`
+- Compute local diffusion and local error estimate
+- If the step is rejected, terminate here; Else continue
+- Predict the covariance and build the measurement covariance `S`
+- Kalman update step
+- (optional) Update the global diffusion MLE
 """
 function OrdinaryDiffEq.perform_step!(
     integ,
@@ -67,70 +70,54 @@ function OrdinaryDiffEq.perform_step!(
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
 
-    # Estimate diffusion
+    # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
     cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ)
+    if integ.opts.adaptive
+        integ.EEst = compute_scaled_error_estimate!(integ, cache)
+        if integ.EEst >= one(integ.EEst)
+            return
+        end
+    end
 
     # Predict the covariance, using either the local or global diffusion
     extrapolation_diff =
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
     predict_cov!(x_pred, x, Ah, Qh, cache.C1, extrapolation_diff)
 
-    # Compute measurement covariance only now
+    # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
-
-    # Likelihood
     # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    # integ.sol.log_likelihood += integ.cache.log_likelihood
 
-    # Update
+    # Update state and save the ODE solution value
     x_filt = update!(integ, x_pred)
+    mul!(view(u_filt, :), SolProj, x_filt.μ)
+    integ.u .= u_filt
 
-    # Estimate error for adaptive steps - can already be done before filtering
-    if integ.opts.adaptive
-        err_est_unscaled = estimate_errors(cache)
-        if integ.f isa DynamicalODEFunction # second-order ODE
-            DiffEqBase.calculate_residuals!(
-                err_tmp,
-                dt * err_est_unscaled,
-                integ.u[1, :],
-                u_pred[1, :],
-                integ.opts.abstol,
-                integ.opts.reltol,
-                integ.opts.internalnorm,
-                t,
-            )
-        else # regular first-order ODE
-            DiffEqBase.calculate_residuals!(
-                err_tmp,
-                dt * err_est_unscaled,
-                integ.u,
-                u_pred,
-                integ.opts.abstol,
-                integ.opts.reltol,
-                integ.opts.internalnorm,
-                t,
-            )
-        end
-        integ.EEst = integ.opts.internalnorm(err_tmp, t) # scalar
+    # Update the global diffusion MLE (if applicable)
+    if !isdynamic(cache.diffusionmodel)
+        cache.global_diffusion = estimate_global_diffusion(cache.diffusionmodel, integ)
     end
 
-    # If the step gets rejected, we don't even need to perform an update!
-    reject = integ.opts.adaptive && integ.EEst >= one(integ.EEst)
-    if !reject
-        # Update the global diffusion MLE (if the diffusionmodel is not dynamic)
-        if !isdynamic(cache.diffusionmodel)
-            cache.global_diffusion = estimate_global_diffusion(cache.diffusionmodel, integ)
-        end
+    # Advance the state
+    copy!(integ.cache.x, integ.cache.x_filt)
 
-        # Save into u_filt and integ.u
-        mul!(view(u_filt, :), SolProj, x_filt.μ)
-        integ.u .= u_filt
-
-        # Advance the state here
-        copy!(integ.cache.x, integ.cache.x_filt)
-        integ.sol.log_likelihood += integ.cache.log_likelihood
-    end
+    return nothing
 end
 
+"""
+    evaluate_ode!(integ, x_pred, t, second_order::Val)
+
+Evaluate the ODE vector field and, if necessary, the Jacobian. In addition, compute the
+measurement mean (`z`) and the measurement function Jacobian (`H`). Results are saved into
+`integ.cache.du`, `integ.cache.ddu`, `integ.cache.measurement.μ` and `integ.cache.H`.
+Jacobians are computed either with the supplied `f.jac`, or via automatic differentiation,
+following the example of OrdinaryDiffEq.jl.
+
+For second-order ODEs and the `EK1FDB` algorithm, a specialized implementation is called.
+"""
+evaluate_ode!(integ, x_pred, t) =
+    evaluate_ode!(integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
 function evaluate_ode!(
     integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
     x_pred,
@@ -318,10 +305,8 @@ function evaluate_ode!(
 
     return measurement
 end
-evaluate_ode!(integ, x_pred, t) =
-    evaluate_ode!(integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
 
-# The following functions are just there to handle both IIP and OOP easily
+# Helper functions to handle both IIP and OOP easily
 _eval_f!(du, u, p, t, f::AbstractODEFunction{true}) = f(du, u, p, t)
 _eval_f!(du, u, p, t, f::AbstractODEFunction{false}) = (du .= f(u, p, t))
 _eval_f_jac!(ddu, u, p, t, f::AbstractODEFunction{true}) = f.jac(ddu, u, p, t)
@@ -337,32 +322,55 @@ function update!(integ, prediction)
     return x_filt
 end
 
-function smooth_all!(integ)
-    integ.sol.x_smooth = copy(integ.sol.x_filt)
+"""
+    compute_scaled_error_estimate!(integ, cache)
 
-    @unpack A, Q = integ.cache
-    @unpack x_smooth, t, diffusions = integ.sol
-    @unpack x_tmp, x_tmp2 = integ.cache
-    x = x_smooth
-
-    for i in length(x)-1:-1:1
-        dt = t[i+1] - t[i]
-        if iszero(dt)
-            copy!(x[i], x[i+1])
-            continue
-        end
-
-        make_preconditioners!(integ.cache, dt)
-        P, PI = integ.cache.P, integ.cache.PI
-
-        mul!(x_tmp, P, x[i])
-        mul!(x_tmp2, P, x[i+1])
-        smooth!(x_tmp, x_tmp2, A, Q, integ, diffusions[i])
-        mul!(x[i], PI, x_tmp)
+Computes the scaled, local error estimate, that should satisfy `Eest < 1`. The actual local
+error is computed with [`estimate_errors!`](@ref). Then, `DiffEqBase.calculate_residuals!`
+handles the scaling with adaptive and relative tolerances, and `integ.opts.internalnorm`
+provides the norm that should be used to return only a scalar.
+"""
+function compute_scaled_error_estimate!(integ, cache)
+    @unpack u_pred, err_tmp = cache
+    t = integ.t + integ.dt
+    err_est_unscaled = estimate_errors!(cache)
+    if integ.f isa DynamicalODEFunction # second-order ODE
+        DiffEqBase.calculate_residuals!(
+            err_tmp,
+            integ.dt * err_est_unscaled,
+            integ.u[1, :],
+            u_pred[1, :],
+            integ.opts.abstol,
+            integ.opts.reltol,
+            integ.opts.internalnorm,
+            t,
+        )
+    else # regular first-order ODE
+        DiffEqBase.calculate_residuals!(
+            err_tmp,
+            integ.dt * err_est_unscaled,
+            integ.u,
+            u_pred,
+            integ.opts.abstol,
+            integ.opts.reltol,
+            integ.opts.internalnorm,
+            t,
+        )
     end
+    return integ.opts.internalnorm(err_tmp, t) # scalar
 end
 
-function estimate_errors(cache::GaussianODEFilterCache)
+"""
+    estimate_errors!(cache)
+
+Computes a local error estimate, as
+```math
+E_i = ( σ_{loc}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
+```
+To save allocations, the function modifies the given `cache` and writes into
+`cache.m_tmp.Σ.squareroot` during some computations.
+"""
+function estimate_errors!(cache::GaussianODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
 
     if local_diffusion isa Real && isinf(local_diffusion)

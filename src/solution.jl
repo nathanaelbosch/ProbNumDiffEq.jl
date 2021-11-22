@@ -81,9 +81,14 @@ function DiffEqBase.build_solution(
         errors = nothing
     end
 
+    uElTypeNoUnits = OrdinaryDiffEq.recursive_unitless_bottom_eltype(u)
+    q = 1
+    diffusion_prototype = initial_diffusion(alg.diffusionmodel, d, q, uElTypeNoUnits)
+
     ll = zero(uElType)
     return ProbODESolution{T,N}(
-        u, pu, u_analytic, errors, t, [], x_filt, x_smooth, [], ll, prob, alg, interp,
+        u, pu, u_analytic, errors, t, k, x_filt, x_smooth, typeof(diffusion_prototype)[],
+        ll, prob, alg, interp,
         dense, 0, destats, retcode,
     )
 end

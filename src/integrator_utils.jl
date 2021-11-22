@@ -1,61 +1,118 @@
-# Calibration, smoothing, then jump to the OrdinaryDiffEq._postamble!
+" ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEq.jl's `postamble!`."
 function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
+    # OrdinaryDiffEq.jl-related calls:
     OrdinaryDiffEq._postamble!(integ)
-    # For some unknown reason, the following is necessary
     copyat_or_push!(integ.sol.k, integ.saveiter_dense, integ.k)
-
-    # Add the final timepoint to the solution
     pn_solution_endpoint_match_cur_integrator!(integ)
 
+    # Calibrate the solution (if applicable)
     if isstatic(integ.cache.diffusionmodel)
-        if integ.cache.diffusionmodel isa FixedDiffusion &&
-           !integ.cache.diffusionmodel.calibrate
-            # Set all diffusions to the final diffusion
-            final_diff = integ.cache.diffusionmodel.initial_diffusion
-            set_diffusions(integ, final_diff)
+        if (
+            integ.cache.diffusionmodel isa FixedDiffusion &&
+            !integ.cache.diffusionmodel.calibrate
+        )
+            constant_diffusion = integ.cache.diffusionmodel.initial_diffusion
+            set_diffusions!(integ.sol, constant_diffusion)
         else
-            integ.sol.log_likelihood = NaN
-            final_diff =
+            mle_diffusion =
                 integ.cache.global_diffusion * integ.cache.diffusionmodel.initial_diffusion
-
-            set_diffusions(integ, final_diff)
-
-            # Rescale all filtering estimates to have the correct diffusion
-            rescale_diff = final_diff ./ integ.cache.diffusionmodel.initial_diffusion
-            @simd ivdep for s in integ.sol.x_filt
-                copy!(s.Σ, apply_diffusion(s.Σ, rescale_diff))
-            end
-
-            # Re-write into the solution estimates
-            for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
-                mul!(pu, integ.cache.SolProj, x)
-            end
-            [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
+            calibrate_solution!(integ, mle_diffusion)
         end
     end
 
     if integ.alg.smooth
-        smooth_all!(integ)
-        for (pu, x) in zip(integ.sol.pu, integ.sol.x_smooth)
-            mul!(pu, integ.cache.SolProj, x)
-        end
-        integ.sol.interp = set_smooth(integ.sol.interp)
-        [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
+        smooth_solution!(integ)
     end
+
     @assert (length(integ.sol.u) == length(integ.sol.pu))
 
     return nothing
 end
-function set_diffusions(integ, final_diff)
-    if isempty(size(final_diff))
-        integ.sol.diffusions .= final_diff
-    else
-        [(d .= final_diff) for d in integ.sol.diffusions]
+
+"""
+    calibrate_solution!(integ, mle_diffusion)
+
+Calibrate the solution (`integ.sol`) with the specified `mle_diffusion` by (i) setting the
+values in `integ.sol.diffusions` to the `mle_diffusion` (see [`set_diffusions!`](@ref)),
+(ii) rescaling all filtering estimates such that they have the correct diffusion, and (iii)
+updating the solution estimates in `integ.sol.pu`.
+"""
+function calibrate_solution!(integ, mle_diffusion)
+
+    # Set all solution diffusions
+    set_diffusions!(integ.sol, mle_diffusion)
+
+    # Rescale all filtering estimates to have the correct diffusion
+    rescale_diff = mle_diffusion ./ integ.cache.diffusionmodel.initial_diffusion
+    @simd ivdep for s in integ.sol.x_filt
+        copy!(s.Σ, apply_diffusion(s.Σ, rescale_diff))
     end
+
+    # Re-write into the solution estimates
+    for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
+        mul!(pu, integ.cache.SolProj, x)
+    end
+    # [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
 end
 
+"""
+    set_diffusions!(solution::AbstractProbODESolution, diffusion)
+
+Set the contents of `solution.diffusions` to the provided `diffusion`, overwriting the local
+diffusion estimates that are in there. Typically, `diffusion` is either a global quasi-MLE
+or the specified initial diffusion value if no calibration is desired.
+"""
+function set_diffusions!(solution::AbstractProbODESolution, diffusion::Number)
+    solution.diffusions .= diffusion
+    return nothing
+end
+function set_diffusions!(solution::AbstractProbODESolution, diffusion::Diagonal)
+    @simd ivdep for d in solution.diffusions
+        copy!(d, diffusion)
+    end
+    return nothing
+end
+
+"""
+    smooth_solution!(integ)
+
+Smoothes the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updating the
+values saved in `integ.sol.pu` and `integ.sol.u`. This function handles the iteration and
+preconditioning. The actual smoothing step happens in [`smooth!`](@ref).
+"""
+function smooth_solution!(integ)
+    integ.sol.x_smooth = copy(integ.sol.x_filt)
+
+    @unpack A, Q = integ.cache
+    @unpack x_smooth, t, diffusions = integ.sol
+    @unpack x_tmp, x_tmp2 = integ.cache
+    x = x_smooth
+
+    for i in length(x)-1:-1:1
+        dt = t[i+1] - t[i]
+        if iszero(dt)
+            copy!(x[i], x[i+1])
+            continue
+        end
+
+        make_preconditioners!(integ.cache, dt)
+        P, PI = integ.cache.P, integ.cache.PI
+
+        mul!(x_tmp, P, x[i])
+        mul!(x_tmp2, P, x[i+1])
+        smooth!(x_tmp, x_tmp2, A, Q, integ, diffusions[i])
+        mul!(x[i], PI, x_tmp)
+
+        # Save the smoothed state into the solution
+        mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
+        integ.sol.u[i][:] .= integ.sol.pu[i].μ
+    end
+    integ.sol.interp = set_smooth(integ.sol.interp)
+    return nothing
+end
+
+"Inspired by `OrdinaryDiffEq.solution_match_cur_integrator!`"
 function pn_solution_endpoint_match_cur_integrator!(integ)
-    # Inspired from OrdinaryDiffEq.solution_match_cur_integrator!
     if integ.opts.save_end
         if integ.alg.smooth
             OrdinaryDiffEq.copyat_or_push!(
@@ -73,6 +130,7 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
     end
 end
 
+"Extends `OrdinaryDiffEq._savevalues!` to save ProbNumDiffEq.jl-specific things."
 function DiffEqBase.savevalues!(
     integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
     force_save=false,
