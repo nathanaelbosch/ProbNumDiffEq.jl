@@ -164,6 +164,7 @@ function OrdinaryDiffEq.alg_cache(
 
     diffmodel = alg.diffusionmodel
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
+    copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     Ah, Qh = copy(A), copy(Q)
     u_pred = similar(u)
