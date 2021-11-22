@@ -1,36 +1,24 @@
-# Calibration, smoothing, then jump to the OrdinaryDiffEq._postamble!
+"""
+ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEq.jl's `postamble!`.
+"""
 function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
+    # OrdinaryDiffEq.jl-related calls:
     OrdinaryDiffEq._postamble!(integ)
-    # For some unknown reason, the following is necessary
     copyat_or_push!(integ.sol.k, integ.saveiter_dense, integ.k)
-
-    # Add the final timepoint to the solution
     pn_solution_endpoint_match_cur_integrator!(integ)
 
+    # Calibrate the solution (if applicable)
     if isstatic(integ.cache.diffusionmodel)
-        if integ.cache.diffusionmodel isa FixedDiffusion &&
-           !integ.cache.diffusionmodel.calibrate
-            # Set all diffusions to the final diffusion
+        if (
+            integ.cache.diffusionmodel isa FixedDiffusion &&
+            !integ.cache.diffusionmodel.calibrate
+        )
             final_diff = integ.cache.diffusionmodel.initial_diffusion
-            set_diffusions(integ, final_diff)
+            set_diffusions!(integ.sol, final_diff)
         else
-            integ.sol.log_likelihood = NaN
-            final_diff =
+            mle_diffusion =
                 integ.cache.global_diffusion * integ.cache.diffusionmodel.initial_diffusion
-
-            set_diffusions(integ, final_diff)
-
-            # Rescale all filtering estimates to have the correct diffusion
-            rescale_diff = final_diff ./ integ.cache.diffusionmodel.initial_diffusion
-            @simd ivdep for s in integ.sol.x_filt
-                copy!(s.Σ, apply_diffusion(s.Σ, rescale_diff))
-            end
-
-            # Re-write into the solution estimates
-            for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
-                mul!(pu, integ.cache.SolProj, x)
-            end
-            [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
+            calibrate_solution!(integ, mle_diffusion)
         end
     end
 
@@ -43,11 +31,29 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
     return nothing
 end
 
-function set_diffusions(integ, final_diff)
+function calibrate_solution!(integ, mle_diffusion)
+
+    # Set all solution diffusions
+    set_diffusions!(integ.sol, mle_diffusion)
+
+    # Rescale all filtering estimates to have the correct diffusion
+    rescale_diff = mle_diffusion ./ integ.cache.diffusionmodel.initial_diffusion
+    @simd ivdep for s in integ.sol.x_filt
+        copy!(s.Σ, apply_diffusion(s.Σ, rescale_diff))
+    end
+
+    # Re-write into the solution estimates
+    for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
+        mul!(pu, integ.cache.SolProj, x)
+    end
+    # [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
+end
+
+function set_diffusions!(solution::AbstractProbODESolution, final_diff)
     if isempty(size(final_diff))
-        integ.sol.diffusions .= final_diff
+        solution.diffusions .= final_diff
     else
-        [(d .= final_diff) for d in integ.sol.diffusions]
+        [(d .= final_diff) for d in solution.diffusions]
     end
 end
 

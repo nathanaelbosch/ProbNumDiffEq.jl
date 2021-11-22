@@ -101,6 +101,8 @@ function OrdinaryDiffEq.perform_step!(
 
     # Advance the state
     copy!(integ.cache.x, integ.cache.x_filt)
+
+    return nothing
 end
 
 """
