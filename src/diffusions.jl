@@ -100,7 +100,7 @@ function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
         # @assert length(diffusions) == 0
         return Σ_out
     else
-        @assert length(diffusions) == integ.success_iter
+        # @assert length(diffusions) == integ.success_iter
         diffusion_prev = integ.cache.global_diffusion
         diffusion = diffusion_prev + (Σ_out - diffusion_prev) / integ.success_iter
         return diffusion
