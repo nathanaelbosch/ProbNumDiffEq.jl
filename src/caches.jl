@@ -65,6 +65,7 @@ mutable struct GaussianODEFilterCache{
     G1::matType
     G2::matType
     covmatcache::matType
+    default_diffusion::diffusionType
     local_diffusion::diffusionType
     global_diffusion::diffusionType
     err_tmp::duType
@@ -161,14 +162,9 @@ function OrdinaryDiffEq.alg_cache(
         K = zeros(uElType, D, 2d)
     end
 
-    diffmodel =
-        alg.diffusionmodel == :dynamic ? DynamicDiffusion() :
-        alg.diffusionmodel == :fixed ? FixedDiffusion() :
-        alg.diffusionmodel == :dynamicMV ? MVDynamicDiffusion() :
-        alg.diffusionmodel == :fixedMV ? MVFixedDiffusion() :
-        error("The specified diffusion could not be recognized! Use e.g. `:dynamic`.")
-
+    diffmodel = alg.diffusionmodel
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
+    copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     Ah, Qh = copy(A), copy(Q)
     u_pred = similar(u)
@@ -255,7 +251,8 @@ function OrdinaryDiffEq.alg_cache(
         G2,
         covmatcache,
         initdiff,
-        initdiff,
+        initdiff * NaN,
+        initdiff * NaN,
         err_tmp,
         zero(uEltypeNoUnits),
         C1,

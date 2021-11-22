@@ -57,36 +57,26 @@ function OrdinaryDiffEq.perform_step!(
     tnew = t + dt
 
     # Build the correct matrices
-    @. Ah = PI.diag .* A .* P.diag'
+    @. Ah .= PI.diag .* A .* P.diag'
     X_A_Xt!(Qh, Q, PI)
 
-    if isdynamic(cache.diffusionmodel)  # Calibrate, then predict cov
+    # Predict the mean
+    predict_mean!(x_pred, x, Ah)
+    mul!(view(u_pred, :), SolProj, x_pred.μ)
 
-        # Predict
-        predict_mean!(x_pred, x, Ah)
-        mul!(view(u_pred, :), SolProj, x_pred.μ)
+    # Measure
+    evaluate_ode!(integ, x_pred, tnew)
 
-        # Measure
-        evaluate_ode!(integ, x_pred, tnew)
+    # Estimate diffusion
+    cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ)
 
-        # Estimate diffusion
-        cache.local_diffusion, cache.global_diffusion =
-            estimate_diffusion(cache.diffusionmodel, integ)
-        # Adjust prediction and measurement
-        predict_cov!(x_pred, x, Ah, Qh, cache.C1, cache.local_diffusion)
+    # Predict the covariance, using either the local or global diffusion
+    extrapolation_diff =
+        isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
+    predict_cov!(x_pred, x, Ah, Qh, cache.C1, extrapolation_diff)
 
-        # Compute measurement covariance only now
-        compute_measurement_covariance!(cache)
-
-    else
-        predict_mean!(x_pred, x, Ah)
-        predict_cov!(x_pred, x, Ah, Qh, cache.C1)
-        mul!(view(u_pred, :), SolProj, x_pred.μ)
-        evaluate_ode!(integ, x_pred, tnew)
-        compute_measurement_covariance!(cache)
-        cache.local_diffusion, cache.global_diffusion =
-            estimate_diffusion(cache.diffusionmodel, integ)
-    end
+    # Compute measurement covariance only now
+    compute_measurement_covariance!(cache)
 
     # Likelihood
     # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
@@ -126,6 +116,10 @@ function OrdinaryDiffEq.perform_step!(
     # If the step gets rejected, we don't even need to perform an update!
     reject = integ.opts.adaptive && integ.EEst >= one(integ.EEst)
     if !reject
+        # Update the global diffusion MLE (if the diffusionmodel is not dynamic)
+        if !isdynamic(cache.diffusionmodel)
+            cache.global_diffusion = estimate_global_diffusion(cache.diffusionmodel, integ)
+        end
 
         # Save into u_filt and integ.u
         mul!(view(u_filt, :), SolProj, x_filt.μ)

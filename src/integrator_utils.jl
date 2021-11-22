@@ -7,24 +7,30 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
     # Add the final timepoint to the solution
     pn_solution_endpoint_match_cur_integrator!(integ)
 
-    if isstatic(integ.cache.diffusionmodel) # Calibrate
-        # @warn "sol.log_likelihood is not correct for static diffusion models!"
-        integ.sol.log_likelihood = NaN
-        final_diff = integ.sol.diffusions[end]
-        @simd ivdep for s in integ.sol.x_filt
-            # s.Σ .*= final_diff
-            copy!(s.Σ, apply_diffusion(s.Σ, final_diff))
-        end
-
-        for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
-            mul!(pu, integ.cache.SolProj, x)
-        end
-        [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
-
-        if isempty(size(final_diff))
-            integ.sol.diffusions .= final_diff
+    if isstatic(integ.cache.diffusionmodel)
+        if integ.cache.diffusionmodel isa FixedDiffusion &&
+           !integ.cache.diffusionmodel.calibrate
+            # Set all diffusions to the final diffusion
+            final_diff = integ.cache.diffusionmodel.initial_diffusion
+            set_diffusions(integ, final_diff)
         else
-            [(d .= final_diff) for d in integ.sol.diffusions]
+            integ.sol.log_likelihood = NaN
+            final_diff =
+                integ.cache.global_diffusion * integ.cache.diffusionmodel.initial_diffusion
+
+            set_diffusions(integ, final_diff)
+
+            # Rescale all filtering estimates to have the correct diffusion
+            rescale_diff = final_diff ./ integ.cache.diffusionmodel.initial_diffusion
+            @simd ivdep for s in integ.sol.x_filt
+                copy!(s.Σ, apply_diffusion(s.Σ, rescale_diff))
+            end
+
+            # Re-write into the solution estimates
+            for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
+                mul!(pu, integ.cache.SolProj, x)
+            end
+            [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
         end
     end
 
@@ -39,6 +45,13 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
     @assert (length(integ.sol.u) == length(integ.sol.pu))
 
     return nothing
+end
+function set_diffusions(integ, final_diff)
+    if isempty(size(final_diff))
+        integ.sol.diffusions .= final_diff
+    else
+        [(d .= final_diff) for d in integ.sol.diffusions]
+    end
 end
 
 function pn_solution_endpoint_match_cur_integrator!(integ)
@@ -78,7 +91,7 @@ function DiffEqBase.savevalues!(
     OrdinaryDiffEq.copyat_or_push!(
         integ.sol.diffusions,
         integ.saveiter,
-        integ.cache.global_diffusion,
+        integ.cache.local_diffusion,
     )
     if integ.opts.save_everystep
         OrdinaryDiffEq.copyat_or_push!(

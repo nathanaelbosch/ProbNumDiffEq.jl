@@ -45,5 +45,6 @@ end
 end
 
 @testset "Fixed Diffusion" begin
-    @test solve(prob_iip, EK0(diffusionmodel=:fixed)) isa ProbNumDiffEq.ProbODESolution
+    @test solve(prob_iip, EK0(diffusionmodel=FixedDiffusion())) isa
+          ProbNumDiffEq.ProbODESolution
 end
