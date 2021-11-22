@@ -91,16 +91,16 @@ include("caches.jl")
 include("initialization/taylormode.jl")
 include("initialization/classicsolverinit.jl")
 
+include("solution.jl")
+include("solution_sampling.jl")
+include("solution_plotting.jl")
+
 include("integrator_utils.jl")
 include("filtering/predict.jl")
 include("filtering/update.jl")
 include("filtering/smooth.jl")
 include("perform_step.jl")
 include("projection.jl")
-
-include("solution.jl")
-include("solution_sampling.jl")
-include("solution_plotting.jl")
 
 include("preconditioning.jl")
 

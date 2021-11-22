@@ -107,6 +107,8 @@ function smooth_solution!(integ)
         mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
         integ.sol.u[i][:] .= integ.sol.pu[i].μ
     end
+    integ.sol.interp = set_smooth(integ.sol.interp)
+    return nothing
 end
 
 "Inspired by `OrdinaryDiffEq.solution_match_cur_integrator!`"
