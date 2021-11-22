@@ -1,6 +1,4 @@
-"""
-ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEq.jl's `postamble!`.
-"""
+" ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEq.jl's `postamble!`."
 function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
     # OrdinaryDiffEq.jl-related calls:
     OrdinaryDiffEq._postamble!(integ)
@@ -31,6 +29,14 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
     return nothing
 end
 
+"""
+    calibrate_solution!(integ, mle_diffusion)
+
+Calibrate the solution (`integ.sol`) with the specified `mle_diffusion` by (i) setting the
+values in `integ.sol.diffusions` to the `mle_diffusion` (see [`set_diffusions!`](@ref)),
+(ii) rescaling all filtering estimates such that they have the correct diffusion, and (iii)
+updating the solution estimates in `integ.sol.pu`.
+"""
 function calibrate_solution!(integ, mle_diffusion)
 
     # Set all solution diffusions
@@ -49,7 +55,14 @@ function calibrate_solution!(integ, mle_diffusion)
     # [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
 end
 
-function set_diffusions!(solution::AbstractProbODESolution, final_diff)
+"""
+    set_diffusions!(solution::AbstractProbODESolution, diffusion)
+
+Set the contents of `solution.diffusions` to the provided `diffusion`, overwriting the local
+diffusion estimates that are in there. Typically, `diffusion` is either a global quasi-MLE
+or the specified initial diffusion value if no calibration is desired.
+"""
+function set_diffusions!(solution::AbstractProbODESolution, diffusion)
     if isempty(size(final_diff))
         solution.diffusions .= final_diff
     else
@@ -93,8 +106,8 @@ function smooth_solution!(integ)
     end
 end
 
+"Inspired by `OrdinaryDiffEq.solution_match_cur_integrator!`"
 function pn_solution_endpoint_match_cur_integrator!(integ)
-    # Inspired from OrdinaryDiffEq.solution_match_cur_integrator!
     if integ.opts.save_end
         if integ.alg.smooth
             OrdinaryDiffEq.copyat_or_push!(
@@ -112,6 +125,7 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
     end
 end
 
+"Extends `OrdinaryDiffEq._savevalues!` to save ProbNumDiffEq.jl-specific things."
 function DiffEqBase.savevalues!(
     integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
     force_save=false,
