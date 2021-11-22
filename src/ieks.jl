@@ -21,7 +21,7 @@ since it is implemented as an outer loop around the solver.
 
 Currently, only the integrated Brownian motion prior `:ibm` is supported.
 For the diffusionmodel, chose one of
-`[DynamicDiffusion, DynamicMVDiffusion, FixedDiffusion, FixedMVDiffusion]`.
+`[DynamicDiffusion(), DynamicMVDiffusion(), FixedDiffusion(), FixedMVDiffusion()]`.
 Just like the [`EK1`](@ref) it requires that the Jacobian of the rhs function is available.
 
 See also: [`EK0`](@ref), [`EK1`](@ref), [`solve_ieks`](@ref)

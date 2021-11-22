@@ -11,7 +11,7 @@ abstract type AbstractEK <: GaussianODEFilter end
 
 Currently, only the integrated Brownian motion prior `:ibm` is supported.
 For the diffusionmodel, chose one of
-`[DynamicDiffusion, DynamicMVDiffusion, FixedDiffusion, FixedMVDiffusion]`.
+`[DynamicDiffusion(), DynamicMVDiffusion(), FixedDiffusion(), FixedMVDiffusion()]`.
 
 See also: [`EK1`](@ref)
 
@@ -35,7 +35,7 @@ end
 
 Currently, only the integrated Brownian motion prior `:ibm` is supported.
 For the diffusionmodel, chose one of
-`[DynamicDiffusion, DynamicMVDiffusion, FixedDiffusion, FixedMVDiffusion]`.
+`[DynamicDiffusion(), DynamicMVDiffusion(), FixedDiffusion(), FixedMVDiffusion()]`.
 
 See also: [`EK0`](@ref)
 
