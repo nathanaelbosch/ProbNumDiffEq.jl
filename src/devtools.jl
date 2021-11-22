@@ -1,4 +1,5 @@
 # Copied from DiffEqDevTools.jl and modified
+# See also: https://devdocs.sciml.ai/dev/alg_dev/test_problems/
 function DiffEqDevTools.appxtrue(sol::ProbODESolution, sol2::TestSolution)
 
     # (almost) everything should work on the mean solution
