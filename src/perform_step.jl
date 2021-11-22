@@ -320,31 +320,6 @@ function update!(integ, prediction)
     return x_filt
 end
 
-function smooth_all!(integ)
-    integ.sol.x_smooth = copy(integ.sol.x_filt)
-
-    @unpack A, Q = integ.cache
-    @unpack x_smooth, t, diffusions = integ.sol
-    @unpack x_tmp, x_tmp2 = integ.cache
-    x = x_smooth
-
-    for i in length(x)-1:-1:1
-        dt = t[i+1] - t[i]
-        if iszero(dt)
-            copy!(x[i], x[i+1])
-            continue
-        end
-
-        make_preconditioners!(integ.cache, dt)
-        P, PI = integ.cache.P, integ.cache.PI
-
-        mul!(x_tmp, P, x[i])
-        mul!(x_tmp2, P, x[i+1])
-        smooth!(x_tmp, x_tmp2, A, Q, integ, diffusions[i])
-        mul!(x[i], PI, x_tmp)
-    end
-end
-
 """
     compute_scaled_error_estimate!(integ, cache)
 

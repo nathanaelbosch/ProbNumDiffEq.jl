@@ -35,22 +35,55 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
     end
 
     if integ.alg.smooth
-        smooth_all!(integ)
-        for (pu, x) in zip(integ.sol.pu, integ.sol.x_smooth)
-            mul!(pu, integ.cache.SolProj, x)
-        end
-        integ.sol.interp = set_smooth(integ.sol.interp)
-        [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
+        smooth_solution!(integ)
     end
+
     @assert (length(integ.sol.u) == length(integ.sol.pu))
 
     return nothing
 end
+
 function set_diffusions(integ, final_diff)
     if isempty(size(final_diff))
         integ.sol.diffusions .= final_diff
     else
         [(d .= final_diff) for d in integ.sol.diffusions]
+    end
+end
+
+"""
+    smooth_solution!(integ)
+
+Smoothes the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updating the
+values saved in `integ.sol.pu` and `integ.sol.u`. This function handles the iteration and
+preconditioning. The actual smoothing step happens in [`smooth!`](@ref).
+"""
+function smooth_solution!(integ)
+    integ.sol.x_smooth = copy(integ.sol.x_filt)
+
+    @unpack A, Q = integ.cache
+    @unpack x_smooth, t, diffusions = integ.sol
+    @unpack x_tmp, x_tmp2 = integ.cache
+    x = x_smooth
+
+    for i in length(x)-1:-1:1
+        dt = t[i+1] - t[i]
+        if iszero(dt)
+            copy!(x[i], x[i+1])
+            continue
+        end
+
+        make_preconditioners!(integ.cache, dt)
+        P, PI = integ.cache.P, integ.cache.PI
+
+        mul!(x_tmp, P, x[i])
+        mul!(x_tmp2, P, x[i+1])
+        smooth!(x_tmp, x_tmp2, A, Q, integ, diffusions[i])
+        mul!(x[i], PI, x_tmp)
+
+        # Save the smoothed state into the solution
+        mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
+        integ.sol.u[i][:] .= integ.sol.pu[i].μ
     end
 end
 
