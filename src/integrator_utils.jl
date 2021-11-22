@@ -16,7 +16,7 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
         else
             integ.sol.log_likelihood = NaN
             final_diff =
-                integ.sol.diffusions[end] * integ.cache.diffusionmodel.initial_diffusion
+                integ.cache.global_diffusion * integ.cache.diffusionmodel.initial_diffusion
 
             set_diffusions(integ, final_diff)
 
@@ -91,7 +91,7 @@ function DiffEqBase.savevalues!(
     OrdinaryDiffEq.copyat_or_push!(
         integ.sol.diffusions,
         integ.saveiter,
-        integ.cache.global_diffusion,
+        integ.cache.local_diffusion,
     )
     if integ.opts.save_everystep
         OrdinaryDiffEq.copyat_or_push!(
