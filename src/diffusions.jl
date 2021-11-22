@@ -17,18 +17,6 @@ initial_diffusion(diffusionmodel::DynamicMVDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 estimate_local_diffusion(kind::DynamicMVDiffusion, integ) = local_diagonal_diffusion(integ)
 
-"""
-    FixedDiffusion(; initial_diffusion=1.0, calibrate=True)
-
-Time-fixed diffusion model with or without calibration.
-The initial diffusion can be set via `initial_diffusion`; it will be used for each
-prediction during the solve.
-With calibration, this model accumulates the quasi-MLE during the forward solve of the ODE
-and the filtering states are then calibrated correspondingly.
-Without calibration, the model has a constant diffusion of `initial_diffusion`.
-In addition, a local diffusion estimate is computed as in [`DynamicDiffusion`](@ref), which
-is used for local error estimation and step-size adaptation.
-"""
 Base.@kwdef struct FixedDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
     calibrate::Bool = true
@@ -94,8 +82,12 @@ function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
 end
 
 """
-Local scalar diffusion:
+    local_scalar_diffusion(integ)
+
+Computes a scalar local diffusion estimate:
+```math
 σ² = zᵀ ⋅ (H*Q*H')⁻¹ ⋅ z
+```
 """
 function local_scalar_diffusion(integ)
     @unpack d, R, H, Qh, measurement, m_tmp = integ.cache
@@ -113,9 +105,14 @@ function local_scalar_diffusion(integ)
         return σ²
     end
 end
+
 """
-Local diagonal diffusion:
+    local_diagonal_diffusion(integ)
+
+Computes a diagonal local diffusion estimate:
+```math
 Σᵢᵢ = zᵢ² / (H*Q*H')ᵢᵢ
+```
 """
 function local_diagonal_diffusion(integ)
     @unpack q, H, Qh, measurement, m_tmp = integ.cache
