@@ -17,7 +17,7 @@ initial_diffusion(diffusionmodel::DynamicMVDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 estimate_local_diffusion(kind::DynamicMVDiffusion, integ) = local_diagonal_diffusion(integ)
 
-Base.@kwdef struct FixedDiffusion{T} <: AbstractStaticDiffusion
+Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
     calibrate::Bool = true
 end
@@ -55,10 +55,13 @@ end
 
 Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
+    calibrate::Bool = true
 end
-initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype) =
-    diffusionmodel.initial_diffusion .*
-    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
+function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
+    initdiff = diffusionmodel.initial_diffusion
+    @assert initdiff isa Number || length(initdiff) == d
+    return kron(Diagonal(initdiff .* ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
+end
 estimate_local_diffusion(kind::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ)
 function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
     @unpack q, measurement = integ.cache
