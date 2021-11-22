@@ -5,9 +5,11 @@ isstatic(diffusion::AbstractStaticDiffusion) = true
 isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
-initial_diffusion(diffusion::AbstractDiffusion, d, q, Eltype) = one(Eltype)
+
+estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
 
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
+initial_diffusion(diffusion::DynamicDiffusion, d, q, Eltype) = one(Eltype)
 estimate_local_diffusion(kind::DynamicDiffusion, integ) = local_scalar_diffusion(integ)
 
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
