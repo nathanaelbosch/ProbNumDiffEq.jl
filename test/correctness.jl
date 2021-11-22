@@ -13,6 +13,14 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
 
 import ProbNumDiffEq: remake_prob_with_jac
 
+EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
+EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
+EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
+ALGS = [EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3]
+DIFFUSIONS =
+    [FixedDiffusion(), DynamicDiffusion(), FixedMVDiffusion(), DynamicMVDiffusion()]
+INITS = [TaylorModeInit(), ClassicSolverInit()]
+
 for (prob, probname) in [
     (remake_prob_with_jac(prob_ode_lotkavoltera), "lotkavolterra"),
     (remake_prob_with_jac(prob_ode_fitzhughnagumo), "fitzhughnagumo"),
@@ -21,19 +29,7 @@ for (prob, probname) in [
         true_sol =
             solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
-        EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
-        EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
-        EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
-        for Alg in (EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3),
-            diffusion in [
-                FixedDiffusion(),
-                DynamicDiffusion(),
-                FixedMVDiffusion(),
-                DynamicMVDiffusion(),
-            ],
-            init in [TaylorModeInit(), ClassicSolverInit()],
-            q in [2, 3, 5]
-
+        for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]
             if (diffusion isa FixedMVDiffusion || diffusion isa DynamicMVDiffusion) &&
                Alg != EK0
                 continue
@@ -64,19 +60,7 @@ for (prob, probname) in [
             solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
         true_dense_vals = true_sol.(t_eval)
 
-        EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
-        EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
-        EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
-        for Alg in (EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3),
-            diffusion in [
-                FixedDiffusion(),
-                DynamicDiffusion(),
-                FixedMVDiffusion(),
-                DynamicMVDiffusion(),
-            ],
-            init in [TaylorModeInit(), ClassicSolverInit()],
-            q in [2, 3, 5]
-
+        for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]
             if (diffusion isa FixedMVDiffusion || diffusion isa DynamicMVDiffusion) &&
                Alg != EK0
                 continue

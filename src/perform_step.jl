@@ -71,9 +71,8 @@ function OrdinaryDiffEq.perform_step!(
     cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ)
 
     # Predict the covariance, using either the local or global diffusion
-    extrapolation_diff = isdynamic(cache.diffusionmodel) ?
-        cache.local_diffusion :
-        cache.default_diffusion
+    extrapolation_diff =
+        isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
     predict_cov!(x_pred, x, Ah, Qh, cache.C1, extrapolation_diff)
 
     # Compute measurement covariance only now

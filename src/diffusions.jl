@@ -17,7 +17,6 @@ initial_diffusion(diffusionmodel::DynamicMVDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 estimate_local_diffusion(kind::DynamicMVDiffusion, integ) = local_diagonal_diffusion(integ)
 
-
 """
     FixedDiffusion(; initial_diffusion=1.0, calibrate=True)
 
@@ -93,7 +92,6 @@ function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
         return diffusion
     end
 end
-
 
 """
 Local scalar diffusion:
