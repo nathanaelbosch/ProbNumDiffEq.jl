@@ -108,7 +108,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
     # Filter through the data forwards
     for (i, (t, u)) in enumerate(zip(ts, us))
         predict_mean!(x_pred, x, A)
-        predict_cov!(x_pred, x, A, Q, cache.C1, cache.global_diffusion)
+        predict_cov!(x_pred, x, A, Q, cache.C1, cache.default_diffusion)
         push!(preds, copy(x_pred))
 
         H = cache.E0 * PI
