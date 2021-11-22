@@ -11,8 +11,8 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
             integ.cache.diffusionmodel isa FixedDiffusion &&
             !integ.cache.diffusionmodel.calibrate
         )
-            final_diff = integ.cache.diffusionmodel.initial_diffusion
-            set_diffusions!(integ.sol, final_diff)
+            constant_diffusion = integ.cache.diffusionmodel.initial_diffusion
+            set_diffusions!(integ.sol, constant_diffusion)
         else
             mle_diffusion =
                 integ.cache.global_diffusion * integ.cache.diffusionmodel.initial_diffusion
@@ -62,12 +62,15 @@ Set the contents of `solution.diffusions` to the provided `diffusion`, overwriti
 diffusion estimates that are in there. Typically, `diffusion` is either a global quasi-MLE
 or the specified initial diffusion value if no calibration is desired.
 """
-function set_diffusions!(solution::AbstractProbODESolution, diffusion)
-    if isempty(size(final_diff))
-        solution.diffusions .= final_diff
-    else
-        [(d .= final_diff) for d in solution.diffusions]
+function set_diffusions!(solution::AbstractProbODESolution, diffusion::Number)
+    solution.diffusions .= diffusion
+    return nothing
+end
+function set_diffusions!(solution::AbstractProbODESolution, diffusion::Diagonal)
+    @simd ivdep for d in solution.diffusions
+        copy!(d, diffusion)
     end
+    return nothing
 end
 
 """
