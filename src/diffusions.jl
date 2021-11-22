@@ -74,27 +74,14 @@ initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 estimate_local_diffusion(kind::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ)
 function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
-    @unpack d, q, R, P, PI, E1 = integ.cache
-    @unpack measurement, H = integ.cache
-    @unpack d, measurement = integ.cache
-    # diffusions = integ.sol.diffusions
+    @unpack q, measurement = integ.cache
 
-    # Assert EK0
-    @assert all(H .== E1)
-
-    @unpack measurement = integ.cache
     v, S = measurement.μ, measurement.Σ
-
-    # More safety checks
-    @assert isdiag(S)
-    # @assert length(unique(diag(S))) == 1
     S_11 = diag(S)[1]
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
     Σ_out = kron(Σ, I(q + 1))
-    @assert isdiag(Σ_out)
-    # @info "MV-MLE-Diffusion" v S Σ Σ_out
 
     if integ.success_iter == 0
         # @assert length(diffusions) == 0
@@ -133,27 +120,15 @@ Local diagonal diffusion:
 Σᵢᵢ = zᵢ² / (H*Q*H')ᵢᵢ
 """
 function local_diagonal_diffusion(integ)
-    @unpack d, q, R, P, PI, E1 = integ.cache
-    @unpack H, Qh, measurement, m_tmp = integ.cache
+    @unpack q, H, Qh, measurement, m_tmp = integ.cache
     z = measurement.μ
-
-    # @assert all(R .== 0) "The dynamic-diffusion assumes R==0!"
-
-    # Assert EK0
-    @assert all(H .== E1)
-
-    # More safety checks
     HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
-    @assert isdiag(HQH)
-    @assert length(unique(diag(HQH))) == 1
     Q0_11 = diag(HQH)[1]
 
     Σ_ii = z .^ 2 ./ Q0_11
-    Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
+    # Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 
     Σ_out = kron(Σ, I(q + 1))
-    @assert isdiag(Σ_out)
-    # @info "DynamicMV diffusion" Σ Σ_out
     return Σ_out
 end
