@@ -7,16 +7,13 @@ function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:Abstrac
 
     # Calibrate the solution (if applicable)
     if isstatic(integ.cache.diffusionmodel)
-        if (
-            integ.cache.diffusionmodel isa FixedDiffusion &&
-            !integ.cache.diffusionmodel.calibrate
-        )
-            constant_diffusion = integ.cache.diffusionmodel.initial_diffusion
-            set_diffusions!(integ.sol, constant_diffusion)
-        else
-            mle_diffusion =
-                integ.cache.global_diffusion * integ.cache.diffusionmodel.initial_diffusion
+        if integ.cache.diffusionmodel.calibrate
+            # The estimated global_diffusion is just a scaling factor
+            mle_diffusion = integ.cache.global_diffusion
             calibrate_solution!(integ, mle_diffusion)
+        else
+            constant_diffusion = integ.cache.default_diffusion
+            set_diffusions!(integ.sol, constant_diffusion)
         end
     end
 
@@ -39,13 +36,12 @@ updating the solution estimates in `integ.sol.pu`.
 """
 function calibrate_solution!(integ, mle_diffusion)
 
-    # Set all solution diffusions
-    set_diffusions!(integ.sol, mle_diffusion)
+    # Set all solution diffusions; don't forget the initial diffusion!
+    set_diffusions!(integ.sol, mle_diffusion * integ.cache.default_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
-    rescale_diff = mle_diffusion ./ integ.cache.diffusionmodel.initial_diffusion
     @simd ivdep for s in integ.sol.x_filt
-        copy!(s.Σ, apply_diffusion(s.Σ, rescale_diff))
+        copy!(s.Σ, apply_diffusion(s.Σ, mle_diffusion))
     end
 
     # Re-write into the solution estimates

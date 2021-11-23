@@ -32,7 +32,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
         @test sol.u[end] ≈ true_sol.(sol.t)[end]
     end
 
-    @testset "Time-Fixed Diffusion - uncalibrated" begin
+    @testset "Time-Fixed Diffusion - uncalibrated and with custom initial value" begin
         sol = solve(
             prob,
             EK0(diffusionmodel=FixedDiffusion(1e3, false), smooth=false),
@@ -58,6 +58,19 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
         sol = solve(
             prob,
             EK0(diffusionmodel=FixedMVDiffusion(), smooth=false),
+            dense=false,
+            adaptive=false,
+            dt=1e-4,
+        )
+        @test sol.u[end] ≈ true_sol.(sol.t)[end]
+    end
+
+    @testset "Time-Fixed Diagonal Diffusion - uncalibrated and with custom values" begin
+        d = length(prob.u0)
+        initial_diffusion = 1 .+ rand(d)
+        sol = solve(
+            prob,
+            EK0(diffusionmodel=FixedMVDiffusion(initial_diffusion, false), smooth=false),
             dense=false,
             adaptive=false,
             dt=1e-4,
