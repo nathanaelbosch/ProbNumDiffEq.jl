@@ -33,7 +33,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     end
 
     @testset "Call on known t" begin
-        @test sol(sol.t).u == sol.pu
+        @test sol(sol.t).u ≈ sol.pu
     end
 
     @testset "Correct initial values" begin
