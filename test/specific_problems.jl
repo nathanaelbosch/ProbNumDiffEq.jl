@@ -12,7 +12,7 @@ using Plots
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary:
-    prob_ode_fitzhughnagumo, prob_ode_vanstiff, prob_ode_2Dlinear, prob_ode_linear
+    prob_ode_fitzhughnagumo, prob_ode_vanderpol_stiff, prob_ode_2Dlinear, prob_ode_linear
 
 @testset "Problem with analytic solution" begin
     linear(u, p, t) = p .* u
@@ -52,7 +52,7 @@ end
 end
 
 @testset "Stiff Vanderpol" begin
-    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_vanstiff)
+    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_vanderpol_stiff)
     @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
