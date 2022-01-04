@@ -10,6 +10,8 @@ OrdinaryDiffEq.alg_difftype(alg::EK1{CS,AD,DiffType}) where {CS,AD,DiffType} = D
 OrdinaryDiffEq.get_chunksize(alg::AbstractEK) = Val(0)
 OrdinaryDiffEq.isfsal(alg::AbstractEK) = false
 
+OrdinaryDiffEq.standardtag(alg::AbstractEK) = false
+
 OrdinaryDiffEq.isimplicit(alg::EK1) = true
 
 ############################################
