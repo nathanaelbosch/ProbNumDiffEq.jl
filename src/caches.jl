@@ -117,7 +117,7 @@ function OrdinaryDiffEq.alg_cache(
     matType = Matrix{uElType}
 
     # Projections
-    Proj = projection(d, q, uElType)
+    Proj = projection(d, q, Val(uElType))
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
@@ -180,9 +180,7 @@ function OrdinaryDiffEq.alg_cache(
     err_tmp = similar(du)
 
     # Things for calc_J
-    uf =
-        IIP == true ? OrdinaryDiffEq.UJacobianWrapper(f, t, p) :
-        OrdinaryDiffEq.UDerivativeWrapper(f, t, p)
+    uf = get_uf(f, t, p, Val(IIP))
     du1 = similar(rate_prototype)
     dw1 = zero(u)
     jac_config = OrdinaryDiffEq.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
@@ -262,3 +260,6 @@ function OrdinaryDiffEq.alg_cache(
         jac_config,
     )
 end
+
+get_uf(f, t, p, ::Val{true}) = OrdinaryDiffEq.UJacobianWrapper(f, t, p)
+get_uf(f, t, p, ::Val{false}) = OrdinaryDiffEq.UDerivativeWrapper(f, t, p)
