@@ -1,4 +1,4 @@
-function projection(d::Integer, q::Integer, elType=typeof(1.0))
+function projection(d::Integer, q::Integer, ::Val{elType}=Val(typeof(1.0))) where {elType}
     # Proj(deriv) = kron(diagm(0 => ones(elType, d)), [i==(deriv+1) ? 1 : 0 for i in 1:q+1]')
 
     # Slightly faster version of the above:

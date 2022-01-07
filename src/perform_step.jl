@@ -182,7 +182,7 @@ function evaluate_ode!(
     t,
     second_order::Val{false},
 )
-    @unpack f, p, dt, alg = integ
+    @unpack f, p, alg = integ
     @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
@@ -254,7 +254,7 @@ function evaluate_ode!(
     t,
     second_order::Val{true},
 )
-    @unpack f, p, dt, alg = integ
+    @unpack f, p, alg = integ
     @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
     du2 = du
