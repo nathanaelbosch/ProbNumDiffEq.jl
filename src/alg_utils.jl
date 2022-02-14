@@ -6,7 +6,6 @@
 OrdinaryDiffEq.alg_autodiff(alg::AbstractEK) = true
 OrdinaryDiffEq.alg_autodiff(alg::EK1{CS,AD}) where {CS,AD} = AD
 OrdinaryDiffEq.alg_difftype(alg::EK1{CS,AD,DiffType}) where {CS,AD,DiffType} = DiffType
-OrdinaryDiffEq.concrete_jac(GaussianODEFilter) = nothing  # I'm not sure what this is option supposed to do
 OrdinaryDiffEq.standardtag(alg::EK1) = true
 OrdinaryDiffEq.standardtag(alg::AbstractEK) = false
 @inline DiffEqBase.get_tmp_cache(integ, alg::EK1, cache) = (cache.tmp, cache.atmp)
