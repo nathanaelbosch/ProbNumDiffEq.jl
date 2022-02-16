@@ -274,7 +274,6 @@ function evaluate_ode!(
 
     # Cov
     if alg isa EK1
-
         if isinplace(f)
             H .= E2
 
