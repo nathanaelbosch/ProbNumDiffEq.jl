@@ -107,10 +107,6 @@ include("preconditioning.jl")
 # Utils
 include("jacobian.jl")
 
-# Iterated Extended Kalman Smoother
-include("ieks.jl")
-export IEKS, solve_ieks
-
 include("devtools.jl")
 include("callbacks.jl")
 export ManifoldUpdate

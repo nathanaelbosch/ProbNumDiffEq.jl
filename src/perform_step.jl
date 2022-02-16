@@ -148,13 +148,11 @@ function evaluate_ode!(
     z .-= du[:]
 
     # If EK1, evaluate the Jacobian and adjust H
-    if alg isa EK1 || alg isa IEKS
-        u_lin =
-            (alg isa IEKS && !isnothing(alg.linearize_at)) ? alg.linearize_at(t).μ : u_pred
+    if alg isa EK1
 
         # Jacobian is computed either with the given jac, or ForwardDiff
         if !isnothing(f.jac)
-            _eval_f_jac!(ddu, u_lin, p, t, f)
+            _eval_f_jac!(ddu, u_pred, p, t, f)
         else
             !isnothing(f.jac)
             @unpack du1, uf, jac_config = integ.cache
@@ -162,9 +160,9 @@ function evaluate_ode!(
             uf.t = t
             uf.p = p
             if isinplace(f)
-                OrdinaryDiffEq.jacobian!(ddu, uf, u_lin, du1, integ, jac_config)
+                OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
             else
-                ddu .= OrdinaryDiffEq.jacobian(uf, u_lin, integ)
+                ddu .= OrdinaryDiffEq.jacobian(uf, u_pred, integ)
             end
         end
         integ.destats.njacs += 1
@@ -204,14 +202,13 @@ function evaluate_ode!(
     z1 .-= @view du[:]
 
     # If EK1, evaluate the Jacobian and adjust H
-    u_lin = u_pred
     if !isnothing(f.jac)
-        _eval_f_jac!(ddu, u_lin, p, t, f)
+        _eval_f_jac!(ddu, u_pred, p, t, f)
     elseif isinplace(f)
-        ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_lin)
+        ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
         integ.destats.nf += 1
     else
-        ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_lin)
+        ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
         integ.destats.nf += 1
     end
     integ.destats.njacs += 1
@@ -277,7 +274,6 @@ function evaluate_ode!(
 
     # Cov
     if alg isa EK1
-        (alg isa IEKS) && error("IEKS is currently not supported for SecondOrderODEProbems")
 
         if isinplace(f)
             H .= E2
