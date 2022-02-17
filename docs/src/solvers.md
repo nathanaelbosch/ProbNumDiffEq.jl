@@ -7,10 +7,3 @@ For the best results we suggest using `EK1`, but note that it relies on the Jaco
 EK1
 EK0
 ```
-
-#### Experimental: Iterated extended Kalman smoothing
-We do not recommend using the following solver, but if you are interested feel free to open an issue!
-```@docs
-IEKS
-solve_ieks
-```

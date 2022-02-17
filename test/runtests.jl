@@ -53,10 +53,6 @@ end
         include("errors.jl")
     end
 
-    @timedtestset "IEKS" begin
-        include("ieks.jl")
-    end
-
     @timedtestset "Automatic Differentiation" begin
         include("autodiff.jl")
     end
