@@ -133,7 +133,7 @@ function evaluate_ode!(
     z, S = measurement.μ, measurement.Σ
 
     # Mean
-    _eval_f!(du, u_pred, p, t, f)
+    f(du, u_pred, p, t)
     integ.destats.nf += 1
     # z .= MM*E1*x_pred.μ .- du
     if f.mass_matrix == I
@@ -152,18 +152,14 @@ function evaluate_ode!(
 
         # Jacobian is computed either with the given jac, or ForwardDiff
         if !isnothing(f.jac)
-            _eval_f_jac!(ddu, u_pred, p, t, f)
+            f.jac(ddu, u_pred, p, t)
         else
             !isnothing(f.jac)
             @unpack du1, uf, jac_config = integ.cache
             uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
             uf.t = t
             uf.p = p
-            if isinplace(f)
-                OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
-            else
-                ddu .= OrdinaryDiffEq.jacobian(uf, u_pred, integ)
-            end
+            OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
         end
         integ.destats.njacs += 1
 
@@ -191,7 +187,7 @@ function evaluate_ode!(
     (f.mass_matrix != I) && error("EK1FDB does not support mass-matrices right now")
 
     # Mean
-    _eval_f!(du, u_pred, p, t, f)
+    f(du, u_pred, p, t)
     integ.destats.nf += 1
     # z .= MM*E1*x_pred.μ .- du
     H1, H2 = view(H, 1:d, :), view(H, d+1:2d, :)
@@ -203,12 +199,9 @@ function evaluate_ode!(
 
     # If EK1, evaluate the Jacobian and adjust H
     if !isnothing(f.jac)
-        _eval_f_jac!(ddu, u_pred, p, t, f)
-    elseif isinplace(f)
-        ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
-        integ.destats.nf += 1
+        f.jac(ddu, u_pred, p, t)
     else
-        ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
+        ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
         integ.destats.nf += 1
     end
     integ.destats.njacs += 1
@@ -225,14 +218,11 @@ function evaluate_ode!(
             u_pred = E0 * m
             du = zeros(eltype(m), d)
             ddu = zeros(eltype(m), d, d)
-            _eval_f!(du, u_pred, p, t, f)
+            f(du, u_pred, p, t)
             if !isnothing(f.jac)
-                _eval_f_jac!(ddu, u_pred, p, t, f)
-            elseif isinplace(f)
-                ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
-                # integ.destats.nf += 1
+                f.jac(ddu, u_pred, p, t)
             else
-                ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u_pred)
+                ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
                 # integ.destats.nf += 1
             end
             # integ.destats.njacs += 1
@@ -263,49 +253,29 @@ function evaluate_ode!(
     # Mean
     # _u_pred = E0 * x_pred.μ
     # _du_pred = E1 * x_pred.μ
-    if isinplace(f)
-        f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
-    else
-        du2 .= f.f1(view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
-    end
+    f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     integ.destats.nf += 1
     _matmul!(z, E2, x_pred.μ)
     z .-= @view du2[:]
 
     # Cov
     if alg isa EK1
-        if isinplace(f)
-            H .= E2
+        H .= E2
 
-            J = ddu
-            ForwardDiff.jacobian!(
-                J,
-                (du2, du_u) -> f.f1(du2, view(du_u, 1:d), view(du_u, d+1:2d), p, t),
-                du2,
-                u_pred,
-            )
-            integ.destats.nf += 1
-            integ.destats.njacs += 1
-            _matmul!(H, J, integ.cache.SolProj, -1.0, 1.0)
-        else
-            J = ForwardDiff.jacobian(
-                (du_u) -> f.f1(view(du_u, 1:d), view(du_u, d+1:2d), p, t),
-                u_pred,
-            )
-            integ.destats.nf += 1
-            integ.destats.njacs += 1
-            H .= E2 .- J * integ.cache.SolProj
-        end
+        J = ddu
+        ForwardDiff.jacobian!(
+            J,
+            (du2, du_u) -> f.f1(du2, view(du_u, 1:d), view(du_u, d+1:2d), p, t),
+            du2,
+            u_pred,
+        )
+        integ.destats.nf += 1
+        integ.destats.njacs += 1
+        _matmul!(H, J, integ.cache.SolProj, -1.0, 1.0)
     end
 
     return measurement
 end
-
-# Helper functions to handle both IIP and OOP easily
-_eval_f!(du, u, p, t, f::AbstractODEFunction{true}) = f(du, u, p, t)
-_eval_f!(du, u, p, t, f::AbstractODEFunction{false}) = (du .= f(u, p, t))
-_eval_f_jac!(ddu, u, p, t, f::AbstractODEFunction{true}) = f.jac(ddu, u, p, t)
-_eval_f_jac!(ddu, u, p, t, f::AbstractODEFunction{false}) = (ddu .= f.jac(u, p, t))
 
 compute_measurement_covariance!(cache) =
     X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)

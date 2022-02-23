@@ -101,6 +101,7 @@ include("filtering/update.jl")
 include("filtering/smooth.jl")
 include("perform_step.jl")
 include("projection.jl")
+include("solve.jl")
 
 include("preconditioning.jl")
 
