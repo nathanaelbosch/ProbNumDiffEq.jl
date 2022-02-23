@@ -103,21 +103,3 @@ end
         end
     end
 end
-
-@testset "ClassicSolverInit enables solving Pleiades with order 5" begin
-    # This has not worked before with the Taylor-Mode init, it simply took too long!
-    prob = prob_ode_pleiades
-    sol1 = solve(prob, Vern9(), abstol=1e-10, reltol=1e-10, save_everystep=false)
-    sol2 = solve(
-        prob,
-        EK1(
-            order=5,
-            smooth=false,
-            initialization=ClassicSolverInit(alg=Rosenbrock32(), init_on_du=true),
-        ),
-        abstol=1e-6,
-        reltol=1e-6,
-        save_everystep=false,
-    )
-    @test sol1.u[end] ≈ sol2.u[end] rtol = 1e-5
-end

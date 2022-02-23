@@ -33,8 +33,8 @@ end
     prob = remake(prob, p=my_p)
 
     @testset "$alg" for alg in [EK0(), EK1()]
-        @test solve(prob, alg) isa ProbNumDiffEq.ProbODESolution
         sol = solve(prob, alg)
+        @test sol isa ProbNumDiffEq.ProbODESolution
 
         @test length(sol.u[1]) == length(sol.pu.μ[1])
         @test sol.u[1][:] == sol.pu.μ[1]
@@ -62,31 +62,6 @@ end
     @test eltype(eltype(sol.pu.μ)) == BigFloat
     @test eltype(eltype(sol.pu.Σ)) == BigFloat
     @test sol isa ProbNumDiffEq.ProbODESolution
-end
-
-@testset "IIP problem" begin
-    f(du, u, p, t) = (du[1] = p[1] * u[1] .* (1 .- u[1]))
-    prob = ODEProblem(f, [1e-1], (0.0, 5), [3.0])
-    @testset "without jacobian" begin
-        # first without defined jac
-        @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK0(initialization=ClassicSolverInit())) isa
-              ProbNumDiffEq.ProbODESolution
-    end
-    @testset "with jacobian" begin
-        # now with defined jac
-        prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob)
-        @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK0(initialization=ClassicSolverInit())) isa
-              ProbNumDiffEq.ProbODESolution
-    end
 end
 
 @testset "OOP problem" begin
@@ -159,7 +134,7 @@ end
         du[1] = u[2]
         return du[2] = -u[1]
     end
-    prob = ODEProblem(harmonic_oscillator, u0, (0.0, 100.0))
+    prob = ODEProblem(harmonic_oscillator, u0, (0.0, 10.0))
     appxsol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
 
     E(u) = [dot(u, u) - 2]

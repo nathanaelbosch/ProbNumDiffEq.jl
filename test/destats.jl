@@ -2,8 +2,9 @@ using ProbNumDiffEq
 using Test
 using LinearAlgebra
 
-@testset "destats.nf testing $alg" for q in (1, 2, 3, 5),
-    init in (TaylorModeInit(), ClassicSolverInit()),
+q = 3
+
+@testset "destats.nf testing $alg" for init in (TaylorModeInit(), ClassicSolverInit()),
     alg in (
         EK0(order=q, smooth=false, initialization=init),
         EK1(order=q, smooth=false, initialization=init),
