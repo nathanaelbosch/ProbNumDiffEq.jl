@@ -148,11 +148,8 @@ function DiffEqBase.savevalues!(
         integ.cache.local_diffusion,
     )
     if integ.opts.save_everystep
-        OrdinaryDiffEq.copyat_or_push!(
-            integ.sol.pu,
-            integ.saveiter,
-            mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
-        )
+        mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
+        OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, integ.cache.pu_tmp)
     end
 
     return out
