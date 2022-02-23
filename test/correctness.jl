@@ -16,7 +16,8 @@ import ProbNumDiffEq: modelingtoolkitize_with_jac
 EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
 EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
 EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
-ALGS = [EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3]
+# ALGS = [EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3]
+ALGS = [EK0, EK1]
 DIFFUSIONS =
     [FixedDiffusion(), DynamicDiffusion(), FixedMVDiffusion(), DynamicMVDiffusion()]
 INITS = [TaylorModeInit(), ClassicSolverInit()]
