@@ -24,11 +24,3 @@ end
     prob = prob_ode_lotkavoltera
     @test_throws ErrorException solve(prob, EK0(smooth=true), save_everystep=false)
 end
-
-@testset "`dense=false` warns if `smooth=true`" begin
-    prob = prob_ode_lotkavoltera
-    @test_logs (
-        :warn,
-        "If you set dense=false for efficiency, you might also want to set smooth=false.",
-    ) solve(prob, EK0(smooth=true), dense=false)
-end
