@@ -15,14 +15,12 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     prob_ode_fitzhughnagumo, prob_ode_vanderpol_stiff, prob_ode_2Dlinear, prob_ode_linear
 
 @testset "Problem with analytic solution" begin
-    linear(u, p, t) = p .* u
+    linear(du, u, p, t) = du .= p .* u
     linear_analytic(u0, p, t) = @. u0 * exp(p * t)
     prob =
         ODEProblem(ODEFunction(linear, analytic=linear_analytic), [1 / 2], (0.0, 1.0), 1.01)
 
     @test solve(prob, EK0()) isa ProbNumDiffEq.ProbODESolution
-    @test solve(ProbNumDiffEq.remake_prob_with_jac(prob), EK1()) isa
-          ProbNumDiffEq.ProbODESolution
     sol = solve(prob, EK0())
     @test sol.errors isa Dict
     @test all(haskey.(Ref(sol.errors), (:l∞, :l2, :final)))

@@ -3,8 +3,8 @@ using ProbNumDiffEq
 using DiffEqDevTools
 
 # Simple linear problem
-linear(u, p, t) = p .* u
-linear_jac(u, p, t) = p
+linear(du, u, p, t) = du .= p .* u
+linear_jac(du, u, p, t) = du .= p
 linear_analytic(u0, p, t) = @. u0 * exp(p * t)
 prob = ODEProblem(
     ODEFunction(linear, jac=linear_jac, analytic=linear_analytic),
