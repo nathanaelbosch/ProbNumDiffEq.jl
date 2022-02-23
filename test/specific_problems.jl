@@ -52,7 +52,7 @@ end
 end
 
 @testset "Stiff Vanderpol" begin
-    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_vanderpol_stiff)
+    prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob_ode_vanderpol_stiff)
     @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
@@ -81,7 +81,7 @@ end
     end
     @testset "with jacobian" begin
         # now with defined jac
-        prob = ProbNumDiffEq.remake_prob_with_jac(prob)
+        prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob)
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
@@ -104,7 +104,7 @@ end
     end
     @testset "with jacobian" begin
         # now with defined jac
-        prob = ProbNumDiffEq.remake_prob_with_jac(prob)
+        prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob)
         @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution

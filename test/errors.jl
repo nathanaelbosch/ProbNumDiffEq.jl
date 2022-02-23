@@ -7,8 +7,6 @@ importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary:
     prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
-import ProbNumDiffEq: remake_prob_with_jac
-
 @testset "Fixed-timestep requires dt" begin
     prob = prob_ode_lotkavoltera
     @test_throws ErrorException solve(prob, EK0(), adaptive=false)
