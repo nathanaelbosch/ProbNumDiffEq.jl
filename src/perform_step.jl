@@ -128,43 +128,39 @@ function evaluate_ode!(
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
-    @unpack E0, E1, E2 = integ.cache
-
     z, S = measurement.μ, measurement.Σ
 
     # Mean
     f(du, u_pred, p, t)
     integ.destats.nf += 1
-    # z .= MM*E1*x_pred.μ .- du
-    if f.mass_matrix == I
-        H .= E1
-    elseif f.mass_matrix isa UniformScaling
-        H .= f.mass_matrix.λ .* E1
-    else
-        _matmul!(H, f.mass_matrix, E1)
-    end
 
-    _matmul!(z, H, x_pred.μ)
+    # H.E1 would already contain the mass matrix if there is one
+    _matmul!(z, H.E1, x_pred.μ)
     z .-= du[:]
 
     # If EK1, evaluate the Jacobian and adjust H
     if alg isa EK1
 
+        # So OrdinaryDiffEq's `calc_J` computes the jacobian rather efficiently
+        # But, it relies on some assumptions: The jacobian is computed at location
+        # `integ.cache.uprev`, and at time `integ.t`; Either I'd overwrite these and
+        # call calc_J, or I just to the work here?
+
         # Jacobian is computed either with the given jac, or ForwardDiff
-        if !isnothing(f.jac)
-            f.jac(ddu, u_pred, p, t)
+        if DiffEqBase.has_jac(f)
+            f.jac(H.J, u_pred, p, t)
         else
-            !isnothing(f.jac)
             @unpack du1, uf, jac_config = integ.cache
             uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
             uf.t = t
             uf.p = p
-            OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
+            OrdinaryDiffEq.jacobian!(H.J, uf, u_pred, du1, integ, jac_config)
         end
         integ.destats.njacs += 1
 
         # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
-        _matmul!(H, ddu, E0, -1.0, 1.0)
+        # _matmul!(H, ddu, E0, -1.0, 1.0)
+        # copy!(H.J, ddu)
     end
 
     return nothing

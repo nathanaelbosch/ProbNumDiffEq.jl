@@ -23,7 +23,7 @@ end
 """Basically an Kalman update"""
 function condition_on!(
     x::SRGaussian,
-    H::AbstractMatrix,
+    H,
     data::AbstractVector,
     meascache,
     Kcache,

@@ -17,7 +17,7 @@ catch
     import DiffEqBase.SciMLBase: interpret_vars, getsyms
 end
 
-import Base: copy, copy!, show, size, ndims, similar
+import Base: copy, copy!, show, size, ndims, similar, *
 stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
@@ -31,6 +31,7 @@ using RecursiveArrayTools
 using StaticArrays
 using ForwardDiff
 using Tullio
+using LinearMaps
 # By default use mul!
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)

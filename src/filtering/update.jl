@@ -53,7 +53,7 @@ function update!(
     x_out::Gaussian,
     x_pred::Gaussian,
     measurement::Gaussian,
-    H::AbstractMatrix,
+    H,
     K_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
     m_tmp,
@@ -64,19 +64,26 @@ function update!(
 
     # K = P_p * H' / S
     S_chol = cholesky!(S)
-    K = _matmul!(K_cache, Matrix(P_p), H')
+    # K = _matmul!(K_cache, Matrix(P_p), H')
+    mul!(K_cache', H, Matrix(P_p))
+    K = K_cache
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
-    _matmul!(M_cache, K, H, -1.0, 0.0)
-    @inbounds @simd ivdep for i in 1:D
-        M_cache[i, i] += 1
-    end
+    # _matmul!(M_cache, K, H, -1.0, 0.0)
+    # @inbounds @simd ivdep for i in 1:D
+    #     M_cache[i, i] += 1
+    # end
+    # X_A_Xt!(x_out.Σ, P_p, M_cache)
 
-    X_A_Xt!(x_out.Σ, P_p, M_cache)
+    HC_cache = m_tmp.Σ.squareroot
+    mul!(HC_cache, H, P_p.squareroot)
+    KHC = _matmul!(M_cache, K, HC_cache)
+    x_out.Σ.squareroot .= P_p.squareroot .- KHC
+    _matmul!(x_out.Σ.mat, x_out.Σ.squareroot, x_out.Σ.squareroot')
 
     return x_out
 end

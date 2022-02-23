@@ -8,13 +8,13 @@ mutable struct GaussianODEFilterCache{
     SolProjType,
     PType,
     PIType,
-    EType,
     uType,
     duType,
     xType,
     AType,
     QType,
     matType,
+    HMatType,
     diffusionType,
     diffModelType,
     measType,
@@ -40,9 +40,6 @@ mutable struct GaussianODEFilterCache{
     # Also mutable
     P::PType
     PI::PIType
-    E0::EType
-    E1::EType
-    E2::EType
     # Mutable stuff
     u::uType
     u_pred::uType
@@ -57,7 +54,7 @@ mutable struct GaussianODEFilterCache{
     measurement::measType
     m_tmp::measType
     pu_tmp::puType
-    H::matType
+    H::HMatType
     du::duType
     ddu::matType
     K1::matType
@@ -117,8 +114,7 @@ function OrdinaryDiffEq.alg_cache(
     matType = Matrix{uElType}
 
     # Projections
-    Proj = projection(d, q, Val(uElType))
-    E0, E1, E2 = Proj(0), Proj(1), Proj(2)
+    Proj = ProjMatGenerator(d, q)
     @assert f isa AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
@@ -136,9 +132,11 @@ function OrdinaryDiffEq.alg_cache(
 
     # Pre-allocate a bunch of matrices
     h = zeros(uElType, d)
-    H = f isa DynamicalODEFunction ? copy(E2) : copy(E1)
+    # H = f isa DynamicalODEFunction ? copy(E2) : copy(E1)
     du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
     ddu = f isa DynamicalODEFunction ? zeros(uElType, d, 2d) : zeros(uElType, d, d)
+    @assert f.mass_matrix == I "Mass matrices not supported right now"
+    H = ODEHMat(Proj(0), Proj(1), ddu)
     v, S = similar(h), similar(ddu)
     v = similar(h)
     S =
@@ -192,13 +190,13 @@ function OrdinaryDiffEq.alg_cache(
         typeof(SolProj),
         typeof(P),
         typeof(PI),
-        typeof(E0),
         uType,
         typeof(du),
         typeof(x0),
         typeof(A),
         typeof(Q),
         matType,
+        typeof(H),
         typeof(initdiff),
         typeof(diffmodel),
         typeof(measurement),
@@ -223,9 +221,6 @@ function OrdinaryDiffEq.alg_cache(
         SolProj,
         P,
         PI,
-        E0,
-        E1,
-        E2,
         # Mutable stuff
         u,
         u_pred,

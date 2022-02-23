@@ -37,6 +37,11 @@ X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, X::AbstractMatrix) = begin
     _matmul!(out.mat, out.squareroot, out.squareroot')
     return out
 end
+X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, X::LinearMap) = begin
+    mul!(out.squareroot, X, M.squareroot)
+    _matmul!(out.mat, out.squareroot, out.squareroot')
+    return out
+end
 X_A_Xt!(out::SquarerootMatrix, M::SquarerootMatrix, D::Diagonal) = begin
     # Basically just to optimize PI*Q*PI
     out.squareroot .= D.diag .* M.squareroot
