@@ -15,13 +15,13 @@ prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob)
     dt = 1e-5
     q = 8
     @test solve(
-        prob,
+        remake(prob, tspan=(0.0, 10dt)),
         EK0(order=q, smooth=true, diffusionmodel=FixedDiffusion()),
         adaptive=false,
         dt=dt,
     ) isa DiffEqBase.AbstractODESolution
     @test solve(
-        prob,
+        remake(prob, tspan=(0.0, 10dt)),
         EK1(order=q, smooth=true, diffusionmodel=FixedDiffusion()),
         adaptive=false,
         dt=dt,
