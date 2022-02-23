@@ -106,7 +106,7 @@ include("solve.jl")
 include("preconditioning.jl")
 
 # Utils
-include("jacobian.jl")
+include("modelingtoolkitize.jl")
 
 include("devtools.jl")
 include("callbacks.jl")
