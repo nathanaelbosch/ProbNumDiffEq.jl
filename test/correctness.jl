@@ -18,8 +18,7 @@ EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
 EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
 # ALGS = [EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3]
 ALGS = [EK0, EK1]
-DIFFUSIONS =
-    [FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion]
+DIFFUSIONS = [FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion]
 INITS = [TaylorModeInit, ClassicSolverInit]
 
 for (prob, probname) in [
@@ -73,7 +72,11 @@ for (prob, probname) in [
             @testset "Adaptive steps: $probname; alg=$Alg, diffusion=$diffusion, init=$init, q=$q" begin
                 @debug "Testing for correctness: Adaptive steps" probname Alg diffusion q
 
-                sol = solve(prob, Alg(order=q, diffusionmodel=diffusion(), initialization=init()), adaptive=true)
+                sol = solve(
+                    prob,
+                    Alg(order=q, diffusionmodel=diffusion(), initialization=init()),
+                    adaptive=true,
+                )
 
                 @test sol.u ≈ true_sol.(sol.t) rtol = 1e-3
                 @test mean.(sol.(t_eval)) ≈ true_dense_vals rtol = 1e-3
