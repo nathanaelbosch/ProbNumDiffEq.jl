@@ -53,6 +53,8 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
 
         @test sol.(t0:1e-3:t1) isa Array{Gaussian{T,S}} where {T,S}
         @test sol(t0:1e-3:t1).u isa StructArray{Gaussian{T,S}} where {T,S}
+
+        @test_throws ErrorException sol(t0-1e-2)
     end
 
     # Sampling
@@ -112,9 +114,13 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
         @test plot(sol) isa AbstractPlot
         @test plot(sol, denseplot=false) isa AbstractPlot
         @test plot(sol, vars=(1, 2)) isa AbstractPlot
+        @test plot(sol, vars=(1, 1, 2)) isa AbstractPlot
+        @test plot(sol, tspan=prob.tspan) isa AbstractPlot
     end
 
     @testset "Mean Solution" begin
+        @test mean(sol)(prob.tspan[1]) isa AbstractVector
+        @test mean(sol)(sol.t) isa ProbNumDiffEq.DiffEqArray
         @test mean(sol) isa DiffEqBase.AbstractODESolution
         @test plot(mean(sol)) isa AbstractPlot
     end
