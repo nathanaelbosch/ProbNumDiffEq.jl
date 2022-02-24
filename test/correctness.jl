@@ -19,10 +19,8 @@ ALGS = [EK0, EK1]
 DIFFUSIONS = [FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion]
 INITS = [TaylorModeInit, ClassicSolverInit]
 
-for (prob, probname) in [
-    (prob_odelotkavoltera, "lotkavolterra"),
-    (prob_odefitzhughnagumo, "fitzhughnagumo"),
-]
+for (prob, probname) in
+    [(prob_odelotkavoltera, "lotkavolterra"), (prob_odefitzhughnagumo, "fitzhughnagumo")]
     @testset "Constant steps: $probname" begin
         true_sol =
             solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
@@ -51,10 +49,8 @@ for (prob, probname) in [
     end
 end
 
-for (prob, probname) in [
-    (prob_odelotkavoltera, "lotkavolterra"),
-    (prob_odefitzhughnagumo, "fitzhughnagumo"),
-]
+for (prob, probname) in
+    [(prob_odelotkavoltera, "lotkavolterra"), (prob_odefitzhughnagumo, "fitzhughnagumo")]
     @testset "Adaptive steps: $probname" begin
         t_eval = prob.tspan[1]:0.01:prob.tspan[end]
         true_sol =
