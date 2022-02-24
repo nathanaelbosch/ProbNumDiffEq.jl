@@ -2,6 +2,7 @@
 # specific problem to this list to make sure, that this specific run then works without
 # bugs.
 using ProbNumDiffEq
+using ModelingToolkit
 using Test
 using LinearAlgebra
 using UnPack
@@ -21,8 +22,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
         ODEProblem(ODEFunction(linear, analytic=linear_analytic), [1 / 2], (0.0, 1.0), 1.01)
 
     @test solve(prob, EK0()) isa ProbNumDiffEq.ProbODESolution
-    @test solve(ProbNumDiffEq.remake_prob_with_jac(prob), EK1()) isa
-          ProbNumDiffEq.ProbODESolution
     sol = solve(prob, EK0())
     @test sol.errors isa Dict
     @test all(haskey.(Ref(sol.errors), (:l∞, :l2, :final)))
@@ -35,8 +34,8 @@ end
     prob = remake(prob, p=my_p)
 
     @testset "$alg" for alg in [EK0(), EK1()]
-        @test solve(prob, alg) isa ProbNumDiffEq.ProbODESolution
         sol = solve(prob, alg)
+        @test sol isa ProbNumDiffEq.ProbODESolution
 
         @test length(sol.u[1]) == length(sol.pu.μ[1])
         @test sol.u[1][:] == sol.pu.μ[1]
@@ -52,7 +51,8 @@ end
 end
 
 @testset "Stiff Vanderpol" begin
-    prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_vanderpol_stiff)
+    prob = prob_ode_vanderpol_stiff
+    # prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
     @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
@@ -66,50 +66,23 @@ end
     @test sol isa ProbNumDiffEq.ProbODESolution
 end
 
-@testset "IIP problem" begin
-    f(du, u, p, t) = (du[1] = p[1] * u[1] .* (1 .- u[1]))
-    prob = ODEProblem(f, [1e-1], (0.0, 5), [3.0])
-    @testset "without jacobian" begin
-        # first without defined jac
-        @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK0(initialization=ClassicSolverInit())) isa
-              ProbNumDiffEq.ProbODESolution
-    end
-    @testset "with jacobian" begin
-        # now with defined jac
-        prob = ProbNumDiffEq.remake_prob_with_jac(prob)
-        @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK0(initialization=ClassicSolverInit())) isa
-              ProbNumDiffEq.ProbODESolution
-    end
-end
-
 @testset "OOP problem" begin
     f(u, p, t) = p .* u .* (1 .- u)
-    prob = ODEProblem(f, [1e-1], (0.0, 5), [3.0])
+    prob = ODEProblem(f, [1e-1], (0.0, 2.0), [3.0])
     @testset "without jacobian" begin
         # first without defined jac
         @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
+        @test solve(prob, EK1(order=4, initialization=ClassicSolverInit())) isa
+              ProbNumDiffEq.ProbODESolution
     end
     @testset "with jacobian" begin
         # now with defined jac
-        prob = ProbNumDiffEq.remake_prob_with_jac(prob)
+        prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
         @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
+        @test solve(prob, EK1(order=4, initialization=ClassicSolverInit())) isa
+              ProbNumDiffEq.ProbODESolution
     end
 end
 
@@ -161,8 +134,8 @@ end
         du[1] = u[2]
         return du[2] = -u[1]
     end
-    prob = ODEProblem(harmonic_oscillator, u0, (0.0, 100.0))
-    appxsol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
+    prob = ODEProblem(harmonic_oscillator, u0, (0.0, 10.0))
+    appxsol = solve(prob, Vern9(), abstol=1e-10, reltol=1e-10)
 
     E(u) = [dot(u, u) - 2]
 
@@ -205,7 +178,7 @@ end
         0 0 0
     ]
     f = ODEFunction(rober, mass_matrix=M)
-    prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e1), (0.04, 3e7, 1e4))
+    prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e0), (0.04, 3e7, 1e4))
 
     sol1 = solve(prob, EK1(order=3))
     sol2 = solve(prob, RadauIIA5())

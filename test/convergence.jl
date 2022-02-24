@@ -17,26 +17,26 @@ prob = ODEProblem(
 dts1 = 1 .// 2 .^ (7:-1:4)
 dts2 = 1 .// 2 .^ (10:-1:8)
 
-@testset "EK0(order=$q) convergence" for q in 1:5
+@testset "EK0(order=$q) convergence" for q in (3, 5)
     sim = test_convergence(dts1, prob, EK0(order=q))
     @test sim.𝒪est[:final] ≈ q + 1 atol = 0.3
     @test sim.𝒪est[:l2] ≈ q + 1 atol = 0.3
     @test sim.𝒪est[:l∞] ≈ q + 1 atol = 0.3
 end
-@testset "EK0(order=$q) convergence" for q in [7, 8]
+@testset "EK0(order=$q) convergence" for q in [8]
     sim = test_convergence(dts2, prob, EK0(order=q))
     @test sim.𝒪est[:final] ≈ q + 1 atol = 1.5
     @test sim.𝒪est[:l2] ≈ q + 1 atol = 1
     @test sim.𝒪est[:l∞] ≈ q + 1 atol = 1
 end
 
-@testset "EK1(order=$q) convergence" for q in 1:5
+@testset "EK1(order=$q) convergence" for q in (3, 5)
     sim = test_convergence(dts1, prob, EK1(order=q))
     @test sim.𝒪est[:final] ≈ q + 1 atol = 0.55
     @test sim.𝒪est[:l2] ≈ q + 1 atol = 0.5
     @test sim.𝒪est[:l∞] ≈ q + 1 atol = 0.5
 end
-@testset "EK1(order=$q) convergence" for q in [7, 8, 10]
+@testset "EK1(order=$q) convergence" for q in [8, 10]
     sim = test_convergence(dts2, prob, EK1(order=q))
     @test sim.𝒪est[:final] ≈ q + 1 atol = 1
     @test sim.𝒪est[:l2] ≈ q + 1 atol = 1

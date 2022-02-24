@@ -1,13 +1,16 @@
 using ProbNumDiffEq
+using ModelingToolkit
 using Test
 using LinearAlgebra
-using FiniteDiff, ForwardDiff, Zygote, ReverseDiff
+using FiniteDiff, ForwardDiff, ReverseDiff
+# using Zygote
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
 
-prob = ProbNumDiffEq.remake_prob_with_jac(prob_ode_fitzhughnagumo)
+prob = prob_ode_fitzhughnagumo
+prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
 
 function param_to_loss(p)
     sol = solve(remake(prob, p=p), EK1(order=3), sensealg=SensitivityADPassThrough())
@@ -31,7 +34,7 @@ end
     @test_broken ReverseDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0
 end
 
-@testset "Zygote.jl" begin
-    @test_broken Zygote.gradient(param_to_loss, prob.p) ≈ dldp
-    @test_broken Zygote.gradient(startval_to_loss, prob.u0) ≈ dldu0
-end
+# @testset "Zygote.jl" begin
+#     @test_broken Zygote.gradient(param_to_loss, prob.p) ≈ dldp
+#     @test_broken Zygote.gradient(startval_to_loss, prob.u0) ≈ dldu0
+# end

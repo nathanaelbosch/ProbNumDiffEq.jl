@@ -11,27 +11,26 @@ importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary:
     prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
-import ProbNumDiffEq: remake_prob_with_jac
+# EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
+# EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
+# EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
+# ALGS = [EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3]
+ALGS = [EK0, EK1]
+DIFFUSIONS = [FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion]
+INITS = [TaylorModeInit, ClassicSolverInit]
 
-EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
-EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
-EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
-ALGS = [EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3]
-DIFFUSIONS =
-    [FixedDiffusion(), DynamicDiffusion(), FixedMVDiffusion(), DynamicMVDiffusion()]
-INITS = [TaylorModeInit(), ClassicSolverInit()]
-
-for (prob, probname) in [
-    (remake_prob_with_jac(prob_ode_lotkavoltera), "lotkavolterra"),
-    (remake_prob_with_jac(prob_ode_fitzhughnagumo), "fitzhughnagumo"),
-]
+for (prob, probname) in
+    [(prob_ode_lotkavoltera, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
     @testset "Constant steps: $probname" begin
         true_sol =
             solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
 
         for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]
-            if (diffusion isa FixedMVDiffusion || diffusion isa DynamicMVDiffusion) &&
+            if (diffusion == FixedMVDiffusion || diffusion == DynamicMVDiffusion) &&
                Alg != EK0
+                continue
+            end
+            if init == ClassicSolverInit && q > 4
                 continue
             end
 
@@ -40,9 +39,9 @@ for (prob, probname) in [
 
                 sol = solve(
                     prob,
-                    Alg(order=q, diffusionmodel=diffusion),
+                    Alg(order=q, diffusionmodel=diffusion(), initialization=init()),
                     adaptive=false,
-                    dt=5e-3,
+                    dt=1e-2,
                 )
                 @test sol.u ≈ true_sol.(sol.t) rtol = 1e-5
             end
@@ -50,10 +49,8 @@ for (prob, probname) in [
     end
 end
 
-for (prob, probname) in [
-    (remake_prob_with_jac(prob_ode_lotkavoltera), "lotkavolterra"),
-    (remake_prob_with_jac(prob_ode_fitzhughnagumo), "fitzhughnagumo"),
-]
+for (prob, probname) in
+    [(prob_ode_lotkavoltera, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
     @testset "Adaptive steps: $probname" begin
         t_eval = prob.tspan[1]:0.01:prob.tspan[end]
         true_sol =
@@ -61,7 +58,7 @@ for (prob, probname) in [
         true_dense_vals = true_sol.(t_eval)
 
         for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]
-            if (diffusion isa FixedMVDiffusion || diffusion isa DynamicMVDiffusion) &&
+            if (diffusion == FixedMVDiffusion || diffusion == DynamicMVDiffusion) &&
                Alg != EK0
                 continue
             end
@@ -69,7 +66,11 @@ for (prob, probname) in [
             @testset "Adaptive steps: $probname; alg=$Alg, diffusion=$diffusion, init=$init, q=$q" begin
                 @debug "Testing for correctness: Adaptive steps" probname Alg diffusion q
 
-                sol = solve(prob, Alg(order=q, diffusionmodel=diffusion), adaptive=true)
+                sol = solve(
+                    prob,
+                    Alg(order=q, diffusionmodel=diffusion(), initialization=init()),
+                    adaptive=true,
+                )
 
                 @test sol.u ≈ true_sol.(sol.t) rtol = 1e-3
                 @test mean.(sol.(t_eval)) ≈ true_dense_vals rtol = 1e-3

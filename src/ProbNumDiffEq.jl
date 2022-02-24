@@ -27,7 +27,6 @@ using TaylorIntegration
 @reexport using StructArrays
 using UnPack
 using RecipesBase
-using ModelingToolkit
 using RecursiveArrayTools
 using StaticArrays
 using ForwardDiff
@@ -101,11 +100,9 @@ include("filtering/update.jl")
 include("filtering/smooth.jl")
 include("perform_step.jl")
 include("projection.jl")
+include("solve.jl")
 
 include("preconditioning.jl")
-
-# Utils
-include("jacobian.jl")
 
 include("devtools.jl")
 include("callbacks.jl")

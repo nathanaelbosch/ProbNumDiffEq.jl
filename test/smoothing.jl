@@ -4,24 +4,22 @@ using LinearAlgebra
 using OrdinaryDiffEq
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary:
-    prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
 using Plots
 
 prob = prob_ode_lotkavoltera
-prob = ProbNumDiffEq.remake_prob_with_jac(prob)
 
 @testset "Smoothing for small dt and large q" begin
     dt = 1e-5
     q = 8
     @test solve(
-        prob,
+        remake(prob, tspan=(0.0, 10dt)),
         EK0(order=q, smooth=true, diffusionmodel=FixedDiffusion()),
         adaptive=false,
         dt=dt,
     ) isa DiffEqBase.AbstractODESolution
     @test solve(
-        prob,
+        remake(prob, tspan=(0.0, 10dt)),
         EK1(order=q, smooth=true, diffusionmodel=FixedDiffusion()),
         adaptive=false,
         dt=dt,

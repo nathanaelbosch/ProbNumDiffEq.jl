@@ -2,6 +2,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
     q = integ.alg.order
+    @assert isinplace(f)
 
     if q > 5
         @warn "ClassicSolverInit might be unstable for high orders"
@@ -11,11 +12,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
 
     # Initialize on u0
     condition_on!(x, Proj(0), view(u, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-    if isinplace(f)
-        f(du, u, p, t)
-    else
-        du .= f(u, p, t)
-    end
+    f(du, u, p, t)
     integ.destats.nf += 1
     condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
@@ -25,22 +22,13 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
 
     # Use a jac or autodiff to initialize on ddu0
     if integ.alg.initialization.init_on_du
-        if isinplace(f)
-            dfdt = copy(u)
-            ForwardDiff.derivative!(dfdt, (du, t) -> f(du, u, p, t), du, t)
+        dfdt = copy(u)
+        ForwardDiff.derivative!(dfdt, (du, t) -> f(du, u, p, t), du, t)
 
-            if !isnothing(f.jac)
-                f.jac(ddu, u, p, t)
-            else
-                ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
-            end
+        if !isnothing(f.jac)
+            f.jac(ddu, u, p, t)
         else
-            dfdt = ForwardDiff.derivative((t) -> f(u, p, t), t)
-            if !isnothing(f.jac)
-                ddu .= f.jac(du, u, p, t)
-            else
-                ddu .= ForwardDiff.jacobian(u -> f(u, p, t), u)
-            end
+            ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
         condition_on!(x, Proj(2), ddfddu, m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)

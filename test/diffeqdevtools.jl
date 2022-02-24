@@ -10,6 +10,8 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
 prob = prob_ode_fitzhughnagumo
 
 test_sol = TestSolution(solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14))
+test_sol_nondense =
+    TestSolution(solve(prob, Vern7(), dense=false, abstol=1 / 10^14, reltol=1 / 10^14))
 
 @testset "appxtrue" begin
     appxsol = appxtrue(solve(prob, EK1()), test_sol)
@@ -20,7 +22,14 @@ test_sol = TestSolution(solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14)
     @test :l∞ in keys(appxsol.errors)
     @test :L∞ in keys(appxsol.errors)
 
-    appxsol = appxtrue(solve(prob, EK1(smooth=false), dense=false), test_sol)
+    sol = solve(prob, EK1(smooth=false), dense=false)
+    appxsol = appxtrue(sol, test_sol)
+    @test appxsol.errors isa Dict
+    @test :final in keys(appxsol.errors)
+    @test :l2 in keys(appxsol.errors)
+    @test :l∞ in keys(appxsol.errors)
+
+    appxsol = appxtrue(sol, test_sol_nondense)
     @test appxsol.errors isa Dict
     @test :final in keys(appxsol.errors)
     @test :l2 in keys(appxsol.errors)
