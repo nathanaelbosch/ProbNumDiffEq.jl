@@ -54,7 +54,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
         @test sol.(t0:1e-3:t1) isa Array{Gaussian{T,S}} where {T,S}
         @test sol(t0:1e-3:t1).u isa StructArray{Gaussian{T,S}} where {T,S}
 
-        @test_throws ErrorException sol(t0-1e-2)
+        @test_throws ErrorException sol(t0 - 1e-2)
     end
 
     # Sampling
