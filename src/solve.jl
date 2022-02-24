@@ -5,7 +5,15 @@ function DiffEqBase.__init(
     args...;
     kwargs...,
 ) where {uType,tType}
-    @warn "The given problem is in out-of-place form, but since the algorithms in this package are written for in-place problems it will be automatically converted using ModelingToolkit.jl. For more control, specify the ODEProblem directly in in-place form."
-    prob = modelingtoolkitize_with_jac(prob; jac=!isnothing(prob.f.jac))
-    return DiffEqBase.__init(prob, alg, args...; kwargs...)
+    @warn "The given problem is in out-of-place form. Since the algorithms in this package are written for in-place problems, it will be automatically converted."
+    if prob.f isa DynamicalODEFunction
+        f1!(dv, v, u, p, t) = dv .= prob.f.f1(v, u, p, t)
+        f2!(du, v, u, p, t) = du .= prob.f.f2(v, u, p, t)
+        _prob = DynamicalODEProblem(f1!, f2!, prob.u0.x[1], prob.u0.x[2], prob.tspan, prob.p;
+                                    prob.kwargs...)
+    else
+        f!(du, u, p, t) = du .= f(u, p, t)
+        _prob = ODEProblem(f!, prob.u0, prob.tspan, prob.p; prob.kwargs...)
+    end
+    return DiffEqBase.__init(_prob, alg, args...; kwargs...)
 end
