@@ -4,8 +4,7 @@ using LinearAlgebra
 using OrdinaryDiffEq
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary:
-    prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
 using Plots
 
 prob = prob_ode_lotkavoltera
