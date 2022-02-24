@@ -1,4 +1,5 @@
 using ProbNumDiffEq
+using ModelingToolkit
 using Test
 using LinearAlgebra
 using FiniteDiff, ForwardDiff, Zygote, ReverseDiff
@@ -8,6 +9,7 @@ importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
 
 prob = prob_ode_fitzhughnagumo
+prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
 
 function param_to_loss(p)
     sol = solve(remake(prob, p=p), EK1(order=3), sensealg=SensitivityADPassThrough())

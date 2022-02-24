@@ -51,6 +51,8 @@ end
 end
 
 @testset "Stiff Vanderpol" begin
+    prob = prob_ode_vanderpol_stiff
+    # prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
     @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
 end
 
@@ -77,7 +79,7 @@ end
     end
     @testset "with jacobian" begin
         # now with defined jac
-        prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=jac)
+        prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
         @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
