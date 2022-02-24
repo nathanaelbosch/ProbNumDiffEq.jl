@@ -68,23 +68,17 @@ end
 
 @testset "OOP problem" begin
     f(u, p, t) = p .* u .* (1 .- u)
-    prob = ODEProblem(f, [1e-1], (0.0, 5), [3.0])
+    prob = ODEProblem(f, [1e-1], (0.0, 2.0), [3.0])
     @testset "without jacobian" begin
         # first without defined jac
         @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
     end
     @testset "with jacobian" begin
         # now with defined jac
         prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
         @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=1)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=2)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1FDB(order=4, jac_quality=3)) isa ProbNumDiffEq.ProbODESolution
     end
 end
 
@@ -137,7 +131,7 @@ end
         return du[2] = -u[1]
     end
     prob = ODEProblem(harmonic_oscillator, u0, (0.0, 10.0))
-    appxsol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
+    appxsol = solve(prob, Vern9(), abstol=1e-10, reltol=1e-10)
 
     E(u) = [dot(u, u) - 2]
 
@@ -180,7 +174,7 @@ end
         0 0 0
     ]
     f = ODEFunction(rober, mass_matrix=M)
-    prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e1), (0.04, 3e7, 1e4))
+    prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e0), (0.04, 3e7, 1e4))
 
     sol1 = solve(prob, EK1(order=3))
     sol2 = solve(prob, RadauIIA5())

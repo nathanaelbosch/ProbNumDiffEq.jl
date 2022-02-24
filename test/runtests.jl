@@ -1,5 +1,7 @@
 using Test
 using ProbNumDiffEq
+using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
+importodeproblems();
 using TimerOutputs
 const to = TimerOutput()
 macro timedtestset(name, code)

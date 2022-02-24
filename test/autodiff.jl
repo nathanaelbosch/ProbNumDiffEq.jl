@@ -2,7 +2,8 @@ using ProbNumDiffEq
 using ModelingToolkit
 using Test
 using LinearAlgebra
-using FiniteDiff, ForwardDiff, Zygote, ReverseDiff
+using FiniteDiff, ForwardDiff, ReverseDiff
+# using Zygote
 
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
@@ -33,7 +34,7 @@ end
     @test_broken ReverseDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0
 end
 
-@testset "Zygote.jl" begin
-    @test_broken Zygote.gradient(param_to_loss, prob.p) ≈ dldp
-    @test_broken Zygote.gradient(startval_to_loss, prob.u0) ≈ dldu0
-end
+# @testset "Zygote.jl" begin
+#     @test_broken Zygote.gradient(param_to_loss, prob.p) ≈ dldp
+#     @test_broken Zygote.gradient(startval_to_loss, prob.u0) ≈ dldu0
+# end
