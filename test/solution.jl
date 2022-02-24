@@ -10,7 +10,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
 @testset "Solution" begin
-    prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob_ode_lotkavoltera)
+    prob = prob_ode_lotkavoltera
     sol = solve(prob, EK1())
 
     @test length(sol) > 2

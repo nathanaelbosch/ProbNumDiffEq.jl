@@ -11,8 +11,6 @@ importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary:
     prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
-import ProbNumDiffEq: modelingtoolkitize_with_jac
-
 EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
 EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
 EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
@@ -22,8 +20,8 @@ DIFFUSIONS = [FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffu
 INITS = [TaylorModeInit, ClassicSolverInit]
 
 for (prob, probname) in [
-    (modelingtoolkitize_with_jac(prob_ode_lotkavoltera), "lotkavolterra"),
-    (modelingtoolkitize_with_jac(prob_ode_fitzhughnagumo), "fitzhughnagumo"),
+    (prob_odelotkavoltera, "lotkavolterra"),
+    (prob_odefitzhughnagumo, "fitzhughnagumo"),
 ]
     @testset "Constant steps: $probname" begin
         true_sol =
@@ -54,8 +52,8 @@ for (prob, probname) in [
 end
 
 for (prob, probname) in [
-    (modelingtoolkitize_with_jac(prob_ode_lotkavoltera), "lotkavolterra"),
-    (modelingtoolkitize_with_jac(prob_ode_fitzhughnagumo), "fitzhughnagumo"),
+    (prob_odelotkavoltera, "lotkavolterra"),
+    (prob_odefitzhughnagumo, "fitzhughnagumo"),
 ]
     @testset "Adaptive steps: $probname" begin
         t_eval = prob.tspan[1]:0.01:prob.tspan[end]

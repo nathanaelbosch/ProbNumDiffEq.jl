@@ -9,7 +9,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
 using Plots
 
 prob = prob_ode_lotkavoltera
-prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob)
 
 @testset "Smoothing for small dt and large q" begin
     dt = 1e-5

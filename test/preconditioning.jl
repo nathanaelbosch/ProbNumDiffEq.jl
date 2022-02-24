@@ -7,7 +7,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
 
 prob = prob_ode_lotkavoltera
 prob = remake(prob, tspan=(0.0, 10.0))
-prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob)
 
 @testset "Condition numbers of A,Q" begin
     h = 0.1 * rand()

@@ -7,7 +7,7 @@ using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
 import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
 
-prob = ProbNumDiffEq.modelingtoolkitize_with_jac(prob_ode_fitzhughnagumo)
+prob = prob_ode_fitzhughnagumo
 
 function param_to_loss(p)
     sol = solve(remake(prob, p=p), EK1(order=3), sensealg=SensitivityADPassThrough())
