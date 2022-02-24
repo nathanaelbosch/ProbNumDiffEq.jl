@@ -27,7 +27,6 @@ using TaylorIntegration
 @reexport using StructArrays
 using UnPack
 using RecipesBase
-using ModelingToolkit
 using RecursiveArrayTools
 using StaticArrays
 using ForwardDiff
@@ -104,9 +103,6 @@ include("projection.jl")
 include("solve.jl")
 
 include("preconditioning.jl")
-
-# Utils
-include("modelingtoolkitize.jl")
 
 include("devtools.jl")
 include("callbacks.jl")
