@@ -28,8 +28,7 @@ q = 3
     @test sol.destats.nf == f_counter[1]
 end
 
-
-@testset "SecondOrderODEProblem destats.nf testing $alg" for init in (TaylorModeInit(), ),
+@testset "SecondOrderODEProblem destats.nf testing $alg" for init in (TaylorModeInit(),),
     # ClassicSolverInit does not work for second order ODEs right now
     alg in (
         EK0(order=q, smooth=false, initialization=init),
