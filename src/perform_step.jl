@@ -142,6 +142,8 @@ function measure!(integ, x_pred, t, second_order::Val{false})
     _eval_f!(du, u_pred, p, t, f)
     integ.destats.nf += 1
 
+    _E1 = f.mass_matrix == I ? E1 : mul!(H, f.mass_matrix, E1)
+
     # Cov
     if alg isa EK1 || alg isa IEKS
         linearize_at = (alg isa IEKS && !isnothing(alg.linearize_at)) ?
@@ -150,8 +152,8 @@ function measure!(integ, x_pred, t, second_order::Val{false})
         ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
         integ.destats.njacs += 1
         if alg.fdb_improved == 0
-            z .= E1*PI*x_pred.μ .- du
-            mul!(H, (E1 .- ddu * E0), PI)
+            z .= _E1*PI*x_pred.μ .- du
+            mul!(H, (_E1 .- ddu * E0), PI)
         else
             E2 = Proj(2)
             z2_ = z2(x_pred.μ, integ, t)
@@ -172,8 +174,8 @@ function measure!(integ, x_pred, t, second_order::Val{false})
             end
         end
     else
-        z .= E1*PI*x_pred.μ .- du
-        mul!(H, E1, PI)
+        z .= _E1*PI*x_pred.μ .- du
+        mul!(H, _E1, PI)
     end
     copy!(S, Matrix(X_A_Xt(x_pred.Σ, H)))
 
