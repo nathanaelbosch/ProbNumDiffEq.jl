@@ -146,7 +146,8 @@ function iekf_update(x::Gaussian, h::Function, z=0, R=0;
         # H_i = reshape(H_i, (1, length(H_i)))
 
         S_i_L = H_i*x.Σ.squareroot
-        S_i = S_i_L * S_i_L'
+        S_i = Symmetric(S_i_L * S_i_L')
+        iszero(S_i) && return x
         K_i = x.Σ * H_i' * inv(S_i)
         μ_i_new = x.μ .+ K_i * (z .- h_i .- (H_i * (x.μ - μ_i)))
 
