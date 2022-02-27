@@ -15,14 +15,19 @@ end
 
 
 """Projection matrices with non-allocating multiplication by using views."""
-struct ProjMatGenerator{d,q} end
-ProjMatGenerator(d,q) = ProjMatGenerator{d,q}()
-(P::ProjMatGenerator{d,q})(p::Int) where {d,q} = ProjMat(d,q,p)
-struct ProjMat{d,q,p} <: LinearMaps.LinearMap{Bool} end
-ProjMat(d,q,p) = ProjMat{d,q,p}()
-Base.size(P::ProjMat{d,q,p}) where {d,q,p} = (d, d*(q+1))
-*(P::ProjMat{d,q,p}, v::AbstractVector) where {d,q,p} = view(v, p+1:q+1:d*(q+1))
-*(P::ProjMat{d,q,p}, M::AbstractMatrix) where {d,q,p} = view(M, p+1:q+1:d*(q+1), :)
+struct ProjMatGenerator
+    d::Int
+    q::Int
+end
+(P::ProjMatGenerator)(p::Int) = ProjMat(P.d,P.q,p)
+struct ProjMat <: LinearMaps.LinearMap{Bool}
+    d::Int
+    q::Int
+    p::Int
+end
+Base.size(P::ProjMat) = (P.d, P.d*(P.q+1))
+*(P::ProjMat, v::AbstractVector) = view(v, P.p+1:P.q+1:P.d*(P.q+1))
+*(P::ProjMat, M::AbstractMatrix) = view(M, P.p+1:P.q+1:P.d*(P.q+1), :)
 mul!(out::AbstractVector, P::ProjMat, v::AbstractVector) = out .= P*v
 mul!(out::AbstractVector, P::ProjMat, v::AbstractVector, a::Number, b::Number) =
     (out .*= b; out .+= b .* (P*v); out)
@@ -30,8 +35,8 @@ mul!(out::AbstractMatrix, P::ProjMat, M::AbstractMatrix) = out .= P*M
 mul!(out::AbstractMatrix, P::ProjMat, M::AbstractMatrix, a::Number, b::Number) =
     (out .*= b; out .+= b .* (P*M); out)
 LinearMaps.MulStyle(P::ProjMat) = LinearMaps.FiveArg()
-Base.Matrix(P::ProjMat{d,q,p}) where {d,q,p} =
-    kron(diagm(0 => ones(d)), [i==(p+1) ? 1 : 0 for i in 1:q+1]')
+Base.Matrix(P::ProjMat) =
+    kron(diagm(0 => ones(P.d)), [i==(P.p+1) ? 1 : 0 for i in 1:P.q+1]')
 # LinearAlgebra.adjoint(P::ProjMat{d,q,p}) where {d,q,p} =
 
 *(P::LinearMaps.TransposeMap{<:Any, <:ProjMat}, v::AbstractVector) =
@@ -42,21 +47,20 @@ Base.Matrix(P::ProjMat{d,q,p}) where {d,q,p} =
 # const PT{d,q,p} = LinearMaps.TransposeMap{Bool, ProjMat{d,q,p}}
 function mul!(
     out::AbstractVector,
-    P::LinearMaps.TransposeMap{<:Any, ProjMat{d,q,p}},
+    P::LinearMaps.TransposeMap{<:Any, ProjMat},
     v::AbstractVector,
     a::Number,
-    b::Number) where {d,q,p}
+    b::Number)
     out .*= a
-    out[p+1:q+1:d*(q+1)] .+= b .* v
+    out[P.lmap.p+1:P.lmap.q+1:P.lmap.d*(P.lmap.q+1)] .+= b .* v
     out
 end
 function mul!(
     out::AbstractVector,
-    P::LinearMaps.TransposeMap{<:Any, ProjMat{d,q,p}},
-    v::AbstractVector,
-    ) where {d,q,p}
+    P::LinearMaps.TransposeMap{<:Any, ProjMat},
+    v::AbstractVector)
     out .*= 0
-    out[p+1:q+1:d*(q+1)] .= v
+    out[P.lmap.p+1:P.lmap.q+1:P.lmap.d*(P.lmap.q+1)] .= v
     out
 end
 
@@ -64,9 +68,11 @@ end
 
 
 """
-Special operator to handle the H resulting from ODEs
-
-H = E1 - J * E0
+Special operator to handle the matrix H resulting from ODEs
+```math
+H = E_1 - J \\cdot E_0,
+```
+implemented more efficiently to minimize the resulting allocations.
 """
 struct ODEHMat{T,E0T,E1T,JT} <: LinearMaps.LinearMap{T}
     E0::E0T
@@ -82,14 +88,14 @@ Base.size(H::ODEHMat) = size(H.E0)
 *(H::ODEHMat, M::AbstractMatrix) = (H.E1 * M) .- H.J * (H.E0 * M)
 LinearMaps.MulStyle(H::ODEHMat) = FiveArg()
 mul!(out::AbstractVector, H::ODEHMat, v::AbstractVector) =
-    (matmul!(out, H.J, H.E0*v, -1, 0); out .+= (H.E1*v); out)
+    (_matmul!(out, H.J, H.E0*v, -1, 0); out .+= (H.E1*v); out)
 mul!(out::AbstractVector, H::ODEHMat, v::AbstractVector, a::Number, b::Number) =
-    (matmul!(out, H.J, H.E0*v, -a, b); out .+= a .* (H.E1*v); out)
+    (_matmul!(out, H.J, H.E0*v, -a, b); out .+= a .* (H.E1*v); out)
 mul!(out::AbstractMatrix, H::ODEHMat, M::AbstractMatrix) = begin
-    matmul!(out, H.J, H.E0*M, -1, 0); out .+= (H.E1*M); out
+    _matmul!(out, H.J, H.E0*M, -1, 0); out .+= (H.E1*M); out
 end
 mul!(out::AbstractMatrix, H::ODEHMat, M::AbstractMatrix, a::Number, b::Number) =
-    (matmul!(out, H.J, H.E0*M, -a, b); out .+= a .* (H.E1*M); out)
+    (_matmul!(out, H.J, H.E0*M, -a, b); out .+= a .* (H.E1*M); out)
 *(M::AbstractMatrix, HT::LinearMaps.TransposeMap{<:Any, <:ODEHMat}) = (HT.lmap * M')'
 # Works great with J::Matrix, but also J=0!
 # mul!(out::AbstractMatrix, M::AbstractMatrix, HT::LinearMaps.TransposeMap{<:Any, <:ODEHMat}) = mul!(out', HT.lmap, M')
