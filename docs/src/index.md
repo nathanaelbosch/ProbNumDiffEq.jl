@@ -39,7 +39,8 @@ To quickly try out ProbNumDiffEq.jl check out the "[Getting Started](@ref)" tuto
 - Convenient plotting through a Plots.jl recipe
 - Automatic differentiation via ForwardDiff.jl
 - Supports arbitrary precision numbers via BigFloats.jl
-- Specialized solvers for second-order ODEs
+- Specialized solvers for second-order ODEs (demo will be added)
+- Compatible with DAEs in mass-matrix ODE form (demo will be added)
 
 ## Benchmarks
 - [Multi-Language Wrapper Benchmark](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/benchmarks/benchmarks/multi-language-wrappers.ipynb):
