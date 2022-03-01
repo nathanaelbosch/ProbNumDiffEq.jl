@@ -129,7 +129,8 @@ mean(sol(0.45))
 The result can be conveniently visualized through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
 ```@example 1
 using Plots
-plot(sol); nothing
+plot(sol)
+nothing # hide
 ```
 ![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg)
 
