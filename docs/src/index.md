@@ -1,12 +1,14 @@
-# ProbNumDiffEq.jl: Probabilistic Numerical Solvers for Differential Equations
+# Probabilistic Numerical Differential Equation Solvers
 
 
 ![Banner](https://raw.githubusercontent.com/nathanaelbosch/ProbNumDiffEq.jl/main/examples/banner.svg)
 
 
-__ProbNumDiffEq.jl__ provides _probabilistic numerical_ ODE solvers to the
+__ProbNumDiffEq.jl__ provides _probabilistic numerical_ solvers to the
 [DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.
 The implemented _ODE filters_ solve differential equations via Bayesian filtering and smoothing and compute not just a single point estimate of the true solution, but a posterior distribution that contains an estimate of its numerical approximation error.
+
+For a short intro video, check out our [poster presentation at JuliaCon2021](https://www.youtube.com/watch?v=EMFl6ytP3iQ).
 
 
 ---
@@ -25,8 +27,8 @@ julia> ]
 (v1.7) pkg> add ProbNumDiffEq.jl
 ```
 
-## [Getting Started](@ref)
-To quickly try out ProbNumDiffEq.jl check out the "[Getting Started](@ref)" tutorial.
+## Getting Started
+For a quick introduction check out the "[Introduction to ODE Filters](@ref)" tutorial.
 
 
 ## Features
