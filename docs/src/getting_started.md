@@ -1,22 +1,65 @@
-# Getting Started
-If you are unfamiliar with DifferentialEquations.jl, check out the
-[official tutorial](https://docs.sciml.ai/stable/tutorials/ode_example/)
-on how to solve ordinary differential equations.
+# Solving ODEs with Probabilistic Numerics
+In this tutorial we solve a simple non-linear ordinary differential equation (ODE) with the _probabilistic numerical_ ODE solvers implemented in this package.
+If you are new to Julia and DifferentialEquations.jl, check out the
+[DifferentialEquation.jl tutorial](https://docs.sciml.ai/stable/tutorials/ode_example/)
+on how to solve ordinary differential equations with classic numerical solvers.
 
-
-## Step 1: Defining a problem
-To solve the
+In this example, we consider a
 [Fitzhugh-Nagumo model](https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model)
-we first set up an `ODEProblem`.
+described by an ODE of the form
+```math
+\begin{aligned}
+\dot{y}_1(t) &= c (y_1 - \frac{y_1^3}{3} + y_2) \\
+\dot{y}_2(t) &= -\frac{1}{c} (y_1 - a - b y_2)
+\end{aligned}
+```
+on a time span ``t \in [0, T]``, with initial value ``y(0) = y_0``.
+In the following, we
+1. define the problem with explicit choices of initial values, integration domains, and parameters,
+2. solve the problem with our ODE filters, and
+3. visualize the results and the corresponding uncertainties.
+
+
+#### TL;DR:
+```@example 1
+using ProbNumDiffEq, Plots
+
+function fitz(du, u, p, t)
+    a, b, c = p
+    du[1] = c*(u[1] - u[1]^3/3 + u[2])
+    du[2] = -(1/c)*(u[1] -  a - b*u[2])
+end
+u0 = [-1.0; 1.0]
+tspan = (0., 20.)
+p = (0.2, 0.2, 3.0)
+prob = ODEProblem(fitz, u0, tspan, p)
+
+using Logging; Logging.disable_logging(Logging.Warn) # hide
+sol = solve(prob, EK1())
+Logging.disable_logging(Logging.Debug) # hide
+plot(sol)
+savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
+```
+![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg)
+
+
+## Step 1: Defining the problem
+We first import ProbNumDiffEq.jl
 ```@example 1
 using ProbNumDiffEq
-
-function fitz(u, p, t)
+```
+and then set up an `ODEProblem` exactly as we're used to with DifferentialEquations.jl,
+by defining the vector field
+```@example 1
+function fitz(du, u, p, t)
     a, b, c = p
-    return [c*(u[1] - u[1]^3/3 + u[2])
-            -(1/c)*(u[1] -  a - b*u[2])]
+    du[1] = c*(u[1] - u[1]^3/3 + u[2])
+    du[2] = -(1/c)*(u[1] -  a - b*u[2])
 end
-
+nothing # hide
+```
+and then an `ODEProblem`, with initial value `u0`, time span `tspan`, and parameters `p`
+```@example 1
 u0 = [-1.0; 1.0]
 tspan = (0., 20.)
 p = (0.2, 0.2, 3.0)
@@ -24,35 +67,43 @@ prob = ODEProblem(fitz, u0, tspan, p)
 nothing # hide
 ```
 
-## Step 2: Solving a problem
-To solve the `ODEProblem` we can use the `solve` interface that DifferentialEquations.jl defines.
-All we have to do is to select one of the PN algorithms: `EK0` or `EK1`.
-In this example we solve the ODE with the default `EK0` and high tolerance levels to visualize the resulting uncertainty
+## Step 2: Solving the problem
+To solve the ODE we just use DifferentialEquations.jl's `solve` interface, together with one of the algorithms implemented in this package.
+For now, let's use `EK1`:
 ```@example 1
-sol = solve(prob, EK0(), abstol=1e-1, reltol=1e-1)
+using Logging; Logging.disable_logging(Logging.Warn) # hide
+sol = solve(prob, EK1())
+Logging.disable_logging(Logging.Debug) # hide
 nothing # hide
 ```
-
-Note that ProbNumDiffEq.jl supports many of DifferentialEquations.jl's
-[common solver options](https://diffeq.sciml.ai/stable/basics/common_solver_opts/).
+That's it! we just computed a _probabilistic numerical_ ODE solution!
 
 
 ## Step 3: Analyzing the solution
-Just as in DifferentialEquations.jl, the result of `solve` is a solution object, and we can access the (mean) values and timesteps as usual
+The result of `solve` is a solution object which can be handled just as in DifferentialEquations.jl.
+We can access _mean_ values by indexing `sol`
 ```@repl 1
 sol[end]
-sol.u[5]
-sol.t[8]
+```
+or directly via `sol.u`
+```@repl 1
+sol.u[end]
+```
+and similarly the time steps
+```@repl 1
+sol.t[end]
 ```
 
-However, the solver returns a _probabilistic_ solution, here a
+But we didn't use probabilstic numerics to just compute means.
+In fact, `sol` is a _probabilistic numerical_ ODE solution and it provides
 [Gaussian](https://github.com/mschauer/GaussianDistributions.jl)
-distribution over solution values:
+distributions over solution values.
+These are stored in `sol.pu`:
 ```@repl 1
 sol.pu[end]
 ```
 
-It is often convenient to look at means, covariances, and standard deviations via Statistics.jl:
+You can compute means, covariances, and standard deviations via Statistics.jl:
 ```@repl 1
 using Statistics
 mean(sol.pu[5])
@@ -60,8 +111,17 @@ cov(sol.pu[5])
 std(sol.pu[5])
 ```
 
-By default, the posterior distribution can be evaluated for arbitrary points in time `t` by treating `sol` as a function:
+### Dense output
+Probabilistic numerical ODE solvers approximate the posterior distribution
+```math
+p \Big( y(t) \mid \{ \dot{y}(t_i) = f_\theta(y(t_i), t_i) \} \Big),
+```
+which describes a posterior not just for the discrete steps but for any ``t`` in the continuous space ``t \in [0, T]``;
+in classic ODE solvers, this is also known as "interpolation" or "dense output".
+The probabilistic solutions returned by our solvers can be interpolated as usual by treating them as functions,
+but they return Gaussian distributions
 ```@repl 1
+sol(0.45)
 mean(sol(0.45))
 ```
 
@@ -69,7 +129,23 @@ mean(sol(0.45))
 The result can be conveniently visualized through [Plots.jl](https://github.com/JuliaPlots/Plots.jl):
 ```@example 1
 using Plots
-plot(sol, color=["#107D79" "#FF9933"])
-savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
+plot(sol)
+nothing # hide
 ```
 ![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg)
+
+A more detailed plotting tutorial for DifferentialEquations.jl + Plots.jl is provided [here](https://diffeq.sciml.ai/stable/basics/plot/); most of the features work exactly as expected.
+
+
+The uncertainties here are very low compared to the function value so we can't really see them.
+Just to demonstrate that they're there, let's solve the explicit `EK0` solver, low order and higher tolerance levels:
+```@example 1
+using Logging; Logging.disable_logging(Logging.Warn) # hide
+sol = solve(prob, EK0(order=1), abstol=1e-2, reltol=1e-1)
+Logging.disable_logging(Logging.Debug) # hide
+plot(sol, denseplot=false)
+savefig("./figures/fitzhugh_nagumo_coarse.svg"); nothing # hide
+```
+![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo_coarse.svg)
+
+There it is!

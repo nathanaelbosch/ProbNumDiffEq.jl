@@ -7,7 +7,7 @@ makedocs(
     modules=[ProbNumDiffEq],
     pages=[
         "Home" => "index.md",
-        "Tutorials" => ["Getting Started" => "getting_started.md"],
+        "Tutorials" => ["Introduction to ODE Filters" => "getting_started.md"],
         "Solvers and Options" => "solvers.md",
     ],
 )

@@ -17,6 +17,7 @@ __ProbNumDiffEq.jl__ provides _probabilistic numerical_ ODE solvers to the
 [DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.
 The implemented _ODE filters_ solve differential equations via Bayesian filtering and smoothing. The filters compute not just a single point estimate of the true solution, but a posterior distribution that contains an estimate of its numerical approximation error.
 
+For a short intro video, check out our [poster presentation at JuliaCon2021](https://www.youtube.com/watch?v=EMFl6ytP3iQ).
 
 ---
 
@@ -26,9 +27,10 @@ It implements probabilistic ODE solvers, but also probabilistic linear solvers, 
 ---
 
 ## Installation
-The package can be installed directly with the Julia package manager:
-```julia
-] add ProbNumDiffEq
+Run Julia, enter `]` to bring up Julia's package manager, and add the ProbNumDiffEq.jl package:
+```
+julia> ]
+(v1.7) pkg> add ProbNumDiffEq.jl
 ```
 
 
@@ -37,10 +39,10 @@ The package can be installed directly with the Julia package manager:
 using ProbNumDiffEq
 
 # ODE definition as in DifferentialEquations.jl
-function fitz(u, p, t)
+function fitz(du, u, p, t)
     a, b, c = p
-    return [c*(u[1] - u[1]^3/3 + u[2])
-            -(1/c)*(u[1] -  a - b*u[2])]
+    du[1] = c*(u[1] - u[1]^3/3 + u[2])
+    du[2] = -(1/c)*(u[1] -  a - b*u[2])
 end
 u0 = [-1.0; 1.0]
 tspan = (0., 20.)
@@ -65,6 +67,16 @@ end
 
 
 ## Benchmarks
-
 - [Multi-Language Wrapper Benchmark](./benchmarks/multi-language-wrappers.ipynb):
   ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
+
+
+## References
+The main references _for this package_ include:
+- M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018) ([link](https://link.springer.com/article/10.1007/s11222-017-9798-7))
+- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019) ([link](https://link.springer.com/article/10.1007/s11222-019-09900-1))
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021) ([link](http://proceedings.mlr.press/v130/bosch21a.html))
+- N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020) ([link](https://arxiv.org/abs/2012.10106))
+- N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022) ([link](https://arxiv.org/abs/2110.10770))
+
+A more extensive list of references relevant to ODE filters is provided [here](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/stable/#References).
