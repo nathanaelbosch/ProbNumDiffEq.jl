@@ -46,12 +46,13 @@ To quickly try out ProbNumDiffEq.jl check out the "[Getting Started](@ref)" tuto
   ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
 
 ## References
+- N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022)
+- N. Krämer, N. Bosch, J. Schmidt, P. Hennig: **Probabilistic ODE Solutions in Millions of Dimensions** (2021)
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 - F. Tronarp, S. Särkkä, and P. Hennig: **Bayesian ODE Solvers: The Maximum A Posteriori Estimate** (2021)
 - N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 - H. Kersting, T. J. Sullivan, and P. Hennig: **Convergence Rates of Gaussian Ode Filters** (2020)
 - F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
-- C. J. Oates and T. J. Sullivan: **A modern retrospective on probabilistic numerics** (2019)
 - M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018)
-- P. Hennig, M. A. Osborne, and M. Girolami: **Probabilistic numerics and uncertainty in computations** (2015)
-A more detailed list of references can be found on the [probabilistic-numerics.org homepage](http://probabilistic-numerics.org/en/latest/research.html).
+
+A much more detailed list of references, not only on ODE filters but on probabilistic numerics in general, can be found on the [probabilistic-numerics.org homepage](https://www.probabilistic-numerics.org/en/latest/research/general/).
