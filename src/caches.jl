@@ -123,7 +123,6 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
     # Prior dynamics
-    @assert alg.prior == :ibm "Only the ibm prior is implemented so far"
     P, PI = init_preconditioner(d, q, uElType)
 
     A, Q = ibm(d, q, uElType)
