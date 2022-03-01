@@ -38,9 +38,7 @@ using Logging; Logging.disable_logging(Logging.Warn) # hide
 sol = solve(prob, EK1())
 Logging.disable_logging(Logging.Debug) # hide
 plot(sol)
-savefig("./figures/fitzhugh_nagumo.svg"); nothing # hide
 ```
-![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg)
 
 
 ## Step 1: Defining the problem
@@ -130,9 +128,7 @@ The result can be conveniently visualized through [Plots.jl](https://github.com/
 ```@example 1
 using Plots
 plot(sol)
-nothing # hide
 ```
-![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo.svg)
 
 A more detailed plotting tutorial for DifferentialEquations.jl + Plots.jl is provided [here](https://diffeq.sciml.ai/stable/basics/plot/); most of the features work exactly as expected.
 
@@ -144,8 +140,6 @@ using Logging; Logging.disable_logging(Logging.Warn) # hide
 sol = solve(prob, EK0(order=1), abstol=1e-2, reltol=1e-1)
 Logging.disable_logging(Logging.Debug) # hide
 plot(sol, denseplot=false)
-savefig("./figures/fitzhugh_nagumo_coarse.svg"); nothing # hide
 ```
-![Fitzhugh-Nagumo Solution](./figures/fitzhugh_nagumo_coarse.svg)
 
 There it is!
