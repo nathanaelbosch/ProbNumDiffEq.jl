@@ -39,31 +39,24 @@ julia> ]
 using ProbNumDiffEq
 
 # ODE definition as in DifferentialEquations.jl
-function fitz(du, u, p, t)
+function f(du, u, p, t)
     a, b, c = p
     du[1] = c*(u[1] - u[1]^3/3 + u[2])
     du[2] = -(1/c)*(u[1] -  a - b*u[2])
 end
-u0 = [-1.0; 1.0]
-tspan = (0., 20.)
-p = (0.2,0.2,3.0)
-prob = ODEProblem(fitz, u0, tspan, p)
+u0 = [-1.0, 1.0]
+tspan = (0.0, 20.0)
+p = (0.2, 0.2, 3.0)
+prob = ODEProblem(f, u0, tspan, p)
 
 # Solve the ODE with a probabilistic numerical solver: EK0
-sol = solve(prob, EK0(order=1), abstol=1e-1, reltol=1e-2)
+sol = solve(prob, EK0(order=1), abstol=1e-2, reltol=1e-1)
 
-# Plot the solution
+# Plot the solution with Plots.jl
 using Plots
-C1, C2 = "#107D79", "#FF9933"
-plot(sol, color=[C1 C2], fillalpha=0.15)
-
-# Sample from the solution and plot the samples
-samples = ProbNumDiffEq.sample(sol, 100)
-for i in 1:100
-    plot!(sol.t, samples[:, :, i], color=[C1 C2], label="", linewidth=0.1)
-end
+plot(sol, color=["#107D79" "#FF9933"])
 ```
-![Fitzhugh-Nagumo Solution](./docs/src/figures/fitzhugh_nagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
+![Fitzhugh-Nagumo Solution](./examples/fitzhughnagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
 
 
 ## Benchmarks
@@ -75,8 +68,8 @@ end
 The main references _for this package_ include:
 - M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018) ([link](https://link.springer.com/article/10.1007/s11222-017-9798-7))
 - F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019) ([link](https://link.springer.com/article/10.1007/s11222-019-09900-1))
-- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021) ([link](http://proceedings.mlr.press/v130/bosch21a.html))
 - N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020) ([link](https://arxiv.org/abs/2012.10106))
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021) ([link](http://proceedings.mlr.press/v130/bosch21a.html))
 - N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022) ([link](https://arxiv.org/abs/2110.10770))
 
 A more extensive list of references relevant to ODE filters is provided [here](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/stable/#References).
