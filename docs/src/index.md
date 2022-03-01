@@ -31,7 +31,7 @@ To quickly try out ProbNumDiffEq.jl check out the "[Getting Started](@ref)" tuto
 
 ## Features
 - Two extended Kalman filtering-based probabilistic solvers: the explicit [`EK0`](@ref) and semi-implicit [`EK1`](@ref).
-- Adaptive step-size selection (PI control)
+- Adaptive step-size selection (by default with PI control)
 - On-line uncertainty calibration, for multiple different measurement models
 - Dense output
 - Sampling from the solution
