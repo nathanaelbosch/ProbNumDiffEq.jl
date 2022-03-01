@@ -19,9 +19,10 @@ It implements probabilistic ODE solvers, but also probabilistic linear solvers, 
 
 
 ## Installation
-The package can be installed directly with the Julia package manager:
-```julia
-] add ProbNumDiffEq
+Run Julia, enter `]` to bring up Julia's package manager, and add the ProbNumDiffEq.jl package:
+```
+julia> ]
+(v1.7) pkg> add ProbNumDiffEq.jl
 ```
 
 ## [Getting Started](@ref)
