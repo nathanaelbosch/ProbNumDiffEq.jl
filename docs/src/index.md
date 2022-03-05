@@ -28,7 +28,7 @@ julia> ]
 ```
 
 ## Getting Started
-For a quick introduction check out the "[Introduction to ODE Filters](@ref)" tutorial.
+For a quick introduction check out the "[Solving ODEs with Probabilistic Numerics](@ref)" tutorial.
 
 
 ## Features
