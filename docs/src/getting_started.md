@@ -1,10 +1,12 @@
 # Solving ODEs with Probabilistic Numerics
 In this tutorial we solve a simple non-linear ordinary differential equation (ODE) with the _probabilistic numerical_ ODE solvers implemented in this package.
-If you are new to Julia and DifferentialEquations.jl, check out the
-[DifferentialEquation.jl tutorial](https://docs.sciml.ai/stable/tutorials/ode_example/)
-on how to solve ordinary differential equations with classic numerical solvers.
 
-In this example, we consider a
+!!! note
+    If you never used DifferentialEquations.jl, check out their
+    ["Ordinary Differential Equations" tutorial](https://docs.sciml.ai/stable/tutorials/ode_example/)
+    on how to solve ordinary differential equations with classic numerical solvers.
+
+In this tutorial, we consider a
 [Fitzhugh-Nagumo model](https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model)
 described by an ODE of the form
 ```math
