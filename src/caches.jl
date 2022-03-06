@@ -81,9 +81,9 @@ function OrdinaryDiffEq.alg_cache(
     alg::GaussianODEFilter,
     u,
     rate_prototype,
-    uEltypeNoUnits,
-    uBottomEltypeNoUnits,
-    tTypeNoUnits,
+    ::Type{uEltypeNoUnits},
+    ::Type{uBottomEltypeNoUnits},
+    ::Type{tTypeNoUnits},
     uprev,
     uprev2,
     f,
@@ -93,7 +93,7 @@ function OrdinaryDiffEq.alg_cache(
     p,
     calck,
     ::Val{IIP},
-) where {IIP}
+) where {IIP, uEltypeNoUnits, uBottomEltypeNoUnits, tTypeNoUnits}
     initialize_derivatives = true
 
     if u isa Number
