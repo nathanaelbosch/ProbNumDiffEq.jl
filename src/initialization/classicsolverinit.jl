@@ -88,7 +88,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
     make_preconditioners!(cache, dt)
     @unpack P, PI = cache
 
-    mul!(x, P, x)
+    _gaussian_mul!(x, P, x)
 
     preds = []
     filts = [copy(x)]
@@ -117,7 +117,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         smooth!(xf, xs, A, Q, integ.cache, 1)
     end
 
-    mul!(cache.x, PI, filts[1])
+    _gaussian_mul!(cache.x, PI, filts[1])
 
     return nothing
 end
