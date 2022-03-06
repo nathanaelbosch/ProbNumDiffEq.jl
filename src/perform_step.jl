@@ -22,7 +22,7 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     OrdinaryDiffEq.copyat_or_push!(
         integ.sol.pu,
         integ.saveiter,
-        mul!(cache.pu_tmp, cache.SolProj, cache.x),
+        _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x),
     )
     return nothing
 end
