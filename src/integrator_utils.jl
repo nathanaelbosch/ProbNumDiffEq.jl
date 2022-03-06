@@ -40,8 +40,8 @@ function calibrate_solution!(integ, mle_diffusion)
     set_diffusions!(integ.sol, mle_diffusion * integ.cache.default_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
-    @simd ivdep for s in integ.sol.x_filt
-        copy!(s.Σ, apply_diffusion(s.Σ, mle_diffusion))
+    @simd ivdep for S in integ.sol.x_filt.Σ
+        copy!(S, apply_diffusion(S, mle_diffusion))
     end
 
     # Re-write into the solution estimates
