@@ -168,7 +168,7 @@ function GaussianODEFilterPosterior(alg, u0)
     q = alg.order
     D = d * (q + 1)
 
-    Proj = projection(d, q, Val(uElType))
+    Proj = projection(d, q, uElType)
     SolProj = u0 isa ArrayPartition ? [Proj(1); Proj(0)] : Proj(0)
 
     A, Q = ibm(d, q, uElType)
