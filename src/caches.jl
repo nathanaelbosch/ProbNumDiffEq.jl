@@ -142,7 +142,7 @@ function OrdinaryDiffEq.alg_cache(
     v, S = similar(h), similar(ddu)
     v = similar(h)
     S =
-        alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
+        # alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
         SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
     measurement = Gaussian(v, S)
     pu_tmp =
