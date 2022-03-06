@@ -114,7 +114,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         xf = filts[i-1]
         xs = filts[i]
         xp = preds[i-1] # Since `preds` is one shorter
-        smooth!(xf, xs, A, Q, integ, 1)
+        smooth!(xf, xs, A, Q, integ.cache, 1)
     end
 
     mul!(cache.x, PI, filts[1])
