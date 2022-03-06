@@ -25,14 +25,13 @@ function condition_on!(
     x::SRGaussian,
     H::AbstractMatrix,
     data::AbstractVector,
-    meascache,
+    Scache,
     Kcache,
     covcache,
     Mcache,
 )
-    z, S = meascache
+    S = Scache
 
-    _matmul!(z, H, x.μ)
     X_A_Xt!(S, x.Σ, H)
     @assert isdiag(S)
     S_diag = diag(S)
@@ -43,11 +42,12 @@ function condition_on!(
     _matmul!(Kcache, x.Σ.mat, H')
     K = Kcache ./= S_diag'
 
-    _matmul!(x.μ, K, data - z, 1.0, 1.0)
     # x.μ .+= K*(data - z)
+    datadiff = _matmul!(data, H, x.μ, -1, 1)
+    _matmul!(x.μ, K, datadiff, 1, 1)
 
     D = length(x.μ)
-    mul!(Mcache, K, H, -1.0, 0.0)
+    _matmul!(Mcache, K, H, -1, 0)
     @inbounds @simd ivdep for i in 1:D
         Mcache[i, i] += 1
     end

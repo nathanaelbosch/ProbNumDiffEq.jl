@@ -11,10 +11,10 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
 
     # Initialize on u0
-    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(0), view(u, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
     f(du, u, p, t)
     integ.destats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q < 2
         return
@@ -31,7 +31,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
         if q < 3
             return
         end
