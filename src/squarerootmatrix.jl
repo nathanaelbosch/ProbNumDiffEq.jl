@@ -5,8 +5,7 @@ Relates to PSDMatrices.jl, and I might move this to PSDMatrices.jl in the
 future, but having this here allowed for easier development.
 """
 
-struct SquarerootMatrix{T<:Real,S<:AbstractMatrix,M<:AbstractMatrix} <:
-       AbstractMatrix{T}
+struct SquarerootMatrix{T<:Real,S<:AbstractMatrix,M<:AbstractMatrix} <: AbstractMatrix{T}
     squareroot::S
     mat::M
     SquarerootMatrix(S::AbstractMatrix{T}, mat::AbstractMatrix{T}) where {T} =
