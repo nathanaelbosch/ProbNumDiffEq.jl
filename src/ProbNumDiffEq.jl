@@ -35,26 +35,12 @@ using Tullio
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
 # Some special cases
-_matmul!(C::AbstractMatrix{Float64}, A::AbstractMatrix{Float64}, B::Diagonal{Float64}) =
+_matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) =
     (C .= A .* B.diag')
-_matmul!(C::AbstractMatrix{Float64}, A::Diagonal{Float64}, B::AbstractMatrix{Float64}) =
+_matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) =
     (C .= A.diag .* B)
-_matmul!(C::Diagonal{Float64}, A::AbstractMatrix{Float64}, B::AbstractMatrix{Float64}) =
+_matmul!(C::Diagonal, A::AbstractMatrix, B::AbstractMatrix) =
     @tullio C[i, i] = A[i, j] * B[j, i]
-# Use Octavian's matmul! when the types are very specific
-import Octavian: matmul!
-_matmul!(
-    C::AbstractVecOrMat{Float64},
-    A::AbstractVecOrMat{Float64},
-    B::AbstractVecOrMat{Float64},
-) = matmul!(C, A, B)
-_matmul!(
-    C::AbstractVecOrMat{Float64},
-    A::AbstractVecOrMat{Float64},
-    B::AbstractVecOrMat{Float64},
-    a::Float64,
-    b::Float64,
-) = matmul!(C, A, B, a, b)
 
 # @reexport using PSDMatrices
 # import PSDMatrices: X_A_Xt
