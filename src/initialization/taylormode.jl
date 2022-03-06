@@ -6,6 +6,9 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     D = d * (q + 1)
 
     @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = cache
+    if size(K1, 2) != d
+        K1 = K1[:, 1:d]
+    end
 
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     integ.destats.nf += q
@@ -20,12 +23,17 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[2, :]
         end
         pmat = f.mass_matrix * Proj(o)
+
+        if !(ndims(df) == 1)
+            df = view(df, :)
+        end
+
         condition_on!(
             x,
             pmat,
             view(df, :),
             m_cache,
-            view(K1, :, 1:d),
+            K1,
             x_tmp.Σ,
             x_tmp2.Σ.mat,
         )
