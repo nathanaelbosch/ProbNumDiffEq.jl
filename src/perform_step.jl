@@ -158,7 +158,9 @@ function evaluate_ode!(
             @unpack du1, uf, jac_config = integ.cache
             uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
             uf.t = t
-            uf.p = p
+            if !(p isa DiffEqBase.NullParameters)
+                uf.p = p
+            end
             OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
         end
         integ.destats.njacs += 1
