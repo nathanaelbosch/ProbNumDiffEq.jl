@@ -96,7 +96,7 @@ function smooth_solution!(integ)
 
         mul!(x_tmp, P, x[i])
         mul!(x_tmp2, P, x[i+1])
-        smooth!(x_tmp, x_tmp2, A, Q, integ, diffusions[i])
+        smooth!(x_tmp, x_tmp2, A, Q, integ.cache, diffusions[i])
         mul!(x[i], PI, x_tmp)
 
         # Save the smoothed state into the solution

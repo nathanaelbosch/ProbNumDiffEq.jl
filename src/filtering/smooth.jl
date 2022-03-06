@@ -58,12 +58,12 @@ function smooth(
     return x_curr_smoothed, G
 end
 
-function smooth!(x_curr, x_next, Ah, Qh, integ, diffusion=1)
+function smooth!(x_curr, x_next, Ah, Qh, cache, diffusion=1)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
-    @unpack d, q = integ.cache
-    @unpack x_pred = integ.cache
-    @unpack C1, G1, G2, C2 = integ.cache
+    @unpack d, q = cache
+    @unpack x_pred = cache
+    @unpack C1, G1, G2, C2 = cache
 
     # Prediction: t -> t+1
     predict_mean!(x_pred, x_curr, Ah)
