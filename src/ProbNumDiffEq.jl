@@ -48,8 +48,8 @@ export SRMatrix
 X_A_Xt(A, X) = X * A * X'
 X_A_Xt!(out, A, X) = (out .= X * A * X')
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::SRMatrix, diffusion::Number) = SRMatrix(
-    sqrt.(diffusion) * Q.squareroot, diffusion * Q.mat)
+apply_diffusion(Q::SRMatrix, diffusion::Number) =
+    SRMatrix(sqrt.(diffusion) * Q.squareroot, diffusion * Q.mat)
 
 # All the Gaussian things
 @reexport using GaussianDistributions
