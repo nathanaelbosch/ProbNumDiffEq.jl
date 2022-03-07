@@ -1,5 +1,28 @@
 abstract type InitializationScheme end
+
+"""
+    TaylorModeInit()
+
+**Recommended**
+
+Exact initialization via Taylor-mode automatic differentiation.
+Uses [TaylorIntegration.jl](https://perezhz.github.io/TaylorIntegration.jl/latest/).
+In case of errors, try [`ClassicSolverInit`](@ref).
+
+# References:
+- N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
+"""
 struct TaylorModeInit <: InitializationScheme end
+
+"""
+    ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_du=false)
+
+Exact initialization with a classic ODE solver. The solver to be used can be set with the
+`alg` keyword argument. `init_on_du` specifies if ForwardDiff.jl should be used to compute
+the jacobian and initialize on the exact second derivative.
+
+Not recommended for large solver orders, say `order>4`.
+"""
 Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG = Tsit5()
     init_on_du::Bool = false

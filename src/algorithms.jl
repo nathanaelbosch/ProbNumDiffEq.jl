@@ -5,20 +5,18 @@ abstract type GaussianODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorith
 abstract type AbstractEK <: GaussianODEFilter end
 
 """
-    EK0(; order=3, diffusionmodel=DynamicDiffusion(), smooth=true)
+    EK0(; order=3, smooth=true,
+          diffusionmodel=DynamicDiffusion(),
+          initialization=TaylorModeInit())
 
-**Gaussian ODE filtering with zeroth order extended Kalman filtering.**
+**Gaussian ODE filter with zeroth order vector field linearization**
 
-All solvers use an integrated Brownian motion prior of order `order`.
-For the diffusionmodel, chose one of
-`[DynamicDiffusion(), DynamicMVDiffusion(), FixedDiffusion(), FixedMVDiffusion()]`.
+- `order`: Order of the integrated Brownian motion (IBM) prior.
+- `smooth`: Turn smoothing on/off; smoothing is required for dense output.
+- `diffusionmodel`: See [Diffusion models and calibration](@ref).
+- `initialization`: See [Initialization](@ref).
 
-See also: [`EK1`](@ref)
-
-# References:
-- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
-- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
-- M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018)
+## [References](@ref references)
 """
 Base.@kwdef struct EK0{DT,IT} <: AbstractEK
     order::Int = 3
@@ -28,19 +26,25 @@ Base.@kwdef struct EK0{DT,IT} <: AbstractEK
 end
 
 """
-    EK1(; order=3, diffusionmodel=DynamicDiffusion(), smooth=true)
+    EK1(; order=3, smooth=true,
+          diffusionmodel=DynamicDiffusion(),
+          initialization=TaylorModeInit(),
+          kwargs...)
 
-**Gaussian ODE filtering with first order extended Kalman filtering.**
+**Gaussian ODE filter with first order vector field linearization**
 
-All solvers use an integrated Brownian motion prior of order `order`.
-For the diffusionmodel, chose one of
-`[DynamicDiffusion(), DynamicMVDiffusion(), FixedDiffusion(), FixedMVDiffusion()]`.
+- `order`: Order of the integrated Brownian motion (IBM) prior.
+- `smooth`: Turn smoothing on/off; smoothing is required for dense output.
+- `diffusionmodel`: See [Diffusion models and calibration](@ref).
+- `initialization`: See [Initialization](@ref).
 
-See also: [`EK0`](@ref)
+Some additional `kwargs` relating to implicit solvers are supported;
+check out DifferentialEquations.jl's [Extra Options](https://diffeq.sciml.ai/stable/solvers/ode_solve/#Extra-Options) page.
+Right now, we support `autodiff`, `chunk_size`, and `diff_type`.
+In particular, `autodiff=false` can come in handy to use finite differences instead of
+ForwardDiff.jl to compute Jacobians.
 
-# References:
-- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
-- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
+## [References](@ref references)
 """
 struct EK1{CS,AD,DiffType,DT,IT} <: AbstractEK
     order::Int

@@ -48,7 +48,7 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
 - [Multi-Language Wrapper Benchmark](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/benchmarks/benchmarks/multi-language-wrappers.ipynb):
   ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
 
-## References
+## [References](@id references)
 - N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022)
 - N. Krämer, N. Bosch, J. Schmidt, P. Hennig: **Probabilistic ODE Solutions in Millions of Dimensions** (2021)
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)

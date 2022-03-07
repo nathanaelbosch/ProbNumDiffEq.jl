@@ -8,15 +8,40 @@ isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
 
+"""
+    DynamicDiffusion()
+
+**Recommended with adaptive steps**
+
+A local diffusion parameter is estimated at each step. Works well with adaptive steps.
+"""
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::DynamicDiffusion, d, q, Eltype) = one(Eltype)
 estimate_local_diffusion(kind::DynamicDiffusion, integ) = local_scalar_diffusion(integ)
 
+"""
+    DynamicMVDiffusion()
+
+**Only works with the [`EK0`](@ref)**
+
+A multi-variate version of [`DynamicDiffusion`](@ref), where instead of a scalar a
+vector-valued diffusion is estimated. When using the EK0, this can be helpful when the
+scales of the different dimensions vary a lot.
+"""
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusionmodel::DynamicMVDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 estimate_local_diffusion(kind::DynamicMVDiffusion, integ) = local_diagonal_diffusion(integ)
 
+"""
+    FixedDiffusion(; initial_diffusion=1.0, calibrate=true)
+
+**Recommended with fixed steps**
+
+If `calibrate=true`, the probabilistic solution is calibrated once at the end of the solve.
+An initial diffusion parameter can be passed, but this only has an effect if
+`calibrate=false` - which is typically not recommended.
+"""
 Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
     calibrate::Bool = true
@@ -53,6 +78,15 @@ function estimate_global_diffusion(rule::FixedDiffusion, integ)
     end
 end
 
+"""
+    FixedMVDiffusion(; initial_diffusion=1.0, calibrate=true)
+
+**Only works with the [`EK0`](@ref)**
+
+A multi-variate version of [`FixedDiffusion`](@ref), where instead of a scalar a
+vector-valued diffusion is estimated. When using the EK0, this can be helpful when the
+scales of the different dimensions vary a lot.
+"""
 Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
     calibrate::Bool = true
