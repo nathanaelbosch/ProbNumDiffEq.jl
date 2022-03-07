@@ -86,7 +86,7 @@ function smooth!(
     Ah::AbstractMatrix,
     Qh::SquarerootMatrix,
     cache::GaussianODEFilterCache,
-    diffusion::Union{Number,AbstractVector}=1,
+    diffusion::Union{Number,Diagonal}=1,
 )
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
