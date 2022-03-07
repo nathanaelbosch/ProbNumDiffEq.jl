@@ -56,9 +56,9 @@ function update!(
     H::AbstractMatrix,
     K_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
-    m_tmp,
+    S_cache::AbstractMatrix,
 )
-    z, S = measurement.μ, copy!(m_tmp.Σ, measurement.Σ)
+    z, S = measurement.μ, copy!(S_cache, measurement.Σ.mat)
     m_p, P_p = x_pred.μ, x_pred.Σ
     D = length(m_p)
 
