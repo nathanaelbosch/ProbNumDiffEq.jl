@@ -1,15 +1,24 @@
 """
     update(x, measurement, H)
 
-UPDATE step in Kalman filtering for linear dynamics models:
-```math
-K = P_{n+1}^P * H^T * S^{-1}
-m_{n+1} = m_{n+1}^P + K * (0 - z)
-P_{n+1} = P_{n+1}^P - K*S*K^T
-```
+Update step in Kalman filtering for linear dynamics models.
 
-This function provides a very simple UPDATE implementation.
-In the solvers, we recommend to use the non-allocating [`update!`](@ref).
+Given a Gaussian ``x = \\mathcal{N}(μ, Σ)``
+and a measurement ``z = \\mathcal{N}(\\hat{z}, S)``, with ``S = H Σ H^T``,
+compute
+```math
+\\begin{aligned}
+K &= Σ^P H^T S^{-1}, \\\\
+μ^F &= μ + K (0 - \\hat{z}), \\\\
+Σ^F &= Σ - K S K^T,
+\\end{aligned}
+```
+and return `\\mathcal{N}(μ^F, Σ^F)`.
+Note that this assumes zero-measurements.
+When called with `ProbNumDiffEq.SquarerootMatrix` type arguments it performs the update in
+Joseph / square-root form.
+
+For better performance, we recommend to use the non-allocating [`update!`](@ref).
 """
 function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
     m, C = x
@@ -21,7 +30,6 @@ function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
 
     return Gaussian(m_new, C_new)
 end
-"""UPDATE step in Joseph-form, with square-root matrix inputs"""
 function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix)
     m, C = x
     z, S = measurement
@@ -34,20 +42,16 @@ function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix)
 end
 
 """
-    update!(x_out, x_pred, measurement, H, R=0)
+    update!(x_out, x_pred, measurement, H, K_cache, M_cache, S_cache)
 
-UPDATE step in Kalman filtering for linear dynamics models, given a measurement `Z=N(z, S)`.
-In-place implementation of [`update`](@ref), saving the result in `x_out`.
+In-place and square-root implementation of [`update`](@ref)
+which saves the result into `x_out`.
 
-```math
-K = P_{n+1}^P * H^T * S^{-1}
-m_{n+1} = m_{n+1}^P + K * (0 - z)
-P_{n+1} = P_{n+1}^P - K*S*K^T
-```
+Implemented in Joseph Form; works best when called with `SquarerootMatrix` covariances.
+To prevent allocations, write into caches `K_cache` and `M_cache`, both of size `D × D`,
+and `S_cache` of size `d × d`.
 
-Implemented in Joseph Form.
-
-See also: [`predict`](@ref)
+See also: [`update`](@ref).
 """
 function update!(
     x_out::Gaussian,
