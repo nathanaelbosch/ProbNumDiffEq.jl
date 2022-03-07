@@ -9,14 +9,15 @@ abstract type AbstractEK <: GaussianODEFilter end
           diffusionmodel=DynamicDiffusion(),
           initialization=TaylorModeInit())
 
-**Gaussian ODE filter with zeroth order vector field linearization**
+**Gaussian ODE filter with zeroth order vector field linearization.**
 
-- `order`: Order of the integrated Brownian motion (IBM) prior.
-- `smooth`: Turn smoothing on/off; smoothing is required for dense output.
-- `diffusionmodel`: See [Diffusion models and calibration](@ref).
-- `initialization`: See [Initialization](@ref).
+# Arguments
+- `order::Integer`: Order of the integrated Brownian motion (IBM) prior.
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
+- `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
 
-## [References](@ref references)
+# [References](@ref references)
 """
 Base.@kwdef struct EK0{DT,IT} <: AbstractEK
     order::Int = 3
@@ -31,12 +32,13 @@ end
           initialization=TaylorModeInit(),
           kwargs...)
 
-**Gaussian ODE filter with first order vector field linearization**
+**Gaussian ODE filter with first order vector field linearization.**
 
-- `order`: Order of the integrated Brownian motion (IBM) prior.
-- `smooth`: Turn smoothing on/off; smoothing is required for dense output.
-- `diffusionmodel`: See [Diffusion models and calibration](@ref).
-- `initialization`: See [Initialization](@ref).
+# Arguments
+- `order::Integer`: Order of the integrated Brownian motion (IBM) prior.
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
+- `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
 
 Some additional `kwargs` relating to implicit solvers are supported;
 check out DifferentialEquations.jl's [Extra Options](https://diffeq.sciml.ai/stable/solvers/ode_solve/#Extra-Options) page.
@@ -44,7 +46,7 @@ Right now, we support `autodiff`, `chunk_size`, and `diff_type`.
 In particular, `autodiff=false` can come in handy to use finite differences instead of
 ForwardDiff.jl to compute Jacobians.
 
-## [References](@ref references)
+# [References](@ref references)
 """
 struct EK1{CS,AD,DiffType,DT,IT} <: AbstractEK
     order::Int
