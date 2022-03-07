@@ -103,7 +103,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         measurement.μ .= H * x_pred.μ .- u
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
-        M_cache, S_cache = cache.x_tmp2.Σ.mat, cache.m_tmp.Σ.mat
+        M_cache, S_cache = cache.x_tmp2.Σ.mat, cache.m_tmp.Σ
         update!(x_filt, x_pred, measurement, H, cache.K1, M_cache, S_cache)
         push!(filts, copy(x_filt))
 

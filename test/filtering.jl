@@ -78,7 +78,7 @@ end
         K_cache = copy(K)
         M_cache = zeros(d, d)
         m_tmp = copy(measurement)
-        ProbNumDiffEq.update!(x_out, x_pred, measurement, H, K_cache, M_cache, m_tmp.Σ.mat)
+        ProbNumDiffEq.update!(x_out, x_pred, measurement, H, K_cache, M_cache, m_tmp.Σ)
         @test m ≈ x_out.μ
         @test P ≈ x_out.Σ
     end
