@@ -28,7 +28,6 @@ Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     init_on_du::Bool = false
 end
 
-
 """
     initial_update!(integ, cache[, init::InitializationScheme])
 
