@@ -13,7 +13,7 @@ K &= Σ^P H^T S^{-1}, \\\\
 Σ^F &= Σ - K S K^T,
 \\end{aligned}
 ```
-and return `\\mathcal{N}(μ^F, Σ^F)`.
+and return an updated state `\\mathcal{N}(μ^F, Σ^F)`.
 Note that this assumes zero-measurements.
 When called with `ProbNumDiffEq.SquarerootMatrix` type arguments it performs the update in
 Joseph / square-root form.
