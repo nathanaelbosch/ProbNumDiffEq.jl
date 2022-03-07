@@ -28,11 +28,26 @@ Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     init_on_du::Bool = false
 end
 
+
+"""
+    initial_update!(integ, cache[, init::InitializationScheme])
+
+Improve the initial state estimate by updating either on exact derivatives or values
+computed with a classic solver.
+
+See also: [Initialization](@ref), [`TaylorModeInit`](@ref), [`ClassicSolverInit`](@ref).
+"""
 function initial_update!(integ, cache)
     return initial_update!(integ, cache, integ.alg.initialization)
 end
 
-"""Basically a Kalman update"""
+"""
+    condition_on!(x, H, data, Scache, Kcache, covcache, Mcache)
+
+Condition `x` on `data`, with linearized measurement function `H`.
+
+This is basically a Kalman update. We recommend using [`update`](@ref) or [`update!`](@ref).
+"""
 function condition_on!(
     x::SRGaussian,
     H::AbstractMatrix,

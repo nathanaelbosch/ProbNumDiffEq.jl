@@ -121,10 +121,16 @@ end
 """
     local_scalar_diffusion(integ)
 
-Computes a scalar local diffusion estimate:
+Compute the local, scalar diffusion estimate.
+
+Corresponds to
 ```math
-σ² = zᵀ ⋅ (H*Q*H')⁻¹ ⋅ z
+σ² = zᵀ (H Q H^T)⁻¹ z,
 ```
+where ``z, H, Q`` are taken from the passed integrator.
+
+For more background information
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
 function local_scalar_diffusion(integ)
     @unpack d, R, H, Qh, measurement, m_tmp = integ.cache
@@ -146,10 +152,17 @@ end
 """
     local_diagonal_diffusion(integ)
 
-Computes a diagonal local diffusion estimate:
+Compute the local, scalar diffusion estimate.
+
+Corresponds to
 ```math
-Σᵢᵢ = zᵢ² / (H*Q*H')ᵢᵢ
+Σ_{ii} = z_i^2 / (H Q H^T)_{ii},
 ```
+where ``z, H, Q`` are taken from the passed integrator.
+**This should only be used with the EK0!**
+
+For more background information
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
 function local_diagonal_diffusion(integ)
     @unpack q, H, Qh, measurement, m_tmp = integ.cache

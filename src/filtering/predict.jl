@@ -12,7 +12,6 @@ predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
     Gaussian(predict_mean(x, A), predict_cov(x, A, Q))
 predict_mean(x::Gaussian, A::AbstractMatrix) = A * x.μ
 predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A * x.Σ * A' + Q
-"""Square-root implementation of [`predict_cov!`](@ref); returns a `SquarerootMatrix`"""
 predict_cov(x::SRGaussian, A::AbstractMatrix, Q::SRMatrix) =
     SRMatrix(qr([A * x.Σ.squareroot Q.squareroot]').R')
 

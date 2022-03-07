@@ -1,4 +1,11 @@
-" ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEq.jl's `postamble!`."
+"""
+    OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
+
+ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEq.jl's `postamble!`.
+
+In addition to calling `OrdinaryDiffEq._postamble!(integ)`, calibrate the diffusion and
+smooth the solution.
+"""
 function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
     # OrdinaryDiffEq.jl-related calls:
     OrdinaryDiffEq._postamble!(integ)
@@ -52,7 +59,7 @@ function calibrate_solution!(integ, mle_diffusion)
 end
 
 """
-    set_diffusions!(solution::AbstractProbODESolution, diffusion)
+    set_diffusions!(solution::AbstractProbODESolution, diffusion::Union{Number,Diagonal})
 
 Set the contents of `solution.diffusions` to the provided `diffusion`, overwriting the local
 diffusion estimates that are in there. Typically, `diffusion` is either a global quasi-MLE
@@ -72,9 +79,11 @@ end
 """
     smooth_solution!(integ)
 
-Smoothes the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updating the
-values saved in `integ.sol.pu` and `integ.sol.u`. This function handles the iteration and
-preconditioning. The actual smoothing step happens in [`smooth!`](@ref).
+Smooth the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updating the
+values saved in `integ.sol.pu` and `integ.sol.u`.
+
+This function handles the iteration and preconditioning.
+The actual smoothing step happens in [`smooth!`](@ref).
 """
 function smooth_solution!(integ)
     integ.sol.x_smooth = copy(integ.sol.x_filt)

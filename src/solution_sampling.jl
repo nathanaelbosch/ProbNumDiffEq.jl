@@ -1,12 +1,14 @@
 ########################################################################################
 # Sampling from a solution
 ########################################################################################
-"""Helper function to sample from our covariances, which often have a "cross" of zeros
-For the 0-cov entries the outcome of the sampling is deterministic!"""
-function _rand(x::Gaussian, n::Int=1)
-    m, C = x.μ, x.Σ
-    @assert C isa SRMatrix
+"""
+    _rand(x::Gaussian{<:Vector,<:SRMatrix}, n::Integer=1)
 
+Sample from a Gaussian with a `ProbNumDiffEq.SquarerootMatrix` covariance.
+Uses the existing covariance square root to make the sampling more stable.
+"""
+function _rand(x::SRGaussian, n::Integer=1)
+    m, C = x.μ, x.Σ
     sample = m .+ C.squareroot * randn(length(m), n)
     return sample
 end

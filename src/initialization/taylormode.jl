@@ -1,4 +1,3 @@
-"""initialize x0 up to the provided order"""
 function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
