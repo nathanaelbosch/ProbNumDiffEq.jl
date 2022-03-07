@@ -12,6 +12,7 @@ makedocs(
             "Differential Algebraic Equations" => "dae.md"
         ],
         "Solvers and Options" => "solvers.md",
+        "Internals" => ["Filtering and Smoothing" => "filtering.md"],
     ],
 )
 

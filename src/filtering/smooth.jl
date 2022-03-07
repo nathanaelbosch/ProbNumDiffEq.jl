@@ -1,16 +1,27 @@
 """
-    smooth(x_curr::Gaussian, x_next_smoothed::Gaussian, Ah::AbstractMatrix, Qh::AbstractMatrix)
+    smooth(x_curr, x_next_smoothed, A, Q)
 
-SMOOTH step of the (extended) Kalman smoother, or (extended) Rauch-Tung-Striebel smoother.
-It is implemented in Joseph Form:
+Update step of the Kalman smoother, aka. Rauch-Tung-Striebel smoother,
+for linear dynamics models.
+
+Given Gaussians
+``x_n = \\mathcal{N}(μ_{n}, Σ_{n})`` and
+``x_{n+1} = \\mathcal{N}(μ_{n+1}^S, Σ_{n+1}^S)``,
+compute
 ```math
-m_{n+1}^P = A(h)*m_n
-P_{n+1}^P = A(h)*P_n*A(h) + Q(h)
-
-G = P_n * A(h)^T * (P_{n+1}^P)^{-1}
-m_n^S = m_n + G * (m_{n+1}^S - m_{n+1}^P)
-P_n^S = (I - G*A(h)) P_n (I - G*A(h))^T + G * Q(h) * G + G * P_{n+1}^S * G
+\\begin{aligned}
+μ_{n+1}^P &= A μ_n^F, \\\\
+P_{n+1}^P &= A Σ_n^F A + Q, \\\\
+G &= Σ_n^S A^T (Σ_{n+1}^P)^{-1}, \\\\
+μ_n^S &= μ_n^F + G (μ_{n+1}^S - μ_{n+1}^P), \\\\
+Σ_n^S &= (I - G A) Σ_n^F (I - G A)^T + G Q G^T + G Σ_{n+1}^S G^T,
+\\end{aligned}
 ```
+and return a smoothed state `\\mathcal{N}(μ_n^S, Σ_n^S)`.
+When called with `ProbNumDiffEq.SquarerootMatrix` type arguments it performs the update in
+Joseph / square-root form.
+
+For better performance, we recommend to use the non-allocating [`smooth!`](@ref).
 """
 function smooth(
     x_curr::Gaussian,
@@ -58,7 +69,25 @@ function smooth(
     return x_curr_smoothed, G
 end
 
-function smooth!(x_curr, x_next, Ah, Qh, cache, diffusion=1)
+"""
+    smooth!(x_curr, x_next, Ah, Qh, cache, diffusion=1)
+
+In-place and square-root implementation of [`smooth`](@ref) which overwrites `x_curr`.
+
+Implemented in Joseph form to preserve square-root structure.
+It requires access to the solvers `GaussianODEFilterCache` (passed as `cache`)
+to prevent allocations.
+
+See also: [`smooth`](@ref).
+"""
+function smooth!(
+    x_curr::SRGaussian,
+    x_next::SRGaussian,
+    Ah::AbstractMatrix,
+    Qh::SquarerootMatrix,
+    cache::GaussianODEFilterCache,
+    diffusion::Union{Number,Diagonal}=1,
+)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = cache
