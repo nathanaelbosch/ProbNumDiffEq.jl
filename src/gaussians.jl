@@ -20,14 +20,14 @@ ndims(g::Gaussian) = ndims(g.μ)
 Base.:*(M, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 # GaussianDistributions.whiten(Σ::SRMatrix, z) = Σ.L\z
 
-function mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
+function _gaussian_mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
     _matmul!(g_out.μ, M, g_in.μ)
     X_A_Xt!(g_out.Σ, g_in.Σ, M)
     return g_out
 end
 
-var(p::SRGaussian{T}) where {T} = diag(p.Σ)
-std(p::SRGaussian{T}) where {T} = sqrt.(var(p))
-mean(s::SRGaussianList{T}) where {T} = s.μ
-var(s::SRGaussianList{T}) where {T} = diag.(s.Σ)
-std(s::SRGaussianList{T}) where {T} = map(std, s)
+var(p::SRGaussian) = diag(p.Σ)
+std(p::SRGaussian) = sqrt.(var(p))
+mean(s::SRGaussianList) = s.μ
+var(s::SRGaussianList) = diag.(s.Σ)
+std(s::SRGaussianList) = map(std, s)

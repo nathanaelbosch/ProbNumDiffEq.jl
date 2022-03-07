@@ -1,4 +1,4 @@
-function init_preconditioner(d, q, elType=typeof(1.0))
+function init_preconditioner(d, q, ::Type{elType}=typeof(1.0)) where {elType}
     D = d * (q + 1)
     P = Diagonal(ones(elType, D))
     PI = Diagonal(ones(elType, D))

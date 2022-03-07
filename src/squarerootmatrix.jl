@@ -5,13 +5,12 @@ Relates to PSDMatrices.jl, and I might move this to PSDMatrices.jl in the
 future, but having this here allowed for easier development.
 """
 
-struct SquarerootMatrix{T<:Real,S<:AbstractMatrix{T},M<:AbstractMatrix{T}} <:
-       AbstractMatrix{T}
+struct SquarerootMatrix{T<:Real,S<:AbstractMatrix,M<:AbstractMatrix} <: AbstractMatrix{T}
     squareroot::S
     mat::M
+    SquarerootMatrix(S::AbstractMatrix{T}, mat::AbstractMatrix{T}) where {T} =
+        new{T,typeof(S),typeof(mat)}(S, mat)
 end
-SquarerootMatrix(S::AbstractMatrix{T}, mat::AbstractMatrix{T}) where {T} =
-    SquarerootMatrix{T,typeof(S),typeof(mat)}(S, mat)
 SquarerootMatrix(S) = SquarerootMatrix(S, S * S')
 
 Base.Matrix(M::SquarerootMatrix) = M.mat

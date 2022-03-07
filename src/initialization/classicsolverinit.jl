@@ -11,10 +11,10 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
 
     # Initialize on u0
-    condition_on!(x, Proj(0), view(u, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(0), view(u, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
     f(du, u, p, t)
     integ.destats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q < 2
         return
@@ -31,7 +31,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, m_tmp, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
         if q < 3
             return
         end
@@ -88,7 +88,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
     make_preconditioners!(cache, dt)
     @unpack P, PI = cache
 
-    mul!(x, P, x)
+    _gaussian_mul!(x, P, x)
 
     preds = []
     filts = [copy(x)]
@@ -114,10 +114,10 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         xf = filts[i-1]
         xs = filts[i]
         xp = preds[i-1] # Since `preds` is one shorter
-        smooth!(xf, xs, A, Q, integ, 1)
+        smooth!(xf, xs, A, Q, integ.cache, 1)
     end
 
-    mul!(cache.x, PI, filts[1])
+    _gaussian_mul!(cache.x, PI, filts[1])
 
     return nothing
 end

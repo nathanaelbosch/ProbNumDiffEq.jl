@@ -63,10 +63,10 @@ function DiffEqBase.build_solution(
     uElType = eltype(prob.u0)
     D = d
     pu_cov =
-        alg isa EK0 && !(prob.f isa DynamicalODEFunction) ?
-        SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D))
-    x_cov = SRMatrix(zeros(uElType, d, d))
+        # alg isa EK0 && !(prob.f isa DynamicalODEFunction) ?
+        # SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
+        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
+    x_cov = SRMatrix(zeros(uElType, d, d), zeros(uElType, d, d))
     pu = StructArray{Gaussian{Vector{uElType},typeof(pu_cov)}}(undef, 0)
     x_filt = StructArray{Gaussian{Vector{uElType},typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)
@@ -168,7 +168,7 @@ function GaussianODEFilterPosterior(alg, u0)
     q = alg.order
     D = d * (q + 1)
 
-    Proj = projection(d, q, Val(uElType))
+    Proj = projection(d, q, uElType)
     SolProj = u0 isa ArrayPartition ? [Proj(1); Proj(0)] : Proj(0)
 
     A, Q = ibm(d, q, uElType)

@@ -81,9 +81,9 @@ function OrdinaryDiffEq.alg_cache(
     alg::GaussianODEFilter,
     u,
     rate_prototype,
-    uEltypeNoUnits,
-    uBottomEltypeNoUnits,
-    tTypeNoUnits,
+    ::Type{uEltypeNoUnits},
+    ::Type{uBottomEltypeNoUnits},
+    ::Type{tTypeNoUnits},
     uprev,
     uprev2,
     f,
@@ -93,7 +93,7 @@ function OrdinaryDiffEq.alg_cache(
     p,
     calck,
     ::Val{IIP},
-) where {IIP}
+) where {IIP,uEltypeNoUnits,uBottomEltypeNoUnits,tTypeNoUnits}
     initialize_derivatives = true
 
     if u isa Number
@@ -113,11 +113,12 @@ function OrdinaryDiffEq.alg_cache(
     t0 = t
 
     uType = typeof(u)
-    uElType = eltype(u_vec)
+    # uElType = eltype(u_vec)
+    uElType = uBottomEltypeNoUnits
     matType = Matrix{uElType}
 
     # Projections
-    Proj = projection(d, q, Val(uElType))
+    Proj = projection(d, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
@@ -127,8 +128,11 @@ function OrdinaryDiffEq.alg_cache(
 
     A, Q = ibm(d, q, uElType)
 
-    initial_variance = 1.0 * ones(uElType, D)
-    x0 = Gaussian(zeros(uElType, D), SRMatrix(Matrix(Diagonal(sqrt.(initial_variance)))))
+    initial_variance = ones(uElType, D)
+    x0 = Gaussian(
+        zeros(uElType, D),
+        SRMatrix(diagm(sqrt.(initial_variance)), diagm(initial_variance)),
+    )
 
     # Measurement model
     R = zeros(uElType, d, d)
@@ -141,7 +145,7 @@ function OrdinaryDiffEq.alg_cache(
     v, S = similar(h), similar(ddu)
     v = similar(h)
     S =
-        alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
+    # alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
         SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
     measurement = Gaussian(v, S)
     pu_tmp =

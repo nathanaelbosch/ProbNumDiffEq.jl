@@ -22,7 +22,7 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
     OrdinaryDiffEq.copyat_or_push!(
         integ.sol.pu,
         integ.saveiter,
-        mul!(cache.pu_tmp, cache.SolProj, cache.x),
+        _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x),
     )
     return nothing
 end
@@ -158,7 +158,9 @@ function evaluate_ode!(
             @unpack du1, uf, jac_config = integ.cache
             uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
             uf.t = t
-            uf.p = p
+            if !(p isa DiffEqBase.NullParameters)
+                uf.p = p
+            end
             OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
         end
         integ.destats.njacs += 1

@@ -40,13 +40,13 @@ function calibrate_solution!(integ, mle_diffusion)
     set_diffusions!(integ.sol, mle_diffusion * integ.cache.default_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
-    @simd ivdep for s in integ.sol.x_filt
-        copy!(s.Σ, apply_diffusion(s.Σ, mle_diffusion))
+    @simd ivdep for S in integ.sol.x_filt.Σ
+        copy!(S, apply_diffusion(S, mle_diffusion))
     end
 
     # Re-write into the solution estimates
     for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
-        mul!(pu, integ.cache.SolProj, x)
+        _gaussian_mul!(pu, integ.cache.SolProj, x)
     end
     # [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
 end
@@ -94,13 +94,13 @@ function smooth_solution!(integ)
         make_preconditioners!(integ.cache, dt)
         P, PI = integ.cache.P, integ.cache.PI
 
-        mul!(x_tmp, P, x[i])
-        mul!(x_tmp2, P, x[i+1])
-        smooth!(x_tmp, x_tmp2, A, Q, integ, diffusions[i])
-        mul!(x[i], PI, x_tmp)
+        _gaussian_mul!(x_tmp, P, x[i])
+        _gaussian_mul!(x_tmp2, P, x[i+1])
+        smooth!(x_tmp, x_tmp2, A, Q, integ.cache, diffusions[i])
+        _gaussian_mul!(x[i], PI, x_tmp)
 
         # Save the smoothed state into the solution
-        mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
+        _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
         integ.sol.u[i][:] .= integ.sol.pu[i].μ
     end
     integ.sol.interp = set_smooth(integ.sol.interp)
@@ -121,7 +121,7 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
         OrdinaryDiffEq.copyat_or_push!(
             integ.sol.pu,
             integ.saveiter,
-            mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
+            _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
         )
     end
 end
@@ -148,7 +148,7 @@ function DiffEqBase.savevalues!(
         integ.cache.local_diffusion,
     )
     if integ.opts.save_everystep
-        mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
+        _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
         OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, integ.cache.pu_tmp)
     end
 

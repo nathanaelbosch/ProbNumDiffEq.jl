@@ -6,7 +6,7 @@
 
 Generate the discrete dynamics for a q-IBM model. INCLUDES AUTOMATIC PRECONDITIONING!
 """
-function ibm(d::Integer, q::Integer, elType=typeof(1.0))
+function ibm(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {elType}
     # Make A
     A_breve = zeros(elType, q + 1, q + 1)
     @simd ivdep for j in 1:q+1
@@ -28,9 +28,8 @@ function ibm(d::Integer, q::Integer, elType=typeof(1.0))
             @inbounds Q_breve[1+row, 1+col] = val
         end
     end
-    QL_breve = cholesky!(Q_breve).L
-    QL = kron(I(d), QL_breve)
-    Q = SRMatrix(QL)
+    QL_breve = cholesky(Q_breve).L
+    Q = SRMatrix(kron(I(d), QL_breve), kron(I(d), Q_breve))
 
     return A, Q
 end
