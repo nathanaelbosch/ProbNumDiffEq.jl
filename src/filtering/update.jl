@@ -49,7 +49,7 @@ which saves the result into `x_out`.
 
 Implemented in Joseph Form; works best when called with `SquarerootMatrix` covariances.
 To prevent allocations, write into caches `K_cache` and `M_cache`, both of size `D × D`,
-and `S_cache` of size `d × d`.
+and `S_cache` of same type as `measurement.Σ`.
 
 See also: [`update`](@ref).
 """
