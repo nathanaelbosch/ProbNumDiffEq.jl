@@ -33,24 +33,6 @@ function initial_update!(integ, cache, init::TaylorModeInit)
 end
 
 """
-    Compute initial derivatives of an OOP ODEProblem with TaylorSeries.jl
-"""
-function taylormode_get_derivatives(u, f::AbstractODEFunction{false}, p, t, q)
-    f = oop_to_iip(f)
-
-    tT = Taylor1(typeof(t), q)
-    tT[0] = t
-    # uT = Taylor1.(u, tT.order) # precompilation could be faster with the following:
-    uT = similar(u, Taylor1{eltype(u)})
-    @inbounds @simd ivdep for i in eachindex(u)
-        uT[i] = Taylor1(u[i], q)
-    end
-    duT = zero(uT)
-    uauxT = similar(uT)
-    TaylorIntegration.jetcoeffs!(f, tT, uT, duT, uauxT, p)
-    return [evaluate.(differentiate.(uT, i)) for i in 0:q]
-end
-"""
     Compute initial derivatives of an IIP ODEProblem with TaylorIntegration.jl
 """
 function taylormode_get_derivatives(u, f::AbstractODEFunction{true}, p, t, q)
