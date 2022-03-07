@@ -31,18 +31,6 @@ ddddddu(t) = [a^6 * u0[1] * exp(a * t), (b)^6 * u0[2] * exp(b * t)]
 true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddddddu(t0)]
 
 @testset "Taylormode initialization" begin
-    @testset "OOP" begin
-        dfs = ProbNumDiffEq.taylormode_get_derivatives(
-            prob.u0,
-            prob.f,
-            prob.p,
-            prob.tspan[1],
-            q,
-        )
-        @test length(dfs) == q + 1
-        @test true_init_states ≈ vcat(dfs...)
-    end
-
     @testset "IIP" begin
         f!(du, u, p, t) = (du .= f(u, p, t))
         prob = ODEProblem(f!, u0, tspan)
