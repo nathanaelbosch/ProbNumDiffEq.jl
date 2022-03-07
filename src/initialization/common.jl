@@ -32,18 +32,7 @@ function initial_update!(integ, cache)
     return initial_update!(integ, cache, integ.alg.initialization)
 end
 
-########################################################################
-# Some utilities below
-"""Quick and dirty wrapper to make OOP functions IIP"""
-function oop_to_iip(f)
-    function f!(du, u, p, t)
-        du .= f(u, p, t)
-        return nothing
-    end
-    return f!
-end
-
-"""Basically an Kalman update"""
+"""Basically a Kalman update"""
 function condition_on!(
     x::SRGaussian,
     H::AbstractMatrix,
