@@ -4,7 +4,10 @@
 """
     ibm(d::Integer, q::Integer, elType=typeof(1.0))
 
-Generate the discrete dynamics for a q-IBM model. INCLUDES AUTOMATIC PRECONDITIONING!
+Generate the discrete dynamics for a q-IBM model.
+
+The returned matrices `A::AbstractMatrix` and `Q::ProbNumDiffEq.SquarerootMatrix` should be
+used in combination with the preconditioners (see `./src/preconditioning.jl`).
 """
 function ibm(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {elType}
     # Make A
@@ -34,7 +37,11 @@ function ibm(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {elType}
     return A, Q
 end
 
-"""Same as above, but without the automatic preconditioning"""
+"""
+    vanilla_ibm(d::Integer, q::Integer)
+
+**This function serves only for tests and is not used anywhere in the main package!**
+"""
 function vanilla_ibm(d::Integer, q::Integer)
     @fastmath function A!(A::AbstractMatrix, h::Real)
         # Assumes that A comes from a previous computation => zeros and one-diag

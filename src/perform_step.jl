@@ -28,10 +28,9 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
 end
 
 """
-    perform_step!(integ, cache::GaussianODEFilterCache, repeat_step=false)
+    perform_step!(integ, cache::GaussianODEFilterCache[, repeat_step=false])
 
-Performs an ODE solver step.
-Not necessarily successful! For that, see `step!(integ)`.
+Perform the ODE filter step.
 
 Basically consists of the following steps
 - Compute the current transition and diffusion matrices
@@ -42,6 +41,9 @@ Basically consists of the following steps
 - Predict the covariance and build the measurement covariance `S`
 - Kalman update step
 - (optional) Update the global diffusion MLE
+
+As in OrdinaryDiffEq.jl, this step is not necessarily successful!
+For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 """
 function OrdinaryDiffEq.perform_step!(
     integ,
@@ -106,15 +108,17 @@ function OrdinaryDiffEq.perform_step!(
 end
 
 """
-    evaluate_ode!(integ, x_pred, t, second_order::Val)
+    evaluate_ode!(integ, x_pred, t)
 
-Evaluate the ODE vector field and, if necessary, the Jacobian. In addition, compute the
-measurement mean (`z`) and the measurement function Jacobian (`H`). Results are saved into
-`integ.cache.du`, `integ.cache.ddu`, `integ.cache.measurement.μ` and `integ.cache.H`.
+Evaluate the ODE vector field and, if using the [`EK1`](@ref), its Jacobian.
+
+In addition, compute the measurement mean (`z`) and the measurement function Jacobian (`H`).
+Results are saved into `integ.cache.du`, `integ.cache.ddu`, `integ.cache.measurement.μ`
+and `integ.cache.H`.
 Jacobians are computed either with the supplied `f.jac`, or via automatic differentiation,
-following the example of OrdinaryDiffEq.jl.
+as in OrdinaryDiffEq.jl.
 
-For second-order ODEs and the `EK1FDB` algorithm, a specialized implementation is called.
+For second-order ODEs and the `EK1FDB` algorithm a specialized implementation is called.
 """
 evaluate_ode!(integ, x_pred, t) =
     evaluate_ode!(integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
@@ -292,10 +296,11 @@ end
 """
     compute_scaled_error_estimate!(integ, cache)
 
-Computes the scaled, local error estimate, that should satisfy `Eest < 1`. The actual local
-error is computed with [`estimate_errors!`](@ref). Then, `DiffEqBase.calculate_residuals!`
-handles the scaling with adaptive and relative tolerances, and `integ.opts.internalnorm`
-provides the norm that should be used to return only a scalar.
+Compute the scaled, local error estimate `Eest`, that should satisfy `Eest < 1`.
+The actual local error is computed with [`estimate_errors!`](@ref).
+Then, `DiffEqBase.calculate_residuals!` handles the scaling with adaptive and relative
+tolerances, and `integ.opts.internalnorm` provides the norm that should be used to return
+only a scalar.
 """
 function compute_scaled_error_estimate!(integ, cache)
     @unpack u_pred, err_tmp = cache

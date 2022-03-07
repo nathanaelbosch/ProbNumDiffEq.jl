@@ -3,6 +3,15 @@
 ########################################################################################
 #! format: off
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
+
+"""
+    ProbODESolution
+
+The probabilistic numerical ODE solution.
+
+It contains filtering and smoothing state estimates which enables plots with uncertainties,
+sampling, and dense evaluation.
+"""
 mutable struct ProbODESolution{
     T, N, uType, puType, uType2, DType, tType, rateType, xType, diffType, llType, P, A, IType, DE
 } <: AbstractProbODESolution{T,N,uType}
@@ -108,9 +117,14 @@ end
 ########################################################################################
 # Compat with classic ODE solutions, to enable analysis with DiffEqDevTools.jl
 ########################################################################################
-"""Mean of a probabilistic ODE solution
+"""
+    MeanProbODESolution
 
-Used for compatibility with classic ODE solutions, e.g. in `DiffEqDevTools.appxtrue`."""
+The mean of a probabilistic numerical ODE solution.
+
+Since it is the mean and does never return Gaussians, it can basically be treated as if it
+were a classic ODE solution and is well-compatible with e.g. DiffEqDevtools.jl.
+"""
 mutable struct MeanProbODESolution{
     T, N, uType, uType2, DType, tType, rateType, P, A, IType, DE, PSolType
 } <: DiffEqBase.AbstractODESolution{T,N,uType}
