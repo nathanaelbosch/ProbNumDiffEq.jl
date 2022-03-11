@@ -6,8 +6,7 @@ using OrdinaryDiffEq
 using Statistics
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary:
-    prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
 
 @testset "Solution" begin
     prob = prob_ode_lotkavoltera
@@ -59,7 +58,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
 
     # Sampling
     @testset "Solution Sampling" begin
-        n_samples = 10
+        n_samples = 2
 
         samples = ProbNumDiffEq.sample(sol, n_samples)
         dsamples, dts = ProbNumDiffEq.dense_sample(sol, n_samples)
@@ -85,7 +84,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
     end
 
     @testset "Sampling states from the solution" begin
-        n_samples = 10
+        n_samples = 2
 
         samples = ProbNumDiffEq.sample_states(sol, n_samples)
         dsamples, dts = ProbNumDiffEq.dense_sample_states(sol, n_samples)
@@ -120,7 +119,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
 
     @testset "Mean Solution" begin
         @test mean(sol)(prob.tspan[1]) isa AbstractVector
-        @test mean(sol)(sol.t) isa ProbNumDiffEq.DiffEqArray
+        @test mean(sol)(sol.t[1:2]) isa ProbNumDiffEq.DiffEqArray
         @test mean(sol) isa DiffEqBase.AbstractODESolution
         @test plot(mean(sol)) isa AbstractPlot
     end

@@ -22,8 +22,7 @@ INITS = [TaylorModeInit, ClassicSolverInit]
 for (prob, probname) in
     [(prob_ode_lotkavoltera, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
     @testset "Constant steps: $probname" begin
-        true_sol =
-            solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
+        true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
 
         for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]
             if (diffusion == FixedMVDiffusion || diffusion == DynamicMVDiffusion) &&
@@ -53,8 +52,7 @@ for (prob, probname) in
     [(prob_ode_lotkavoltera, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
     @testset "Adaptive steps: $probname" begin
         t_eval = prob.tspan[1]:0.01:prob.tspan[end]
-        true_sol =
-            solve(remake(prob, u0=big.(prob.u0)), Tsit5(), abstol=1e-20, reltol=1e-20)
+        true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
         true_dense_vals = true_sol.(t_eval)
 
         for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]

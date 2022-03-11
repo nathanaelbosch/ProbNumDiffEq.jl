@@ -28,10 +28,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary:
 end
 
 @testset "Matrix-Valued Problem" begin
-    prob = prob_ode_2Dlinear
-    my_p = similar(prob.u0)
-    my_p .= 1.01
-    prob = remake(prob, p=my_p)
+    prob = remake(prob_ode_2Dlinear, u0=rand(2, 2))
 
     @testset "$alg" for alg in [EK0(), EK1()]
         sol = solve(prob, alg)
@@ -157,7 +154,7 @@ end
         dy = -c * y + d * x * y
     end a b c d
     p = [1.5, 1, 3, 1]
-    tspan = (0.0, 10.0)
+    tspan = (0.0, 1.0)
     u0 = [1.0, 1.0]
     prob = ODEProblem(f, u0, tspan, p)
     @test solve(prob, EK1(order=3)) isa ProbNumDiffEq.ProbODESolution
@@ -178,7 +175,7 @@ end
         0 0 0
     ]
     f = ODEFunction(rober, mass_matrix=M)
-    prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e0), (0.04, 3e7, 1e4))
+    prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e-2), (0.04, 3e7, 1e4))
 
     sol1 = solve(prob, EK1(order=3))
     sol2 = solve(prob, RadauIIA5())

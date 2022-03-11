@@ -19,7 +19,7 @@ q = 3
         return nothing
     end
     u0 = [1.0]
-    p = [-1.0]
+    p = [-0.1]
     tspan = (0.0, 1.0)
     prob = ODEProblem(f, u0, tspan, p)
     sol = solve(prob, alg, save_everystep=false, dense=false)
