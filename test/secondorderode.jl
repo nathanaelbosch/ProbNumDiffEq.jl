@@ -4,7 +4,7 @@ using Test
 
 du0 = [0.0]
 u0 = [2.0]
-tspan = (0.0, 6.3)
+tspan = (0.0, 3.0)
 p = [1e1]
 
 function vanderpol!(ddu, du, u, p, t)
@@ -25,7 +25,7 @@ appxsol = solve(prob_iip, Tsit5(), abstol=1e-7, reltol=1e-7)
 @testset "IIP" begin
     for Alg in (EK0, EK1)
         @testset "$Alg" begin
-            sol = solve(prob_iip, Alg())
+            sol = solve(prob_iip, Alg(), abstol=1e-3, reltol=1e-2)
             @test sol isa ProbNumDiffEq.ProbODESolution
             @test sol.u[end] ≈ appxsol.u[end] rtol = 1e-3
         end
@@ -35,7 +35,7 @@ end
 @testset "OOP" begin
     for Alg in (EK0, EK1)
         @testset "$Alg" begin
-            sol = solve(prob_oop, Alg())
+            sol = solve(prob_oop, Alg(), abstol=1e-3, reltol=1e-2)
             @test sol isa ProbNumDiffEq.ProbODESolution
             @test sol.u[end] ≈ appxsol.u[end] rtol = 1e-3
         end
