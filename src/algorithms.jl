@@ -48,7 +48,7 @@ ForwardDiff.jl to compute Jacobians.
 
 # [References](@ref references)
 """
-struct EK1{CS,AD,DiffType,ST,DT,IT} <: AbstractEK
+struct EK1{CS,AD,DiffType,ST,CJ,DT,IT} <: AbstractEK
     order::Int
     diffusionmodel::DT
     smooth::Bool
@@ -63,11 +63,13 @@ EK1(;
     autodiff=true,
     diff_type=Val{:forward},
     standardtag=true,
+    concrete_jac=nothing,
 ) = EK1{
     chunk_size,
     autodiff,
     diff_type,
     standardtag,
+    concrete_jac,
     typeof(diffusionmodel),
     typeof(initialization),
 }(

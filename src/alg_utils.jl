@@ -8,6 +8,10 @@ OrdinaryDiffEq.alg_autodiff(alg::EK1{CS,AD}) where {CS,AD} = AD
 OrdinaryDiffEq.alg_difftype(alg::EK1{CS,AD,DiffType}) where {CS,AD,DiffType} = DiffType
 OrdinaryDiffEq.standardtag(alg::AbstractEK) = false
 OrdinaryDiffEq.standardtag(alg::EK1{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} = ST
+OrdinaryDiffEq.concrete_jac(alg::AbstractEK) = nothing
+OrdinaryDiffEq.concrete_jac(alg::EK1{CS,AD,DiffType,ST,CJ}) where {CS,AD,DiffType,ST,CJ} =
+    CJ
+
 @inline DiffEqBase.get_tmp_cache(integ, alg::EK1, cache) = (cache.tmp, cache.atmp)
 OrdinaryDiffEq.get_chunksize(alg::AbstractEK) = Val(0)
 OrdinaryDiffEq.isfsal(alg::AbstractEK) = false
