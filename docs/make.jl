@@ -9,6 +9,7 @@ makedocs(
         "Home" => "index.md",
         "Tutorials" => [
             "Introduction to ODE Filters" => "getting_started.md"
+            "Second Order ODEs and Energy Preservation" => "dynamical_odes.md"
             "Differential Algebraic Equations" => "dae.md"
         ],
         "Solvers and Options" => "solvers.md",

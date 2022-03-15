@@ -11,8 +11,8 @@ In this tutorial, we consider a
 described by an ODE of the form
 ```math
 \begin{aligned}
-\dot{y}_1(t) &= c (y_1 - \frac{y_1^3}{3} + y_2) \\
-\dot{y}_2(t) &= -\frac{1}{c} (y_1 - a - b y_2)
+\dot{y}_1 &= c (y_1 - \frac{y_1^3}{3} + y_2) \\
+\dot{y}_2 &= -\frac{1}{c} (y_1 - a - b y_2)
 \end{aligned}
 ```
 on a time span ``t \in [0, T]``, with initial value ``y(0) = y_0``.
