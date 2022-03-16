@@ -37,7 +37,14 @@ zero. Additional arguments and keyword arguments for the `DiscreteCallback` can 
 - `maxiters::Int`: Maximum number of IEKF iterations.
   Setting this to 1 results in a single standard EKF update.
 """
-function ManifoldUpdate(residual::Function, args...; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15, kwargs...)
+function ManifoldUpdate(
+    residual::Function,
+    args...;
+    maxiters=100,
+    ϵ₁=1e-25,
+    ϵ₂=1e-15,
+    kwargs...,
+)
     condition(u, t, integ) = true
     affect!(integ) = manifoldupdate!(integ, residual; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂)
     return DiscreteCallback(condition, affect!, args...; kwargs...)
