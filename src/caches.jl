@@ -101,9 +101,6 @@ function OrdinaryDiffEq.alg_cache(
     end
 
     is_secondorder_ode = f isa DynamicalODEFunction
-    if is_secondorder_ode
-        @warn "Assuming that the given ODE is a SecondOrderODE. If this is not the case, e.g. because it is some other dynamical ODE, the solver will probably run into errors!"
-    end
 
     q = alg.order
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
