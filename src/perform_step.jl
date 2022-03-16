@@ -1,6 +1,7 @@
 # Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
 function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
-    if integ.f isa DynamicalODEFunction && !(integ.sol.prob.problem_type isa SecondOrderODEProblem)
+    if integ.f isa DynamicalODEFunction &&
+       !(integ.sol.prob.problem_type isa SecondOrderODEProblem)
         error("""
             The given problem is a `DynamicalODEProblem`, but not a \
             `SecondOrderODEProblem`. This can not be handled by ProbNumDiffEq.jl right \
