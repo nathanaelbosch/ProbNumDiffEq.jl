@@ -10,9 +10,11 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
 
     @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
 
-    # Initialize on u0
-    condition_on!(x, Proj(0), view(u, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
-    f(du, u, p, t)
+    # Initialize on u0; taking special care for DynamicalODEProblems
+    is_secondorder = integ.f isa DynamicalODEFunction
+    _u = is_secondorder ? view(u.x[2], :) : view(u, :)
+    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.destats.nf += 1
     condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
@@ -76,7 +78,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     integ.destats.ncondition += sol.destats.ncondition
 
     # Filter & smooth to fit these values!
-    us = [view(u, :) for u in sol.u]
+    us = [u for u in sol.u]
     return rk_init_improve(integ, cache, sol.t, us, dt)
 end
 
@@ -95,6 +97,8 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
 
     # Filter through the data forwards
     for (i, (t, u)) in enumerate(zip(ts, us))
+        (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
+        u = view(u, :) # just in case the problem is matrix-valued
         predict_mean!(x_pred, x, A)
         predict_cov!(x_pred, x, A, Q, cache.C1, cache.default_diffusion)
         push!(preds, copy(x_pred))

@@ -43,8 +43,8 @@ end
 end
 
 @testset "ClassicSolverInit for SecondOrderODEProblems" begin
-    @test_broken solve(prob_iip, EK1(initialization=ClassicSolverInit())) isa
-                 ProbNumDiffEq.ProbODESolution
+    @test solve(prob_iip, EK1(initialization=ClassicSolverInit())) isa
+          ProbNumDiffEq.ProbODESolution
 end
 
 @testset "Fixed Diffusion" begin
