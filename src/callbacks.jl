@@ -52,6 +52,11 @@ Update the state to satisfy a zero residual function via iterated extended Kalma
 performs an iterated extended Kalman filter update to keep the residual measurement to be
 zero. Additional arguments and keyword arguments for the `DiscreteCallback` can be passed.
 
+The residual function should be `residual(u::AbstractVector)::AbstractVector`, that is
+_it should not be in-place_ (whereas DiffEqCallback.jl's `ManifoldProjection`) is.
+If you encounter `SingularException`s, make sure that the residual function is such that
+its Jacobian has full rank.
+
 # Additional keyword arguments
 - `maxiters::Int`: Maximum number of IEKF iterations.
   Setting this to 1 results in a single standard EKF update.
