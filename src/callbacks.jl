@@ -1,27 +1,46 @@
 function manifoldupdate!(integ, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
-    @unpack x, SolProj = integ.cache
-    f(m) = residualf(SolProj * m)
-    return copy!(x, manifoldupdate(x, f; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂))
-end
+    m, C = integ.cache.x
 
-function manifoldupdate(x, f; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
-    m, C = x
+    # Create some caches
+    @unpack SolProj, tmp, H, x_tmp, x_tmp2 = integ.cache
+    z_tmp = residualf(mul!(tmp, SolProj, m))
+    result = DiffResults.JacobianResult(z_tmp, tmp)
+    d = length(z_tmp)
+    H = H[1:d, :]
+    S = SquarerootMatrix(C.squareroot[1:d, :], C.mat[1:d, 1:d])
+    m_tmp, C_tmp = x_tmp
+
     m_i = copy(m)
-
     local m_i_new, C_i_new
     for i in 1:maxiters
-        z = f(m_i)
-        J = ForwardDiff.jacobian(f, m_i)
-        S = X_A_Xt(C, J)
+        u_i = mul!(tmp, SolProj, m_i)
 
-        m_i_new, C_i_new = update(x, Gaussian(z .+ (J * (m - m_i)), S), J)
+        ForwardDiff.jacobian!(result, residualf, u_i)
+        z = DiffResults.value(result)
+        J = DiffResults.jacobian(result)
 
-        if norm(m_i_new .- m_i) < ϵ₁ && norm(z) < ϵ₂
+        mul!(H, J, SolProj)
+        X_A_Xt!(S, C, H)
+
+        # m_i_new, C_i_new = update(x, Gaussian(z .+ (H * (m - m_i)), S), H)
+        # More efficient update with less allocations:
+        K = C * (H' / S)
+        m_tmp .= m_i .- m
+        mul!(z_tmp, H, m_tmp)
+        z_tmp .-= z
+        mul!(m_tmp, K, z_tmp)
+        m_i_new = m_tmp .+= m
+
+        if (norm(m_i_new .- m_i) < ϵ₁ && norm(z) < ϵ₂) || (i == maxiters)
+            C_i_new = X_A_Xt!(C_tmp, C, (I - K * H))
             break
         end
         m_i = m_i_new
     end
-    return Gaussian(m_i_new, C_i_new)
+
+    copy!(integ.cache.x, Gaussian(m_i_new, C_i_new))
+
+    return nothing
 end
 
 """
