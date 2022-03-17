@@ -28,7 +28,6 @@ using TaylorIntegration
 using UnPack
 using RecipesBase
 using RecursiveArrayTools
-using StaticArrays
 using ForwardDiff
 using Tullio
 # By default use mul!
