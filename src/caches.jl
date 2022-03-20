@@ -139,7 +139,6 @@ function OrdinaryDiffEq.alg_cache(
     H = f isa DynamicalODEFunction ? copy(E2) : copy(E1)
     du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
     ddu = f isa DynamicalODEFunction ? zeros(uElType, d, 2d) : zeros(uElType, d, d)
-    v, S = similar(h), similar(ddu)
     v = similar(h)
     S =
     # alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
@@ -183,8 +182,12 @@ function OrdinaryDiffEq.alg_cache(
     uf = get_uf(f, t, p, Val(IIP))
     du1 = similar(rate_prototype)
     dw1 = zero(u)
-    jac_config = OrdinaryDiffEq.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
     atmp = similar(u, uEltypeNoUnits)
+    if OrdinaryDiffEq.isimplicit(alg)
+        jac_config = OrdinaryDiffEq.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
+    else
+        jac_config = nothing
+    end
 
     return GaussianODEFilterCache{
         typeof(R),
