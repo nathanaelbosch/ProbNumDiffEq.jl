@@ -1,7 +1,7 @@
 # const PSDGaussian{T} = Gaussian{Vector{T}, PSDMatrix{T}}
 # const PSDGaussianList{T} = StructArray{PSDGaussian{T}}
-const SRGaussian{T,S,M} = Gaussian{Vector{T},SRMatrix{T,S,M}}
-const SRGaussianList{T,S,M} = StructArray{SRGaussian{T,S,M}}
+const SRGaussian{T,S} = Gaussian{Vector{T},SRMatrix{T,S}}
+const SRGaussianList{T,S} = StructArray{SRGaussian{T,S}}
 
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 similar(P::Gaussian) = Gaussian(similar(P.μ), similar(P.Σ))

@@ -128,7 +128,7 @@ function OrdinaryDiffEq.alg_cache(
     initial_variance = ones(uElType, D)
     x0 = Gaussian(
         zeros(uElType, D),
-        SRMatrix(diagm(sqrt.(initial_variance)), diagm(initial_variance)),
+        SRMatrix(diagm(sqrt.(initial_variance))),
     )
 
     # Measurement model
@@ -142,21 +142,21 @@ function OrdinaryDiffEq.alg_cache(
     v = similar(h)
     S =
     # alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
+        SRMatrix(zeros(uElType, D, d))
     measurement = Gaussian(v, S)
     pu_tmp =
         f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, 2d, D))) : similar(measurement)
+        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, D, 2d))) : similar(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
-    C1 = SRMatrix(zeros(uElType, D, 2D), zeros(uElType, D, D))
-    C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
+    C1 = SRMatrix(zeros(uElType, 2D, D))
+    C2 = SRMatrix(zeros(uElType, 3D, D))
     covmatcache = similar(G)
 
     if alg isa EK1FDB
         H = [E1; E2]
         v = [v; v]
-        S = SRMatrix(zeros(uElType, 2d, D), zeros(uElType, 2d, 2d))
+        S = SRMatrix(zeros(uElType, D, 2d))
         measurement = Gaussian(v, S)
         K = zeros(uElType, D, 2d)
     end

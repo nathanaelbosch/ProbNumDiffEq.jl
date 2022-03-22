@@ -59,13 +59,14 @@ function condition_on!(
     S = Scache
 
     X_A_Xt!(S, x.Σ, H)
-    @assert isdiag(S)
-    S_diag = diag(S)
+    Sm = Matrix(S)
+    @assert isdiag(Sm)
+    S_diag = diag(Matrix(Sm))
     if any(iszero.(S_diag)) # could happen with a singular mass-matrix
         S_diag .+= 1e-20
     end
 
-    _matmul!(Kcache, x.Σ.mat, H')
+    _matmul!(Kcache, Matrix(x.Σ), H')
     K = Kcache ./= S_diag'
 
     # x.μ .+= K*(data - z)

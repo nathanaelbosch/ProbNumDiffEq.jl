@@ -14,7 +14,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     @assert length(0:q) == length(f_derivatives)
     m_cache = Gaussian(
         zeros(eltype(u), d),
-        SRMatrix(zeros(eltype(u), d, D), zeros(eltype(u), d, d)),
+        SRMatrix(zeros(eltype(u), D, d)),
     )
     for (o, df) in zip(0:q, f_derivatives)
         if f isa DynamicalODEFunction
@@ -27,7 +27,8 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[:]
         end
 
-        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        Mcache = Matrix(x_tmp2.Σ) # TODO remove this
+        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, Mcache)
     end
 end
 

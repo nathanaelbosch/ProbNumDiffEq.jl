@@ -137,16 +137,11 @@ function local_scalar_diffusion(integ)
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     X_A_Xt!(HQH, Qh, H)
-    if HQH.mat isa Diagonal
-        e .= z ./ HQH.mat.diag
-        σ² = dot(e, z) / d
-        return σ²
-    else
-        C = cholesky!(HQH.mat)
-        ldiv!(e, C, z)
-        σ² = dot(z, e) / d
-        return σ²
-    end
+    HQHmat = Matrix(HQH)
+    C = cholesky!(HQHmat)
+    ldiv!(e, C, z)
+    σ² = dot(z, e) / d
+    return σ²
 end
 
 """

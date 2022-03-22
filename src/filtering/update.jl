@@ -67,7 +67,7 @@ function update!(
     D = length(m_p)
 
     # K = P_p * H' / S
-    S_chol = cholesky!(S)
+    S_chol = Cholesky(choleskify_factor(S).R)
     K = _matmul!(K_cache, Matrix(P_p), H')
     rdiv!(K, S_chol)
 

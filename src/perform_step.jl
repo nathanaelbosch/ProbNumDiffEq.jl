@@ -301,7 +301,7 @@ compute_measurement_covariance!(cache) =
 function update!(integ, prediction)
     @unpack measurement, H, R, x_filt = integ.cache
     @unpack K1, K2, x_tmp2, m_tmp = integ.cache
-    update!(x_filt, prediction, measurement, H, K1, x_tmp2.Σ.mat, m_tmp.Σ)
+    update!(x_filt, prediction, measurement, H, K1, Matrix(x_tmp2.Σ), m_tmp.Σ)
     return x_filt
 end
 
@@ -352,7 +352,7 @@ Computes a local error estimate, as
 E_i = ( σ_{loc}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
 ```
 To save allocations, the function modifies the given `cache` and writes into
-`cache.m_tmp.Σ.squareroot` during some computations.
+`cache.m_tmp.Σ.R` during some computations.
 """
 function estimate_errors!(cache::GaussianODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
@@ -361,17 +361,17 @@ function estimate_errors!(cache::GaussianODEFilterCache)
         return Inf
     end
 
-    L = cache.m_tmp.Σ.squareroot
+    R = cache.m_tmp.Σ.R
 
     if local_diffusion isa Diagonal
+        error("not implemented")
         _matmul!(L, H, sqrt.(local_diffusion) * Qh.squareroot)
         error_estimate = sqrt.(diag(L * L'))
         return view(error_estimate, 1:d)
-
     elseif local_diffusion isa Number
-        _matmul!(L, H, Qh.squareroot)
+        _matmul!(R, Qh.R, H')
         # error_estimate = local_diffusion .* diag(L*L')
-        @tullio error_estimate[i] := L[i, j] * L[i, j]
+        @tullio error_estimate[i] := R[i, j] * R[i, j]
         error_estimate .*= local_diffusion
 
         # @info "it's small anyways I guess?" error_estimate cache.measurement.μ .^ 2

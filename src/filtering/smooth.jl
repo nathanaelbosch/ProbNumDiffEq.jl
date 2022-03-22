@@ -84,7 +84,7 @@ function smooth!(
     x_curr::SRGaussian,
     x_next::SRGaussian,
     Ah::AbstractMatrix,
-    Qh::SquarerootMatrix,
+    Qh::SRMatrix,
     cache::GaussianODEFilterCache,
     diffusion::Union{Number,Diagonal}=1,
 )

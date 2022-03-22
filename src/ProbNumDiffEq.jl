@@ -60,16 +60,10 @@ _matmul!(
     B::AbstractVecOrMat{T},
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
-# @reexport using PSDMatrices
-# import PSDMatrices: X_A_Xt
-include("squarerootmatrix.jl")
-const SRMatrix = SquarerootMatrix
-export SRMatrix
-X_A_Xt(A, X) = X * A * X'
-X_A_Xt!(out, A, X) = (out .= X * A * X')
+@reexport using PSDMatrices
+const SRMatrix = PSDMatrix
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::SRMatrix, diffusion::Number) =
-    SRMatrix(sqrt.(diffusion) * Q.squareroot, diffusion * Q.mat)
+apply_diffusion(Q::SRMatrix, diffusion::Number) = SRMatrix(sqrt.(diffusion) * Q.R)
 
 # All the Gaussian things
 @reexport using GaussianDistributions
@@ -115,19 +109,19 @@ export ManifoldUpdate
 
 # Do as they do here:
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/v5.61.1/src/OrdinaryDiffEq.jl#L175-L193
-let
-    while true
-        function lorenz(du, u, p, t)
-            du[1] = 10.0(u[2] - u[1])
-            du[2] = u[1] * (28.0 - u[3]) - u[2]
-            return du[3] = u[1] * u[2] - (8 / 3) * u[3]
-        end
+# let
+#     while true
+#         function lorenz(du, u, p, t)
+#             du[1] = 10.0(u[2] - u[1])
+#             du[2] = u[1] * (28.0 - u[3]) - u[2]
+#             return du[3] = u[1] * u[2] - (8 / 3) * u[3]
+#         end
 
-        lorenzprob = ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        solve(lorenzprob, EK0())
-        solve(lorenzprob, EK1())
-        break
-    end
-end
+#         lorenzprob = ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
+#         solve(lorenzprob, EK0())
+#         solve(lorenzprob, EK1())
+#         break
+#     end
+# end
 
 end
