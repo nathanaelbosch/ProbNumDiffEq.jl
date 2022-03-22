@@ -371,7 +371,7 @@ function estimate_errors!(cache::GaussianODEFilterCache)
     elseif local_diffusion isa Number
         _matmul!(R, Qh.R, H')
         # error_estimate = local_diffusion .* diag(L*L')
-        @tullio error_estimate[i] := R[i, j] * R[i, j]
+        @tullio error_estimate[i] := R[j, i] * R[j, i]
         error_estimate .*= local_diffusion
 
         # @info "it's small anyways I guess?" error_estimate cache.measurement.μ .^ 2
