@@ -21,7 +21,7 @@ import Base: copy, copy!, show, size, ndims, similar
 stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
-import LinearAlgebra: mul!
+import LinearAlgebra: mul!, diag
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays
@@ -61,6 +61,7 @@ _matmul!(
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 @reexport using PSDMatrices
+import PSDMatrices: X_A_Xt, X_A_Xt!
 const SRMatrix = PSDMatrix
 export SRMatrix
 diag(S::SRMatrix) = map(c -> sum(abs2, c), eachcol(S.R))

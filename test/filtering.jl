@@ -10,12 +10,12 @@ using LinearAlgebra
     # Setup
     d = 5
     m = rand(d)
-    L_p = Matrix(LowerTriangular(rand(d, d)))
-    P = L_p * L_p'
+    R_p = Matrix(LowerTriangular(rand(d, d)))
+    P = R_p'R_p
 
     A = rand(d, d)
-    L_Q = Matrix(LowerTriangular(rand(d, d)))
-    Q = L_Q * L_Q'
+    R_Q = Matrix(LowerTriangular(rand(d, d)))
+    Q = R_Q'R_Q
 
     # PREDICT
     m_p = A * m
@@ -31,13 +31,13 @@ using LinearAlgebra
     end
 
     @testset "predict! with SRMatrix" begin
-        x_curr = Gaussian(m, SRMatrix(L_p))
+        x_curr = Gaussian(m, SRMatrix(R_p))
         x_out = copy(x_curr)
-        Q_SR = SRMatrix(L_Q)
-        cache = SRMatrix(zeros(d, 2d))
+        Q_SR = SRMatrix(R_Q)
+        cache = SRMatrix(zeros(2d, d))
         ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, cache)
         @test m_p == x_out.μ
-        @test P_p ≈ x_out.Σ
+        @test P_p ≈ Matrix(x_out.Σ)
     end
 end
 
@@ -45,14 +45,14 @@ end
     # Setup
     d = 5
     m_p = rand(d)
-    L_P_p = Matrix(LowerTriangular(rand(d, d)))
-    P_p = L_P_p * L_P_p'
+    R_P_p = Matrix(LowerTriangular(rand(d, d)))
+    P_p = R_P_p'R_P_p
 
     # Measure
     o = 3
     H = rand(o, d)
-    L_R = 0.0 * rand(o, o)
-    R = L_R * L_R'
+    R_R = 0.0 * rand(o, o)
+    R = R_R'R_R
 
     z_data = zeros(o)
     z = H * m_p
@@ -80,7 +80,7 @@ end
         m_tmp = copy(measurement)
         ProbNumDiffEq.update!(x_out, x_pred, measurement, H, K_cache, M_cache, m_tmp.Σ)
         @test m ≈ x_out.μ
-        @test P ≈ x_out.Σ
+        @test P ≈ Matrix(x_out.Σ)
     end
 end
 
@@ -88,13 +88,13 @@ end
     # Setup
     d = 5
     m, m_s = rand(d), rand(d)
-    L_P, L_P_s = Matrix(LowerTriangular(rand(d, d))), Matrix(LowerTriangular(rand(d, d)))
-    P, P_s = L_P * L_P', L_P_s * L_P_s'
+    R_P, R_P_s = Matrix(LowerTriangular(rand(d, d))), Matrix(LowerTriangular(rand(d, d)))
+    P, P_s = R_P'R_P, R_P_s'R_P_s
 
     A = rand(d, d)
-    L_Q = Matrix(LowerTriangular(rand(d, d)))
-    Q = L_Q * L_Q'
-    Q_SR = SRMatrix(L_Q)
+    R_Q = Matrix(LowerTriangular(rand(d, d)))
+    Q = R_Q'R_Q
+    Q_SR = SRMatrix(R_Q)
 
     # PREDICT first
     m_p = A * m
@@ -105,8 +105,8 @@ end
     m_smoothed = m + G * (m_s - m_p)
     P_smoothed = P + G * (P_s - P_p) * G'
 
-    x_curr = Gaussian(m, SRMatrix(L_P))
-    x_smoothed = Gaussian(m_s, SRMatrix(L_P_s))
+    x_curr = Gaussian(m, P)
+    x_smoothed = Gaussian(m_s, P_s)
 
     @testset "smooth" begin
         x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q)
@@ -114,10 +114,10 @@ end
         @test P_smoothed ≈ x_out.Σ
     end
     @testset "smooth with SRMatrix" begin
-        x_curr = Gaussian(m, SRMatrix(L_P))
-        x_smoothed = Gaussian(m_s, SRMatrix(L_P_s))
+        x_curr = Gaussian(m, SRMatrix(R_P))
+        x_smoothed = Gaussian(m_s, SRMatrix(R_P_s))
         x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q_SR)
         @test m_smoothed ≈ x_out.μ
-        @test P_smoothed ≈ x_out.Σ
+        @test P_smoothed ≈ Matrix(x_out.Σ)
     end
 end

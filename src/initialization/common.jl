@@ -61,7 +61,7 @@ function condition_on!(
     X_A_Xt!(S, x.Σ, H)
     Sm = Matrix(S)
     @assert isdiag(Sm)
-    S_diag = diag(Matrix(Sm))
+    S_diag = diag(Sm)
     if any(iszero.(S_diag)) # could happen with a singular mass-matrix
         S_diag .+= 1e-20
     end

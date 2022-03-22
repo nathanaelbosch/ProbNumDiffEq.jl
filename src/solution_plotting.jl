@@ -17,7 +17,7 @@
         times = times[tstart.<=times.<=tend]
     end
     values = stack(mean(sol_rvs))
-    stds = stack(diag.(Matrix.(sol_rvs.Σ)))
+    stds = stack(diag.(sol_rvs.Σ))
 
     if isnothing(vars)
         ribbon --> ribbon_width * stds

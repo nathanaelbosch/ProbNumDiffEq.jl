@@ -37,7 +37,7 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
 
     @testset "Correct initial values" begin
         @test sol.pu[1].μ == prob.u0
-        @test iszero(sol.pu[1].Σ)
+        @test iszero(sol.pu[1].Σ.R)
     end
 
     # Interpolation

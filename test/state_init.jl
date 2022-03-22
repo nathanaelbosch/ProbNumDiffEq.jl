@@ -85,8 +85,8 @@ end
             _tm = Proj1(i) * tm_init
             err = _rk .- _tm
             C = ProbNumDiffEq.X_A_Xt(integ2.cache.x.Σ, Proj2(i))
-            @assert isdiag(C)
-            whitened_err = err ./ sqrt.(diag(C.mat))
+            @assert isdiag(Matrix(C))
+            whitened_err = err ./ sqrt.(diag(C))
             @test all(abs.(whitened_err) .< 4e-1)
         end
     end
