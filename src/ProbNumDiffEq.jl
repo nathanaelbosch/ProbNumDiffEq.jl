@@ -62,6 +62,7 @@ _matmul!(
 
 @reexport using PSDMatrices
 const SRMatrix = PSDMatrix
+export SRMatrix
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
 apply_diffusion(Q::SRMatrix, diffusion::Number) = SRMatrix(sqrt.(diffusion) * Q.R)
 

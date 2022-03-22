@@ -146,12 +146,12 @@ function OrdinaryDiffEq.alg_cache(
     measurement = Gaussian(v, S)
     pu_tmp =
         f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, D, 2d))) : similar(measurement)
+        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, D, 2d))) : copy(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     C1 = SRMatrix(zeros(uElType, 2D, D))
     C2 = SRMatrix(zeros(uElType, 3D, D))
-    covmatcache = similar(G)
+    covmatcache = copy(G)
 
     if alg isa EK1FDB
         H = [E1; E2]
@@ -166,17 +166,17 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     Ah, Qh = copy(A), copy(Q)
-    u_pred = similar(u)
-    u_filt = similar(u)
-    tmp = similar(u)
+    u_pred = copy(u)
+    u_filt = copy(u)
+    tmp = copy(u)
     x_pred = copy(x0)
-    x_filt = similar(x0)
-    x_tmp = similar(x0)
-    x_tmp2 = similar(x0)
-    m_tmp = similar(measurement)
-    K2 = similar(K)
-    G2 = similar(G)
-    err_tmp = similar(du)
+    x_filt = copy(x0)
+    x_tmp = copy(x0)
+    x_tmp2 = copy(x0)
+    m_tmp = copy(measurement)
+    K2 = copy(K)
+    G2 = copy(G)
+    err_tmp = copy(du)
 
     # Things for calc_J
     uf = get_uf(f, t, p, Val(IIP))

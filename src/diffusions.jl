@@ -54,14 +54,10 @@ function estimate_global_diffusion(rule::FixedDiffusion, integ)
     # sol_diffusions = integ.sol.diffusions
 
     v, S = measurement.μ, measurement.Σ
-    e, _ = m_tmp.μ, m_tmp.Σ.mat
-    _S = copy!(m_tmp.Σ.mat, S.mat)
-    if _S isa Diagonal
-        e .= v ./ _S.diag
-    else
-        S_chol = cholesky!(_S)
-        ldiv!(e, S_chol, v)
-    end
+    e = m_tmp.μ
+    _S = Matrix(S)
+    S_chol = cholesky!(_S)
+    ldiv!(e, S_chol, v)
     diffusion_t = dot(v, e) / d
 
     if integ.success_iter == 0
@@ -101,7 +97,9 @@ function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
     @unpack q, measurement = integ.cache
 
     v, S = measurement.μ, measurement.Σ
-    S_11 = diag(S)[1]
+    # S_11 = diag(S)[1]
+    c1 = view(S.R, :, 1)
+    S_11 = dot(c1, c1)
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
@@ -163,7 +161,9 @@ function local_diagonal_diffusion(integ)
     @unpack q, H, Qh, measurement, m_tmp = integ.cache
     z = measurement.μ
     HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
-    Q0_11 = diag(HQH)[1]
+    # Q0_11 = diag(HQH)[1]
+    c1 = view(HQH.R, :, 1)
+    Q0_11 = dot(c1, c1)
 
     Σ_ii = z .^ 2 ./ Q0_11
     # Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))

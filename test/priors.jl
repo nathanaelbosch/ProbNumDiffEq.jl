@@ -44,7 +44,7 @@ end
     d, q = 2, 2
 
     A, Q = ProbNumDiffEq.ibm(d, q)
-    Qh = Q * σ^2
+    Qh = SRMatrix(σ*Q.R)
 
     AH_22_PRE = [
         1 2 1 0 0 0
@@ -65,8 +65,8 @@ end
             0 0 0 1/3 1/2 1/1
         ]
 
-    @test AH_22_PRE ≈ A
-    @test QH_22_PRE ≈ Qh
+    @test AH_22_PRE ≈ Matrix(A)
+    @test QH_22_PRE ≈ Matrix(Qh)
 end
 
 @testset "Verify correct prior dim" begin

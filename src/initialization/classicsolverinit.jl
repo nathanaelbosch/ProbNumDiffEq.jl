@@ -13,10 +13,11 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    Mcache = Matrix(x_tmp2.Σ) # TODO remove
+    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, Mcache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.destats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, Mcache)
 
     if q < 2
         return
@@ -33,7 +34,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, Mcache)
         if q < 3
             return
         end
@@ -96,6 +97,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
     filts = [copy(x)]
 
     # Filter through the data forwards
+    M_cache, S_cache = Matrix(cache.x_tmp2.Σ), cache.m_tmp.Σ
     for (i, (t, u)) in enumerate(zip(ts, us))
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
         u = view(u, :) # just in case the problem is matrix-valued
@@ -107,7 +109,6 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         measurement.μ .= H * x_pred.μ .- u
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
-        M_cache, S_cache = cache.x_tmp2.Σ.mat, cache.m_tmp.Σ
         update!(x_filt, x_pred, measurement, H, cache.K1, M_cache, S_cache)
         push!(filts, copy(x_filt))
 
