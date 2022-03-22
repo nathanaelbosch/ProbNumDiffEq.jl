@@ -51,19 +51,19 @@ function smooth(
     x_pred = predict(x_curr, Ah, Qh)
 
     P_p = x_pred.Σ
-    P_p_inv = inv(P_p)
+    # P_p_inv = inv(P_p)
 
-    G = x_curr.Σ * Ah' * P_p_inv
+    G = Matrix(x_curr.Σ) * Ah' / P_p
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
 
     _R = [
-        x_curr.Σ.squareroot' * (I - G * Ah)'
-        Qh.squareroot' * G'
-        x_next_smoothed.Σ.squareroot' * G'
+        x_curr.Σ.R * (I - G * Ah)'
+        Qh.R * G'
+        x_next_smoothed.Σ.R * G'
     ]
-    _, P_s_R = qr(_R)
-    smoothed_cov = SRMatrix(P_s_R')
+    P_s_R = qr(_R).R
+    smoothed_cov = SRMatrix(P_s_R)
 
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, G
@@ -101,32 +101,29 @@ function smooth!(
 
     # Smoothing
     # G = x_curr.Σ * Ah' * P_p_inv
-    P_p_chol = Cholesky(x_pred.Σ.squareroot, :L, 0)
-    G = rdiv!(_matmul!(G1, x_curr.Σ.mat, Ah'), P_p_chol)
+    P_p_chol = Cholesky(x_pred.Σ.R, :U, 0)
+    G = rdiv!(_matmul!(G1, Matrix(x_curr.Σ), Ah'), P_p_chol)
 
     # x_curr.μ .+= G * (x_next.μ .- x_pred.μ) # less allocations:
     x_pred.μ .-= x_next.μ
     _matmul!(x_curr.μ, G, x_pred.μ, -1, 1)
 
     # Joseph-Form:
-    M, L = C2.mat, C2.squareroot
+    M, L = Matrix(C2), C2.R'
 
     _matmul!(G2, G, Ah)
-    copy!(view(L, 1:D, 1:D), x_curr.Σ.squareroot)
-    _matmul!(view(L, 1:D, 1:D), G2, x_curr.Σ.squareroot, -1.0, 1.0)
+    copy!(view(L, 1:D, 1:D), x_curr.Σ.R')
+    _matmul!(view(L, 1:D, 1:D), G2, x_curr.Σ.R', -1.0, 1.0)
 
-    _matmul!(view(L, 1:D, D+1:2D), _matmul!(G2, G, sqrt.(diffusion)), Qh.squareroot)
-    _matmul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.squareroot)
+    _matmul!(view(L, 1:D, D+1:2D), _matmul!(G2, G, sqrt.(diffusion)), Qh.R')
+    _matmul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.R')
 
     # _matmul!(M, L, L')
     # chol = cholesky!(Symmetric(M), check=false)
     succ = false && issuccess(chol)
 
-    QL =
-        succ ? Matrix(chol.U)' :
-        eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
-    copy!(x_curr.Σ.squareroot, QL)
-    _matmul!(x_curr.Σ.mat, QL, QL')
+    Q_R = succ ? Matrix(chol.U) : qr(L').R
+    copy!(x_curr.Σ.R, Q_R)
 
     return nothing
 end
