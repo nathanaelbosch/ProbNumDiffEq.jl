@@ -103,7 +103,7 @@ end
 
             e = m0'm0
             H = 2m0'E0
-            SR = P.R*H'
+            SR = P.R * H'
             S = SR'SR
 
             S_inv = inv(S)
