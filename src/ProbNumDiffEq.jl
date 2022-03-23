@@ -64,7 +64,6 @@ _matmul!(
 import PSDMatrices: X_A_Xt, X_A_Xt!
 const SRMatrix = PSDMatrix
 export SRMatrix
-diag(S::SRMatrix) = map(c -> sum(abs2, c), eachcol(S.R))
 X_A_Xt(A, X) = X * A * X'
 X_A_Xt!(out, A, X) = (out .= X * A * X')
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
