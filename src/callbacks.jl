@@ -73,3 +73,43 @@ function ManifoldUpdate(
     affect!(integ) = manifoldupdate!(integ, residual; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂)
     return DiscreteCallback(condition, affect!, args...; kwargs...)
 end
+
+
+
+function DataConditioningCallback(times, vals, H, σ²)
+    function affect!(integ)
+        val = vals[integ.t.==times]
+        @assert length(val) == 1
+        val = val[1]
+
+        E0 = integ.cache.E0
+        @assert integ.u ≈ E0 * integ.cache.x.μ
+
+        x = integ.cache.x_filt
+        # pu = E0 * x
+        # ll = logpdf(Gaussian(pu.μ, Matrix(pu.Σ) + σ² * I), val)
+        # integ.cache.log_likelihood += ll
+        # integ.sol.log_likelihood += ll
+
+        # Condition on the data
+        m, P = x.μ, x.Σ
+        z = H * m
+        S = H * P * H' + σ² * I
+
+        S_inv = inv(S)
+        K = P * H' * S_inv
+
+        mnew = m + K * (val .- z)
+        Pnew = X_A_Xt(P, (I - K * H)) # + X_A_Xt(R, K)
+
+        # @info m P e S K mnew
+        copy!(m, mnew)
+        copy!(P, Pnew)
+        integ.u = E0 * x.μ
+        # @assert integ.u ≈ val
+        @assert integ.u ≈ E0 * integ.cache.x_filt.μ
+        return copy!(integ.cache.x, Gaussian(mnew, Pnew))
+        # @info "after affect!" integ.u integ.cache.x_filt.μ integ.cache.x.μ
+    end
+    return PresetTimeCallback(times, affect!)
+end

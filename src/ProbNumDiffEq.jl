@@ -7,6 +7,7 @@ using Reexport
 import DiffEqBase: check_error!, AbstractODEFunction
 using OrdinaryDiffEq
 using DiffEqDevTools
+using DiffEqCallbacks
 
 # Current working solution to depending on functions that moved from DiffEqBase to SciMLBase
 try
@@ -90,7 +91,7 @@ include("preconditioning.jl")
 
 include("devtools.jl")
 include("callbacks.jl")
-export ManifoldUpdate
+export ManifoldUpdate, DataConditioningCallback
 
 # Do as they do here:
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/v5.61.1/src/OrdinaryDiffEq.jl#L175-L193
