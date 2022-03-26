@@ -27,7 +27,8 @@ mutable struct GaussianODEFilterCache{
     uNoUnitsType,
 } <: ODEFiltersCache
     # Constants
-    d::Int                  # Dimension of the problem
+    d_y::Int                  # State dimension
+    d_z::Int                  # Measurement dimension
     q::Int                  # Order of the prior
     A::AType
     Q::QType
@@ -86,7 +87,7 @@ function OrdinaryDiffEq.alg_cache(
     ::Type{tTypeNoUnits},
     uprev,
     uprev2,
-    f,
+    m,
     t,
     dt,
     reltol,
@@ -100,11 +101,15 @@ function OrdinaryDiffEq.alg_cache(
         error("We currently don't support scalar-valued problems")
     end
 
-    is_secondorder_ode = f isa DynamicalODEFunction
+    @assert m isa SemiLinearModel
+    f = m.b
 
     q = alg.order
-    d = is_secondorder_ode ? length(u[1, :]) : length(u)
-    D = d * (q + 1)
+    d_y = length(u)
+    d_z = size(m.A, 1)
+    D = d_y * (q + 1)
+    @assert (d_z, D) == size(m.A)
+    @assert (d_y, D) == size(m.C)
 
     u_vec = u[:]
     t0 = t
@@ -115,15 +120,14 @@ function OrdinaryDiffEq.alg_cache(
     matType = Matrix{uElType}
 
     # Projections
-    Proj = projection(d, q, uElType)
+    Proj = projection(d_y, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
-    @assert f isa AbstractODEFunction
-    SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
+    SolProj = Proj(0)
 
     # Prior dynamics
-    P, PI = init_preconditioner(d, q, uElType)
+    P, PI = init_preconditioner(d_y, q, uElType)
 
-    A, Q = ibm(d, q, uElType)
+    A, Q = ibm(d_y, q, uElType)
 
     initial_variance = ones(uElType, D)
     x0 = Gaussian(
@@ -132,28 +136,25 @@ function OrdinaryDiffEq.alg_cache(
     )
 
     # Measurement model
-    R = zeros(uElType, d, d)
+    R = zeros(uElType, d_z, d_z)
 
     # Pre-allocate a bunch of matrices
-    h = zeros(uElType, d)
-    H = f isa DynamicalODEFunction ? copy(E2) : copy(E1)
-    du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
-    ddu = f isa DynamicalODEFunction ? zeros(uElType, d, 2d) : zeros(uElType, d, d)
+    h = zeros(uElType, d_z)
+    H = copy(m.A)
+    du = similar(h)
+    ddu = zeros(uElType, d_z, d_y)
     v = similar(h)
-    S =
-    # alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
+    S = SRMatrix(zeros(uElType, d_z, D), zeros(uElType, d_z, d_z))
     measurement = Gaussian(v, S)
-    pu_tmp =
-        f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, 2d, D))) : similar(measurement)
-    K = zeros(uElType, D, d)
+    pu_tmp = Gaussian(zeros(uElType, d_y), SRMatrix(zeros(uElType, d_y, D), zeros(uElType, d_y, d_y)))
+    K = zeros(uElType, D, d_z)
     G = zeros(uElType, D, D)
     C1 = SRMatrix(zeros(uElType, D, 2D), zeros(uElType, D, D))
     C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
     covmatcache = similar(G)
 
     if alg isa EK1FDB
+        error("Not supported right now")
         H = [E1; E2]
         v = [v; v]
         S = SRMatrix(zeros(uElType, 2d, D), zeros(uElType, 2d, 2d))
@@ -162,7 +163,7 @@ function OrdinaryDiffEq.alg_cache(
     end
 
     diffmodel = alg.diffusionmodel
-    initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
+    initdiff = initial_diffusion(diffmodel, d_y, q, uEltypeNoUnits)
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     Ah, Qh = copy(A), copy(Q)
@@ -176,7 +177,7 @@ function OrdinaryDiffEq.alg_cache(
     m_tmp = similar(measurement)
     K2 = similar(K)
     G2 = similar(G)
-    err_tmp = similar(du)
+    err_tmp = similar(u)
 
     # Things for calc_J
     uf = get_uf(f, t, p, Val(IIP))
@@ -214,7 +215,8 @@ function OrdinaryDiffEq.alg_cache(
         typeof(atmp),
     }(
         # Constants
-        d,
+        d_y,
+        d_z,
         q,
         A,
         Q,

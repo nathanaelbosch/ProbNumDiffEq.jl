@@ -55,7 +55,7 @@ end
 
 # Used to build the initial empty solution in OrdinaryDiffEq.__init
 function DiffEqBase.build_solution(
-    prob::DiffEqBase.AbstractODEProblem,
+    prob::AbstractSemiLinearRegressionProblem,
     alg::GaussianODEFilter,
     t,
     u;
@@ -68,21 +68,20 @@ function DiffEqBase.build_solution(
     T = eltype(eltype(u))
     N = length((size(prob.u0)..., length(u)))
 
-    d = length(prob.u0)
+    d_y = length(u)
+    d_z = size(prob.measurementmodel.A, 1)
     uElType = eltype(prob.u0)
-    D = d
-    pu_cov =
-        # alg isa EK0 && !(prob.f isa DynamicalODEFunction) ?
-        # SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
-    x_cov = SRMatrix(zeros(uElType, d, d), zeros(uElType, d, d))
+    D = d_y
+    pu_cov = SRMatrix(zeros(uElType, d_y, D), zeros(uElType, d_y, d_y))
+    x_cov = SRMatrix(zeros(uElType, d_y, d_y), zeros(uElType, d_y, d_y))
     pu = StructArray{Gaussian{Vector{uElType},typeof(pu_cov)}}(undef, 0)
     x_filt = StructArray{Gaussian{Vector{uElType},typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)
 
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 
-    if DiffEqBase.has_analytic(prob.f)
+    if DiffEqBase.has_analytic(prob.measurementmodel.b)
+        error("We can't handle analytic solutions right now.")
         u_analytic = Vector{typeof(prob.u0)}()
         errors = Dict{Symbol,real(uElType)}()
     else
@@ -92,13 +91,27 @@ function DiffEqBase.build_solution(
 
     uElTypeNoUnits = OrdinaryDiffEq.recursive_unitless_bottom_eltype(u)
     q = 1
-    diffusion_prototype = initial_diffusion(alg.diffusionmodel, d, q, uElTypeNoUnits)
+    diffusion_prototype = initial_diffusion(alg.diffusionmodel, d_y, q, uElTypeNoUnits)
 
     ll = zero(uElType)
     return ProbODESolution{T,N}(
-        u, pu, u_analytic, errors, t, k, x_filt, x_smooth, typeof(diffusion_prototype)[],
-        ll, prob, alg, interp,
-        dense, 0, destats, retcode,
+        u,
+        pu,
+        u_analytic,
+        errors,
+        t,
+        k,
+        x_filt,
+        x_smooth,
+        typeof(diffusion_prototype)[],
+        ll,
+        prob,
+        alg,
+        interp,
+        dense,
+        0,
+        destats,
+        retcode,
     )
 end
 

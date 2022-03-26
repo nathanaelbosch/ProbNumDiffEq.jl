@@ -1,7 +1,10 @@
 function initial_update!(integ, cache, init::ClassicSolverInit)
     @unpack u, f, p, t = integ
-    @unpack d, x, Proj = cache
+    @unpack d_y, d_z, x, Proj = cache
     q = integ.alg.order
+    D = d_y * (q+1)
+    m = f
+    f = m.b
     @assert isinplace(f)
 
     if q > 5
@@ -13,10 +16,10 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(0), _u, m_tmp.Σ, zeros(D, d_y), x_tmp.Σ, x_tmp2.Σ.mat)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.destats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(1)[1:d_z, :], view(du, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
 
     if q < 2
         return

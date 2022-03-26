@@ -63,7 +63,7 @@ function OrdinaryDiffEq.perform_step!(
     repeat_step=false,
 )
     @unpack t, dt = integ
-    @unpack d, SolProj = integ.cache
+    @unpack d_y, d_z, SolProj = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
     @unpack x_tmp, x_tmp2 = integ.cache
     @unpack A, Q, Ah, Qh = integ.cache
@@ -79,7 +79,6 @@ function OrdinaryDiffEq.perform_step!(
 
     # Predict the mean
     predict_mean!(x_pred, x, Ah)
-    mul!(view(u_pred, :), SolProj, x_pred.μ)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -141,6 +140,7 @@ function evaluate_ode!(
     second_order::Val{false},
 )
     @unpack f, p, dt, alg = integ
+    m = f
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
@@ -149,17 +149,11 @@ function evaluate_ode!(
     z, S = measurement.μ, measurement.Σ
 
     # Mean
-    f(du, u_pred, p, t)
+    mul!(u_pred, m.C, x_pred.μ)
+    out = du
+    m.b(out, u_pred, p, t)
     integ.destats.nf += 1
-    # z .= MM*E1*x_pred.μ .- du
-    if f.mass_matrix == I
-        H .= E1
-    elseif f.mass_matrix isa UniformScaling
-        H .= f.mass_matrix.λ .* E1
-    else
-        _matmul!(H, f.mass_matrix, E1)
-    end
-
+    H .= m.A
     _matmul!(z, H, x_pred.μ)
     z .-= du[:]
 
@@ -167,12 +161,11 @@ function evaluate_ode!(
     if alg isa EK1
 
         # Jacobian is computed either with the given jac, or ForwardDiff
-        if !isnothing(f.jac)
-            f.jac(ddu, u_pred, p, t)
+        if DiffEqBase.has_jac(m.b)
+            m.b.jac(ddu, u_pred, p, t)
         else
-            !isnothing(f.jac)
             @unpack du1, uf, jac_config = integ.cache
-            uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
+            uf.f = OrdinaryDiffEq.nlsolve_f(m.b, alg)
             uf.t = t
             if !(p isa DiffEqBase.NullParameters)
                 uf.p = p
@@ -355,18 +348,21 @@ To save allocations, the function modifies the given `cache` and writes into
 `cache.m_tmp.Σ.squareroot` during some computations.
 """
 function estimate_errors!(cache::GaussianODEFilterCache)
-    @unpack local_diffusion, Qh, H, d = cache
+    @unpack local_diffusion, Qh = cache
 
     if local_diffusion isa Real && isinf(local_diffusion)
         return Inf
     end
 
-    L = cache.m_tmp.Σ.squareroot
+    # Old error estimate:
+    # H, L = cache.H, cache.m_tmp.Σ.squareroot
+    # New error estimate; needs to be tested more thoroughly though
+    H, L = cache.E0, cache.pu_tmp.Σ.squareroot
 
     if local_diffusion isa Diagonal
         _matmul!(L, H, sqrt.(local_diffusion) * Qh.squareroot)
         error_estimate = sqrt.(diag(L * L'))
-        return view(error_estimate, 1:d)
+        return error_estimate
 
     elseif local_diffusion isa Number
         _matmul!(L, H, Qh.squareroot)
@@ -378,6 +374,6 @@ function estimate_errors!(cache::GaussianODEFilterCache)
         # error_estimate .+= cache.measurement.μ .^ 2
 
         error_estimate .= sqrt.(error_estimate)
-        return view(error_estimate, 1:d)
+        return error_estimate
     end
 end

@@ -75,6 +75,9 @@ include("caches.jl")
 include("initialization/taylormode.jl")
 include("initialization/classicsolverinit.jl")
 
+include("semilinearmodels.jl")
+export SemiLinearModel, SemiLinearRegressionProblem
+
 include("solution.jl")
 include("solution_sampling.jl")
 include("solution_plotting.jl")

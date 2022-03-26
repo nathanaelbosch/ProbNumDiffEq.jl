@@ -6,9 +6,9 @@ function init_preconditioner(d, q, ::Type{elType}=typeof(1.0)) where {elType}
 end
 
 function make_preconditioners!(cache::GaussianODEFilterCache, dt)
-    @unpack P, PI, d, q = cache
-    make_preconditioner!(P, dt, d, q)
-    make_preconditioner_inv!(PI, dt, d, q)
+    @unpack P, PI, d_y, q = cache
+    make_preconditioner!(P, dt, d_y, q)
+    make_preconditioner_inv!(PI, dt, d_y, q)
     return nothing
 end
 function make_preconditioners!(post::GaussianODEFilterPosterior, dt)
