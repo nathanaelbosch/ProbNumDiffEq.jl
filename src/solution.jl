@@ -68,7 +68,7 @@ function DiffEqBase.build_solution(
     T = eltype(eltype(u))
     N = length((size(prob.u0)..., length(u)))
 
-    d_y = length(u)
+    d_y = length(prob.u0)
     d_z = size(prob.measurementmodel.A, 1)
     uElType = eltype(prob.u0)
     D = d_y
@@ -81,7 +81,7 @@ function DiffEqBase.build_solution(
     interp = GaussianODEFilterPosterior(alg, prob.u0)
 
     if DiffEqBase.has_analytic(prob.measurementmodel.b)
-        error("We can't handle analytic solutions right now.")
+        @warn "We can't reliably handle analytic solutions right now."
         u_analytic = Vector{typeof(prob.u0)}()
         errors = Dict{Symbol,real(uElType)}()
     else

@@ -51,9 +51,9 @@ end
         include("smoothing.jl")
     end
 
-    @timedtestset "Errors" begin
-        include("errors.jl")
-    end
+    # @timedtestset "Errors" begin
+    #     include("errors.jl")
+    # end
 
     @timedtestset "Automatic Differentiation" begin
         include("autodiff.jl")
