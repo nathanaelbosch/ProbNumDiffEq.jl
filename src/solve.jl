@@ -1,16 +1,5 @@
-function ode2slm(prob::DiffEqBase.AbstractODEProblem, order::Integer)
-    d = length(prob.u0)
-    D = d * (order+1)
-    uElType = eltype(prob.u0)
-    E1 = ProbNumDiffEq.stack([(r = zeros(uElType, D); r[(_d-1)*(order+1)+1+1] = 1; r) for _d in 1:d])
-    E0 = ProbNumDiffEq.stack([(r = zeros(uElType, D); r[(_d-1)*(order+1)+1] = 1; r) for _d in 1:d])
-    model = SemiLinearModel(E1, prob.f, E0)
-    slrp = SemiLinearRegressionProblem(model, prob.u0, prob.tspan, prob.p)
-    return slrp
-end
-
 function DiffEqBase.__init(prob::DiffEqBase.AbstractODEProblem, alg::GaussianODEFilter, args...; kwargs...)
-    return DiffEqBase.init(ode2slm(prob, alg.order), alg, args...; kwargs...)
+    return DiffEqBase.init(SemiLinearRegressionProblem(prob, alg.order), alg, args...; kwargs...)
 end
 
 function DiffEqBase.__init(

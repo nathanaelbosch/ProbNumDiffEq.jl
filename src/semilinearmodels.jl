@@ -12,21 +12,61 @@ SemiLinearModel(A, b, C) = SemiLinearModel{typeof(A),typeof(b),typeof(C),true}(A
 end
 
 abstract type AbstractSemiLinearRegressionProblem{IIP} <: SciMLBase.SciMLProblem end
-struct SemiLinearRegressionProblem{IIP,mType,uType,tType,pType,fType} <: AbstractSemiLinearRegressionProblem{IIP}
+struct SemiLinearRegressionProblem{IIP,mType,uType,tType,pType,fType} <:
+       AbstractSemiLinearRegressionProblem{IIP}
     measurementmodel::mType
     u0::uType
     tspan::tType
     p::pType
     f::fType
 end
-SemiLinearRegressionProblem(model::AbstractSemiLinearModel{IIP}, u0, tspan, p) where {IIP} = begin
-    f = model.b
-    SemiLinearRegressionProblem{IIP, typeof(model), typeof(u0), typeof(tspan), typeof(p), typeof(f)}(
-        model, u0, tspan, p, f
-    )
-end
+SemiLinearRegressionProblem(model::AbstractSemiLinearModel{IIP}, u0, tspan, p) where {IIP} =
+    begin
+        f = model.b
+        SemiLinearRegressionProblem{
+            IIP,
+            typeof(model),
+            typeof(u0),
+            typeof(tspan),
+            typeof(p),
+            typeof(f),
+        }(
+            model,
+            u0,
+            tspan,
+            p,
+            f,
+        )
+    end
 SciMLBase.isinplace(prob::AbstractSemiLinearRegressionProblem{IIP}) where {IIP} = IIP
 
+function SemiLinearRegressionProblem(
+    prob::DiffEqBase.ODEProblem{uT,tT,IIP,P,F,K,SciMLBase.StandardODEProblem},
+    order::Integer,
+) where {uT,tT,IIP,P,F,K}
+    proj = projection(length(prob.u0), order, eltype(prob.u0))
+    E0, E1 = proj(0), proj(1)
+    model = SemiLinearModel(prob.f.mass_matrix * E1, prob.f, E0)
+    return SemiLinearRegressionProblem(model, prob.u0, prob.tspan, prob.p)
+end
+
+function SemiLinearRegressionProblem(prob::DiffEqBase.DAEProblem, order::Integer)
+    d = length(prob.u0)
+    proj = projection(d, order, eltype(prob.u0))
+    A = zeros(d, d)
+    C = [proj(1); proj(0)]
+    b(out, u, p, t) = prob.f(out, view(u, 1:d), view(u, d+1:2d), p, t)
+    model = SemiLinearModel(A, prob.f, E0)
+    @warn "correct handling of initial values is still a bit unclear"
+    return SemiLinearRegressionProblem(model, prob.u0, prob.tspan, prob.p)
+end
+
+function SemiLinearRegressionProblem(
+    prob::DiffEqBase.ODEProblem{uT,tT,IIP,P,F,K,SciMLBase.SecondOrderODEProblem},
+    order::Integer,
+) where {uT,tT,IIP,P,F,K}
+    error("TODO")
+end
 
 function DiffEqBase.__solve(
     prob::AbstractSemiLinearRegressionProblem,

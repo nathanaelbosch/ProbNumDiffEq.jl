@@ -1,6 +1,10 @@
 function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack u, f, p, t = integ
-    @unpack d, x, Proj = cache
+    @unpack d_y, d_z, x, Proj = cache
+    if d_y != d_z
+        error("d_y!=d_z can currently not be handled!")
+    end
+    d = d_y
     q = integ.alg.order
     D = d * (q + 1)
 
@@ -9,7 +13,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
         K1 = K1[:, 1:d]
     end
 
-    f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
+    f_derivatives = taylormode_get_derivatives(u, f.b, p, t, q)
     integ.destats.nf += q
     @assert length(0:q) == length(f_derivatives)
     m_cache = Gaussian(
@@ -21,7 +25,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             @assert df isa ArrayPartition
             df = df[2, :]
         end
-        pmat = f.mass_matrix * Proj(o)
+        pmat = f.b.mass_matrix * Proj(o)
 
         if !(df isa AbstractVector)
             df = df[:]
