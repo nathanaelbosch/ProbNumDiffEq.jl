@@ -3,7 +3,7 @@ In this tutorial we solve a simple non-linear ordinary differential equation (OD
 
 !!! note
     If you never used DifferentialEquations.jl, check out their
-    ["Ordinary Differential Equations" tutorial](https://docs.sciml.ai/stable/tutorials/ode_example/)
+    ["Ordinary Differential Equations" tutorial](https://diffeq.sciml.ai/stable/tutorials/ode_example/)
     on how to solve ordinary differential equations with classic numerical solvers.
 
 In this tutorial, we consider a

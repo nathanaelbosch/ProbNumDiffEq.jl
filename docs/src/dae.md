@@ -4,7 +4,7 @@ Currently, we recommend using the semi-implicit `EK1` algorithm.
 
 !!! note
     For a more general tutorial on DAEs, solved with classic solvers, check out the
-    [DifferentialEquations.jl DEA tutorial](https://docs.sciml.ai/stable/tutorials/dae_example/).
+    [DifferentialEquations.jl DAE tutorial](https://diffeq.sciml.ai/stable/tutorials/dae_example/).
 
 
 #### Solving a Mass-Matrix DAE with the `EK1`
