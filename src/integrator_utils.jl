@@ -146,19 +146,12 @@ function DiffEqBase.savevalues!(
     out = OrdinaryDiffEq._savevalues!(integ, force_save, reduce_size)
 
     # Save our custom stuff that we need for the posterior
-    # TODO If we don't want dense output, we might not want to save these!
-    # It's not completely clear how to specify that though; They are also needed for sampling.
-    if integ.alg.smooth
-        OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, integ.cache.x)
-    end
-    OrdinaryDiffEq.copyat_or_push!(
-        integ.sol.diffusions,
-        integ.saveiter,
-        integ.cache.local_diffusion,
-    )
     if integ.opts.save_everystep
-        _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
-        OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, integ.cache.pu_tmp)
+        i = integ.saveiter
+        OrdinaryDiffEq.copyat_or_push!(integ.sol.diffusions, i, integ.cache.local_diffusion)
+        OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
+        _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
+        OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
     end
 
     return out
