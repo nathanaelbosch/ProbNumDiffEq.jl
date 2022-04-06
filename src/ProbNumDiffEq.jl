@@ -30,6 +30,7 @@ using RecipesBase
 using RecursiveArrayTools
 using ForwardDiff
 using Tullio
+using Octavian
 # By default use mul!
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)

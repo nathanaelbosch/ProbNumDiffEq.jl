@@ -124,7 +124,7 @@ function smooth!(
         succ ? Matrix(chol.U)' :
         eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
     copy!(x_curr.Σ.squareroot, QL)
-    _matmul!(x_curr.Σ.mat, QL, QL')
+    matmul!(x_curr.Σ.mat, QL, QL')
 
     return nothing
 end
