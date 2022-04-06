@@ -59,7 +59,7 @@ function predict_cov!(
 
     _matmul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
     _matmul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
-    matmul!(M, L, L')
+    _matmul!(M, L, L')
     chol = cholesky!(Symmetric(M), check=false)
 
     QL =
@@ -67,6 +67,6 @@ function predict_cov!(
         eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
     # QL = eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
     copy!(x_out.Σ.squareroot, QL)
-    matmul!(x_out.Σ.mat, QL, QL')
+    _matmul!(x_out.Σ.mat, QL, QL')
     return x_out.Σ
 end
