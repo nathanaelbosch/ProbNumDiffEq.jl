@@ -35,15 +35,30 @@ using Octavian
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
 # Some special cases
-_matmul!(C::AbstractMatrix{T}, A::AbstractMatrix{T}, B::Diagonal{T}) where {T<:LinearAlgebra.BlasFloat} = (C .= A .* B.diag')
-_matmul!(C::AbstractMatrix{T}, A::Diagonal{T}, B::AbstractMatrix{T}) where {T<:LinearAlgebra.BlasFloat} = (C .= A.diag .* B)
+_matmul!(
+    C::AbstractMatrix{T},
+    A::AbstractMatrix{T},
+    B::Diagonal{T},
+) where {T<:LinearAlgebra.BlasFloat} = (C .= A .* B.diag')
+_matmul!(
+    C::AbstractMatrix{T},
+    A::Diagonal{T},
+    B::AbstractMatrix{T},
+) where {T<:LinearAlgebra.BlasFloat} = (C .= A.diag .* B)
 _matmul!(C::Diagonal, A::AbstractMatrix, B::AbstractMatrix) =
     @tullio C[i, i] = A[i, j] * B[j, i]
-_matmul!(C::AbstractMatrix{T}, A::AbstractVecOrMat{T}, B::AbstractVecOrMat{T},
-         alpha::Number, beta::Number) where {T<:LinearAlgebra.BlasFloat} =
-    matmul!(C, A, B, alpha, beta)
-_matmul!(C::AbstractMatrix{T}, A::AbstractVecOrMat{T}, B::AbstractVecOrMat{T}) where {T<:LinearAlgebra.BlasFloat} =
-    matmul!(C, A, B)
+_matmul!(
+    C::AbstractMatrix{T},
+    A::AbstractVecOrMat{T},
+    B::AbstractVecOrMat{T},
+    alpha::Number,
+    beta::Number,
+) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
+_matmul!(
+    C::AbstractMatrix{T},
+    A::AbstractVecOrMat{T},
+    B::AbstractVecOrMat{T},
+) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 # @reexport using PSDMatrices
 # import PSDMatrices: X_A_Xt
