@@ -88,10 +88,11 @@ function smooth!(
     cache::GaussianODEFilterCache,
     diffusion::Union{Number,Diagonal}=1,
 )
+    D = length(x_curr.μ)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = cache
-    @unpack x_pred = cache
+    @unpack x_pred, x_filt = cache
     @unpack C1, G1, G2, C2 = cache
 
     # Prediction: t -> t+1
@@ -103,11 +104,12 @@ function smooth!(
     P_p_chol = Cholesky(x_pred.Σ.squareroot, :L, 0)
     G = rdiv!(_matmul!(G1, x_curr.Σ.mat, Ah'), P_p_chol)
 
-    x_curr.μ .+= G * (x_next.μ .- x_pred.μ)
+    # x_curr.μ .+= G * (x_next.μ .- x_pred.μ) # less allocations:
+    x_pred.μ .-= x_next.μ
+    _matmul!(x_curr.μ, G, x_pred.μ, -1, 1)
 
     # Joseph-Form:
     M, L = C2.mat, C2.squareroot
-    D = length(x_pred.μ)
 
     _matmul!(G2, G, Ah)
     copy!(view(L, 1:D, 1:D), x_curr.Σ.squareroot)
