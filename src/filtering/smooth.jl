@@ -92,7 +92,7 @@ function smooth!(
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = cache
-    @unpack x_pred, x_filt = cache
+    @unpack x_pred = cache
     @unpack C1, G1, G2, C2 = cache
 
     # Prediction: t -> t+1
