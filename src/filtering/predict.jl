@@ -65,6 +65,7 @@ function predict_cov!(
     QL =
         issuccess(chol) ? Matrix(chol.U)' :
         eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
+    # QL = eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
     copy!(x_out.Σ.squareroot, QL)
     _matmul!(x_out.Σ.mat, QL, QL')
     return x_out.Σ
