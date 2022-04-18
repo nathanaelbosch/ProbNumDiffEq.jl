@@ -1,13 +1,13 @@
-function manifoldupdate!(integ, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
-    m, C = integ.cache.x
+function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
+    m, C = cache.x
 
     # Create some caches
-    @unpack SolProj, tmp, H, x_tmp, x_tmp2 = integ.cache
+    @unpack SolProj, tmp, H, x_tmp, x_tmp2 = cache
     z_tmp = residualf(mul!(tmp, SolProj, m))
     result = DiffResults.JacobianResult(z_tmp, tmp)
     d = length(z_tmp)
     H = H[1:d, :]
-    K1, K2 = integ.cache.C_DxD[:, 1:d], integ.cache.C_dxD[:, 1:d]
+    K1, K2 = cache.C_DxD[:, 1:d], cache.C_dxD[:, 1:d]
 
     S = SRMatrix(C.R[:, 1:d])
     m_tmp, C_tmp = x_tmp
@@ -39,7 +39,7 @@ function manifoldupdate!(integ, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         m_i = m_i_new
     end
 
-    copy!(integ.cache.x, Gaussian(m_i_new, C_i_new))
+    copy!(cache.x, Gaussian(m_i_new, C_i_new))
 
     return nothing
 end
@@ -71,6 +71,9 @@ function ManifoldUpdate(
     kwargs...,
 )
     condition(u, t, integ) = true
-    affect!(integ) = manifoldupdate!(integ, residual; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂)
+    affect!(integ) = begin
+        manifoldupdate!(integ.cache, residual; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂)
+        mul!(view(integ.u, :), integ.cache.SolProj, integ.cache.x.μ)
+    end
     return DiscreteCallback(condition, affect!, args...; kwargs...)
 end
