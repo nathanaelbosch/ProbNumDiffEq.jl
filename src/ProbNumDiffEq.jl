@@ -21,7 +21,7 @@ import Base: copy, copy!, show, size, ndims, similar
 stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
-import LinearAlgebra: mul!, diag
+import LinearAlgebra: mul!
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays
