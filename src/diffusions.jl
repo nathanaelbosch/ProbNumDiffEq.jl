@@ -48,7 +48,7 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
 end
 initial_diffusion(diffusionmodel::FixedDiffusion, d, q, Eltype) =
     diffusionmodel.initial_diffusion * one(Eltype)
-estimate_local_diffusion(kind::FixedDiffusion, integ) = local_scalar_diffusion(integ)
+estimate_local_diffusion(kind::FixedDiffusion, integ) = local_scalar_diffusion(integ.cache)
 function estimate_global_diffusion(rule::FixedDiffusion, integ)
     @unpack d, measurement, m_tmp, Smat = integ.cache
     # sol_diffusions = integ.sol.diffusions
@@ -92,7 +92,7 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
     @assert initdiff isa Number || length(initdiff) == d
     return kron(Diagonal(initdiff .* ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 end
-estimate_local_diffusion(kind::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ)
+estimate_local_diffusion(kind::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ.cache)
 function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
     @unpack q, measurement = integ.cache
 
@@ -130,8 +130,8 @@ where ``z, H, Q`` are taken from the passed integrator.
 For more background information
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
-function local_scalar_diffusion(integ)
-    @unpack d, R, H, Qh, measurement, m_tmp, Smat = integ.cache
+function local_scalar_diffusion(cache)
+    @unpack d, R, H, Qh, measurement, m_tmp, Smat = cache
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     X_A_Xt!(HQH, Qh, H)
@@ -143,7 +143,7 @@ function local_scalar_diffusion(integ)
 end
 
 """
-    local_diagonal_diffusion(integ)
+    local_diagonal_diffusion(cache)
 
 Compute the local, scalar diffusion estimate.
 
@@ -157,8 +157,8 @@ where ``z, H, Q`` are taken from the passed integrator.
 For more background information
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
-function local_diagonal_diffusion(integ)
-    @unpack q, H, Qh, measurement, m_tmp = integ.cache
+function local_diagonal_diffusion(cache)
+    @unpack q, H, Qh, measurement, m_tmp = cache
     z = measurement.μ
     HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
     # Q0_11 = diag(HQH)[1]
