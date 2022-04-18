@@ -80,10 +80,10 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
 
     # Filter & smooth to fit these values!
     us = [u for u in sol.u]
-    return rk_init_improve(integ, cache, sol.t, us, dt)
+    return rk_init_improve(cache, sol.t, us, dt)
 end
 
-function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
+function rk_init_improve(cache::GaussianODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
     @unpack x, x_pred, x_filt, measurement = cache
 
@@ -120,7 +120,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         xf = filts[i-1]
         xs = filts[i]
         xp = preds[i-1] # Since `preds` is one shorter
-        smooth!(xf, xs, A, Q, integ.cache, 1)
+        smooth!(xf, xs, A, Q, cache, 1)
     end
 
     _gaussian_mul!(cache.x, PI, filts[1])
