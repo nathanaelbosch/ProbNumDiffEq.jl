@@ -67,6 +67,7 @@ mutable struct GaussianODEFilterCache{
     covmatcache::matType
     Smat::matType
     C_dxd::matType
+    C_dxD::matType
     C_DxD::matType
     C_2DxD::matType
     C_3DxD::matType
@@ -154,6 +155,8 @@ function OrdinaryDiffEq.alg_cache(
     Smat = zeros(uElType, d, d)
     covmatcache = copy(G)
 
+    C_dxd = zeros(uElType, d, d)
+    C_dxD = zeros(uElType, d, D)
     C_DxD = zeros(uElType, D, D)
     C_2DxD = zeros(uElType, 2D, D)
     C_3DxD = zeros(uElType, 3D, D)
@@ -257,6 +260,8 @@ function OrdinaryDiffEq.alg_cache(
         G2,
         covmatcache,
         Smat,
+        C_dxd,
+        C_dxD,
         C_DxD,
         C_2DxD,
         C_3DxD,
