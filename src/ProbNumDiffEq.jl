@@ -62,6 +62,7 @@ _matmul!(
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!
+# Legacy stuff:
 const SRMatrix = PSDMatrix
 export SRMatrix
 X_A_Xt(A, X) = X * A * X'

@@ -21,7 +21,7 @@ predict_cov(x::SRGaussian, A::AbstractMatrix, Q::SRMatrix) =
 In-place and square-root implementation of [`predict`](@ref)
 which saves the result into `x_out`.
 
-Only works with `PSDMatrix` types as `Ah`, `Qh`, and in the
+Only works with `PSDMatrices.PSDMatrix` types as `Ah`, `Qh`, and in the
 covariances of `x_curr` and `x_out` (both of type `Gaussian`).
 To prevent allocations, a cache matrix `cachemat` of size ``D \\times 2D``
 (where ``D \\times D`` is the size of `Ah` and `Qh`) needs to be passed.

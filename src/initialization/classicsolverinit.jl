@@ -1,4 +1,4 @@
-function initial_update!(integ, cache, init::ClassicSolverInit)
+function initial_update!(integ, cache, ::ClassicSolverInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
     q = integ.alg.order
