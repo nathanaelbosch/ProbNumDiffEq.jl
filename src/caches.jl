@@ -65,6 +65,11 @@ mutable struct GaussianODEFilterCache{
     G1::matType
     G2::matType
     covmatcache::matType
+    Smat::matType
+    C_dxd::matType
+    C_DxD::matType
+    C_2DxD::matType
+    C_3DxD::matType
     default_diffusion::diffusionType
     local_diffusion::diffusionType
     global_diffusion::diffusionType
@@ -137,9 +142,7 @@ function OrdinaryDiffEq.alg_cache(
     du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
     ddu = f isa DynamicalODEFunction ? zeros(uElType, d, 2d) : zeros(uElType, d, d)
     v = similar(h)
-    S =
-    # alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, D, d))
+    S = SRMatrix(zeros(uElType, D, d))
     measurement = Gaussian(v, S)
     pu_tmp =
         f isa DynamicalODEFunction ?
@@ -148,7 +151,12 @@ function OrdinaryDiffEq.alg_cache(
     G = zeros(uElType, D, D)
     C1 = SRMatrix(zeros(uElType, 2D, D))
     C2 = SRMatrix(zeros(uElType, 3D, D))
+    Smat = zeros(uElType, d, d)
     covmatcache = copy(G)
+
+    C_DxD = zeros(uElType, D, D)
+    C_2DxD = zeros(uElType, 2D, D)
+    C_3DxD = zeros(uElType, 3D, D)
 
     if alg isa EK1FDB
         H = [E1; E2]
@@ -248,6 +256,10 @@ function OrdinaryDiffEq.alg_cache(
         G,
         G2,
         covmatcache,
+        Smat,
+        C_DxD,
+        C_2DxD,
+        C_3DxD,
         initdiff,
         initdiff * NaN,
         initdiff * NaN,

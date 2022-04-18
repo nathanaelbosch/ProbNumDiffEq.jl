@@ -51,10 +51,11 @@ function predict_cov!(
     x_curr::SRGaussian,
     Ah::AbstractMatrix,
     Qh::SRMatrix,
-    cachemat::SRMatrix,
+    C_DxD::SRMatrix,
+    C_2DxD::SRMatrix,
     diffusion=1,
 )
-    L = cachemat.R'
+    L, M = C_2DxD', c_DxD
     M = Matrix(cachemat)
     D, D = size(Qh)
 

@@ -50,12 +50,12 @@ initial_diffusion(diffusionmodel::FixedDiffusion, d, q, Eltype) =
     diffusionmodel.initial_diffusion * one(Eltype)
 estimate_local_diffusion(kind::FixedDiffusion, integ) = local_scalar_diffusion(integ)
 function estimate_global_diffusion(rule::FixedDiffusion, integ)
-    @unpack d, measurement, m_tmp = integ.cache
+    @unpack d, measurement, m_tmp, Smat = integ.cache
     # sol_diffusions = integ.sol.diffusions
 
     v, S = measurement.μ, measurement.Σ
     e = m_tmp.μ
-    _S = Matrix(S)
+    _S = mul!(Smat, S.R', S.R)
     S_chol = cholesky!(_S)
     ldiv!(e, S_chol, v)
     diffusion_t = dot(v, e) / d
@@ -131,11 +131,11 @@ For more background information
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
 function local_scalar_diffusion(integ)
-    @unpack d, R, H, Qh, measurement, m_tmp = integ.cache
+    @unpack d, R, H, Qh, measurement, m_tmp, Smat = integ.cache
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     X_A_Xt!(HQH, Qh, H)
-    HQHmat = Matrix(HQH)
+    HQHmat = mul!(Smat, HQH.R', HQH.R)
     C = cholesky!(HQHmat)
     ldiv!(e, C, z)
     σ² = dot(z, e) / d

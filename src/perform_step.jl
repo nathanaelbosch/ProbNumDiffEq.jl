@@ -96,7 +96,7 @@ function OrdinaryDiffEq.perform_step!(
     # Predict the covariance, using either the local or global diffusion
     extrapolation_diff =
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
-    predict_cov!(x_pred, x, Ah, Qh, cache.C1, extrapolation_diff)
+    predict_cov!(x_pred, x, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
     # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
@@ -300,8 +300,8 @@ compute_measurement_covariance!(cache) =
 
 function update!(integ, prediction)
     @unpack measurement, H, R, x_filt = integ.cache
-    @unpack K1, K2, x_tmp2, m_tmp = integ.cache
-    update!(x_filt, prediction, measurement, H, K1, Matrix(x_tmp2.Σ), m_tmp.Σ)
+    @unpack K1, K2, x_tmp2, m_tmp, C_DxD = integ.cache
+    update!(x_filt, prediction, measurement, H, K1, C_DxD, m_tmp.Σ)
     return x_filt
 end
 

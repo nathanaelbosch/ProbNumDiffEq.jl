@@ -93,7 +93,7 @@ function smooth!(
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = cache
     @unpack x_pred = cache
-    @unpack C1, G1, G2, C2 = cache
+    @unpack C1, G1, G2, C2, C_DxD, C_3DxD = cache
 
     # Prediction: t -> t+1
     predict_mean!(x_pred, x_curr, Ah)
@@ -109,7 +109,7 @@ function smooth!(
     _matmul!(x_curr.μ, G, x_pred.μ, -1, 1)
 
     # Joseph-Form:
-    M, L = Matrix(C2), C2.R'
+    L = C_3DxD'
 
     _matmul!(G2, G, Ah)
     copy!(view(L, 1:D, 1:D), x_curr.Σ.R')
@@ -120,9 +120,9 @@ function smooth!(
 
     # _matmul!(M, L, L')
     # chol = cholesky!(Symmetric(M), check=false)
-    succ = false && issuccess(chol)
+    # Q_R = issuccess(chol) ? chol.U : qr(L').R
 
-    Q_R = succ ? Matrix(chol.U) : qr(L').R
+    Q_R = qr(L').R
     copy!(x_curr.Σ.R, Q_R)
 
     return nothing

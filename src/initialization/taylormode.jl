@@ -24,8 +24,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[:]
         end
 
-        Mcache = Matrix(x_tmp2.Σ) # TODO remove this
-        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, Mcache)
+        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, cache.C_DxD)
     end
 end
 
