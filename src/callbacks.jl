@@ -7,6 +7,8 @@ function manifoldupdate!(integ, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     result = DiffResults.JacobianResult(z_tmp, tmp)
     d = length(z_tmp)
     H = H[1:d, :]
+    K1, K2 = integ.cache.C_DxD[:, 1:d], integ.cache.C_dxD[:, 1:d]
+
     S = SRMatrix(C.R[:, 1:d])
     m_tmp, C_tmp = x_tmp
 
@@ -23,8 +25,7 @@ function manifoldupdate!(integ, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         X_A_Xt!(S, C, H)
 
         # m_i_new, C_i_new = update(x, Gaussian(z .+ (H * (m - m_i)), S), H)
-        # More efficient update with less allocations:
-        K = C.R' * C.R * (H' / S)
+        K = _matmul!(K2, C.R', _matmul!(K1, C.R, H' / S))
         m_tmp .= m_i .- m
         mul!(z_tmp, H, m_tmp)
         z_tmp .-= z
