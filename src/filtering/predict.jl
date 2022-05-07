@@ -56,15 +56,15 @@ function predict_cov!(
     C_2DxD::AbstractMatrix,
     diffusion=1,
 )
-    L, M = C_2DxD', C_DxD
+    R, M = C_2DxD, C_DxD
     D, D = size(Qh)
 
-    _matmul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.R')
-    _matmul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.R')
-    _matmul!(M, L, L')
+    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, Ah')
+    _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
+    _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
 
-    Q_R = issuccess(chol) ? Matrix(chol.U) : qr(L').R
+    Q_R = issuccess(chol) ? Matrix(chol.U) : qr(R).R
     copy!(x_out.Σ.R, Q_R)
     # _matmul!(x_out.Σ.mat, QL, QL')
     return x_out.Σ

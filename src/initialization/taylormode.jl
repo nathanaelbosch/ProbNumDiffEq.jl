@@ -24,7 +24,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[:]
         end
 
-        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, cache.C_DxD)
+        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, cache.C_DxD, cache)
     end
 end
 

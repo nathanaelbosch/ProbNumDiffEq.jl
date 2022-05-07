@@ -361,7 +361,7 @@ function estimate_errors!(cache::GaussianODEFilterCache)
         return Inf
     end
 
-    R = cache.m_tmp.Σ.R
+    R = cache.C_Dxd
 
     if local_diffusion isa Diagonal
         _matmul!(R, Qh.R * sqrt.(local_diffusion), H')

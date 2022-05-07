@@ -68,6 +68,7 @@ mutable struct GaussianODEFilterCache{
     Smat::matType
     C_dxd::matType
     C_dxD::matType
+    C_Dxd::matType
     C_DxD::matType
     C_2DxD::matType
     C_3DxD::matType
@@ -100,7 +101,6 @@ function OrdinaryDiffEq.alg_cache(
     calck,
     ::Val{IIP},
 ) where {IIP,uEltypeNoUnits,uBottomEltypeNoUnits,tTypeNoUnits}
-
     if u isa Number
         error("We currently don't support scalar-valued problems")
     end
@@ -156,6 +156,7 @@ function OrdinaryDiffEq.alg_cache(
 
     C_dxd = zeros(uElType, d, d)
     C_dxD = zeros(uElType, d, D)
+    C_Dxd = zeros(uElType, D, d)
     C_DxD = zeros(uElType, D, D)
     C_2DxD = zeros(uElType, 2D, D)
     C_3DxD = zeros(uElType, 3D, D)
@@ -261,6 +262,7 @@ function OrdinaryDiffEq.alg_cache(
         Smat,
         C_dxd,
         C_dxD,
+        C_Dxd,
         C_DxD,
         C_2DxD,
         C_3DxD,

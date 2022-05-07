@@ -93,36 +93,36 @@ function smooth!(
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = cache
     @unpack x_pred = cache
-    @unpack C1, G1, G2, C2, C_DxD, C_3DxD = cache
+    @unpack C1, G1, G2, C2, C_DxD, C_2DxD, C_3DxD = cache
 
     # Prediction: t -> t+1
     predict_mean!(x_pred, x_curr, Ah)
-    predict_cov!(x_pred, x_curr, Ah, Qh, cache.C_DxD, cache.C_2DxD, diffusion)
+    predict_cov!(x_pred, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
 
     # Smoothing
     # G = x_curr.Σ * Ah' * P_p_inv
     P_p_chol = Cholesky(x_pred.Σ.R, :U, 0)
-    G = rdiv!(_matmul!(G1, Matrix(x_curr.Σ), Ah'), P_p_chol)
+    G = rdiv!(_matmul!(G1, x_curr.Σ.R', _matmul!(G2, x_curr.Σ.R, Ah')), P_p_chol)
 
     # x_curr.μ .+= G * (x_next.μ .- x_pred.μ) # less allocations:
     x_pred.μ .-= x_next.μ
     _matmul!(x_curr.μ, G, x_pred.μ, -1, 1)
 
     # Joseph-Form:
-    L = C_3DxD'
+    R = C_3DxD
 
     _matmul!(G2, G, Ah)
-    copy!(view(L, 1:D, 1:D), x_curr.Σ.R')
-    _matmul!(view(L, 1:D, 1:D), G2, x_curr.Σ.R', -1.0, 1.0)
+    copy!(view(R, 1:D, 1:D), x_curr.Σ.R')
+    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, G2', -1.0, 1.0)
 
-    _matmul!(view(L, 1:D, D+1:2D), _matmul!(G2, G, sqrt.(diffusion)), Qh.R')
-    _matmul!(view(L, 1:D, 2D+1:3D), G, x_next.Σ.R')
+    _matmul!(view(R, D+1:2D, 1:D), Qh.R,_matmul!(G2, G, sqrt.(diffusion))')
+    _matmul!(view(R, 2D+1:3D, 1:D), x_next.Σ.R, G')
 
-    # _matmul!(M, L, L')
+    # _matmul!(M, R', R)
     # chol = cholesky!(Symmetric(M), check=false)
-    # Q_R = issuccess(chol) ? chol.U : qr(L').R
+    # Q_R = issuccess(chol) ? chol.U : qr(R).R
 
-    Q_R = qr(L').R
+    Q_R = qr(R).R
     copy!(x_curr.Σ.R, Q_R)
 
     return nothing

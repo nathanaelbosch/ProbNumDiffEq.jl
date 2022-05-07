@@ -14,10 +14,10 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
     Mcache = cache.C_DxD
-    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, Mcache)
+    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.destats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, Mcache)
+    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
 
     if q < 2
         return
@@ -34,7 +34,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, Mcache)
+        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
         if q < 3
             return
         end
@@ -97,7 +97,6 @@ function rk_init_improve(cache::GaussianODEFilterCache, ts, us, dt)
     filts = [copy(x)]
 
     # Filter through the data forwards
-    M_cache, S_cache = cache.C_DxD, cache.C_dxd
     for (i, (t, u)) in enumerate(zip(ts, us))
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
         u = view(u, :) # just in case the problem is matrix-valued

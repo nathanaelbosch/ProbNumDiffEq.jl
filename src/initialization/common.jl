@@ -55,6 +55,7 @@ function condition_on!(
     Kcache,
     covcache,
     Mcache,
+    cache,
 )
     S = Scache
 
@@ -65,7 +66,7 @@ function condition_on!(
         S_diag .+= 1e-20
     end
 
-    _matmul!(Kcache, Matrix(x.Σ), H')
+    _matmul!(Kcache, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
     K = Kcache ./= S_diag'
 
     # x.μ .+= K*(data - z)

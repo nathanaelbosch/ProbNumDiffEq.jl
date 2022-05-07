@@ -55,7 +55,7 @@ function estimate_global_diffusion(rule::FixedDiffusion, integ)
 
     v, S = measurement.μ, measurement.Σ
     e = m_tmp.μ
-    _S = mul!(Smat, S.R', S.R)
+    _S = _matmul!(Smat, S.R', S.R)
     S_chol = cholesky!(_S)
     ldiv!(e, S_chol, v)
     diffusion_t = dot(v, e) / d
@@ -135,7 +135,7 @@ function local_scalar_diffusion(cache)
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     X_A_Xt!(HQH, Qh, H)
-    HQHmat = mul!(Smat, HQH.R', HQH.R)
+    HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     C = cholesky!(HQHmat)
     ldiv!(e, C, z)
     σ² = dot(z, e) / d
