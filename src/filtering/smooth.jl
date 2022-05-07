@@ -97,7 +97,7 @@ function smooth!(
 
     # Prediction: t -> t+1
     predict_mean!(x_pred, x_curr, Ah)
-    predict_cov!(x_pred, x_curr, Ah, Qh, C1, diffusion)
+    predict_cov!(x_pred, x_curr, Ah, Qh, cache.C_DxD, cache.C_2DxD, diffusion)
 
     # Smoothing
     # G = x_curr.Σ * Ah' * P_p_inv

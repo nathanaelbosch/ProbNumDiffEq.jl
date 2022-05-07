@@ -34,8 +34,7 @@ using LinearAlgebra
         x_curr = Gaussian(m, SRMatrix(R_p))
         x_out = copy(x_curr)
         Q_SR = SRMatrix(R_Q)
-        cache = SRMatrix(zeros(2d, d))
-        ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, cache)
+        ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, zeros(d, d), zeros(2d, d))
         @test m_p == x_out.μ
         @test P_p ≈ Matrix(x_out.Σ)
     end

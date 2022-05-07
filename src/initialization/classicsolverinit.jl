@@ -102,14 +102,14 @@ function rk_init_improve(cache::GaussianODEFilterCache, ts, us, dt)
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
         u = view(u, :) # just in case the problem is matrix-valued
         predict_mean!(x_pred, x, A)
-        predict_cov!(x_pred, x, A, Q, cache.C1, cache.default_diffusion)
+        predict_cov!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
         push!(preds, copy(x_pred))
 
         H = cache.E0 * PI
         measurement.μ .= H * x_pred.μ .- u
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
-        update!(x_filt, x_pred, measurement, H, cache.K1, M_cache, S_cache)
+        update!(x_filt, x_pred, measurement, H, cache.K1, cache.C_DxD, cache.m_tmp.Σ)
         push!(filts, copy(x_filt))
 
         x = x_filt

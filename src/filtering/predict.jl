@@ -33,11 +33,12 @@ function predict!(
     x_curr::SRGaussian,
     Ah::AbstractMatrix,
     Qh::SRMatrix,
-    cachemat::SRMatrix,
+    C_DxD::AbstractMatrix,
+    C_2DxD::AbstractMatrix,
     diffusion=1,
 )
     predict_mean!(x_out, x_curr, Ah)
-    predict_cov!(x_out, x_curr, Ah, Qh, cachemat, diffusion)
+    predict_cov!(x_out, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
     return x_out
 end
 
@@ -51,12 +52,11 @@ function predict_cov!(
     x_curr::SRGaussian,
     Ah::AbstractMatrix,
     Qh::SRMatrix,
-    C_DxD::SRMatrix,
-    C_2DxD::SRMatrix,
+    C_DxD::AbstractMatrix,
+    C_2DxD::AbstractMatrix,
     diffusion=1,
 )
-    L, M = C_2DxD', c_DxD
-    M = Matrix(cachemat)
+    L, M = C_2DxD', C_DxD
     D, D = size(Qh)
 
     _matmul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.R')
