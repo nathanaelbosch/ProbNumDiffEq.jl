@@ -3,11 +3,12 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
 
     # Create some caches
     @unpack SolProj, tmp, H, x_tmp, x_tmp2 = cache
+    D = cache.d * (cache.q + 1)
     z_tmp = residualf(mul!(tmp, SolProj, m))
     result = DiffResults.JacobianResult(z_tmp, tmp)
     d = length(z_tmp)
     H = H[1:d, :]
-    K1, K2 = cache.C_DxD[:, 1:d], cache.C_dxD[:, 1:d]
+    K1, K2 = cache.C_DxD[:, 1:d], cache.C_2DxD[1:D, 1:d]
 
     S = SRMatrix(C.R[:, 1:d])
     m_tmp, C_tmp = x_tmp
