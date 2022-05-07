@@ -100,7 +100,6 @@ function OrdinaryDiffEq.alg_cache(
     calck,
     ::Val{IIP},
 ) where {IIP,uEltypeNoUnits,uBottomEltypeNoUnits,tTypeNoUnits}
-    initialize_derivatives = true
 
     if u isa Number
         error("We currently don't support scalar-valued problems")
