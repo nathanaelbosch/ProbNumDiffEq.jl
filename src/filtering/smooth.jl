@@ -115,7 +115,7 @@ function smooth!(
     copy!(view(R, 1:D, 1:D), x_curr.Σ.R')
     _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, G2', -1.0, 1.0)
 
-    _matmul!(view(R, D+1:2D, 1:D), Qh.R,_matmul!(G2, G, sqrt.(diffusion))')
+    _matmul!(view(R, D+1:2D, 1:D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
     _matmul!(view(R, 2D+1:3D, 1:D), x_next.Σ.R, G')
 
     # _matmul!(M, R', R)

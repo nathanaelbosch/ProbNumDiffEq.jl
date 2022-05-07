@@ -17,7 +17,8 @@ A local diffusion parameter is estimated at each step. Works well with adaptive 
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::DynamicDiffusion, d, q, Eltype) = one(Eltype)
-estimate_local_diffusion(kind::DynamicDiffusion, integ) = local_scalar_diffusion(integ.cache)
+estimate_local_diffusion(kind::DynamicDiffusion, integ) =
+    local_scalar_diffusion(integ.cache)
 
 """
     DynamicMVDiffusion()
@@ -31,7 +32,8 @@ scales of the different dimensions vary a lot.
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusionmodel::DynamicMVDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
-estimate_local_diffusion(kind::DynamicMVDiffusion, integ) = local_diagonal_diffusion(integ.cache)
+estimate_local_diffusion(kind::DynamicMVDiffusion, integ) =
+    local_diagonal_diffusion(integ.cache)
 
 """
     FixedDiffusion(; initial_diffusion=1.0, calibrate=true)
@@ -92,7 +94,8 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
     @assert initdiff isa Number || length(initdiff) == d
     return kron(Diagonal(initdiff .* ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 end
-estimate_local_diffusion(kind::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ.cache)
+estimate_local_diffusion(kind::FixedMVDiffusion, integ) =
+    local_diagonal_diffusion(integ.cache)
 function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
     @unpack q, measurement = integ.cache
 
