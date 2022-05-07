@@ -61,7 +61,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
         n_samples = 2
 
         samples = ProbNumDiffEq.sample(sol, n_samples)
-        dsamples, dts = ProbNumDiffEq.dense_sample(sol, n_samples)
 
         @test samples isa Array
 
@@ -69,11 +68,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
         @test m == length(sol)
         @test n == length(sol.u[1])
         @test o == n_samples
-
-        u = ProbNumDiffEq.stack(sol.u)
-        stds = sqrt.(ProbNumDiffEq.stack(diag.(sol.pu.Σ)))
-        outlier_count = sum(abs.(u .- samples) .> 3stds)
-        @test outlier_count < 0.05 * m * n * o
 
         # Dense sampling
         dense_samples, dense_times = ProbNumDiffEq.dense_sample(sol, n_samples)
@@ -87,7 +81,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
         n_samples = 2
 
         samples = ProbNumDiffEq.sample_states(sol, n_samples)
-        dsamples, dts = ProbNumDiffEq.dense_sample_states(sol, n_samples)
 
         @test samples isa Array
 
@@ -95,11 +88,6 @@ import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
         @test m == length(sol)
         @test n == length(sol.u[1]) * (sol.interp.q + 1)
         @test o == n_samples
-
-        x = ProbNumDiffEq.stack(mean(sol.x_smooth))
-        stds = sqrt.(ProbNumDiffEq.stack(diag.(sol.x_smooth.Σ)))
-        outlier_count = sum(abs.(x .- samples) .> 3stds)
-        @test outlier_count < 0.05 * m * n * o
 
         # Dense sampling
         dense_samples, dense_times = ProbNumDiffEq.dense_sample_states(sol, n_samples)
