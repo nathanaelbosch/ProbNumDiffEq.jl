@@ -122,7 +122,7 @@ function smooth!(
     # chol = cholesky!(Symmetric(M), check=false)
     # Q_R = issuccess(chol) ? chol.U : qr(R).R
 
-    Q_R = qr(R).R
+    Q_R = custom_qr!(R).R
     copy!(x_curr.Σ.R, Q_R)
 
     return nothing

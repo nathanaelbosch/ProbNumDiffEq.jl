@@ -22,6 +22,9 @@ stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
 import LinearAlgebra: mul!
+"""LAPACK.geqrf! seems to be faster on small matrices than LAPACK.geqrt!"""
+custom_qr!(A) = qr!(A)
+custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays

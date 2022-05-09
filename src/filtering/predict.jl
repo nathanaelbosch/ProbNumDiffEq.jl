@@ -64,7 +64,7 @@ function predict_cov!(
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
 
-    Q_R = issuccess(chol) ? Matrix(chol.U) : qr(R).R
+    Q_R = issuccess(chol) ? Matrix(chol.U) : custom_qr!(R).R
     copy!(x_out.Σ.R, Q_R)
     # _matmul!(x_out.Σ.mat, QL, QL')
     return x_out.Σ
