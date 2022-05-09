@@ -68,7 +68,7 @@ function update!(
 
     # K = P_p * H' / S
     if S isa SRMatrix
-        S_chol = Cholesky(triangularize_factor(S).R, :U, 0)
+        S_chol = Cholesky(qr!(S.R).R, :U, 0)
     else
         S_chol = cholesky(S)
     end
