@@ -118,10 +118,6 @@ function smooth!(
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
     _matmul!(view(R, 2D+1:3D, 1:D), x_next.Σ.R, G')
 
-    # _matmul!(M, R', R)
-    # chol = cholesky!(Symmetric(M), check=false)
-    # Q_R = issuccess(chol) ? chol.U : qr(R).R
-
     Q_R = custom_qr!(R).R
     copy!(x_curr.Σ.R, Q_R)
 
