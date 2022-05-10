@@ -352,7 +352,7 @@ Computes a local error estimate, as
 E_i = ( σ_{loc}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
 ```
 To save allocations, the function modifies the given `cache` and writes into
-`cache.m_tmp.Σ.R` during some computations.
+`cache.C_Dxd` during some computations.
 """
 function estimate_errors!(cache::GaussianODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
