@@ -50,10 +50,7 @@ function smooth(
 )
     x_pred = predict(x_curr, Ah, Qh)
 
-    P_p = x_pred.Σ
-    # P_p_inv = inv(P_p)
-
-    G = Matrix(x_curr.Σ) * Ah' / P_p
+    G = Matrix(x_curr.Σ) * Ah' / x_pred.Σ
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
 
