@@ -46,7 +46,7 @@ function smooth(
     x_curr::SRGaussian,
     x_next_smoothed::SRGaussian,
     Ah::AbstractMatrix,
-    Qh::SRMatrix,
+    Qh::PSDMatrix,
 )
     x_pred = predict(x_curr, Ah, Qh)
 
@@ -60,7 +60,7 @@ function smooth(
         x_next_smoothed.Σ.R * G'
     ]
     P_s_R = qr(_R).R
-    smoothed_cov = SRMatrix(P_s_R)
+    smoothed_cov = PSDMatrix(P_s_R)
 
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, G
@@ -81,7 +81,7 @@ function smooth!(
     x_curr::SRGaussian,
     x_next::SRGaussian,
     Ah::AbstractMatrix,
-    Qh::SRMatrix,
+    Qh::PSDMatrix,
     cache::GaussianODEFilterCache,
     diffusion::Union{Number,Diagonal}=1,
 )

@@ -365,12 +365,12 @@ function estimate_errors!(cache::GaussianODEFilterCache)
 
     if local_diffusion isa Diagonal
         _matmul!(R, Qh.R * sqrt.(local_diffusion), H')
-        error_estimate = sqrt.(diag(SRMatrix(R)))
+        error_estimate = sqrt.(diag(PSDMatrix(R)))
         return view(error_estimate, 1:d)
     elseif local_diffusion isa Number
         _matmul!(R, Qh.R, H')
         # error_estimate = local_diffusion .* diag(L*L')
-        error_estimate = diag(SRMatrix(R))
+        error_estimate = diag(PSDMatrix(R))
         error_estimate .*= local_diffusion
 
         # @info "it's small anyways I guess?" error_estimate cache.measurement.μ .^ 2

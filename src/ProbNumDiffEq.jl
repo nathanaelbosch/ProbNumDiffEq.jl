@@ -65,13 +65,10 @@ _matmul!(
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!
-# Legacy stuff:
-const SRMatrix = PSDMatrix
-export SRMatrix
 X_A_Xt(A, X) = X * A * X'
 X_A_Xt!(out, A, X) = (out .= X * A * X')
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::SRMatrix, diffusion::Number) = SRMatrix(sqrt.(diffusion) * Q.R)
+apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
 
 # All the Gaussian things
 @reexport using GaussianDistributions

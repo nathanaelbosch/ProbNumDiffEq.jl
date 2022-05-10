@@ -67,7 +67,7 @@ function update!(
     D = length(m_p)
 
     # K = P_p * H' / S
-    if S isa SRMatrix
+    if S isa PSDMatrix
         S_chol = Cholesky(custom_qr!(S.R).R, :U, 0)
     else
         S_chol = cholesky(S)

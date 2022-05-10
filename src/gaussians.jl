@@ -1,6 +1,6 @@
 # const PSDGaussian{T} = Gaussian{Vector{T}, PSDMatrix{T}}
 # const PSDGaussianList{T} = StructArray{PSDGaussian{T}}
-const SRGaussian{T,S} = Gaussian{Vector{T},SRMatrix{T,S}}
+const SRGaussian{T,S} = Gaussian{Vector{T},PSDMatrix{T,S}}
 const SRGaussianList{T,S} = StructArray{SRGaussian{T,S}}
 
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
@@ -18,7 +18,7 @@ size(g::Gaussian) = size(g.μ)
 ndims(g::Gaussian) = ndims(g.μ)
 
 Base.:*(M, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
-# GaussianDistributions.whiten(Σ::SRMatrix, z) = Σ.L\z
+# GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
 
 function _gaussian_mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
     _matmul!(g_out.μ, M, g_in.μ)

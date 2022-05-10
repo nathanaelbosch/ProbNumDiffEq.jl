@@ -12,8 +12,8 @@ predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
     Gaussian(predict_mean(x, A), predict_cov(x, A, Q))
 predict_mean(x::Gaussian, A::AbstractMatrix) = A * x.μ
 predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A * x.Σ * A' + Q
-predict_cov(x::SRGaussian, A::AbstractMatrix, Q::SRMatrix) =
-    SRMatrix(qr([x.Σ.R * A'; Q.R]).R)
+predict_cov(x::SRGaussian, A::AbstractMatrix, Q::PSDMatrix) =
+    PSDMatrix(qr([x.Σ.R * A'; Q.R]).R)
 
 """
     predict!(x_out, x_curr, Ah, Qh, cachemat)
@@ -32,7 +32,7 @@ function predict!(
     x_out::SRGaussian,
     x_curr::SRGaussian,
     Ah::AbstractMatrix,
-    Qh::SRMatrix,
+    Qh::PSDMatrix,
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     diffusion=1,
@@ -51,7 +51,7 @@ function predict_cov!(
     x_out::SRGaussian,
     x_curr::SRGaussian,
     Ah::AbstractMatrix,
-    Qh::SRMatrix,
+    Qh::PSDMatrix,
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     diffusion=1,

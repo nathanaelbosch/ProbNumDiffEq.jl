@@ -22,7 +22,7 @@ prob = remake(prob, tspan=(0.0, 10.0))
 
     A_p, Q_p = ProbNumDiffEq.ibm(d, q)
     Ah_p = A_p
-    Qh_p = SRMatrix(σ * Q_p.R)
+    Qh_p = PSDMatrix(σ * Q_p.R)
 
     # First test that they're both equivalent
     D = d * (q + 1)

@@ -10,7 +10,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     H = H[1:d, :]
     K1, K2 = cache.C_DxD[:, 1:d], cache.C_2DxD[1:D, 1:d]
 
-    S = SRMatrix(C.R[:, 1:d])
+    S = PSDMatrix(C.R[:, 1:d])
     m_tmp, C_tmp = x_tmp
 
     m_i = copy(m)

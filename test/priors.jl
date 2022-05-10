@@ -44,7 +44,7 @@ end
     d, q = 2, 2
 
     A, Q = ProbNumDiffEq.ibm(d, q)
-    Qh = SRMatrix(σ * Q.R)
+    Qh = PSDMatrix(σ * Q.R)
 
     AH_22_PRE = [
         1 2 1 0 0 0

@@ -30,10 +30,10 @@ using LinearAlgebra
         @test P_p == x_out.Σ
     end
 
-    @testset "predict! with SRMatrix" begin
-        x_curr = Gaussian(m, SRMatrix(R_p))
+    @testset "predict! with PSDMatrix" begin
+        x_curr = Gaussian(m, PSDMatrix(R_p))
         x_out = copy(x_curr)
-        Q_SR = SRMatrix(R_Q)
+        Q_SR = PSDMatrix(R_Q)
         ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, zeros(d, d), zeros(2d, d))
         @test m_p == x_out.μ
         @test P_p ≈ Matrix(x_out.Σ)
@@ -93,7 +93,7 @@ end
     A = rand(d, d)
     R_Q = Matrix(LowerTriangular(rand(d, d)))
     Q = R_Q'R_Q
-    Q_SR = SRMatrix(R_Q)
+    Q_SR = PSDMatrix(R_Q)
 
     # PREDICT first
     m_p = A * m
@@ -112,9 +112,9 @@ end
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ x_out.Σ
     end
-    @testset "smooth with SRMatrix" begin
-        x_curr = Gaussian(m, SRMatrix(R_P))
-        x_smoothed = Gaussian(m_s, SRMatrix(R_P_s))
+    @testset "smooth with PSDMatrix" begin
+        x_curr = Gaussian(m, PSDMatrix(R_P))
+        x_smoothed = Gaussian(m_s, PSDMatrix(R_P_s))
         x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q_SR)
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ Matrix(x_out.Σ)
