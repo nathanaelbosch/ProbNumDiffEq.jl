@@ -67,7 +67,11 @@ function update!(
     D = length(m_p)
 
     # K = P_p * H' / S
-    S_chol = cholesky!(S)
+    if S isa PSDMatrix
+        S_chol = Cholesky(custom_qr!(S.R).R, :U, 0)
+    else
+        S_chol = cholesky(S)
+    end
     K = _matmul!(K_cache, Matrix(P_p), H')
     rdiv!(K, S_chol)
 

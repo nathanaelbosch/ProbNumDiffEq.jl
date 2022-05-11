@@ -12,8 +12,8 @@ predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
     Gaussian(predict_mean(x, A), predict_cov(x, A, Q))
 predict_mean(x::Gaussian, A::AbstractMatrix) = A * x.μ
 predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A * x.Σ * A' + Q
-predict_cov(x::SRGaussian, A::AbstractMatrix, Q::SRMatrix) =
-    SRMatrix(qr([A * x.Σ.squareroot Q.squareroot]').R')
+predict_cov(x::SRGaussian, A::AbstractMatrix, Q::PSDMatrix) =
+    PSDMatrix(qr([x.Σ.R * A'; Q.R]).R)
 
 """
     predict!(x_out, x_curr, Ah, Qh, cachemat)
@@ -21,7 +21,7 @@ predict_cov(x::SRGaussian, A::AbstractMatrix, Q::SRMatrix) =
 In-place and square-root implementation of [`predict`](@ref)
 which saves the result into `x_out`.
 
-Only works with `ProbNumDiffEq.SquarerootMatrix` types as `Ah`, `Qh`, and in the
+Only works with `PSDMatrices.PSDMatrix` types as `Ah`, `Qh`, and in the
 covariances of `x_curr` and `x_out` (both of type `Gaussian`).
 To prevent allocations, a cache matrix `cachemat` of size ``D \\times 2D``
 (where ``D \\times D`` is the size of `Ah` and `Qh`) needs to be passed.
@@ -32,12 +32,13 @@ function predict!(
     x_out::SRGaussian,
     x_curr::SRGaussian,
     Ah::AbstractMatrix,
-    Qh::SRMatrix,
-    cachemat::SRMatrix,
+    Qh::PSDMatrix,
+    C_DxD::AbstractMatrix,
+    C_2DxD::AbstractMatrix,
     diffusion=1,
 )
     predict_mean!(x_out, x_curr, Ah)
-    predict_cov!(x_out, x_curr, Ah, Qh, cachemat, diffusion)
+    predict_cov!(x_out, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
     return x_out
 end
 
@@ -50,23 +51,21 @@ function predict_cov!(
     x_out::SRGaussian,
     x_curr::SRGaussian,
     Ah::AbstractMatrix,
-    Qh::SRMatrix,
-    cachemat::SRMatrix,
+    Qh::PSDMatrix,
+    C_DxD::AbstractMatrix,
+    C_2DxD::AbstractMatrix,
     diffusion=1,
 )
-    M, L = cachemat.mat, cachemat.squareroot
-    D, D = size(Qh.mat)
+    R, M = C_2DxD, C_DxD
+    D, D = size(Qh)
 
-    _matmul!(view(L, 1:D, 1:D), Ah, x_curr.Σ.squareroot)
-    _matmul!(view(L, 1:D, D+1:2D), sqrt.(diffusion), Qh.squareroot)
-    _matmul!(M, L, L')
+    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, Ah')
+    _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
+    _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
 
-    QL =
-        issuccess(chol) ? Matrix(chol.U)' :
-        eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
-    # QL = eltype(L) <: Union{Float16,Float32,Float64} ? lq!(L).L : qr(L').R'
-    copy!(x_out.Σ.squareroot, QL)
-    _matmul!(x_out.Σ.mat, QL, QL')
+    Q_R = issuccess(chol) ? Matrix(chol.U) : custom_qr!(R).R
+    copy!(x_out.Σ.R, Q_R)
+    # _matmul!(x_out.Σ.mat, QL, QL')
     return x_out.Σ
 end

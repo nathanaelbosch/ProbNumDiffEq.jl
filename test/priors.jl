@@ -44,7 +44,7 @@ end
     d, q = 2, 2
 
     A, Q = ProbNumDiffEq.ibm(d, q)
-    Qh = Q * σ^2
+    Qh = PSDMatrix(σ * Q.R)
 
     AH_22_PRE = [
         1 2 1 0 0 0
@@ -65,15 +65,15 @@ end
             0 0 0 1/3 1/2 1/1
         ]
 
-    @test AH_22_PRE ≈ A
-    @test QH_22_PRE ≈ Qh
+    @test AH_22_PRE ≈ Matrix(A)
+    @test QH_22_PRE ≈ Matrix(Qh)
 end
 
 @testset "Verify correct prior dim" begin
     prob = prob_ode_lotkavoltera
     d = length(prob.u0)
     for q in 1:5
-        integ = init(prob, EK0(order=q), initialize_derivatives=false)
+        integ = init(prob, EK0(order=q))
         @test length(integ.cache.x.μ) == d * (q + 1)
         sol = solve!(integ)
         @test length(integ.cache.x.μ) == d * (q + 1)

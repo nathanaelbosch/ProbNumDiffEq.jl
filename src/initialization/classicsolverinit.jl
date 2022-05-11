@@ -1,4 +1,4 @@
-function initial_update!(integ, cache, init::ClassicSolverInit)
+function initial_update!(integ, cache, ::ClassicSolverInit)
     @unpack u, f, p, t = integ
     @unpack d, x, Proj = cache
     q = integ.alg.order
@@ -13,10 +13,11 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    Mcache = cache.C_DxD
+    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.destats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
 
     if q < 2
         return
@@ -33,7 +34,7 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
         if q < 3
             return
         end
@@ -79,10 +80,10 @@ function initial_update!(integ, cache, init::ClassicSolverInit)
 
     # Filter & smooth to fit these values!
     us = [u for u in sol.u]
-    return rk_init_improve(integ, cache, sol.t, us, dt)
+    return rk_init_improve(cache, sol.t, us, dt)
 end
 
-function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
+function rk_init_improve(cache::GaussianODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
     @unpack x, x_pred, x_filt, measurement = cache
 
@@ -100,15 +101,14 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
         u = view(u, :) # just in case the problem is matrix-valued
         predict_mean!(x_pred, x, A)
-        predict_cov!(x_pred, x, A, Q, cache.C1, cache.default_diffusion)
+        predict_cov!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
         push!(preds, copy(x_pred))
 
         H = cache.E0 * PI
         measurement.μ .= H * x_pred.μ .- u
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
-        M_cache, S_cache = cache.x_tmp2.Σ.mat, cache.m_tmp.Σ
-        update!(x_filt, x_pred, measurement, H, cache.K1, M_cache, S_cache)
+        update!(x_filt, x_pred, measurement, H, cache.K1, cache.C_DxD, cache.m_tmp.Σ)
         push!(filts, copy(x_filt))
 
         x = x_filt
@@ -119,7 +119,7 @@ function rk_init_improve(integ, cache::GaussianODEFilterCache, ts, us, dt)
         xf = filts[i-1]
         xs = filts[i]
         xp = preds[i-1] # Since `preds` is one shorter
-        smooth!(xf, xs, A, Q, integ.cache, 1)
+        smooth!(xf, xs, A, Q, cache, 1)
     end
 
     _gaussian_mul!(cache.x, PI, filts[1])

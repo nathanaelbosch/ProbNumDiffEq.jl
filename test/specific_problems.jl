@@ -103,10 +103,10 @@ end
 
             e = m0'm0
             H = 2m0'E0
-            S = H * P * H'
+            SR = P.R * H'
+            S = SR'SR
 
-            S_inv = inv(S)
-            K = P * H' * S_inv
+            K = P.R' * (P.R * (H' / S))
 
             mnew = m + K * (2 .- e)
             Pnew = ProbNumDiffEq.X_A_Xt(P, (I - K * H)) # + X_A_Xt(R, K)

@@ -71,11 +71,8 @@ function DiffEqBase.build_solution(
     d = length(prob.u0)
     uElType = eltype(prob.u0)
     D = d
-    pu_cov =
-        # alg isa EK0 && !(prob.f isa DynamicalODEFunction) ?
-        # SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
-    x_cov = SRMatrix(zeros(uElType, d, d), zeros(uElType, d, d))
+    pu_cov = PSDMatrix(zeros(uElType, d, D))
+    x_cov = PSDMatrix(zeros(uElType, d, d))
     pu = StructArray{Gaussian{Vector{uElType},typeof(pu_cov)}}(undef, 0)
     x_filt = StructArray{Gaussian{Vector{uElType},typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)

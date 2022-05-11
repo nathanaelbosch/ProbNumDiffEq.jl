@@ -2,14 +2,14 @@
 # Sampling from a solution
 ########################################################################################
 """
-    _rand(x::Gaussian{<:Vector,<:SRMatrix}, n::Integer=1)
+    _rand(x::Gaussian{<:Vector,<:PSDMatrix}, n::Integer=1)
 
 Sample from a Gaussian with a `ProbNumDiffEq.SquarerootMatrix` covariance.
 Uses the existing covariance square root to make the sampling more stable.
 """
 function _rand(x::SRGaussian, n::Integer=1)
     m, C = x.μ, x.Σ
-    sample = m .+ C.squareroot * randn(length(m), n)
+    sample = m .+ C.R' * randn(size(C.R, 1), n)
     return sample
 end
 
@@ -51,7 +51,7 @@ function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
             x_prev_p = P * xs[i]
 
             prev_sample_p, _ =
-                smooth(x_prev_p, Gaussian(sample_p, SRMatrix(zeros(D, D))), A, Qh)
+                smooth(x_prev_p, Gaussian(sample_p, PSDMatrix(zeros(D, D))), A, Qh)
 
             # sample_path[i, :, j] .= PI*prev_sample_p.μ
             sample_path[i, :, j] .= PI * _rand(prev_sample_p)[:]

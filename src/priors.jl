@@ -32,7 +32,7 @@ function ibm(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {elType}
         end
     end
     QL_breve = cholesky(Q_breve).L
-    Q = SRMatrix(kron(I(d), QL_breve), kron(I(d), Q_breve))
+    Q = PSDMatrix(kron(I(d), QL_breve'))
 
     return A, Q
 end

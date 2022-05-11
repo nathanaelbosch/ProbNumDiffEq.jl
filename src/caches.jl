@@ -65,6 +65,13 @@ mutable struct GaussianODEFilterCache{
     G1::matType
     G2::matType
     covmatcache::matType
+    Smat::matType
+    C_dxd::matType
+    C_dxD::matType
+    C_Dxd::matType
+    C_DxD::matType
+    C_2DxD::matType
+    C_3DxD::matType
     default_diffusion::diffusionType
     local_diffusion::diffusionType
     global_diffusion::diffusionType
@@ -94,8 +101,6 @@ function OrdinaryDiffEq.alg_cache(
     calck,
     ::Val{IIP},
 ) where {IIP,uEltypeNoUnits,uBottomEltypeNoUnits,tTypeNoUnits}
-    initialize_derivatives = true
-
     if u isa Number
         error("We currently don't support scalar-valued problems")
     end
@@ -126,10 +131,7 @@ function OrdinaryDiffEq.alg_cache(
     A, Q = ibm(d, q, uElType)
 
     initial_variance = ones(uElType, D)
-    x0 = Gaussian(
-        zeros(uElType, D),
-        SRMatrix(diagm(sqrt.(initial_variance)), diagm(initial_variance)),
-    )
+    x0 = Gaussian(zeros(uElType, D), PSDMatrix(diagm(sqrt.(initial_variance))))
 
     # Measurement model
     R = zeros(uElType, d, d)
@@ -140,23 +142,29 @@ function OrdinaryDiffEq.alg_cache(
     du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
     ddu = f isa DynamicalODEFunction ? zeros(uElType, d, 2d) : zeros(uElType, d, d)
     v = similar(h)
-    S =
-    # alg isa EK0 ? SRMatrix(zeros(uElType, d, D), Diagonal(zeros(uElType, d, d))) :
-        SRMatrix(zeros(uElType, d, D), zeros(uElType, d, d))
+    S = PSDMatrix(zeros(uElType, D, d))
     measurement = Gaussian(v, S)
     pu_tmp =
         f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), SRMatrix(zeros(uElType, 2d, D))) : similar(measurement)
+        Gaussian(zeros(uElType, 2d), PSDMatrix(zeros(uElType, D, 2d))) : copy(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
-    C1 = SRMatrix(zeros(uElType, D, 2D), zeros(uElType, D, D))
-    C2 = SRMatrix(zeros(uElType, D, 3D), zeros(uElType, D, D))
-    covmatcache = similar(G)
+    C1 = PSDMatrix(zeros(uElType, 2D, D))
+    C2 = PSDMatrix(zeros(uElType, 3D, D))
+    Smat = zeros(uElType, d, d)
+    covmatcache = copy(G)
+
+    C_dxd = zeros(uElType, d, d)
+    C_dxD = zeros(uElType, d, D)
+    C_Dxd = zeros(uElType, D, d)
+    C_DxD = zeros(uElType, D, D)
+    C_2DxD = zeros(uElType, 2D, D)
+    C_3DxD = zeros(uElType, 3D, D)
 
     if alg isa EK1FDB
         H = [E1; E2]
         v = [v; v]
-        S = SRMatrix(zeros(uElType, 2d, D), zeros(uElType, 2d, 2d))
+        S = PSDMatrix(zeros(uElType, D, 2d))
         measurement = Gaussian(v, S)
         K = zeros(uElType, D, 2d)
     end
@@ -166,17 +174,17 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     Ah, Qh = copy(A), copy(Q)
-    u_pred = similar(u)
-    u_filt = similar(u)
-    tmp = similar(u)
+    u_pred = copy(u)
+    u_filt = copy(u)
+    tmp = copy(u)
     x_pred = copy(x0)
-    x_filt = similar(x0)
-    x_tmp = similar(x0)
-    x_tmp2 = similar(x0)
-    m_tmp = similar(measurement)
-    K2 = similar(K)
-    G2 = similar(G)
-    err_tmp = similar(du)
+    x_filt = copy(x0)
+    x_tmp = copy(x0)
+    x_tmp2 = copy(x0)
+    m_tmp = copy(measurement)
+    K2 = copy(K)
+    G2 = copy(G)
+    err_tmp = copy(du)
 
     # Things for calc_J
     uf = get_uf(f, t, p, Val(IIP))
@@ -251,6 +259,13 @@ function OrdinaryDiffEq.alg_cache(
         G,
         G2,
         covmatcache,
+        Smat,
+        C_dxd,
+        C_dxD,
+        C_Dxd,
+        C_DxD,
+        C_2DxD,
+        C_3DxD,
         initdiff,
         initdiff * NaN,
         initdiff * NaN,

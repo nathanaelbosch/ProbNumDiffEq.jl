@@ -12,10 +12,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     integ.destats.nf += q
     @assert length(0:q) == length(f_derivatives)
-    m_cache = Gaussian(
-        zeros(eltype(u), d),
-        SRMatrix(zeros(eltype(u), d, D), zeros(eltype(u), d, d)),
-    )
+    m_cache = Gaussian(zeros(eltype(u), d), PSDMatrix(zeros(eltype(u), D, d)))
     for (o, df) in zip(0:q, f_derivatives)
         if f isa DynamicalODEFunction
             @assert df isa ArrayPartition
@@ -27,7 +24,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[:]
         end
 
-        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, x_tmp2.Σ.mat)
+        condition_on!(x, pmat, df, m_cache.Σ, K1, x_tmp.Σ, cache.C_DxD, cache)
     end
 end
 

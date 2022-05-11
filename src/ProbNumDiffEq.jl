@@ -22,6 +22,9 @@ stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
 import LinearAlgebra: mul!
+"""LAPACK.geqrf! seems to be faster on small matrices than LAPACK.geqrt!"""
+custom_qr!(A) = qr!(A)
+custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays
@@ -60,16 +63,12 @@ _matmul!(
     B::AbstractVecOrMat{T},
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
-# @reexport using PSDMatrices
-# import PSDMatrices: X_A_Xt
-include("squarerootmatrix.jl")
-const SRMatrix = SquarerootMatrix
-export SRMatrix
+@reexport using PSDMatrices
+import PSDMatrices: X_A_Xt, X_A_Xt!
 X_A_Xt(A, X) = X * A * X'
 X_A_Xt!(out, A, X) = (out .= X * A * X')
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::SRMatrix, diffusion::Number) =
-    SRMatrix(sqrt.(diffusion) * Q.squareroot, diffusion * Q.mat)
+apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
 
 # All the Gaussian things
 @reexport using GaussianDistributions

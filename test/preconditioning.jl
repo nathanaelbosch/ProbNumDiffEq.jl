@@ -22,18 +22,18 @@ prob = remake(prob, tspan=(0.0, 10.0))
 
     A_p, Q_p = ProbNumDiffEq.ibm(d, q)
     Ah_p = A_p
-    Qh_p = Q_p * σ^2
+    Qh_p = PSDMatrix(σ * Q_p.R)
 
     # First test that they're both equivalent
     D = d * (q + 1)
     P, PI = ProbNumDiffEq.init_preconditioner(d, q)
     ProbNumDiffEq.make_preconditioner!(P, h, d, q)
     ProbNumDiffEq.make_preconditioner_inv!(PI, h, d, q)
-    @test Qh_p ≈ P * Qh * P'
+    @test Matrix(Qh_p) ≈ P * Qh * P'
     @test Ah_p ≈ P * Ah * PI
 
     # Check that the preconditioning actually helps
     # @info "Condition numbers" cond(Qh) cond(Matrix(Qh_p)) cond(Ah) cond(Ah_p)
-    @test cond(Qh) > cond(Matrix(Qh_p))
-    @test cond(Qh) > cond(Matrix(Qh_p))^2
+    @test cond(Matrix(Qh)) > cond(Matrix(Qh_p))
+    @test cond(Matrix(Qh)) > cond(Matrix(Qh_p))^2
 end

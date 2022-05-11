@@ -17,7 +17,8 @@ A local diffusion parameter is estimated at each step. Works well with adaptive 
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusion::DynamicDiffusion, d, q, Eltype) = one(Eltype)
-estimate_local_diffusion(kind::DynamicDiffusion, integ) = local_scalar_diffusion(integ)
+estimate_local_diffusion(kind::DynamicDiffusion, integ) =
+    local_scalar_diffusion(integ.cache)
 
 """
     DynamicMVDiffusion()
@@ -31,7 +32,8 @@ scales of the different dimensions vary a lot.
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(diffusionmodel::DynamicMVDiffusion, d, q, Eltype) =
     kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
-estimate_local_diffusion(kind::DynamicMVDiffusion, integ) = local_diagonal_diffusion(integ)
+estimate_local_diffusion(kind::DynamicMVDiffusion, integ) =
+    local_diagonal_diffusion(integ.cache)
 
 """
     FixedDiffusion(; initial_diffusion=1.0, calibrate=true)
@@ -48,20 +50,16 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
 end
 initial_diffusion(diffusionmodel::FixedDiffusion, d, q, Eltype) =
     diffusionmodel.initial_diffusion * one(Eltype)
-estimate_local_diffusion(kind::FixedDiffusion, integ) = local_scalar_diffusion(integ)
+estimate_local_diffusion(kind::FixedDiffusion, integ) = local_scalar_diffusion(integ.cache)
 function estimate_global_diffusion(rule::FixedDiffusion, integ)
-    @unpack d, measurement, m_tmp = integ.cache
+    @unpack d, measurement, m_tmp, Smat = integ.cache
     # sol_diffusions = integ.sol.diffusions
 
     v, S = measurement.μ, measurement.Σ
-    e, _ = m_tmp.μ, m_tmp.Σ.mat
-    _S = copy!(m_tmp.Σ.mat, S.mat)
-    if _S isa Diagonal
-        e .= v ./ _S.diag
-    else
-        S_chol = cholesky!(_S)
-        ldiv!(e, S_chol, v)
-    end
+    e = m_tmp.μ
+    _S = _matmul!(Smat, S.R', S.R)
+    S_chol = cholesky!(_S)
+    ldiv!(e, S_chol, v)
     diffusion_t = dot(v, e) / d
 
     if integ.success_iter == 0
@@ -96,12 +94,15 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
     @assert initdiff isa Number || length(initdiff) == d
     return kron(Diagonal(initdiff .* ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
 end
-estimate_local_diffusion(kind::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ)
+estimate_local_diffusion(kind::FixedMVDiffusion, integ) =
+    local_diagonal_diffusion(integ.cache)
 function estimate_global_diffusion(kind::FixedMVDiffusion, integ)
     @unpack q, measurement = integ.cache
 
     v, S = measurement.μ, measurement.Σ
-    S_11 = diag(S)[1]
+    # S_11 = diag(S)[1]
+    c1 = view(S.R, :, 1)
+    S_11 = dot(c1, c1)
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
@@ -132,25 +133,20 @@ where ``z, H, Q`` are taken from the passed integrator.
 For more background information
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
-function local_scalar_diffusion(integ)
-    @unpack d, R, H, Qh, measurement, m_tmp = integ.cache
+function local_scalar_diffusion(cache)
+    @unpack d, R, H, Qh, measurement, m_tmp, Smat = cache
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     X_A_Xt!(HQH, Qh, H)
-    if HQH.mat isa Diagonal
-        e .= z ./ HQH.mat.diag
-        σ² = dot(e, z) / d
-        return σ²
-    else
-        C = cholesky!(HQH.mat)
-        ldiv!(e, C, z)
-        σ² = dot(z, e) / d
-        return σ²
-    end
+    HQHmat = _matmul!(Smat, HQH.R', HQH.R)
+    C = cholesky!(HQHmat)
+    ldiv!(e, C, z)
+    σ² = dot(z, e) / d
+    return σ²
 end
 
 """
-    local_diagonal_diffusion(integ)
+    local_diagonal_diffusion(cache)
 
 Compute the local, scalar diffusion estimate.
 
@@ -164,11 +160,13 @@ where ``z, H, Q`` are taken from the passed integrator.
 For more background information
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
-function local_diagonal_diffusion(integ)
-    @unpack q, H, Qh, measurement, m_tmp = integ.cache
+function local_diagonal_diffusion(cache)
+    @unpack q, H, Qh, measurement, m_tmp = cache
     z = measurement.μ
     HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
-    Q0_11 = diag(HQH)[1]
+    # Q0_11 = diag(HQH)[1]
+    c1 = view(HQH.R, :, 1)
+    Q0_11 = dot(c1, c1)
 
     Σ_ii = z .^ 2 ./ Q0_11
     # Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
