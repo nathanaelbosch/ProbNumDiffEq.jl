@@ -58,4 +58,4 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
 - F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019)
 - M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018)
 
-A much more detailed list of references, not only on ODE filters but on probabilistic numerics in general, can be found on the [probabilistic-numerics.org homepage](https://www.probabilistic-numerics.org/en/latest/research/general/).
+A much more detailed list of references, not only on ODE filters but on probabilistic numerics in general, can be found on the [probabilistic-numerics.org homepage](https://www.probabilistic-numerics.org/research/general/).
