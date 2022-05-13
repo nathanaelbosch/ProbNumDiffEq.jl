@@ -32,7 +32,6 @@ using UnPack
 using RecipesBase
 using RecursiveArrayTools
 using ForwardDiff
-using Tullio
 using Octavian
 # By default use mul!
 _matmul!(C, A, B) = mul!(C, A, B)
@@ -48,8 +47,6 @@ _matmul!(
     A::Diagonal{T},
     B::AbstractMatrix{T},
 ) where {T<:LinearAlgebra.BlasFloat} = (C .= A.diag .* B)
-_matmul!(C::Diagonal, A::AbstractMatrix, B::AbstractMatrix) =
-    @tullio C[i, i] = A[i, j] * B[j, i]
 _matmul!(
     C::AbstractMatrix{T},
     A::AbstractVecOrMat{T},
