@@ -14,7 +14,8 @@ end
 function make_preconditioners!(post::GaussianODEFilterPosterior, dt)
     @unpack P, PI, d, q = post
     make_preconditioner!(P, dt, d, q)
-    make_preconditioner_inv!(PI, dt, d, q)
+    # make_preconditioner_inv!(PI, dt, d, q)
+    PI.diag .= 1 ./ P.diag
     return nothing
 end
 
