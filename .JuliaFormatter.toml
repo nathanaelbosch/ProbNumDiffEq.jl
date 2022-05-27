@@ -1,10 +1,14 @@
-# style = "blue"
-always_use_return = true
-# short_to_long_function_def = true
-# whitespace_ops_in_indices = true
-remove_extra_newlines = true
+# The SciML Style defaults; with some adjustments
 always_for_in = true
-import_to_using = true
-# pipe_to_function_call = true
-whitespace_in_kwargs = false
-# annotate_untyped_fields_with_any = false
+always_use_return = false
+annotate_untyped_fields_with_any = true
+conditional_to_if = false
+import_to_using = false
+join_lines_based_on_source = false # originally true
+normalize_line_endings = "unix"
+pipe_to_function_call = false
+remove_extra_newlines = true
+short_to_long_function_def = false
+whitespace_in_kwargs = false # originally true
+whitespace_ops_in_indices = false # originally true
+whitespace_typedefs = false # originally true
