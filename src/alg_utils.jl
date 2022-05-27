@@ -36,3 +36,7 @@ OrdinaryDiffEq.ispredictive(alg::AbstractEK) = false # not sure, maybe Gustafsso
 
 # OrdinaryDiffEq.uses_uprev(alg::, adaptive::Bool) = adaptive
 OrdinaryDiffEq.is_mass_matrix_alg(alg::AbstractEK) = true
+
+SciMLBase.isautodifferentiable(alg::AbstractEK) = true
+SciMLBase.allows_arbitrary_number_types(alg::AbstractEK) = true
+SciMLBase.allowscomplex(alg::AbstractEK) = false
