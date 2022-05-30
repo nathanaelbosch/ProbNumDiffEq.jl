@@ -5,7 +5,7 @@
 
 
 __ProbNumDiffEq.jl__ provides _probabilistic numerical_ solvers to the
-[DifferentialEquations.jl](https://docs.sciml.ai/stable/) ecosystem.
+[DifferentialEquations.jl](https://diffeq.sciml.ai/stable/) ecosystem.
 The implemented _ODE filters_ solve differential equations via Bayesian filtering and smoothing and compute not just a single point estimate of the true solution, but a posterior distribution that contains an estimate of its numerical approximation error.
 
 For a short intro video, check out our [poster presentation at JuliaCon2021](https://www.youtube.com/watch?v=EMFl6ytP3iQ).
@@ -13,7 +13,7 @@ For a short intro video, check out our [poster presentation at JuliaCon2021](htt
 
 ---
 
-__For more probabilistic numerics check out the [ProbNum](https://www.probabilistic-numerics.org/en/latest/) Python package.__
+__For more probabilistic numerics check out the [ProbNum](https://probnum.readthedocs.io/en/latest/) Python package.__
 It implements probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
 
 ---
