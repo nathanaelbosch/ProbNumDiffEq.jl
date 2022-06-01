@@ -139,7 +139,7 @@ function DiffEqBase.savevalues!(
     # Save our custom stuff that we need for the posterior
     # TODO If we don't want dense output, we might not want to save these!
     # It's not completely clear how to specify that though; They are also needed for sampling.
-    if integ.alg.smooth
+    if true || integ.alg.smooth
         OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, integ.cache.x)
     end
     OrdinaryDiffEq.copyat_or_push!(
