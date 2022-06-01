@@ -63,7 +63,14 @@ function update!(
     D = length(m_p)
 
     # K = P_p * H' / S
-    S_chol = cholesky!(S)
+    local S_chol
+    try
+        S_chol = cholesky!(S)
+    catch
+        # @info "??" ForwardDiff.value.(S.mat) ForwardDiff.value.(S.squareroot)
+        SL = qr(S.squareroot').R'
+        S_chol = Cholesky(SL, :L, 0)
+    end
     K = _matmul!(K_cache, Matrix(P_p), H')
     rdiv!(K, S_chol)
 
