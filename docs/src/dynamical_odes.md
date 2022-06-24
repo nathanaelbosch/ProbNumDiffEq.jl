@@ -76,7 +76,7 @@ plot(sol2, vars=(3,4))
 Solving second-order ODEs is not just a matter of convenience - in fact, SciMLBase's `SecondOrderODEProblem` is neatly designed in such a way that all the classic solvers from OrdinaryDiffEq.jl can handle it by solving the corresponding first-order ODE.
 But, transforming the ODE to first order increases the dimensionality of the problem, and comes therefore at increased computational cost; this also motivates [classic specialized solvers for second-order ODEs](https://diffeq.sciml.ai/stable/solvers/dynamical_solve/).
 
-The probablistic numerical solvers from ProbNumDiffEq.jl have the same internal state representation for first and second order ODEs; all that changes is the _measurement model_ [1].
+The probabilistic numerical solvers from ProbNumDiffEq.jl have the same internal state representation for first and second order ODEs; all that changes is the _measurement model_ [1].
 As a result, we can use the `EK1` both for first and second order ODEs, but it automatically specializes on the latter to provide a __2x performance boost__:
 ```
 julia> @btime solve(prob, EK1(order=3), adaptive=false, dt=1e-2);
