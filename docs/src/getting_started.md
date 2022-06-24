@@ -94,7 +94,7 @@ and similarly the time steps
 sol.t[end]
 ```
 
-But we didn't use probabilstic numerics to just compute means.
+But we didn't use probabilistic numerics to just compute means.
 In fact, `sol` is a _probabilistic numerical_ ODE solution and it provides
 [Gaussian](https://github.com/mschauer/GaussianDistributions.jl)
 distributions over solution values.
