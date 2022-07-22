@@ -20,7 +20,7 @@ function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::
 end
 
 """
-    perform_step!(integ, cache::GaussianODEFilterCache[, repeat_step=false])
+    perform_step!(integ, cache::EKCache[, repeat_step=false])
 
 Perform the ODE filter step.
 
@@ -37,15 +37,10 @@ Basically consists of the following steps
 As in OrdinaryDiffEq.jl, this step is not necessarily successful!
 For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 """
-function OrdinaryDiffEq.perform_step!(
-    integ,
-    cache::GaussianODEFilterCache,
-    repeat_step=false,
-)
+function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
     @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
-    @unpack x_tmp, x_tmp2 = integ.cache
     @unpack A, Q, Ah, Qh = integ.cache
 
     make_preconditioners!(cache, dt)
@@ -279,8 +274,7 @@ compute_measurement_covariance!(cache) =
     X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
 
 function update!(integ, prediction)
-    @unpack measurement, H, R, x_filt = integ.cache
-    @unpack K1, K2, x_tmp2, m_tmp, C_DxD = integ.cache
+    @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = integ.cache
     update!(x_filt, prediction, measurement, H, K1, C_DxD, m_tmp.Σ)
     return x_filt
 end
@@ -334,7 +328,7 @@ E_i = ( σ_{loc}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
 To save allocations, the function modifies the given `cache` and writes into
 `cache.C_Dxd` during some computations.
 """
-function estimate_errors!(cache::GaussianODEFilterCache)
+function estimate_errors!(cache::AbstractODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
 
     if local_diffusion isa Real && isinf(local_diffusion)

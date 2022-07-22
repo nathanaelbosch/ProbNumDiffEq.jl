@@ -83,7 +83,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     return rk_init_improve(cache, sol.t, us, dt)
 end
 
-function rk_init_improve(cache::GaussianODEFilterCache, ts, us, dt)
+function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
     @unpack x, x_pred, x_filt, measurement = cache
 

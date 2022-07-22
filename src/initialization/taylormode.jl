@@ -1,10 +1,10 @@
 function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack u, f, p, t = integ
-    @unpack d, x, Proj = cache
+    @unpack d, q, x, Proj = cache
     q = integ.alg.order
     D = d * (q + 1)
 
-    @unpack x_tmp, x_tmp2, m_tmp, K1, K2 = cache
+    @unpack x_tmp, x_tmp2, m_tmp, K1 = cache
     if size(K1, 2) != d
         K1 = K1[:, 1:d]
     end

@@ -1,7 +1,7 @@
 
 function DiffEqBase.__init(
     prob::DiffEqBase.AbstractODEProblem{uType,tType,false},
-    alg::GaussianODEFilter,
+    alg::AbstractEK,
     args...;
     kwargs...,
 ) where {uType,tType}

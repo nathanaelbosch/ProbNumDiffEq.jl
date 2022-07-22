@@ -1,8 +1,7 @@
 ########################################################################################
 # Algorithm
 ########################################################################################
-abstract type GaussianODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
-abstract type AbstractEK <: GaussianODEFilter end
+abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 """
     EK0(; order=3, smooth=true,

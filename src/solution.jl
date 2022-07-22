@@ -56,7 +56,7 @@ end
 # Used to build the initial empty solution in OrdinaryDiffEq.__init
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
-    alg::GaussianODEFilter,
+    alg::AbstractEK,
     t,
     u;
     k=nothing,
