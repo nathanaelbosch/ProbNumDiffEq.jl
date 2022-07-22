@@ -89,6 +89,8 @@ export EK0, EK1, EK1FDB
 include("alg_utils.jl")
 include("caches.jl")
 
+include("checks.jl")
+
 include("initialization/taylormode.jl")
 include("initialization/classicsolverinit.jl")
 

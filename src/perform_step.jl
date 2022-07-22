@@ -1,26 +1,8 @@
 # Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
-function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
-    if integ.f isa DynamicalODEFunction &&
-       !(integ.sol.prob.problem_type isa SecondOrderODEProblem)
-        error(
-            """
-          The given problem is a `DynamicalODEProblem`, but not a `SecondOrderODEProblem`.
-          This can not be handled by ProbNumDiffEq.jl right now. Please check if the
-          problem can be formulated as a second order ODE. If not, please open a new
-          github issue!
-          """,
-        )
-    end
-
-    if integ.opts.dense && !integ.alg.smooth
-        error("To use `dense=true` you need to set `smooth=true`!")
-    elseif !integ.opts.dense && integ.alg.smooth
-        @warn "If you set dense=false for efficiency, you might also want to set smooth=false."
-    end
-    if !integ.opts.save_everystep && integ.alg.smooth
-        error("If you do not save all values, you do not need to smooth!")
-    end
-    @assert integ.saveiter == 1
+function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::EKCache)
+    check_secondorderode(integ)
+    check_densesmooth(integ)
+    check_saveiter(integ)
 
     integ.kshortsize = 1
     resize!(integ.k, integ.kshortsize)
@@ -31,11 +13,9 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
-    OrdinaryDiffEq.copyat_or_push!(
-        integ.sol.pu,
-        integ.saveiter,
-        _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x),
-    )
+    initial_pu = _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x)
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
+
     return nothing
 end
 
