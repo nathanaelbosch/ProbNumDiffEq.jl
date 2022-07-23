@@ -17,7 +17,7 @@ show(io::IO, ::MIME"text/plain", g::Gaussian{T,S}) where {T,S} =
 size(g::Gaussian) = size(g.μ)
 ndims(g::Gaussian) = ndims(g.μ)
 
-Base.:*(M, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
+Base.:*(M::AbstractMatrix, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 # GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
 
 function _gaussian_mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
