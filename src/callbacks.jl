@@ -2,7 +2,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     m, C = cache.x
 
     # Create some caches
-    @unpack SolProj, tmp, H, x_tmp, x_tmp2 = cache
+    @unpack SolProj, tmp, H, x_tmp = cache
     D = cache.d * (cache.q + 1)
     z_tmp = residualf(mul!(tmp, SolProj, m))
     result = DiffResults.JacobianResult(z_tmp, tmp)

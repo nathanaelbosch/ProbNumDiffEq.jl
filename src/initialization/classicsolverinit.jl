@@ -8,16 +8,16 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         @warn "ClassicSolverInit might be unstable for high orders"
     end
 
-    @unpack ddu, du, x_tmp, x_tmp2, m_tmp, K1 = cache
+    @unpack ddu, du, x_tmp, m_tmp, K1 = cache
 
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
     Mcache = cache.C_DxD
-    condition_on!(x, Proj(0), _u, m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
+    condition_on!(x, Proj(0), _u, cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.destats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
+    condition_on!(x, Proj(1), view(du, :), cache)
 
     if q < 2
         return
@@ -34,7 +34,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, m_tmp.Σ, K1, x_tmp.Σ, Mcache, cache)
+        condition_on!(x, Proj(2), ddfddu, cache)
         if q < 3
             return
         end

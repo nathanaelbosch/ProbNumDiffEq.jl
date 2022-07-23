@@ -40,7 +40,7 @@ For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
-    @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
+    @unpack x, x_pred, u_pred, x_filt, err_tmp = integ.cache
     @unpack A, Q, Ah, Qh = integ.cache
 
     make_preconditioners!(cache, dt)
@@ -80,8 +80,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Update state and save the ODE solution value
     x_filt = update!(integ, x_pred)
-    mul!(view(u_filt, :), SolProj, x_filt.μ)
-    integ.u .= u_filt
+    mul!(view(integ.u, :), SolProj, x_filt.μ)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
@@ -108,20 +107,13 @@ as in OrdinaryDiffEq.jl.
 For second-order ODEs and the `EK1FDB` algorithm a specialized implementation is called.
 """
 evaluate_ode!(integ, x_pred, t) =
-    evaluate_ode!(integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
-function evaluate_ode!(
-    integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
-    x_pred,
-    t,
-    second_order::Val{false},
-)
-    @unpack f, p, dt, alg = integ
+    evaluate_ode!(integ, integ.alg, x_pred, t, Val(integ.f isa DynamicalODEFunction))
+function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{false})
+    @unpack f, p, dt = integ
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
     @unpack E0, E1, E2 = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
 
     # Mean
     f(du, u_pred, p, t)
@@ -135,6 +127,7 @@ function evaluate_ode!(
         _matmul!(H, f.mass_matrix, E1)
     end
 
+    z = measurement.μ
     _matmul!(z, H, x_pred.μ)
     z .-= du[:]
 
@@ -163,19 +156,12 @@ function evaluate_ode!(
     return nothing
 end
 
-function evaluate_ode!(
-    integ::OrdinaryDiffEq.ODEIntegrator{<:EK1FDB},
-    x_pred,
-    t,
-    second_order::Val{false},
-)
-    @unpack f, p, alg = integ
+function evaluate_ode!(integ, alg::EK1FDB, x_pred, t, second_order::Val{false})
+    @unpack f, p = integ
     @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
     @unpack E0, E1, E2 = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
 
     (f.mass_matrix != I) && error("EK1FDB does not support mass-matrices right now")
 
@@ -184,6 +170,7 @@ function evaluate_ode!(
     integ.destats.nf += 1
     # z .= MM*E1*x_pred.μ .- du
     H1, H2 = view(H, 1:d, :), view(H, d+1:2d, :)
+    z = measurement.μ
     z1, z2 = view(z, 1:d), view(z, d+1:2d)
 
     H1 .= E1
@@ -228,26 +215,20 @@ function evaluate_ode!(
     return nothing
 end
 
-function evaluate_ode!(
-    integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
-    x_pred,
-    t,
-    second_order::Val{true},
-)
-    @unpack f, p, alg = integ
-    @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
-    @assert iszero(R)
+function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{true})
+    @unpack f, p = integ
+    @unpack d, u_pred, du, ddu, measurement, H = integ.cache
     du2 = du
 
     @unpack E0, E1, E2 = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
 
     # Mean
     # _u_pred = E0 * x_pred.μ
     # _du_pred = E1 * x_pred.μ
     f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     integ.destats.nf += 1
+
+    z = measurement.μ
     _matmul!(z, E2, x_pred.μ)
     z .-= @view du2[:]
 
