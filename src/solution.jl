@@ -1,7 +1,6 @@
 ########################################################################################
 # Solution
 ########################################################################################
-#! format: off
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
 
 """
@@ -13,7 +12,7 @@ It contains filtering and smoothing state estimates which enables plots with unc
 sampling, and dense evaluation.
 """
 mutable struct ProbODESolution{
-    T, N, uType, puType, uType2, DType, tType, rateType, xType, diffType, llType, P, A, IType, DE
+    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,llType,P,A,IType,DE,
 } <: AbstractProbODESolution{T,N,uType}
     u::uType
     pu::puType
@@ -37,9 +36,9 @@ ProbODESolution{T,N}(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob,
     alg, interp, dense, tslocation, destats, retcode,
 ) where {T,N} = ProbODESolution{
-    T, N, typeof(u), typeof(pu), typeof(u_analytic), typeof(errors), typeof(t), typeof(k),
-    typeof(x_filt), typeof(diffusions), typeof(log_likelihood), typeof(prob), typeof(alg),
-    typeof(interp), typeof(destats),
+    T,N,typeof(u),typeof(pu),typeof(u_analytic),typeof(errors),typeof(t),typeof(k),
+    typeof(x_filt),typeof(diffusions),typeof(log_likelihood),typeof(prob),typeof(alg),
+    typeof(interp),typeof(destats),
 }(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob,
     alg, interp, dense, tslocation, destats, retcode,
@@ -56,7 +55,7 @@ end
 # Used to build the initial empty solution in OrdinaryDiffEq.__init
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
-    alg::GaussianODEFilter,
+    alg::AbstractEK,
     t,
     u;
     k=nothing,
@@ -123,7 +122,7 @@ Since it is the mean and does never return Gaussians, it can basically be treate
 were a classic ODE solution and is well-compatible with e.g. DiffEqDevtools.jl.
 """
 mutable struct MeanProbODESolution{
-    T, N, uType, uType2, DType, tType, rateType, P, A, IType, DE, PSolType
+    T,N,uType,uType2,DType,tType,rateType,P,A,IType,DE,PSolType,
 } <: DiffEqBase.AbstractODESolution{T,N,uType}
     u::uType
     u_analytic::uType2
@@ -141,15 +140,14 @@ mutable struct MeanProbODESolution{
 end
 function mean(sol::ProbODESolution{T,N}) where {T,N}
     return MeanProbODESolution{
-        T, N, typeof(sol.u), typeof(sol.u_analytic), typeof(sol.errors), typeof(sol.t),
-        typeof(sol.k), typeof(sol.prob), typeof(sol.alg), typeof(sol.interp),
-        typeof(sol.destats), typeof(sol),
+        T,N,typeof(sol.u),typeof(sol.u_analytic),typeof(sol.errors),typeof(sol.t),
+        typeof(sol.k),typeof(sol.prob),typeof(sol.alg),typeof(sol.interp),
+        typeof(sol.destats),typeof(sol),
     }(
         sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp,
         sol.dense, sol.tslocation, sol.destats, sol.retcode, sol,
     )
 end
-#! format: on
 (sol::MeanProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N} =
     mean(sol.probsol(t, deriv))
 (sol::MeanProbODESolution)(t::AbstractVector, deriv=Val(0)) =

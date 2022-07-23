@@ -41,7 +41,7 @@ function initial_update!(integ, cache)
 end
 
 """
-    condition_on!(x, H, data, Scache, Kcache, covcache, Mcache)
+    condition_on!(x, H, data, cache)
 
 Condition `x` on `data`, with linearized measurement function `H`.
 
@@ -51,13 +51,12 @@ function condition_on!(
     x::SRGaussian,
     H::AbstractMatrix,
     data::AbstractVector,
-    Scache,
-    Kcache,
-    covcache,
-    Mcache,
     cache,
 )
-    S = Scache
+    @unpack m_tmp, K1, x_tmp, C_DxD = cache
+    S = m_tmp.Σ
+    covcache = x_tmp.Σ
+    Mcache = cache.C_DxD
 
     X_A_Xt!(S, x.Σ, H)
     # @assert isdiag(Matrix(S))
@@ -66,8 +65,8 @@ function condition_on!(
         S_diag .+= 1e-20
     end
 
-    _matmul!(Kcache, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
-    K = Kcache ./= S_diag'
+    _matmul!(K1, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
+    K = K1 ./= S_diag'
 
     # x.μ .+= K*(data - z)
     datadiff = _matmul!(data, H, x.μ, -1, 1)
@@ -78,7 +77,7 @@ function condition_on!(
     @inbounds @simd ivdep for i in 1:D
         Mcache[i, i] += 1
     end
-    X_A_Xt!(covcache, x.Σ, Mcache)
+    X_A_Xt!(x_tmp.Σ, x.Σ, Mcache)
     copy!(x.Σ, covcache)
     return nothing
 end

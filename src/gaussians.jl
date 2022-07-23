@@ -1,8 +1,6 @@
-# const PSDGaussian{T} = Gaussian{Vector{T}, PSDMatrix{T}}
-# const PSDGaussianList{T} = StructArray{PSDGaussian{T}}
-const SRGaussian{T,S} = Gaussian{Vector{T},PSDMatrix{T,S}}
-const SRGaussianList{T,S} = StructArray{SRGaussian{T,S}}
-
+############################################################################################
+# Useful things when working with GaussianDistributions.Gaussian
+############################################################################################
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 similar(P::Gaussian) = Gaussian(similar(P.μ), similar(P.Σ))
 function Base.copy!(dst::Gaussian, src::Gaussian)
@@ -17,7 +15,11 @@ show(io::IO, ::MIME"text/plain", g::Gaussian{T,S}) where {T,S} =
 size(g::Gaussian) = size(g.μ)
 ndims(g::Gaussian) = ndims(g.μ)
 
-Base.:*(M, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
+############################################################################################
+# `SRGaussian`: Gaussians with PDFMatrix covariances
+############################################################################################
+const SRGaussian{T,S} = Gaussian{Vector{T},PSDMatrix{T,S}}
+Base.:*(M::AbstractMatrix, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 # GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
 
 function _gaussian_mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
@@ -26,8 +28,5 @@ function _gaussian_mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
     return g_out
 end
 
-var(p::SRGaussian) = diag(p.Σ)
-std(p::SRGaussian) = sqrt.(var(p))
+const SRGaussianList{T,S} = StructArray{SRGaussian{T,S}}
 mean(s::SRGaussianList) = s.μ
-var(s::SRGaussianList) = diag.(s.Σ)
-std(s::SRGaussianList) = map(std, s)

@@ -72,7 +72,7 @@ end
 In-place and square-root implementation of [`smooth`](@ref) which overwrites `x_curr`.
 
 Implemented in Joseph form to preserve square-root structure.
-It requires access to the solvers `GaussianODEFilterCache` (passed as `cache`)
+It requires access to the solvers `cache`
 to prevent allocations.
 
 See also: [`smooth`](@ref).
@@ -82,7 +82,7 @@ function smooth!(
     x_next::SRGaussian,
     Ah::AbstractMatrix,
     Qh::PSDMatrix,
-    cache::GaussianODEFilterCache,
+    cache::AbstractODEFilterCache,
     diffusion::Union{Number,Diagonal}=1,
 )
     D = length(x_curr.μ)
@@ -90,7 +90,7 @@ function smooth!(
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack d, q = cache
     @unpack x_pred = cache
-    @unpack C1, G1, G2, C2, C_DxD, C_2DxD, C_3DxD = cache
+    @unpack G1, C_DxD, C_2DxD, C_3DxD = cache
 
     # Prediction: t -> t+1
     predict_mean!(x_pred, x_curr, Ah)
@@ -99,7 +99,7 @@ function smooth!(
     # Smoothing
     # G = x_curr.Σ * Ah' * P_p_inv
     P_p_chol = Cholesky(x_pred.Σ.R, :U, 0)
-    G = rdiv!(_matmul!(G1, x_curr.Σ.R', _matmul!(G2, x_curr.Σ.R, Ah')), P_p_chol)
+    G = rdiv!(_matmul!(G1, x_curr.Σ.R', _matmul!(C_DxD, x_curr.Σ.R, Ah')), P_p_chol)
 
     # x_curr.μ .+= G * (x_next.μ .- x_pred.μ) # less allocations:
     x_pred.μ .-= x_next.μ
@@ -108,7 +108,7 @@ function smooth!(
     # Joseph-Form:
     R = C_3DxD
 
-    _matmul!(G2, G, Ah)
+    G2 = _matmul!(C_DxD, G, Ah)
     copy!(view(R, 1:D, 1:D), x_curr.Σ.R')
     _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, G2', -1.0, 1.0)
 

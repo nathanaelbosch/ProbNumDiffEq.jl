@@ -1,26 +1,8 @@
 # Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
-function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
-    if integ.f isa DynamicalODEFunction &&
-       !(integ.sol.prob.problem_type isa SecondOrderODEProblem)
-        error(
-            """
-          The given problem is a `DynamicalODEProblem`, but not a `SecondOrderODEProblem`.
-          This can not be handled by ProbNumDiffEq.jl right now. Please check if the
-          problem can be formulated as a second order ODE. If not, please open a new
-          github issue!
-          """,
-        )
-    end
-
-    if integ.opts.dense && !integ.alg.smooth
-        error("To use `dense=true` you need to set `smooth=true`!")
-    elseif !integ.opts.dense && integ.alg.smooth
-        @warn "If you set dense=false for efficiency, you might also want to set smooth=false."
-    end
-    if !integ.opts.save_everystep && integ.alg.smooth
-        error("If you do not save all values, you do not need to smooth!")
-    end
-    @assert integ.saveiter == 1
+function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::EKCache)
+    check_secondorderode(integ)
+    check_densesmooth(integ)
+    check_saveiter(integ)
 
     integ.kshortsize = 1
     resize!(integ.k, integ.kshortsize)
@@ -31,16 +13,14 @@ function OrdinaryDiffEq.initialize!(integ, cache::GaussianODEFilterCache)
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
-    OrdinaryDiffEq.copyat_or_push!(
-        integ.sol.pu,
-        integ.saveiter,
-        _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x),
-    )
+    initial_pu = _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x)
+    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
+
     return nothing
 end
 
 """
-    perform_step!(integ, cache::GaussianODEFilterCache[, repeat_step=false])
+    perform_step!(integ, cache::EKCache[, repeat_step=false])
 
 Perform the ODE filter step.
 
@@ -57,15 +37,10 @@ Basically consists of the following steps
 As in OrdinaryDiffEq.jl, this step is not necessarily successful!
 For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 """
-function OrdinaryDiffEq.perform_step!(
-    integ,
-    cache::GaussianODEFilterCache,
-    repeat_step=false,
-)
+function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
-    @unpack x, x_pred, u_pred, x_filt, u_filt, err_tmp = integ.cache
-    @unpack x_tmp, x_tmp2 = integ.cache
+    @unpack x, x_pred, u_pred, x_filt, err_tmp = integ.cache
     @unpack A, Q, Ah, Qh = integ.cache
 
     make_preconditioners!(cache, dt)
@@ -105,8 +80,7 @@ function OrdinaryDiffEq.perform_step!(
 
     # Update state and save the ODE solution value
     x_filt = update!(integ, x_pred)
-    mul!(view(u_filt, :), SolProj, x_filt.μ)
-    integ.u .= u_filt
+    mul!(view(integ.u, :), SolProj, x_filt.μ)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
@@ -133,20 +107,13 @@ as in OrdinaryDiffEq.jl.
 For second-order ODEs and the `EK1FDB` algorithm a specialized implementation is called.
 """
 evaluate_ode!(integ, x_pred, t) =
-    evaluate_ode!(integ, x_pred, t, Val(integ.f isa DynamicalODEFunction))
-function evaluate_ode!(
-    integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
-    x_pred,
-    t,
-    second_order::Val{false},
-)
-    @unpack f, p, dt, alg = integ
+    evaluate_ode!(integ, integ.alg, x_pred, t, Val(integ.f isa DynamicalODEFunction))
+function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{false})
+    @unpack f, p, dt = integ
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
     @unpack E0, E1, E2 = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
 
     # Mean
     f(du, u_pred, p, t)
@@ -160,6 +127,7 @@ function evaluate_ode!(
         _matmul!(H, f.mass_matrix, E1)
     end
 
+    z = measurement.μ
     _matmul!(z, H, x_pred.μ)
     z .-= du[:]
 
@@ -188,19 +156,12 @@ function evaluate_ode!(
     return nothing
 end
 
-function evaluate_ode!(
-    integ::OrdinaryDiffEq.ODEIntegrator{<:EK1FDB},
-    x_pred,
-    t,
-    second_order::Val{false},
-)
-    @unpack f, p, alg = integ
+function evaluate_ode!(integ, alg::EK1FDB, x_pred, t, second_order::Val{false})
+    @unpack f, p = integ
     @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
     @unpack E0, E1, E2 = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
 
     (f.mass_matrix != I) && error("EK1FDB does not support mass-matrices right now")
 
@@ -209,6 +170,7 @@ function evaluate_ode!(
     integ.destats.nf += 1
     # z .= MM*E1*x_pred.μ .- du
     H1, H2 = view(H, 1:d, :), view(H, d+1:2d, :)
+    z = measurement.μ
     z1, z2 = view(z, 1:d), view(z, d+1:2d)
 
     H1 .= E1
@@ -253,26 +215,20 @@ function evaluate_ode!(
     return nothing
 end
 
-function evaluate_ode!(
-    integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
-    x_pred,
-    t,
-    second_order::Val{true},
-)
-    @unpack f, p, alg = integ
-    @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
-    @assert iszero(R)
+function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{true})
+    @unpack f, p = integ
+    @unpack d, u_pred, du, ddu, measurement, H = integ.cache
     du2 = du
 
     @unpack E0, E1, E2 = integ.cache
-
-    z, S = measurement.μ, measurement.Σ
 
     # Mean
     # _u_pred = E0 * x_pred.μ
     # _du_pred = E1 * x_pred.μ
     f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
     integ.destats.nf += 1
+
+    z = measurement.μ
     _matmul!(z, E2, x_pred.μ)
     z .-= @view du2[:]
 
@@ -299,8 +255,7 @@ compute_measurement_covariance!(cache) =
     X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
 
 function update!(integ, prediction)
-    @unpack measurement, H, R, x_filt = integ.cache
-    @unpack K1, K2, x_tmp2, m_tmp, C_DxD = integ.cache
+    @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = integ.cache
     update!(x_filt, prediction, measurement, H, K1, C_DxD, m_tmp.Σ)
     return x_filt
 end
@@ -354,7 +309,7 @@ E_i = ( σ_{loc}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
 To save allocations, the function modifies the given `cache` and writes into
 `cache.C_Dxd` during some computations.
 """
-function estimate_errors!(cache::GaussianODEFilterCache)
+function estimate_errors!(cache::AbstractODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
 
     if local_diffusion isa Real && isinf(local_diffusion)

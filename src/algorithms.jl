@@ -1,8 +1,7 @@
 ########################################################################################
 # Algorithm
 ########################################################################################
-abstract type GaussianODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
-abstract type AbstractEK <: GaussianODEFilter end
+abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 """
     EK0(; order=3, smooth=true,
@@ -56,28 +55,21 @@ struct EK1{CS,AD,DiffType,ST,CJ,DT,IT} <: AbstractEK
 end
 EK1(;
     order=3,
-    diffusionmodel=DynamicDiffusion(),
+    diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
-    initialization=TaylorModeInit(),
+    initialization::IT=TaylorModeInit(),
     chunk_size=0,
     autodiff=true,
     diff_type=Val{:forward},
     standardtag=true,
     concrete_jac=nothing,
-) = EK1{
-    chunk_size,
-    autodiff,
-    diff_type,
-    standardtag,
-    concrete_jac,
-    typeof(diffusionmodel),
-    typeof(initialization),
-}(
-    order,
-    diffusionmodel,
-    smooth,
-    initialization,
-)
+) where {DT,IT} =
+    EK1{chunk_size,autodiff,diff_type,standardtag,concrete_jac,DT,IT}(
+        order,
+        diffusionmodel,
+        smooth,
+        initialization,
+    )
 
 Base.@kwdef struct EK1FDB{DT,IT} <: AbstractEK
     order::Int = 3

@@ -1,15 +1,17 @@
 
 function DiffEqBase.__init(
     prob::DiffEqBase.AbstractODEProblem{uType,tType,false},
-    alg::GaussianODEFilter,
+    alg::AbstractEK,
     args...;
     kwargs...,
 ) where {uType,tType}
-    @warn "The given problem is in out-of-place form. Since the algorithms in this package are written for in-place problems, it will be automatically converted."
+    @warn "The given problem is in out-of-place form. Since the algorithms in this " *
+          "package are written for in-place problems, it will be automatically converted."
     if prob.f isa DynamicalODEFunction
         if !(prob.problem_type isa SecondOrderODEProblem)
             error(
-                "DynamicalODEProblems that are not SecondOrderODEProblems are currently not supported",
+                "DynamicalODEProblems that are not SecondOrderODEProblems " *
+                "are currently not supported",
             )
         end
         f1!(dv, v, u, p, t) = dv .= prob.f.f1(v, u, p, t)
