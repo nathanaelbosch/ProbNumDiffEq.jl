@@ -50,6 +50,11 @@ _matmul!(
 ) where {T<:LinearAlgebra.BlasFloat} = (C .= A.diag .* B)
 _matmul!(
     C::AbstractMatrix{T},
+    A::Diagonal{T},
+    B::Diagonal{T},
+) where {T<:LinearAlgebra.BlasFloat} = @. C = A * B
+_matmul!(
+    C::AbstractMatrix{T},
     A::AbstractVecOrMat{T},
     B::AbstractVecOrMat{T},
     alpha::Number,
@@ -86,6 +91,7 @@ export TaylorModeInit, ClassicSolverInit
 include("algorithms.jl")
 export EK0, EK1, EK1FDB
 
+abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 include("alg_utils.jl")
 include("caches.jl")
 
