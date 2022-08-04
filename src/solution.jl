@@ -149,7 +149,8 @@ function mean(sol::ProbODESolution{T,N}) where {T,N}
     )
 end
 (sol::MeanProbODESolution)(t::Real, args...) = mean(sol.probsol(t, args...))
-(sol::MeanProbODESolution)(t::AbstractVector, args...) = DiffEqArray(mean(sol.probsol(t, args...).u), t)
+(sol::MeanProbODESolution)(t::AbstractVector, args...) =
+    DiffEqArray(mean(sol.probsol(t, args...).u), t)
 DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) =
     DiffEqBase.calculate_solution_errors!(mean(sol), args...; kwargs...)
 
@@ -239,4 +240,5 @@ function (posterior::GaussianODEFilterPosterior)(
 end
 (sol::ProbODESolution)(t::Real, args...) =
     sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions)
-(sol::ProbODESolution)(t::AbstractVector, args...) = DiffEqArray(StructArray(sol.(t, args...)), t)
+(sol::ProbODESolution)(t::AbstractVector, args...) =
+    DiffEqArray(StructArray(sol.(t, args...)), t)
