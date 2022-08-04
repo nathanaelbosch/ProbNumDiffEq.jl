@@ -148,10 +148,9 @@ function mean(sol::ProbODESolution{T,N}) where {T,N}
         sol.dense, sol.tslocation, sol.destats, sol.retcode, sol,
     )
 end
-(sol::MeanProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N} =
-    mean(sol.probsol(t, deriv))
-(sol::MeanProbODESolution)(t::AbstractVector, deriv=Val(0)) =
-    DiffEqArray(mean(sol.probsol(t, deriv).u), t)
+(sol::MeanProbODESolution)(t::Real, args...) = mean(sol.probsol(t, args...))
+(sol::MeanProbODESolution)(t::AbstractVector, args...) =
+    DiffEqArray(mean(sol.probsol(t, args...).u), t)
 DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) =
     DiffEqBase.calculate_solution_errors!(mean(sol), args...; kwargs...)
 
@@ -239,10 +238,7 @@ function (posterior::GaussianODEFilterPosterior)(
 
     return PI * goal_smoothed
 end
-function (sol::ProbODESolution)(t::Real, deriv::Val{N}=Val(0)) where {N}
-    @unpack q, d = sol.interp
-    return sol.interp.SolProj *
-           sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions)
-end
-(sol::ProbODESolution)(t::AbstractVector, deriv=Val(0)) =
-    DiffEqArray(StructArray(sol.(t, deriv)), t)
+(sol::ProbODESolution)(t::Real, args...) =
+    sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions)
+(sol::ProbODESolution)(t::AbstractVector, args...) =
+    DiffEqArray(StructArray(sol.(t, args...)), t)

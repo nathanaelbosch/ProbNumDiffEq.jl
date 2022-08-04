@@ -11,7 +11,8 @@ OrdinaryDiffEq.standardtag(::EK1{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} =
 OrdinaryDiffEq.concrete_jac(::AbstractEK) = nothing
 OrdinaryDiffEq.concrete_jac(::EK1{CS,AD,DiffType,ST,CJ}) where {CS,AD,DiffType,ST,CJ} = CJ
 
-@inline DiffEqBase.get_tmp_cache(integ, alg::EK1, cache) = (cache.tmp, cache.atmp)
+@inline DiffEqBase.get_tmp_cache(integ, alg::EK1, cache::AbstractODEFilterCache) =
+    (cache.tmp, cache.atmp)
 OrdinaryDiffEq.get_chunksize(::AbstractEK) = Val(0)
 OrdinaryDiffEq.isfsal(::AbstractEK) = false
 

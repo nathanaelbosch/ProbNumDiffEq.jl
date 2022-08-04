@@ -1,7 +1,6 @@
 ########################################################################################
 # Caches
 ########################################################################################
-abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,AType,QType,
     matType,diffusionType,diffModelType,measType,puType,llType,rateType,UF,JC,

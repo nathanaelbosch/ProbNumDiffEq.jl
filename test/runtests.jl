@@ -1,5 +1,6 @@
 using Test
 using ProbNumDiffEq
+using Aqua
 using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
 importodeproblems();
 using TimerOutputs
@@ -69,6 +70,11 @@ end
 
     @timedtestset "DiffEqDevTools.jl Compatibility" begin
         include("diffeqdevtools.jl")
+    end
+
+    @testset "Aqua.jl" begin
+        Aqua.test_all(ProbNumDiffEq, ambiguities=false)
+        # Aqua.test_ambiguities(ProbNumDiffEq)
     end
 end
 
