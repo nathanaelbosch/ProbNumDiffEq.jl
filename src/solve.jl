@@ -43,5 +43,5 @@ function DiffEqBase.__init(
             prob.kwargs...,
         )
     end
-    return DiffEqBase.__init(_prob, alg, ts_init, ks_init, recompile; kwargs...)
+    return DiffEqBase.__init(_prob, alg, timeseries_init, ts_init, ks_init, recompile; kwargs...)
 end
