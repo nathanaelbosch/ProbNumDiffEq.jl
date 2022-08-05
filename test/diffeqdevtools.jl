@@ -45,7 +45,7 @@ end
         abstols,
         reltols;
         appxsol=test_sol,
-        save_everystep=false,
+        dense=false,
         maxiters=100000,
         numruns=10,
     )
