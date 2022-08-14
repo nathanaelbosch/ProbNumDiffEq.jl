@@ -41,8 +41,7 @@ tspan = (0.0, 20.0)
 p = (0.2, 0.2, 3.0)
 prob = ODEProblem(fitz, u0, tspan, p)
 
-using Logging;
-Logging.disable_logging(Logging.Warn); # hide
+using Logging; Logging.disable_logging(Logging.Warn); # hide
 sol = solve(prob, EK1())
 Logging.disable_logging(Logging.Debug) # hide
 plot(sol)
