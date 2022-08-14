@@ -26,8 +26,7 @@ M = [1.0 0 0
     0 0 0]
 f = ODEFunction(rober, mass_matrix=M)
 prob_mm = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e5), (0.04, 3e7, 1e4))
-using Logging;
-Logging.disable_logging(Logging.Warn); # hide
+using Logging; Logging.disable_logging(Logging.Warn); # hide
 sol = solve(prob_mm, EK1(), reltol=1e-8, abstol=1e-8)
 Logging.disable_logging(Logging.Debug) # hide
 plot(
