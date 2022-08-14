@@ -164,8 +164,7 @@ The uncertainties here are very low compared to the function value so we can't r
 Just to demonstrate that they're there, let's solve the explicit `EK0` solver, low order and higher tolerance levels:
 
 ```@example 1
-using Logging;
-Logging.disable_logging(Logging.Warn); # hide
+using Logging; Logging.disable_logging(Logging.Warn); # hide
 sol = solve(prob, EK0(order=1), abstol=1e-2, reltol=1e-1)
 Logging.disable_logging(Logging.Debug) # hide
 plot(sol, denseplot=false)
