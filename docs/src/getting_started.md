@@ -84,7 +84,7 @@ To solve the ODE we just use DifferentialEquations.jl's `solve` interface, toget
 For now, let's use `EK1`:
 
 ```@example 1
-using Logging;
+using Logging; # hide
 Logging.disable_logging(Logging.Warn); # hide
 sol = solve(prob, EK1())
 Logging.disable_logging(Logging.Debug) # hide
