@@ -139,11 +139,12 @@ mutable struct MeanProbODESolution{
     probsol::PSolType
 end
 MeanProbODESolution{T,N}(
-    u, u_analytic, errors, t, k, prob, alg, interp, dense, tsl, destats, retcode, probsol,
+    u, u_analytic, errs, t, k, prob, alg, interp, dense, tsl, destats, retcode, probsol,
 ) where {T,N} = MeanProbODESolution{
-    T,N,typeof(u),typeof(u_analytic),typeof(errors),typeof(t),typeof(k),typeof(prob),
+    T,N,typeof(u),typeof(u_analytic),typeof(errs),typeof(t),typeof(k),typeof(prob),
     typeof(alg),typeof(interp),typeof(destats),typeof(probsol)}(
-    u, u_analytic, errors, t, k, prob, alg, interp, dense, tsl, destats, retcode, probsol)
+    u, u_analytic, errs, t, k, prob, alg, interp, dense, tsl, destats, retcode, probsol,
+)
 
 DiffEqBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) where {T,N} =
     MeanProbODESolution{T,N}(
