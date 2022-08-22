@@ -130,7 +130,7 @@ SnoopPrecompile.@precompile_all_calls begin
     end
 
     prob_list = [
-        ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
+        ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0)),
         # ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
         # ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
     ]
