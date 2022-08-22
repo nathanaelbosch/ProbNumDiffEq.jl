@@ -14,7 +14,10 @@ makedocs(
         ],
         "Solvers and Options" => "solvers.md",
         "Benchmark" => "benchmark.md",
-        "Internals" => ["Filtering and Smoothing" => "filtering.md"],
+        "Internals" => [
+            "Filtering and Smoothing" => "filtering.md"
+            "Implementation via OrdinaryDiffEq.jl" => "implementation.md"
+        ],
     ],
 )
 
