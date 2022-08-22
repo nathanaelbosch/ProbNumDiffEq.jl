@@ -1,9 +1,6 @@
 using Test
 using LinearAlgebra
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary:
-    prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_lotkavoltera
 
 prob = prob_ode_lotkavoltera
 prob = remake(prob, tspan=(0.0, 10.0))

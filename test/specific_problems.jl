@@ -10,9 +10,7 @@ using ParameterizedFunctions
 using OrdinaryDiffEq
 using Plots
 
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary:
+import ODEProblemLibrary:
     prob_ode_fitzhughnagumo, prob_ode_vanderpol_stiff, prob_ode_2Dlinear, prob_ode_linear
 
 @testset "Problem with analytic solution" begin

@@ -7,9 +7,7 @@ using ForwardDiff
 # using ReverseDiff
 # using Zygote
 
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
 prob = prob_ode_fitzhughnagumo
 prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)

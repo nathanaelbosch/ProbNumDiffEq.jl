@@ -4,9 +4,7 @@ using OrdinaryDiffEq
 using DiffEqDevTools
 using Plots
 
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_fitzhughnagumo
 prob = prob_ode_fitzhughnagumo
 
 test_sol = TestSolution(solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14))

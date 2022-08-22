@@ -4,9 +4,7 @@ using Plots
 using LinearAlgebra
 using OrdinaryDiffEq
 using Statistics
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
+using ODEProblemLibrary: prob_ode_lotkavoltera
 
 @testset "Solution" begin
     prob = prob_ode_lotkavoltera

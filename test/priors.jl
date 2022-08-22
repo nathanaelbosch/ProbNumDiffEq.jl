@@ -2,9 +2,7 @@ using ProbNumDiffEq
 using Test
 using LinearAlgebra
 
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_lotkavoltera
+import ODEProblemLibrary: prob_ode_lotkavoltera
 
 h = rand()
 σ = rand()
