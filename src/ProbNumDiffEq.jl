@@ -130,9 +130,8 @@ SnoopPrecompile.@precompile_all_calls begin
 
     prob_list = [
         ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
+        # ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
+        # ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
     ]
     alg_list = [
         EK0()
@@ -141,7 +140,6 @@ SnoopPrecompile.@precompile_all_calls begin
     for prob in prob_list, solver in alg_list
         solve(prob, solver)(5.0)
     end
-    prob_list = nothing
 end
 
 end
