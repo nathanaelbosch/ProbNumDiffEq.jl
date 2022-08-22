@@ -6,10 +6,7 @@ using Test
 using OrdinaryDiffEq
 using LinearAlgebra
 using Statistics: mean
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary:
-    prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
 
 # EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
 # EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)

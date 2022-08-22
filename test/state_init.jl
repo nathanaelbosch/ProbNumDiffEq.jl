@@ -4,9 +4,7 @@ using OrdinaryDiffEq
 using LinearAlgebra
 using Test
 
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
-import DiffEqProblemLibrary.ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
+import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
 
 d = 2
 q = 6

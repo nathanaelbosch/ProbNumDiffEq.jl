@@ -1,8 +1,7 @@
 using Test
 using ProbNumDiffEq
 using Aqua
-using DiffEqProblemLibrary.ODEProblemLibrary: importodeproblems;
-importodeproblems();
+using ODEProblemLibrary
 using TimerOutputs
 const to = TimerOutput()
 macro timedtestset(name, code)

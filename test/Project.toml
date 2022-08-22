@@ -1,11 +1,11 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
-DiffEqProblemLibrary = "a077e3f3-b75c-5d7f-a0c6-6bc4c8ec64a9"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
+ODEProblemLibrary = "fdc4e326-1af4-4b90-96e7-779fcce2daa5"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 ParameterizedFunctions = "65888b18-ceab-5e60-b2b9-181511a3b968"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
