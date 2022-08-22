@@ -1,8 +1,8 @@
 using Test
 using LinearAlgebra
-import ODEProblemLibrary: prob_ode_lotkavoltera
+import ODEProblemLibrary: prob_ode_lotkavolterra
 
-prob = prob_ode_lotkavoltera
+prob = prob_ode_lotkavolterra
 prob = remake(prob, tspan=(0.0, 10.0))
 
 @testset "Condition numbers of A,Q" begin

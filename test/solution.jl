@@ -4,10 +4,10 @@ using Plots
 using LinearAlgebra
 using OrdinaryDiffEq
 using Statistics
-using ODEProblemLibrary: prob_ode_lotkavoltera
+using ODEProblemLibrary: prob_ode_lotkavolterra
 
 @testset "Solution" begin
-    prob = prob_ode_lotkavoltera
+    prob = prob_ode_lotkavolterra
     sol = solve(prob, EK1())
 
     @test length(sol) > 2
