@@ -1,12 +1,11 @@
-using Test
+using Test, SafeTestsets, Aqua
 using ProbNumDiffEq
-using Aqua
 using ODEProblemLibrary
 using TimerOutputs
 const to = TimerOutput()
 macro timedtestset(name, code)
     return esc(:(println("Start testset: ", $name);
-    @timeit to $name @testset $name $code;
+    @timeit to $name @safetestset $name $code;
     println("Done.")))
 end
 
