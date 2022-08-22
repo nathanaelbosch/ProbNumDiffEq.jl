@@ -6,7 +6,7 @@ using Test
 using OrdinaryDiffEq
 using LinearAlgebra
 using Statistics: mean
-import ODEProblemLibrary: prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_lotkavolterra, prob_ode_fitzhughnagumo
 
 # EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
 # EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
@@ -17,7 +17,7 @@ DIFFUSIONS = [FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffu
 INITS = [TaylorModeInit, ClassicSolverInit]
 
 for (prob, probname) in
-    [(prob_ode_lotkavoltera, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
+    [(prob_ode_lotkavolterra, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
     @testset "Constant steps: $probname" begin
         true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
 
@@ -46,7 +46,7 @@ for (prob, probname) in
 end
 
 for (prob, probname) in
-    [(prob_ode_lotkavoltera, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
+    [(prob_ode_lotkavolterra, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
     @testset "Adaptive steps: $probname" begin
         t_eval = prob.tspan[1]:0.01:prob.tspan[end]
         true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)

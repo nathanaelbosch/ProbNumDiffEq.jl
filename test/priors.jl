@@ -2,7 +2,7 @@ using ProbNumDiffEq
 using Test
 using LinearAlgebra
 
-import ODEProblemLibrary: prob_ode_lotkavoltera
+import ODEProblemLibrary: prob_ode_lotkavolterra
 
 h = rand()
 σ = rand()
@@ -68,7 +68,7 @@ end
 end
 
 @testset "Verify correct prior dim" begin
-    prob = prob_ode_lotkavoltera
+    prob = prob_ode_lotkavolterra
     d = length(prob.u0)
     for q in 1:5
         integ = init(prob, EK0(order=q))

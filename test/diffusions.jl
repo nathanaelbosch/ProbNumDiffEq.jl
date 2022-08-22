@@ -1,8 +1,7 @@
 using Test
 using ProbNumDiffEq
 using OrdinaryDiffEq
-import ODEProblemLibrary:
-    prob_ode_linear, prob_ode_2Dlinear, prob_ode_lotkavoltera, prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_fitzhughnagumo
 
 @testset "Test the different diffusion models" begin
     prob = prob_ode_fitzhughnagumo

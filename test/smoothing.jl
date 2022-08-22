@@ -2,10 +2,10 @@ using ProbNumDiffEq
 using Test
 using LinearAlgebra
 using OrdinaryDiffEq
-import ODEProblemLibrary: prob_ode_lotkavoltera
+import ODEProblemLibrary: prob_ode_lotkavolterra
 using Plots
 
-prob = prob_ode_lotkavoltera
+prob = prob_ode_lotkavolterra
 
 @testset "Smoothing for small dt and large q" begin
     dt = 1e-5
