@@ -119,19 +119,27 @@ include("callbacks.jl")
 export ManifoldUpdate
 
 # Do as they do here:
-# https://github.com/SciML/OrdinaryDiffEq.jl/blob/v5.61.1/src/OrdinaryDiffEq.jl#L175-L193
-let
-    while true
-        function lorenz(du, u, p, t)
-            du[1] = 10.0(u[2] - u[1])
-            du[2] = u[1] * (28.0 - u[3]) - u[2]
-            return du[3] = u[1] * u[2] - (8 / 3) * u[3]
-        end
+# https://github.com/SciML/OrdinaryDiffEq.jl/blob/v6.21.0/src/OrdinaryDiffEq.jl#L195-L221
+import SnoopPrecompile
+SnoopPrecompile.@precompile_all_calls begin
+    function lorenz(du, u, p, t)
+        du[1] = 10.0(u[2] - u[1])
+        du[2] = u[1] * (28.0 - u[3]) - u[2]
+        du[3] = u[1] * u[2] - (8 / 3) * u[3]
+        return nothing
+    end
 
-        lorenzprob = ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        solve(lorenzprob, EK0())
-        solve(lorenzprob, EK1())
-        break
+    prob_list = [
+        ODEProblem(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0)),
+        # ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
+        # ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
+    ]
+    alg_list = [
+        EK0()
+        EK1()
+    ]
+    for prob in prob_list, solver in alg_list
+        solve(prob, solver)(5.0)
     end
 end
 
