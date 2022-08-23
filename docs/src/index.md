@@ -8,12 +8,12 @@ The implemented _ODE filters_ solve differential equations via Bayesian filterin
 
 For a short intro video, check out our [poster presentation at JuliaCon2021](https://www.youtube.com/watch?v=EMFl6ytP3iQ).
 
-* * *
+---
 
 __For more probabilistic numerics check out the [ProbNum](https://probnum.readthedocs.io/en/latest/) Python package.__
 It implements probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
 
-* * *
+---
 
 ## Installation
 
