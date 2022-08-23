@@ -21,7 +21,7 @@ Run Julia, enter `]` to bring up Julia's package manager, and add the ProbNumDif
 
 ```
 julia> ]
-(v1.7) pkg> add ProbNumDiffEq.jl
+(v1.8) pkg> add ProbNumDiffEq
 ```
 
 ## Getting Started
