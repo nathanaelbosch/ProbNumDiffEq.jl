@@ -25,10 +25,13 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
   - `./src/alg_utils.jl` implements many traits (e.g. relating to autodiff, implicitness, step-size control)
 - **Cache:** `EKCache <: AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache`
   - `./src/caches.jl` implements the cache and its main constructor: `OrdinaryDiffEq.alg_cache`
-- **Initialization and `perform_step!`:** via `OrdinaryDiffEq.initialize!` and `OrdinaryDiffEq.perform_step!`
+- **Initialization and `perform_step!`:** via `OrdinaryDiffEq.initialize!` and `OrdinaryDiffEq.perform_step!`.   
+  Implemented in `./src/perform_step.jl`.
 - **Custom postamble** by overloading `OrdinaryDiffEq.postamble!` (which should always call `OrdinaryDiffEq._postamble!`).
-  This is where we do the "smoothing" of the solution.
-- **Custom saving** by overloading `OrdinaryDiffEq.savevalues!` (which should always call `OrdinaryDiffEq._savevalues!`)
+  This is where we do the "smoothing" of the solution. 
+  Implemented in `./src/integrator_utils.jl`. 
+- **Custom saving** by overloading `OrdinaryDiffEq.savevalues!` (which should always call `OrdinaryDiffEq._savevalues!`). 
+  Implemented in `./src/integrator_utils.jl`.
 
 
 ## Building on DiffEqBase.jl
