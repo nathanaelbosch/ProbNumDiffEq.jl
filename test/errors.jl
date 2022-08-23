@@ -1,7 +1,6 @@
 # Goal: Make sure some combinations that raise errors do so
 using Test
-using OrdinaryDiffEq
-using LinearAlgebra
+using ProbNumDiffEq
 import ODEProblemLibrary: prob_ode_lotkavolterra
 
 @testset "Fixed-timestep requires dt" begin

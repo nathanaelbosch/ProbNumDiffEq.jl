@@ -1,5 +1,6 @@
 using Test
 using LinearAlgebra
+using ProbNumDiffEq
 import ODEProblemLibrary: prob_ode_lotkavolterra
 
 prob = prob_ode_lotkavolterra
