@@ -90,14 +90,19 @@ Base.@kwdef struct EK1FDB{DT,IT} <: AbstractEK
     jac_quality::Int = 1
 end
 
-# This just fixes a temporary issue; will be removed later
-function DiffEqBase.remake(thing::AbstractEK; kwargs...)
+function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
     T = SciMLBase.remaker_of(thing)
-    T(; SciMLBase.struct_as_namedtuple(thing)..., kwargs...)
+    T(;
+        SciMLBase.struct_as_namedtuple(thing)...,
+        chunk_size=Val{CS}(),
+        autodiff=Val{AD}(),
+        standardtag=Val{ST}(),
+        concrete_jac=CJ === nothing ? CJ : Val{CJ}(),
+        diff_type=DT,
+        kwargs...,
+    )
 end
-function DiffEqBase.prepare_alg(
-    alg::EK1{0,AD,FDT}, u0::AbstractArray{T}, p, prob,
-) where {AD,FDT,T}
+function DiffEqBase.prepare_alg(alg::EK1{0}, u0::AbstractArray{T}, p, prob) where {T}
     # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
     # In the future we might want to make EK1 an OrdinaryDiffEqAdaptivmImplicitAlgorithm and
     # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which
