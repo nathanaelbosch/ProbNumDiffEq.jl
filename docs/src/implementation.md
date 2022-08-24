@@ -43,7 +43,9 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
   - There is also `MeanProbODESolution <: DiffEqBase.AbstractODESolution`: It allows handling the mean of a probabilistic ODE solution the same way one would handle any "standard" ODE solution - e.g. it is compatible with `DiffEqDevTools.appxtrue`.
   - `AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation` is the current interpolant, but it does not actually fully handle the interpolation right now. This part might be subject to change soon.
   - *Plot recipe* in `./src/solution_plotting.jl`
-  - *Sampling* in `./src/solution_sampling.jl**
+  - *Sampling* in `./src/solution_sampling.jl`
+- `DiffEqBase.prepare_alg(::EK1{0})`; closely follows a similar function implemented in OrdinaryDiffEq.jl `./src/alg_utils.jl`
+   - this also required `DiffEqBase.remake(::EK1)`
 
 ## Other packages
 - `DiffEqDevTools.appxtrue` is overloaded to work with `ProbODESolution` (by just doing `mean(sol)`). This also enables `DiffEqDevTools.WorkPrecision` to work out of th box.
