@@ -25,6 +25,9 @@ Base.@kwdef struct EK0{DT,IT} <: AbstractEK
     initialization::IT = TaylorModeInit()
 end
 
+_unwrap_val(::Val{B}) where {B} = B
+_unwrap_val(B) = B
+
 """
     EK1(; order=3, smooth=true,
           diffusionmodel=DynamicDiffusion(),
@@ -58,13 +61,21 @@ EK1(;
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
     initialization::IT=TaylorModeInit(),
-    chunk_size=0,
-    autodiff=true,
+    chunk_size=Val{0}(),
+    autodiff=Val{true}(),
     diff_type=Val{:forward},
-    standardtag=true,
+    standardtag=Val{true}(),
     concrete_jac=nothing,
 ) where {DT,IT} =
-    EK1{chunk_size,autodiff,diff_type,standardtag,concrete_jac,DT,IT}(
+    EK1{
+        _unwrap_val(chunk_size),
+        _unwrap_val(autodiff),
+        diff_type,
+        _unwrap_val(standardtag),
+        _unwrap_val(concrete_jac),
+        DT,
+        IT,
+    }(
         order,
         diffusionmodel,
         smooth,
