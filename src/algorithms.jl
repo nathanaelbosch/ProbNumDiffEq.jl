@@ -78,3 +78,39 @@ Base.@kwdef struct EK1FDB{DT,IT} <: AbstractEK
     initialization::IT = TaylorModeInit()
     jac_quality::Int = 1
 end
+
+# This just fixes a temporary issue; will be removed later
+function DiffEqBase.remake(thing::AbstractEK; kwargs...)
+    T = SciMLBase.remaker_of(thing)
+    T(; SciMLBase.struct_as_namedtuple(thing)..., kwargs...)
+end
+function DiffEqBase.prepare_alg(
+    alg::EK1{0,AD,FDT}, u0::AbstractArray{T}, p, prob,
+) where {AD,FDT,T}
+    # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
+    # In the future we might want to make EK1 an OrdinaryDiffEqAdaptivmImplicitAlgorithm and
+    # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which
+    # is a requirement.
+
+    if (isbitstype(T) && sizeof(T) > 24) || (
+        prob.f isa ODEFunction &&
+        prob.f.f isa OrdinaryDiffEq.FunctionWrappersWrappers.FunctionWrappersWrapper
+    )
+        return remake(alg, chunk_size=Val{1}())
+    end
+
+    L = OrdinaryDiffEq.ArrayInterface.known_length(typeof(u0))
+    if L === nothing
+        x = if prob.f.colorvec === nothing
+            length(u0)
+        else
+            maximum(prob.f.colorvec)
+        end
+
+        cs = ForwardDiff.pickchunksize(x)
+        remake(alg, chunk_size=Val{cs}())
+    else
+        cs = pick_static_chunksize(Val{L}())
+        remake(alg, chunk_size=cs)
+    end
+end
