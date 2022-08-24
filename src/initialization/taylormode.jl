@@ -9,7 +9,8 @@ function initial_update!(integ, cache, init::TaylorModeInit)
         K1 = K1[:, 1:d]
     end
 
-    if f isa ODEFunction && f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
+    if f isa ODEFunction &&
+       f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
         f = ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
     end
 
