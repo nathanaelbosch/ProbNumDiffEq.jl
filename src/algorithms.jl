@@ -58,7 +58,7 @@ EK1(;
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
     initialization::IT=TaylorModeInit(),
-    chunk_size=0,
+    chunk_size=1,
     autodiff=true,
     diff_type=Val{:forward},
     standardtag=true,
