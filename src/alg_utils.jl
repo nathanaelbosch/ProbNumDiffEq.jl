@@ -13,7 +13,7 @@ OrdinaryDiffEq.concrete_jac(::EK1{CS,AD,DiffType,ST,CJ}) where {CS,AD,DiffType,S
 
 @inline DiffEqBase.get_tmp_cache(integ, alg::EK1, cache::AbstractODEFilterCache) =
     (cache.tmp, cache.atmp)
-OrdinaryDiffEq.get_chunksize(::AbstractEK) = Val(0)
+OrdinaryDiffEq.get_chunksize(::EK1{CS}) where {CS} = Val(CS)
 OrdinaryDiffEq.isfsal(::AbstractEK) = false
 
 OrdinaryDiffEq.isimplicit(::EK1) = true

@@ -85,7 +85,8 @@ end
     u0 = ones(2)
     function harmonic_oscillator(du, u, p, t)
         du[1] = u[2]
-        return du[2] = -u[1]
+        du[2] = -u[1]
+        return nothing
     end
     prob = ODEProblem(harmonic_oscillator, u0, (0.0, 100.0))
 
@@ -127,7 +128,8 @@ end
     u0 = ones(2)
     function harmonic_oscillator(du, u, p, t)
         du[1] = u[2]
-        return du[2] = -u[1]
+        du[2] = -u[1]
+        return nothing
     end
     prob = ODEProblem(harmonic_oscillator, u0, (0.0, 10.0))
     appxsol = solve(prob, Vern9(), abstol=1e-10, reltol=1e-10)

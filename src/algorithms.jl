@@ -25,6 +25,9 @@ Base.@kwdef struct EK0{DT,IT} <: AbstractEK
     initialization::IT = TaylorModeInit()
 end
 
+_unwrap_val(::Val{B}) where {B} = B
+_unwrap_val(B) = B
+
 """
     EK1(; order=3, smooth=true,
           diffusionmodel=DynamicDiffusion(),
@@ -58,13 +61,21 @@ EK1(;
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
     initialization::IT=TaylorModeInit(),
-    chunk_size=0,
-    autodiff=true,
+    chunk_size=Val{0}(),
+    autodiff=Val{true}(),
     diff_type=Val{:forward},
-    standardtag=true,
+    standardtag=Val{true}(),
     concrete_jac=nothing,
 ) where {DT,IT} =
-    EK1{chunk_size,autodiff,diff_type,standardtag,concrete_jac,DT,IT}(
+    EK1{
+        _unwrap_val(chunk_size),
+        _unwrap_val(autodiff),
+        diff_type,
+        _unwrap_val(standardtag),
+        _unwrap_val(concrete_jac),
+        DT,
+        IT,
+    }(
         order,
         diffusionmodel,
         smooth,
@@ -77,4 +88,45 @@ Base.@kwdef struct EK1FDB{DT,IT} <: AbstractEK
     smooth::Bool = true
     initialization::IT = TaylorModeInit()
     jac_quality::Int = 1
+end
+
+function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
+    T = SciMLBase.remaker_of(thing)
+    T(;
+        SciMLBase.struct_as_namedtuple(thing)...,
+        chunk_size=Val{CS}(),
+        autodiff=Val{AD}(),
+        standardtag=Val{ST}(),
+        concrete_jac=CJ === nothing ? CJ : Val{CJ}(),
+        diff_type=DT,
+        kwargs...,
+    )
+end
+function DiffEqBase.prepare_alg(alg::EK1{0}, u0::AbstractArray{T}, p, prob) where {T}
+    # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
+    # In the future we might want to make EK1 an OrdinaryDiffEqAdaptivmImplicitAlgorithm and
+    # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which
+    # is a requirement.
+
+    if (isbitstype(T) && sizeof(T) > 24) || (
+        prob.f isa ODEFunction &&
+        prob.f.f isa OrdinaryDiffEq.FunctionWrappersWrappers.FunctionWrappersWrapper
+    )
+        return remake(alg, chunk_size=Val{1}())
+    end
+
+    L = OrdinaryDiffEq.ArrayInterface.known_length(typeof(u0))
+    if L === nothing
+        x = if prob.f.colorvec === nothing
+            length(u0)
+        else
+            maximum(prob.f.colorvec)
+        end
+
+        cs = ForwardDiff.pickchunksize(x)
+        remake(alg, chunk_size=Val{cs}())
+    else
+        cs = pick_static_chunksize(Val{L}())
+        remake(alg, chunk_size=cs)
+    end
 end

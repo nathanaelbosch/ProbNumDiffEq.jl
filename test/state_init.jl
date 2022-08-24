@@ -31,7 +31,7 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
 @testset "Taylormode initialization" begin
     @testset "IIP" begin
         f!(du, u, p, t) = (du .= f(u, p, t))
-        prob = ODEProblem(f!, u0, tspan)
+        prob = ODEProblem{true,true}(f!, u0, tspan)
 
         dfs = ProbNumDiffEq.taylormode_get_derivatives(
             prob.u0,

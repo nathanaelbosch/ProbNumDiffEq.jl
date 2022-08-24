@@ -9,6 +9,11 @@ function initial_update!(integ, cache, init::TaylorModeInit)
         K1 = K1[:, 1:d]
     end
 
+    if f isa ODEFunction &&
+       f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
+        f = ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
+    end
+
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     integ.destats.nf += q
     @assert length(0:q) == length(f_derivatives)

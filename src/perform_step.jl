@@ -138,7 +138,6 @@ function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{fals
         if !isnothing(f.jac)
             f.jac(ddu, u_pred, p, t)
         else
-            !isnothing(f.jac)
             @unpack du1, uf, jac_config = integ.cache
             uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
             uf.t = t
