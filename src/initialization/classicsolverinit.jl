@@ -86,6 +86,7 @@ end
 function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
     @unpack x, x_pred, x_filt, measurement = cache
+    @unpack K1, C_Dxd, C_DxD, C_dxd = cache
 
     # Predict forward:
     make_preconditioners!(cache, dt)
@@ -108,7 +109,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
         measurement.μ .= H * x_pred.μ .- u
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
-        update!(x_filt, x_pred, measurement, H, cache.K1, cache.C_DxD, cache.m_tmp.Σ)
+        update!(x_filt, x_pred, measurement, H, K1, C_Dxd, C_DxD, cache.m_tmp.Σ, C_dxd)
         push!(filts, copy(x_filt))
 
         x = x_filt
