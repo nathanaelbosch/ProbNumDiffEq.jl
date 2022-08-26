@@ -11,16 +11,16 @@ function vanderpol!(ddu, du, u, p, t)
     μ = p[1]
     @. ddu = μ * ((1 - u^2) * du - u)
 end
-prob_iip = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
+const prob_iip = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
 
 function vanderpol(du, u, p, t)
     μ = p[1]
     ddu = μ .* ((1 .- u .^ 2) .* du .- u)
     return ddu
 end
-prob_oop = SecondOrderODEProblem(vanderpol, du0, u0, tspan, p)
+const prob_oop = SecondOrderODEProblem(vanderpol, du0, u0, tspan, p)
 
-appxsol = solve(prob_iip, Tsit5(), abstol=1e-7, reltol=1e-7)
+const appxsol = solve(prob_iip, Tsit5(), abstol=1e-7, reltol=1e-7)
 
 @testset "IIP" begin
     for Alg in (EK0, EK1)
@@ -43,11 +43,9 @@ end
 end
 
 @testset "ClassicSolverInit for SecondOrderODEProblems" begin
-    @test solve(prob_iip, EK1(initialization=ClassicSolverInit())) isa
-          ProbNumDiffEq.ProbODESolution
+    @test_nowarn solve(prob_iip, EK1(initialization=ClassicSolverInit()))
 end
 
 @testset "Fixed Diffusion" begin
-    @test solve(prob_iip, EK0(diffusionmodel=FixedDiffusion())) isa
-          ProbNumDiffEq.ProbODESolution
+    @test_nowarn solve(prob_iip, EK0(diffusionmodel=FixedDiffusion()))
 end

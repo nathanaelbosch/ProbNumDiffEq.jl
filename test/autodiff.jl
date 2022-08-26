@@ -9,8 +9,8 @@ using ForwardDiff
 
 import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
-prob = prob_ode_fitzhughnagumo
-prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
+const prob =
+    ODEProblem(modelingtoolkitize(prob_ode_fitzhughnagumo), prob.u0, prob.tspan, jac=true)
 
 function param_to_loss(p)
     sol = solve(
@@ -33,8 +33,8 @@ function startval_to_loss(u0)
     return norm(sol.u[end])  # Dummy loss
 end
 
-dldp = FiniteDiff.finite_difference_gradient(param_to_loss, prob.p)
-dldu0 = FiniteDiff.finite_difference_gradient(startval_to_loss, prob.u0)
+const dldp = FiniteDiff.finite_difference_gradient(param_to_loss, prob.p)
+const dldu0 = FiniteDiff.finite_difference_gradient(startval_to_loss, prob.u0)
 
 @testset "ForwardDiff.jl" begin
     @test ForwardDiff.gradient(param_to_loss, prob.p) ≈ dldp rtol = 1e-4

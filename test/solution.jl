@@ -96,17 +96,18 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
     end
 
     @testset "Plotting" begin
-        @test plot(sol) isa AbstractPlot
-        @test plot(sol, denseplot=false) isa AbstractPlot
-        @test plot(sol, vars=(1, 2)) isa AbstractPlot
-        @test plot(sol, vars=(1, 1, 2)) isa AbstractPlot
-        @test plot(sol, tspan=prob.tspan) isa AbstractPlot
+        @test_nowarn plot(sol)
+        @test_nowarn plot(sol, denseplot=false)
+        @test_nowarn plot(sol, vars=(1, 2))
+        @test_nowarn plot(sol, vars=(1, 1, 2))
+        @test_nowarn plot(sol, tspan=prob.tspan)
     end
 
     @testset "Mean Solution" begin
-        @test mean(sol)(prob.tspan[1]) isa AbstractVector
-        @test mean(sol)(sol.t[1:2]) isa ProbNumDiffEq.DiffEqArray
-        @test mean(sol) isa DiffEqBase.AbstractODESolution
-        @test plot(mean(sol)) isa AbstractPlot
+        msol = mean(sol)
+        @test_nowarn msol(prob.tspan[1])
+        @test_nowarn msol(sol.t[1:2])
+        @test_nowarn msol
+        @test_nowarn plot(msol)
     end
 end

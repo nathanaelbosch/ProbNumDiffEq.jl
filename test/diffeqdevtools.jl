@@ -5,10 +5,10 @@ using DiffEqDevTools
 using Plots
 
 import ODEProblemLibrary: prob_ode_fitzhughnagumo
-prob = prob_ode_fitzhughnagumo
+const prob = prob_ode_fitzhughnagumo
 
-test_sol = TestSolution(solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14))
-test_sol_nondense =
+const test_sol = TestSolution(solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14))
+const test_sol_nondense =
     TestSolution(solve(prob, Vern7(), dense=false, abstol=1 / 10^14, reltol=1 / 10^14))
 
 @testset "appxtrue" begin
@@ -35,8 +35,8 @@ test_sol_nondense =
 end
 
 @testset "WorkPrecision" begin
-    abstols = 1.0 ./ 10.0 .^ (6:13)
-    reltols = 1.0 ./ 10.0 .^ (3:10)
+    abstols = 1.0 ./ 10.0 .^ (6:7)
+    reltols = 1.0 ./ 10.0 .^ (3:4)
     wp = WorkPrecision(
         prob,
         EK1(smooth=false),
@@ -45,18 +45,18 @@ end
         appxsol=test_sol,
         dense=false,
         maxiters=100000,
-        numruns=10,
+        numruns=2,
     )
     @test wp isa WorkPrecision
     @test plot(wp) isa AbstractPlot
 end
 
 @testset "WorkPrecisionSet" begin
-    abstols = 1.0 ./ 10.0 .^ (6:13)
-    reltols = 1.0 ./ 10.0 .^ (3:10)
+    abstols = 1.0 ./ 10.0 .^ (6:7)
+    reltols = 1.0 ./ 10.0 .^ (3:4)
     setups = [
-        Dict(:alg => EK0(order=4))
-        Dict(:alg => EK1(order=5))
+        Dict(:alg => EK0())
+        Dict(:alg => EK1())
     ]
     wps = WorkPrecisionSet(
         prob,
@@ -66,7 +66,7 @@ end
         appxsol=test_sol,
         error_estimate=:L2,
         maxiters=100000,
-        numruns=10,
+        numruns=2,
     )
     @test wps isa WorkPrecisionSet
     @test plot(wps) isa AbstractPlot
