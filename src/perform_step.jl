@@ -79,7 +79,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     # integ.sol.log_likelihood += integ.cache.log_likelihood
 
     # Update state and save the ODE solution value
-    x_filt = update!(integ, x_pred)
+    x_filt = update!(cache, x_pred)
     mul!(view(integ.u, :), SolProj, x_filt.μ)
 
     # Update the global diffusion MLE (if applicable)
@@ -129,7 +129,7 @@ function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{fals
 
     z = measurement.μ
     _matmul!(z, H, x_pred.μ)
-    z .-= du[:]
+    z .-= view(du, :)
 
     # If EK1, evaluate the Jacobian and adjust H
     if alg isa EK1
@@ -253,9 +253,11 @@ end
 compute_measurement_covariance!(cache) =
     X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
 
-function update!(integ, prediction)
-    @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = integ.cache
-    update!(x_filt, prediction, measurement, H, K1, C_DxD, m_tmp.Σ)
+function update!(cache, prediction)
+    @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = cache
+    @unpack C_dxd, C_Dxd = cache
+    K2 = C_Dxd
+    update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, m_tmp.Σ, C_dxd)
     return x_filt
 end
 
@@ -272,10 +274,11 @@ function compute_scaled_error_estimate!(integ, cache)
     @unpack u_pred, err_tmp = cache
     t = integ.t + integ.dt
     err_est_unscaled = estimate_errors!(cache)
+    err_est_unscaled .*= integ.dt
     if integ.f isa DynamicalODEFunction # second-order ODE
         DiffEqBase.calculate_residuals!(
             err_tmp,
-            integ.dt * err_est_unscaled,
+            err_est_unscaled,
             integ.u[1, :],
             u_pred[1, :],
             integ.opts.abstol,
@@ -286,7 +289,7 @@ function compute_scaled_error_estimate!(integ, cache)
     else # regular first-order ODE
         DiffEqBase.calculate_residuals!(
             err_tmp,
-            integ.dt * err_est_unscaled,
+            err_est_unscaled,
             integ.u,
             u_pred,
             integ.opts.abstol,
@@ -323,14 +326,18 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         return view(error_estimate, 1:d)
     elseif local_diffusion isa Number
         _matmul!(R, Qh.R, H')
-        # error_estimate = local_diffusion .* diag(L*L')
-        error_estimate = diag(PSDMatrix(R))
+
+        # error_estimate = diag(PSDMatrix(R))
+        # error_estimate .*= local_diffusion
+        # error_estimate .= sqrt.(error_estimate)
+        # error_estimate = view(error_estimate, 1:d)
+
+        # faster:
+        error_estimate = cache.tmp
+        sum!(abs2, error_estimate', view(R, :, 1:d))
         error_estimate .*= local_diffusion
-
-        # @info "it's small anyways I guess?" error_estimate cache.measurement.μ .^ 2
-        # error_estimate .+= cache.measurement.μ .^ 2
-
         error_estimate .= sqrt.(error_estimate)
-        return view(error_estimate, 1:d)
+
+        return error_estimate
     end
 end

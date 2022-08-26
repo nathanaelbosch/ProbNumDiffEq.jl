@@ -58,21 +58,26 @@ function update!(
     x_pred::Gaussian,
     measurement::Gaussian,
     H::AbstractMatrix,
-    K_cache::AbstractMatrix,
+    K1_cache::AbstractMatrix,
+    K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
     S_cache::AbstractMatrix,
+    C_dxd::AbstractMatrix,
 )
-    z, S = measurement.μ, copy!(S_cache, measurement.Σ)
+    z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
     D = length(m_p)
 
     # K = P_p * H' / S
     if S isa PSDMatrix
-        S_chol = Cholesky(custom_qr!(S.R).R, :U, 0)
+        S = mul!(C_dxd, S.R', S.R)
+        S_chol = cholesky!(S)
     else
-        S_chol = cholesky(S)
+        copy!(C_dxd, S)
+        S_chol = cholesky!(S)
     end
-    K = _matmul!(K_cache, Matrix(P_p), H')
+    _matmul!(K1_cache, P_p.R, H')
+    K = _matmul!(K2_cache, P_p.R', K1_cache)
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)

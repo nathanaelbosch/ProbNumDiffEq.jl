@@ -138,7 +138,8 @@ function local_scalar_diffusion(cache)
     X_A_Xt!(HQH, Qh, H)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     C = cholesky!(HQHmat)
-    ldiv!(e, C, z)
+    e .= z
+    ldiv!(C, e)
     σ² = dot(z, e) / d
     return σ²
 end
