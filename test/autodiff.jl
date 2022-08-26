@@ -9,8 +9,8 @@ using ForwardDiff
 
 import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
-const prob =
-    ODEProblem(modelingtoolkitize(prob_ode_fitzhughnagumo), prob.u0, prob.tspan, jac=true)
+const _prob = prob_ode_fitzhughnagumo
+const prob = ODEProblem(modelingtoolkitize(_prob), _prob.u0, _prob.tspan, jac=true)
 
 function param_to_loss(p)
     sol = solve(
