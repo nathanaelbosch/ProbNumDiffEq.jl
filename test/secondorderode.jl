@@ -4,7 +4,7 @@ using Test
 
 du0 = [0.0]
 u0 = [2.0]
-tspan = (0.0, 3.0)
+tspan = (0.0, 0.1)
 p = [1e1]
 
 function vanderpol!(ddu, du, u, p, t)
@@ -43,9 +43,19 @@ end
 end
 
 @testset "ClassicSolverInit for SecondOrderODEProblems" begin
-    @test_nowarn solve(prob_iip, EK1(initialization=ClassicSolverInit()))
+    @test_nowarn solve(
+        prob_iip,
+        EK1(initialization=ClassicSolverInit(), smooth=false),
+        save_everystep=false,
+        dense=false,
+    )
 end
 
 @testset "Fixed Diffusion" begin
-    @test_nowarn solve(prob_iip, EK0(diffusionmodel=FixedDiffusion()))
+    @test_nowarn solve(
+        prob_iip,
+        EK0(diffusionmodel=FixedDiffusion(), smooth=false),
+        save_everystep=false,
+        dense=false,
+    )
 end
