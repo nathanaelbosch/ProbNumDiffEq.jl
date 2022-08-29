@@ -333,7 +333,7 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         # error_estimate = view(error_estimate, 1:d)
 
         # faster:
-        error_estimate = cache.tmp
+        error_estimate = view(cache.tmp, 1:d)
         sum!(abs2, error_estimate', view(R, :, 1:d))
         error_estimate .*= local_diffusion
         error_estimate .= sqrt.(error_estimate)
