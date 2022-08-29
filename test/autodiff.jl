@@ -15,20 +15,24 @@ const prob = ODEProblem(modelingtoolkitize(_prob), _prob.u0, _prob.tspan, jac=tr
 function param_to_loss(p)
     sol = solve(
         remake(prob, p=p),
-        EK1(order=3),
+        EK1(order=3, smooth=false),
         sensealg=SensitivityADPassThrough(),
         abstol=1e-3,
         reltol=1e-2,
+        save_everystep=false,
+        dense=false,
     )
     return norm(sol.u[end])  # Dummy loss
 end
 function startval_to_loss(u0)
     sol = solve(
         remake(prob, u0=u0),
-        EK1(order=3),
+        EK1(order=3, smooth=false),
         sensealg=SensitivityADPassThrough(),
         abstol=1e-3,
         reltol=1e-2,
+        save_everystep=false,
+        dense=false,
     )
     return norm(sol.u[end])  # Dummy loss
 end
