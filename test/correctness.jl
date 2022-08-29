@@ -6,70 +6,61 @@ using Test
 using OrdinaryDiffEq
 using LinearAlgebra
 using Statistics: mean
+using DiffEqDevTools
 import ODEProblemLibrary: prob_ode_lotkavolterra, prob_ode_fitzhughnagumo
 
-# EK1FDB1(; kwargs...) = EK1FDB(; jac_quality=1, kwargs...)
-# EK1FDB2(; kwargs...) = EK1FDB(; jac_quality=2, kwargs...)
-# EK1FDB3(; kwargs...) = EK1FDB(; jac_quality=3, kwargs...)
-# ALGS = [EK0, EK1, EK1FDB1, EK1FDB2, EK1FDB3]
-ALGS = [EK0, EK1]
-DIFFUSIONS = [FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion]
-INITS = [TaylorModeInit, ClassicSolverInit]
+CONSTANT_ALGS = (
+    EK0(order=2) => 1e-5,
+    EK0(order=3) => 1e-8,
+    EK0(order=5) => 1e-10,
+    EK0(order=3, diffusionmodel=FixedDiffusion()) => 1e-7,
+    EK0(order=3, diffusionmodel=FixedMVDiffusion()) => 1e-7,
+    EK0(order=3, diffusionmodel=DynamicMVDiffusion()) => 1e-8,
+    EK0(order=3, initialization=ClassicSolverInit()) => 1e-7,
+    EK0(order=3, diffusionmodel=FixedMVDiffusion(), initialization=ClassicSolverInit()) => 1e-7,
+    EK1(order=2) => 1e-7,
+    EK1(order=3) => 1e-8,
+    EK1(order=5) => 1e-11,
+    EK1(order=3, diffusionmodel=FixedDiffusion()) => 1e-8,
+    EK1(order=3, initialization=ClassicSolverInit()) => 1e-8,
+)
+ADAPTIVE_ALGS = (
+    EK0(order=2) => 2e-4,
+    EK0(order=3) => 1e-4,
+    EK0(order=5) => 1e-5,
+    EK0(order=8) => 2e-5,
+    EK0(order=3, diffusionmodel=DynamicMVDiffusion()) => 5e-5,
+    EK0(order=3, initialization=ClassicSolverInit()) => 5e-5,
+    EK0(order=3, diffusionmodel=DynamicMVDiffusion(), initialization=ClassicSolverInit()) => 4e-5,
+    EK1(order=2) => 1e-5,
+    EK1(order=3) => 5e-6,
+    EK1(order=5) => 1e-6,
+    EK1(order=8) => 5e-6,
+    EK1(order=3, initialization=ClassicSolverInit()) => 5e-6,
+)
 
-for (prob, probname) in
-    [(prob_ode_lotkavolterra, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
-    @testset "Constant steps: $probname" begin
-        true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
+PROBS = (
+    (prob_ode_lotkavolterra, "lotkavolterra"),
+    (prob_ode_fitzhughnagumo, "fitzhughnagumo"),
+)
 
-        for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]
-            if (diffusion == FixedMVDiffusion || diffusion == DynamicMVDiffusion) &&
-               Alg != EK0
-                continue
-            end
-            if init == ClassicSolverInit && q > 4
-                continue
-            end
+for (prob, probname) in PROBS
+    true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
+    testsol = TestSolution(true_sol)
 
-            @testset "Constant steps: $probname; alg=$Alg, diffusion=$diffusion, init=$init, q=$q" begin
-                @debug "Testing for correctness: Constant steps" probname alg diffusion q dt
-
-                sol = solve(
-                    prob,
-                    Alg(order=q, diffusionmodel=diffusion(), initialization=init()),
-                    adaptive=false,
-                    dt=1e-2,
-                )
-                @test sol.u ≈ true_sol.(sol.t) rtol = 1e-5
-            end
-        end
+    @testset "Constant steps: $probname; alg=$alg" for (alg, err) in CONSTANT_ALGS
+        sol = solve(prob, alg, adaptive=false, dt=1e-2)
+        appxsol = appxtrue(sol, testsol)
+        @test appxsol.errors[:final] < err
+        @test appxsol.errors[:l2] < err
+        @test appxsol.errors[:L2] < err
     end
-end
 
-for (prob, probname) in
-    [(prob_ode_lotkavolterra, "lotkavolterra"), (prob_ode_fitzhughnagumo, "fitzhughnagumo")]
-    @testset "Adaptive steps: $probname" begin
-        t_eval = prob.tspan[1]:0.01:prob.tspan[end]
-        true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
-        true_dense_vals = true_sol.(t_eval)
-
-        for Alg in ALGS, diffusion in DIFFUSIONS, init in INITS, q in [2, 3, 5]
-            if (diffusion == FixedMVDiffusion || diffusion == DynamicMVDiffusion) &&
-               Alg != EK0
-                continue
-            end
-
-            @testset "Adaptive steps: $probname; alg=$Alg, diffusion=$diffusion, init=$init, q=$q" begin
-                @debug "Testing for correctness: Adaptive steps" probname Alg diffusion q
-
-                sol = solve(
-                    prob,
-                    Alg(order=q, diffusionmodel=diffusion(), initialization=init()),
-                    adaptive=true,
-                )
-
-                @test sol.u ≈ true_sol.(sol.t) rtol = 1e-3
-                @test mean.(sol.(t_eval)) ≈ true_dense_vals rtol = 1e-3
-            end
-        end
+    @testset "Adaptive: $probname; alg=$alg" for (alg, err) in ADAPTIVE_ALGS
+        sol = solve(prob, alg)
+        appxsol = appxtrue(sol, testsol)
+        @test appxsol.errors[:final] < err
+        @test appxsol.errors[:l2] < err
+        @test appxsol.errors[:L2] < err
     end
 end
