@@ -70,17 +70,19 @@ function update!(
 
     # K = P_p * H' / S
     _S = if S isa PSDMatrix
-        return mul!(C_dxd, S.R', S.R)
+        mul!(C_dxd, S.R', S.R)
     else
-        return copy!(C_dxd, S)
+        copy!(C_dxd, S)
     end
-    S_chol = cholesky!(_S)
+
     K = if P_p isa PSDMatrix
         _matmul!(K1_cache, P_p.R, H')
-        return _matmul!(K2_cache, P_p.R', K1_cache)
+        _matmul!(K2_cache, P_p.R', K1_cache)
     else
-        return _matmul!(K2_cache, P_p, H')
+        _matmul!(K2_cache, P_p, H')
     end
+
+    S_chol = cholesky!(_S)
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
