@@ -58,7 +58,8 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     e = m_tmp.μ
     _S = _matmul!(Smat, S.R', S.R)
     S_chol = cholesky!(_S)
-    ldiv!(e, S_chol, v)
+    e .= v
+    ldiv!(S_chol, e)
     diffusion_t = dot(v, e) / d
 
     if integ.success_iter == 0
@@ -95,7 +96,7 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
 end
 estimate_local_diffusion(::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ.cache)
 function estimate_global_diffusion(::FixedMVDiffusion, integ)
-    @unpack q, measurement = integ.cache
+    @unpack d, q, measurement, local_diffusion = integ.cache
 
     v, S = measurement.μ, measurement.Σ
     # S_11 = diag(S)[1]
@@ -112,7 +113,9 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
     else
         # @assert length(diffusions) == integ.success_iter
         diffusion_prev = integ.cache.global_diffusion
-        diffusion = diffusion_prev + (Σ_out - diffusion_prev) / integ.success_iter
+        diffusion =
+            @. diffusion_prev =
+                diffusion_prev + (Σ_out - diffusion_prev) / integ.success_iter
         return diffusion
     end
 end
@@ -160,17 +163,23 @@ For more background information
 - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
 function local_diagonal_diffusion(cache)
-    @unpack q, H, Qh, measurement, m_tmp = cache
+    @unpack d, q, H, Qh, measurement, m_tmp, tmp = cache
+    @unpack local_diffusion = cache
     z = measurement.μ
     HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
     # Q0_11 = diag(HQH)[1]
     c1 = view(HQH.R, :, 1)
     Q0_11 = dot(c1, c1)
 
-    Σ_ii = z .^ 2 ./ Q0_11
+    Σ_ii = @. tmp = z^2 / Q0_11
     # Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 
-    Σ_out = kron(Σ, I(q + 1))
-    return Σ_out
+    # local_diffusion = kron(Σ, I(q+1))
+    for i in 1:d
+        for j in (i-1)*(q+1)+1:i*(q+1)
+            local_diffusion[j, j] = Σ[i, i]
+        end
+    end
+    return local_diffusion
 end

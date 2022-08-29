@@ -321,9 +321,12 @@ function estimate_errors!(cache::AbstractODEFilterCache)
     R = cache.C_Dxd
 
     if local_diffusion isa Diagonal
-        _matmul!(R, Qh.R * sqrt.(local_diffusion), H')
-        error_estimate = sqrt.(diag(PSDMatrix(R)))
-        return view(error_estimate, 1:d)
+        _QR = cache.C_DxD .= Qh.R .* sqrt.(local_diffusion.diag)'
+        _matmul!(R, _QR, H')
+        error_estimate = view(cache.tmp, 1:d)
+        sum!(abs2, error_estimate', view(R, :, 1:d))
+        error_estimate .= sqrt.(error_estimate)
+        return error_estimate
     elseif local_diffusion isa Number
         _matmul!(R, Qh.R, H')
 

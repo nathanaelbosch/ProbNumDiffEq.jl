@@ -48,7 +48,13 @@ function calibrate_solution!(integ, mle_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
     @simd ivdep for S in integ.sol.x_filt.Σ
-        copy!(S, apply_diffusion(S, mle_diffusion))
+        if mle_diffusion isa Number
+            S.R .*= sqrt(mle_diffusion)
+        elseif mle_diffusion isa Diagonal
+            S.R .= S.R .* sqrt.(mle_diffusion.diag)'
+        else
+            error()
+        end
     end
 
     # Re-write into the solution estimates
