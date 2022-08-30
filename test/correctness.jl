@@ -10,19 +10,19 @@ using DiffEqDevTools
 import ODEProblemLibrary: prob_ode_lotkavolterra, prob_ode_fitzhughnagumo
 
 CONSTANT_ALGS = (
-    EK0(order=2) => 1e-5,
-    EK0(order=3) => 1e-8,
-    EK0(order=5) => 1e-10,
-    EK0(order=3, diffusionmodel=FixedDiffusion()) => 1e-7,
-    EK0(order=3, diffusionmodel=FixedMVDiffusion()) => 1e-7,
-    EK0(order=3, diffusionmodel=DynamicMVDiffusion()) => 1e-8,
-    EK0(order=3, initialization=ClassicSolverInit()) => 1e-7,
-    EK0(order=3, diffusionmodel=FixedMVDiffusion(), initialization=ClassicSolverInit()) => 1e-7,
-    EK1(order=2) => 1e-7,
-    EK1(order=3) => 1e-8,
-    EK1(order=5) => 1e-11,
-    EK1(order=3, diffusionmodel=FixedDiffusion()) => 1e-8,
-    EK1(order=3, initialization=ClassicSolverInit()) => 1e-8,
+    EK0(order=2, smooth=false) => 1e-5,
+    EK0(order=3, smooth=false) => 1e-8,
+    EK0(order=5, smooth=false) => 1e-10,
+    EK0(order=3, smooth=false, diffusionmodel=FixedDiffusion()) => 1e-7,
+    EK0(order=3, smooth=false, diffusionmodel=FixedMVDiffusion()) => 1e-7,
+    EK0(order=3, smooth=false, diffusionmodel=DynamicMVDiffusion()) => 1e-8,
+    EK0(order=3, smooth=false, initialization=ClassicSolverInit()) => 1e-7,
+    EK0(order=3, smooth=false, diffusionmodel=FixedMVDiffusion(), initialization=ClassicSolverInit()) => 1e-7,
+    EK1(order=2, smooth=false) => 1e-7,
+    EK1(order=3, smooth=false) => 1e-8,
+    EK1(order=5, smooth=false) => 1e-11,
+    EK1(order=3, smooth=false, diffusionmodel=FixedDiffusion()) => 1e-8,
+    EK1(order=3, smooth=false, initialization=ClassicSolverInit()) => 1e-8,
 )
 ADAPTIVE_ALGS = (
     EK0(order=2) => 2e-4,
@@ -49,11 +49,11 @@ for (prob, probname) in PROBS
     testsol = TestSolution(true_sol)
 
     @testset "Constant steps: $probname; alg=$alg" for (alg, err) in CONSTANT_ALGS
-        sol = solve(prob, alg, adaptive=false, dt=1e-2)
-        appxsol = appxtrue(sol, testsol)
+        sol = solve(prob, alg, adaptive=false, dt=1e-2, dense=false, save_everystep=false)
+        appxsol = appxtrue(sol, true_sol, dense_errors=false)
         @test appxsol.errors[:final] < err
-        @test appxsol.errors[:l2] < err
-        @test appxsol.errors[:L2] < err
+        # @test appxsol.errors[:l2] < err
+        # @test appxsol.errors[:L2] < err
     end
 
     @testset "Adaptive: $probname; alg=$alg" for (alg, err) in ADAPTIVE_ALGS
