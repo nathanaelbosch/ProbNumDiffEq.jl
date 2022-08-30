@@ -6,12 +6,18 @@ import ODEProblemLibrary: prob_ode_lotkavolterra
 @testset "Fixed-timestep requires dt" begin
     prob = prob_ode_lotkavolterra
     @test_throws ErrorException solve(prob, EK0(), adaptive=false)
-    @test solve(prob, EK0(), adaptive=false, dt=0.05) isa ProbNumDiffEq.ProbODESolution
+    @test_nowarn solve(
+        prob,
+        EK0(smooth=false),
+        save_everystep=false,
+        adaptive=false,
+        dt=0.1,
+    )
 end
 
 @testset "`dense=true` requires `smooth=true`" begin
     prob = prob_ode_lotkavolterra
-    @test_throws ErrorException solve(prob, EK0(smooth=false))
+    @test_throws ErrorException solve(prob, EK0(smooth=false), dense=true)
 end
 
 @testset "`save_everystep=false` requires `smooth=false`" begin
