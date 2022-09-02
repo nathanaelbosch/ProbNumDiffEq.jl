@@ -46,7 +46,6 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
 end
 
 @testset "Compare TaylorModeInit and ClassicSolverInit" begin
-
     prob = prob_ode_fitzhughnagumo
     d = length(prob.u0)
 

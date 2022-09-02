@@ -17,7 +17,12 @@ CONSTANT_ALGS = (
     EK0(order=3, smooth=false, diffusionmodel=FixedMVDiffusion()) => 1e-7,
     EK0(order=3, smooth=false, diffusionmodel=DynamicMVDiffusion()) => 1e-8,
     EK0(order=3, smooth=false, initialization=ClassicSolverInit()) => 1e-7,
-    EK0(order=3, smooth=false, diffusionmodel=FixedMVDiffusion(), initialization=ClassicSolverInit()) => 1e-7,
+    EK0(
+        order=3,
+        smooth=false,
+        diffusionmodel=FixedMVDiffusion(),
+        initialization=ClassicSolverInit(),
+    ) => 1e-7,
     EK1(order=2, smooth=false) => 1e-7,
     EK1(order=3, smooth=false) => 1e-8,
     EK1(order=5, smooth=false) => 1e-11,
