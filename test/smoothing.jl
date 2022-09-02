@@ -10,18 +10,18 @@ prob = prob_ode_lotkavolterra
 @testset "Smoothing for small dt and large q" begin
     dt = 1e-5
     q = 8
-    @test solve(
+    @test_nowarn solve(
         remake(prob, tspan=(0.0, 10dt)),
         EK0(order=q, smooth=true, diffusionmodel=FixedDiffusion()),
         adaptive=false,
         dt=dt,
-    ) isa DiffEqBase.AbstractODESolution
-    @test solve(
+    )
+    @test_nowarn solve(
         remake(prob, tspan=(0.0, 10dt)),
         EK1(order=q, smooth=true, diffusionmodel=FixedDiffusion()),
         adaptive=false,
         dt=dt,
-    ) isa DiffEqBase.AbstractODESolution
+    )
 end
 
 @testset "Smooth vs. non-smooth" begin

@@ -1,79 +1,115 @@
-using Test
+using Test, SafeTestsets, Aqua, TimerOutputs
 using ProbNumDiffEq
-using Aqua
 using ODEProblemLibrary
-using TimerOutputs
-const to = TimerOutput()
+
+to = TimerOutput()
 macro timedtestset(name, code)
     return esc(:(println("Start testset: ", $name);
     @timeit to $name @testset $name $code;
     println("Done.")))
 end
+macro timedsafetestset(name, code)
+    return esc(:(println("Start testset: ", $name);
+    @timeit to $name @safetestset $name $code;
+    println("Done.")))
+end
+
+const GROUP = get(ENV, "GROUP", "All")
 
 @testset "ProbNumDiffEq" begin
-    @timedtestset "Correctness" begin
-        include("correctness.jl")
+    if GROUP == "All" || GROUP == "Core"
+        @timedtestset "Core" begin
+            @timedsafetestset "Filtering" begin
+                include("core/filtering.jl")
+            end
+            @timedsafetestset "Priors" begin
+                include("core/priors.jl")
+            end
+            @timedsafetestset "Preconditioning" begin
+                include("core/preconditioning.jl")
+            end
+            #
+            @timedsafetestset "State Initialization" begin
+                include("state_init.jl")
+            end
+            @timedsafetestset "Smoothing" begin
+                include("smoothing.jl")
+            end
+        end
     end
 
-    @timedtestset "Filtering" begin
-        include("filtering.jl")
+    if GROUP == "All" || GROUP == "Downstream" || GROUP == "Solvers"
+        @timedtestset "Solver Correctness" begin
+            @timedsafetestset "Correctness" begin
+                include("correctness.jl")
+            end
+            @timedsafetestset "Convergence" begin
+                include("convergence.jl")
+            end
+            @timedsafetestset "Stiff Problem" begin
+                include("stiff_problem.jl")
+            end
+            @timedtestset "Test all diffusion models" begin
+                include("diffusions.jl")
+            end
+        end
     end
 
-    @timedtestset "Convergence" begin
-        include("convergence.jl")
+    if GROUP == "All" || GROUP == "Downstream" || GROUP == "Interface"
+        @timedtestset "Interface" begin
+            @timedsafetestset "Solution" begin
+                include("solution.jl")
+            end
+            @timedsafetestset "DE-stats" begin
+                include("destats.jl")
+            end
+            @timedsafetestset "Errors Thrown" begin
+                include("errors_thrown.jl")
+            end
+            @timedsafetestset "Automatic Differentiation" begin
+                include("autodiff.jl")
+            end
+            @timedsafetestset "Second order ODEs" begin
+                include("secondorderode.jl")
+            end
+            @timedsafetestset "DiffEqDevTools.jl Compatibility" begin
+                include("diffeqdevtools.jl")
+            end
+            @timedsafetestset "OOP Problem Compatibility" begin
+                include("oop_problems.jl")
+            end
+            @timedsafetestset "Mass Matrix" begin
+                include("mass_matrix.jl")
+            end
+            @timedsafetestset "ParameterizedFunctions.jl" begin
+                include("parameterized_functions.jl")
+            end
+            @timedsafetestset "Callbacks.jl" begin
+                include("callbacks.jl")
+            end
+            @timedsafetestset "BigFloat" begin
+                include("bigfloat.jl")
+            end
+            @timedsafetestset "Problem with analytic solution" begin
+                include("analytic_solution.jl")
+            end
+            @timedsafetestset "Matrix-valued problem" begin
+                include("matrix_valued_problem.jl")
+            end
+            @timedsafetestset "Scalar-valued problem (broken)" begin
+                include("scalar_valued_problem.jl")
+            end
+            @timedsafetestset "Implicit solver kwarg compat" begin
+                include("implicit_solver_kwarg_compat.jl")
+            end
+        end
     end
 
-    @timedtestset "Priors" begin
-        include("priors.jl")
-    end
-
-    @timedtestset "Solution" begin
-        include("solution.jl")
-    end
-
-    @timedtestset "DE-stats" begin
-        include("destats.jl")
-    end
-
-    @timedtestset "Diffusions" begin
-        include("diffusions.jl")
-    end
-
-    @timedtestset "State Initialization" begin
-        include("state_init.jl")
-    end
-
-    @timedtestset "Preconditioning" begin
-        include("preconditioning.jl")
-    end
-
-    @timedtestset "Smoothing" begin
-        include("smoothing.jl")
-    end
-
-    @timedtestset "Errors" begin
-        include("errors.jl")
-    end
-
-    @timedtestset "Automatic Differentiation" begin
-        include("autodiff.jl")
-    end
-
-    @timedtestset "Second order ODEs" begin
-        include("secondorderode.jl")
-    end
-
-    @timedtestset "Specific Problems" begin
-        include("specific_problems.jl")
-    end
-
-    @timedtestset "DiffEqDevTools.jl Compatibility" begin
-        include("diffeqdevtools.jl")
-    end
-
-    @testset "Aqua.jl" begin
-        Aqua.test_all(ProbNumDiffEq, ambiguities=false)
-        # Aqua.test_ambiguities(ProbNumDiffEq)
+    if GROUP == "All"
+        @timedtestset "Aqua.jl" begin
+            Aqua.test_all(ProbNumDiffEq, ambiguities=false)
+            # Aqua.test_ambiguities(ProbNumDiffEq)
+        end
     end
 end
 

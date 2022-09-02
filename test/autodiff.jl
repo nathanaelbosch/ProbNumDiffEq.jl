@@ -9,32 +9,36 @@ using ForwardDiff
 
 import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
-prob = prob_ode_fitzhughnagumo
-prob = ODEProblem(modelingtoolkitize(prob), prob.u0, prob.tspan, jac=true)
+const _prob = prob_ode_fitzhughnagumo
+const prob = ODEProblem(modelingtoolkitize(_prob), _prob.u0, _prob.tspan, jac=true)
 
 function param_to_loss(p)
     sol = solve(
         remake(prob, p=p),
-        EK1(order=3),
+        EK1(order=3, smooth=false),
         sensealg=SensitivityADPassThrough(),
         abstol=1e-3,
         reltol=1e-2,
+        save_everystep=false,
+        dense=false,
     )
     return norm(sol.u[end])  # Dummy loss
 end
 function startval_to_loss(u0)
     sol = solve(
         remake(prob, u0=u0),
-        EK1(order=3),
+        EK1(order=3, smooth=false),
         sensealg=SensitivityADPassThrough(),
         abstol=1e-3,
         reltol=1e-2,
+        save_everystep=false,
+        dense=false,
     )
     return norm(sol.u[end])  # Dummy loss
 end
 
-dldp = FiniteDiff.finite_difference_gradient(param_to_loss, prob.p)
-dldu0 = FiniteDiff.finite_difference_gradient(startval_to_loss, prob.u0)
+const dldp = FiniteDiff.finite_difference_gradient(param_to_loss, prob.p)
+const dldu0 = FiniteDiff.finite_difference_gradient(startval_to_loss, prob.u0)
 
 @testset "ForwardDiff.jl" begin
     @test ForwardDiff.gradient(param_to_loss, prob.p) ≈ dldp rtol = 1e-4

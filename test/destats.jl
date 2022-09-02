@@ -2,7 +2,7 @@ using ProbNumDiffEq
 using Test
 using LinearAlgebra
 
-q = 3
+const q = 3
 
 @testset "destats.nf testing $alg" for init in (TaylorModeInit(), ClassicSolverInit()),
     alg in (
@@ -23,8 +23,6 @@ q = 3
     tspan = (0.0, 1.0)
     prob = ODEProblem(f, u0, tspan, p)
     sol = solve(prob, alg, save_everystep=false, dense=false)
-    # @info alg sol.destats.nf f_counter[1]
-    # @info sol.destats f_counter
     @test sol.destats.nf == f_counter[1]
 end
 
@@ -49,7 +47,5 @@ end
     tspan = (0.0, 1.0)
     prob = SecondOrderODEProblem(f, du0, u0, tspan, p)
     sol = solve(prob, alg, save_everystep=false, dense=false)
-    # @info alg sol.destats.nf f_counter[1]
-    # @info sol.destats f_counter
     @test sol.destats.nf == f_counter[1]
 end

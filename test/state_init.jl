@@ -46,9 +46,6 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
 end
 
 @testset "Compare TaylorModeInit and ClassicSolverInit" begin
-    # This has not worked before with the Taylor-Mode init!
-    # The high dimensions made the runtimes explode
-
     prob = prob_ode_fitzhughnagumo
     d = length(prob.u0)
 
@@ -61,9 +58,6 @@ end
         rk_init = integ2.cache.x.μ
         Proj2 = integ2.cache.Proj
 
-        # @info "how do things look?" tm_init rk_init
-        # error()
-
         # These are fit via the initial values + autodiff, and should be good
         @test Proj1(0) * tm_init ≈ Proj2(0) * rk_init
         @test Proj1(1) * tm_init ≈ Proj2(1) * rk_init
@@ -75,7 +69,6 @@ end
         # (o == 5) && @test Proj1(3) * tm_init ≈ Proj2(3) * rk_init rtol=6e-1
         # (o == 5) && @test Proj1(4) * tm_init ≈ Proj2(4) * rk_init rtol=2e-2
         # (o == 5) && @test Proj1(5) * tm_init ≈ Proj2(5) * rk_init rtol=8e-1
-        # 8e-1 is only because of macOS, on linux this test should be much tighter
 
         # Test if the covariance covers the true error
         for i in 3:o

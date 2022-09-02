@@ -1,11 +1,11 @@
 using Test
 using ProbNumDiffEq
 using OrdinaryDiffEq
-import ODEProblemLibrary: prob_ode_linear, prob_ode_2Dlinear, prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
 @testset "Test the different diffusion models" begin
     prob = prob_ode_fitzhughnagumo
-    true_sol = solve(prob, Tsit5(), abstol=1e-12, reltol=1e-12)
+    true_sol = solve(prob, Vern9(), abstol=1e-12, reltol=1e-12)
 
     @testset "Time-Varying Diffusion" begin
         sol = solve(
