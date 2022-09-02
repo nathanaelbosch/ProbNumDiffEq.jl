@@ -1,4 +1,7 @@
 using ProbNumDiffEq
+using OrdinaryDiffEq
+using LinearAlgebra
+using UnPack
 using Test
 
 u0 = ones(2)
@@ -7,7 +10,7 @@ function harmonic_oscillator(du, u, p, t)
     du[2] = -u[1]
     return nothing
 end
-prob = ODEProblem(harmonic_oscillator, u0, (0.0, 1.0))
+prob = ODEProblem(harmonic_oscillator, u0, (0.0, 10.0))
 appxsol = solve(prob, Vern9())
 
 @testset "Custom callback" begin

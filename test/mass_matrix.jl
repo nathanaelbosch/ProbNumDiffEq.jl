@@ -1,4 +1,5 @@
 using ProbNumDiffEq
+using OrdinaryDiffEq
 using Test
 
 @testset "Robertson in mass-matrix-ODE form" begin

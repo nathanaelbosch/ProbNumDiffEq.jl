@@ -100,7 +100,7 @@ const GROUP = get(ENV, "GROUP", "All")
                 include("scalar_valued_problem.jl")
             end
             @timedsafetestset "Implicit solver kwarg compat" begin
-                include("implcit_solver_kwarg_compat.jl")
+                include("implicit_solver_kwarg_compat.jl")
             end
         end
     end
