@@ -17,13 +17,20 @@ end
 @testset "ProbNumDiffEq" begin
     @timedtestset "Core" begin
         @timedsafetestset "Filtering" begin
-            include("filtering.jl")
+            include("core/filtering.jl")
         end
         @timedsafetestset "Priors" begin
-            include("priors.jl")
+            include("core/priors.jl")
         end
         @timedsafetestset "Preconditioning" begin
-            include("preconditioning.jl")
+            include("core/preconditioning.jl")
+        end
+        #
+        @timedsafetestset "State Initialization" begin
+            include("state_init.jl")
+        end
+        @timedsafetestset "Smoothing" begin
+            include("smoothing.jl")
         end
     end
 
@@ -34,11 +41,11 @@ end
         @timedsafetestset "Convergence" begin
             include("convergence.jl")
         end
-        @timedsafetestset "State Initialization" begin
-            include("state_init.jl")
+        @timedsafetestset "Stiff Problem" begin
+            include("stiff_porblem.jl")
         end
-        @timedsafetestset "Smoothing" begin
-            include("smoothing.jl")
+        @timedtestset "Test all diffusion models" begin
+            include("diffusions.jl")
         end
     end
 
@@ -61,17 +68,36 @@ end
         @timedsafetestset "DiffEqDevTools.jl Compatibility" begin
             include("diffeqdevtools.jl")
         end
+        @timedsafetestset "OOP Problem Compatibility" begin
+            include("oop_problems.jl")
+        end
+        @timedsafetestset "Mass Matrix" begin
+            include("mass_matrix.jl")
+        end
+        @timedsafetestset "ParameterizedFunctions.jl" begin
+            include("parameterized_functions.jl")
+        end
+        @timedsafetestset "Callbacks.jl" begin
+            include("callbacks.jl")
+        end
+        @timedsafetestset "BigFloat" begin
+            include("bigfloat.jl")
+        end
+        @timedsafetestset "Problem with analytic solution" begin
+            include("analytic_solution.jl")
+        end
+        @timedsafetestset "Matrix-valued problem" begin
+            include("matrix_valued_problem.jl")
+        end
+        @timedsafetestset "Scalar-valued problem (broken)" begin
+            include("scalar_valued_problem.jl")
+        end
+        @timedsafetestset "Implicit solver kwarg compat" begin
+            include("implcit_solver_kwarg_compat.jl")
+        end
     end
 
-    @timedtestset "Diffusions" begin
-        include("diffusions.jl")
-    end
-
-    @timedtestset "Specific Problems" begin
-        include("specific_problems.jl")
-    end
-
-    @testset "Aqua.jl" begin
+    @timedtestset "Aqua.jl" begin
         Aqua.test_all(ProbNumDiffEq, ambiguities=false)
         # Aqua.test_ambiguities(ProbNumDiffEq)
     end
