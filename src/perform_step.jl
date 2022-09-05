@@ -113,43 +113,56 @@ function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{fals
     @unpack u_pred, du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
-    @unpack E0, E1, E2 = integ.cache
+    # @unpack E0, E1, E2 = integ.cache
 
-    # Mean
-    f(du, u_pred, p, t)
+    # # Mean
+    # f(du, u_pred, p, t)
+    # integ.destats.nf += 1
+    # # z .= MM*E1*x_pred.μ .- du
+    # if f.mass_matrix == I
+    #     H .= E1
+    # elseif f.mass_matrix isa UniformScaling
+    #     H .= f.mass_matrix.λ .* E1
+    # else
+    #     _matmul!(H, f.mass_matrix, E1)
+    # end
+
+    # z = measurement.μ
+    # _matmul!(z, H, x_pred.μ)
+    # z .-= view(du, :)
+
+    # # If EK1, evaluate the Jacobian and adjust H
+    # if alg isa EK1
+
+    #     # Jacobian is computed either with the given jac, or ForwardDiff
+    #     if !isnothing(f.jac)
+    #         f.jac(ddu, u_pred, p, t)
+    #     else
+    #         @unpack du1, uf, jac_config = integ.cache
+    #         uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
+    #         uf.t = t
+    #         if !(p isa DiffEqBase.NullParameters)
+    #             uf.p = p
+    #         end
+    #         OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
+    #     end
+    #     integ.destats.njacs += 1
+
+    #     # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
+    #     _matmul!(H, ddu, E0, -1.0, 1.0)
+    # end
+
+    # New
+    z = integ.cache.measurement
+    z_tmp = integ.cache.m_tmp
+
+    integ.cache.measurement_model(z.μ, x_pred.μ, p, t)
     integ.destats.nf += 1
-    # z .= MM*E1*x_pred.μ .- du
-    if f.mass_matrix == I
-        H .= E1
-    elseif f.mass_matrix isa UniformScaling
-        H .= f.mass_matrix.λ .* E1
-    else
-        _matmul!(H, f.mass_matrix, E1)
-    end
 
-    z = measurement.μ
-    _matmul!(z, H, x_pred.μ)
-    z .-= view(du, :)
-
-    # If EK1, evaluate the Jacobian and adjust H
     if alg isa EK1
-
-        # Jacobian is computed either with the given jac, or ForwardDiff
-        if !isnothing(f.jac)
-            f.jac(ddu, u_pred, p, t)
-        else
-            @unpack du1, uf, jac_config = integ.cache
-            uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
-            uf.t = t
-            if !(p isa DiffEqBase.NullParameters)
-                uf.p = p
-            end
-            OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
-        end
+        wm = WrappedF(integ.cache.measurement_model, p, t)
+        ForwardDiff.jacobian!(H, wm, z_tmp.μ, x_pred.μ)
         integ.destats.njacs += 1
-
-        # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
-        _matmul!(H, ddu, E0, -1.0, 1.0)
     end
 
     return nothing
@@ -214,6 +227,16 @@ function evaluate_ode!(integ, alg::EK1FDB, x_pred, t, second_order::Val{false})
     return nothing
 end
 
+struct WrappedF1{F,P,T,D}
+    f1::F
+    p::P
+    t::T
+    d::D
+end
+(wf::WrappedF1)(du2, du) = begin
+    d = wf.d
+    wf.f1(du2, view(du, 1:d), view(du, d+1:2d), wf.p, wf.t)
+end
 function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{true})
     @unpack f, p = integ
     @unpack d, u_pred, du, ddu, measurement, H = integ.cache
@@ -236,12 +259,14 @@ function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{true
         H .= E2
 
         J = ddu
-        ForwardDiff.jacobian!(
-            J,
-            (du2, du_u) -> f.f1(du2, view(du_u, 1:d), view(du_u, d+1:2d), p, t),
-            du2,
-            u_pred,
-        )
+        # ForwardDiff.jacobian!(
+        #     J,
+        #     (du2, du_u) -> f.f1(du2, view(du_u, 1:d), view(du_u, d+1:2d), p, t),
+        #     du2,
+        #     u_pred,
+        # )
+        wf = WrappedF1(f.f1, p, t, d)
+        ForwardDiff.jacobian!(J, wf, du2, u_pred)
         integ.destats.nf += 1
         integ.destats.njacs += 1
         _matmul!(H, J, integ.cache.SolProj, -1.0, 1.0)

@@ -3,7 +3,7 @@
 ########################################################################################
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,AType,QType,
-    matType,diffusionType,diffModelType,measType,puType,llType,rateType,UF,JC,
+    matType,diffusionType,diffModelType,M,measType,puType,llType,rateType,UF,JC,
     uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
@@ -14,6 +14,7 @@ mutable struct EKCache{
     Ah::AType
     Qh::QType
     diffusionmodel::diffModelType
+    measurement_model::M
     R::RType
     Proj::ProjType
     SolProj::SolProjType
@@ -102,6 +103,10 @@ function OrdinaryDiffEq.alg_cache(
     A, Q = ibm(d, q, uElType)
     Ah, Qh = copy(A), copy(Q)
 
+    # Measurement Model
+    measurement_model = StandardODEMeasurementModel(f)
+    # @info "There we go" measurement_model
+
     # Initial State
     initial_variance = ones(uElType, D)
     x0 = Gaussian(zeros(uElType, D), PSDMatrix(diagm(sqrt.(initial_variance))))
@@ -168,10 +173,10 @@ function OrdinaryDiffEq.alg_cache(
     return EKCache{
         typeof(R),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(A),typeof(Q),matType,typeof(initdiff),
-        typeof(diffmodel),typeof(measurement),typeof(pu_tmp),uEltypeNoUnits,
+        typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),uEltypeNoUnits,
         typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
-        d, q, A, Q, Ah, Qh, diffmodel, R, Proj, SolProj, P, PI, E0, E1, E2,
+        d, q, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI, E0, E1, E2,
         u, u_pred, u_filt, tmp, atmp,
         x0, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
