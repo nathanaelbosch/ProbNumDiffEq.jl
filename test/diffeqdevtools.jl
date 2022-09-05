@@ -7,9 +7,11 @@ using Plots
 import ODEProblemLibrary: prob_ode_fitzhughnagumo
 const prob = prob_ode_fitzhughnagumo
 
-const test_sol = TestSolution(solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14))
-const test_sol_nondense =
-    TestSolution(solve(prob, Vern7(), dense=false, abstol=1 / 10^14, reltol=1 / 10^14))
+const appxsol = solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14)
+const test_sol = TestSolution(appxsol)
+const appxsol_nondense =
+    solve(prob, Vern7(), abstol=1 / 10^14, reltol=1 / 10^14, dense=false)
+const test_sol_nondense = TestSolution(appxsol_nondense)
 
 @testset "appxtrue" begin
     appxsol = appxtrue(solve(prob, EK1()), test_sol)
@@ -70,4 +72,37 @@ end
     )
     @test wps isa WorkPrecisionSet
     @test plot(wps) isa AbstractPlot
+end
+
+@testset "WorkPrecisionSet with TestSolution is broken" begin
+    abstols = 1.0 ./ 10.0 .^ (6:7)
+    reltols = 1.0 ./ 10.0 .^ (3:4)
+    setups = [
+        Dict(:alg => EK0(smooth=false))
+        Dict(:alg => EK1(smooth=false))
+    ]
+    @test_broken wp = WorkPrecisionSet(
+        prob, abstols, reltols, setups;
+        # names=labels,
+        #print_names = true,
+        appxsol=test_sol,
+        dense=false,
+        save_everystep=false,
+        numruns=2,
+        maxiters=Int(1e7),
+        timeseries_errors=false,
+        verbose=false,
+    )
+    @test_nowarn WorkPrecisionSet(
+        prob, abstols, reltols, setups;
+        # names=labels,
+        #print_names = true,
+        appxsol=appxsol_nondense,
+        dense=false,
+        save_everystep=false,
+        numruns=2,
+        maxiters=Int(1e7),
+        timeseries_errors=false,
+        verbose=false,
+    )
 end
