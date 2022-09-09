@@ -53,8 +53,8 @@ For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
-    @unpack x, x_pred, x_filt, err_tmp = integ.cache
-    @unpack A, Q, Ah, Qh, P, PI = integ.cache
+    @unpack xprev, x_pred, u_pred, x_filt, err_tmp = integ.cache
+    @unpack A, Q, Ah, Qh = integ.cache
 
     tnew = t + dt
 
@@ -65,8 +65,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     end
 
     # Predict the mean
-    predict_mean!(x_pred, x, Ah)
-    mul!(view(integ.u, :), SolProj, x_pred.μ)
+    predict_mean!(x_pred, xprev, Ah)
+    mul!(view(u_pred, :), SolProj, x_pred.μ)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -83,7 +83,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     # Predict the covariance, using either the local or global diffusion
     extrapolation_diff =
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
-    predict_cov!(x_pred, x, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
+    predict_cov!(x_pred, xprev, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
     # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
