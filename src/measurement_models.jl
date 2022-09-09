@@ -57,13 +57,25 @@ function make_measurement_model(f::SciMLBase.AbstractODEFunction)
 end
 
 function calc_H!(H, integ, cache)
-    @unpack d, ddu, H_base = cache
+    @unpack d, ddu, H_base, E1, E2 = cache
 
-    H .= H_base # typically E1 for first order ODEs
+    if f isa DynamicalODEFunction
+        @assert f.mass_matrix === I
+        H .= E2
+    else
+        if f.mass_matrix === I
+            H .= E1
+        elseif f.mass_matrix isa UniformScaling
+            H .= f.mass_matrix.λ .* E1
+        else
+            _matmul!(H, f.mass_matrix, E1)
+        end
+    end
+
     # @assert integ.u == @view x_pred.μ[1:(q+1):end]
     OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
-    J = view(ddu, 1:d, :)
-    ProbNumDiffEq._matmul!(H, J, cache.SolProj, -1.0, 1.0)
+
+    ProbNumDiffEq._matmul!(H, view(ddu, 1:d, :), cache.SolProj, -1.0, 1.0)
 
     return nothing
 end

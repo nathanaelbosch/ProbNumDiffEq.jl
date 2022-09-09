@@ -39,7 +39,6 @@ mutable struct EKCache{
     m_tmp::measType
     pu_tmp::puType
     H::matType
-    H_base::matType
     du::duType
     ddu::matType
     K1::matType
@@ -118,12 +117,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Measurement model related things
     R = zeros(uElType, d, d)
-    H_base = if f isa DynamicalODEFunction
-        copy(E2)
-    else
-        f.mass_matrix * E1
-    end
-    H = copy(H_base)
+    H = zeros(uElType, d, D)
     v = zeros(uElType, d)
     S = PSDMatrix(zeros(uElType, D, d))
     measurement = Gaussian(v, S)
@@ -186,7 +180,7 @@ function OrdinaryDiffEq.alg_cache(
         u, u_pred, u_filt, tmp, atmp,
         x0, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
-        H, H_base, du, ddu, K, G, Smat,
+        H, du, ddu, K, G, Smat,
         C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,
         initdiff, initdiff * NaN, initdiff * NaN,
         err_tmp, ll, du1, uf, jac_config,
