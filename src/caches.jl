@@ -3,7 +3,7 @@
 ########################################################################################
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,AType,QType,
-    matType,diffusionType,diffModelType,M,measType,puType,llType,rateType,UF,JC,
+    matType,diffusionType,diffModelType,measModType,measType,puType,llType,rateType,UF,JC,
     uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
@@ -14,7 +14,7 @@ mutable struct EKCache{
     Ah::AType
     Qh::QType
     diffusionmodel::diffModelType
-    measurement_model::M
+    measurement_model::measModType
     R::RType
     Proj::ProjType
     SolProj::SolProjType
