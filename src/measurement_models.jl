@@ -48,6 +48,14 @@ function (m::SecondOrderODEMeasurementModel{true})(z, x, p, t)
     return z
 end
 
+function make_measurement_model(f::SciMLBase.AbstractODEFunction)
+    if f isa DynamicalODEFunction
+        return SecondOrderODEMeasurementModel(f)
+    else
+        return StandardODEMeasurementModel(f)
+    end
+end
+
 function calc_H!(H, integ, cache)
     @unpack d, ddu, H_base = cache
 

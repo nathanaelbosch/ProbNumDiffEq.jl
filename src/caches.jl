@@ -105,12 +105,7 @@ function OrdinaryDiffEq.alg_cache(
     Ah, Qh = copy(A), copy(Q)
 
     # Measurement Model
-    measurement_model = if f isa DynamicalODEFunction
-        SecondOrderODEMeasurementModel(f)
-    else
-        StandardODEMeasurementModel(f)
-    end
-    # @info "There we go" measurement_model
+    measurement_model = make_measurement_model(f)
 
     # Initial State
     initial_variance = ones(uElType, D)
