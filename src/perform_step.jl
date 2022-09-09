@@ -40,7 +40,7 @@ For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
-    @unpack x, x_pred, u_pred, x_filt, err_tmp = integ.cache
+    @unpack x, x_pred, x_filt, err_tmp = integ.cache
     @unpack A, Q, Ah, Qh = integ.cache
 
     make_preconditioners!(cache, dt)
@@ -54,7 +54,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Predict the mean
     predict_mean!(x_pred, x, Ah)
-    mul!(view(u_pred, :), SolProj, x_pred.μ)
+    mul!(view(integ.u, :), SolProj, x_pred.μ)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -108,7 +108,7 @@ For second-order ODEs and the `EK1FDB` algorithm a specialized implementation is
 """
 function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ
-    @unpack u_pred, du, ddu, measurement, R, H = integ.cache
+    @unpack du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
     z = integ.cache.measurement
@@ -118,9 +118,7 @@ function evaluate_ode!(integ, x_pred, t)
     integ.destats.nf += 1
 
     if integ.alg isa EK1
-        wm = WrappedF(integ.cache.measurement_model, p, t)
-        ForwardDiff.jacobian!(H, wm, z_tmp.μ, x_pred.μ)
-        integ.destats.njacs += 1
+        calc_H!(H, integ, integ.cache)
     end
 
     return nothing
@@ -147,7 +145,7 @@ tolerances, and `integ.opts.internalnorm` provides the norm that should be used 
 only a scalar.
 """
 function compute_scaled_error_estimate!(integ, cache)
-    @unpack u_pred, err_tmp = cache
+    @unpack err_tmp = cache
     t = integ.t + integ.dt
     err_est_unscaled = estimate_errors!(cache)
     err_est_unscaled .*= integ.dt
@@ -156,7 +154,7 @@ function compute_scaled_error_estimate!(integ, cache)
             err_tmp,
             err_est_unscaled,
             integ.u[1, :],
-            u_pred[1, :],
+            integ.uprev[1, :],
             integ.opts.abstol,
             integ.opts.reltol,
             integ.opts.internalnorm,
@@ -167,7 +165,7 @@ function compute_scaled_error_estimate!(integ, cache)
             err_tmp,
             err_est_unscaled,
             integ.u,
-            u_pred,
+            integ.uprev,
             integ.opts.abstol,
             integ.opts.reltol,
             integ.opts.internalnorm,
