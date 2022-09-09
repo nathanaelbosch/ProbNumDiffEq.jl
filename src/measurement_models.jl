@@ -19,9 +19,9 @@ function (m::StandardODEMeasurementModel{true})(z, x, p, t)
     return z
 end
 # function (m::StandardODEMeasurementModel{false})(x, p, t)
-#     d = length(x) ÷ 2
-#     E0x = @view x[1:d]
-#     E1x = @view x[d+1:2d]
+#     d, q = ?
+#     E0_x = @view x[1:(q+1):end]
+#     E1_x = @view x[2:(q+1):end]
 #     du = m.f(E0x, p, t)
 #     return m.f.mass_matrix * E1x - du
 # end
