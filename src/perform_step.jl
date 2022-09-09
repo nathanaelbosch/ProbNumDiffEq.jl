@@ -19,6 +19,19 @@ function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::
     return nothing
 end
 
+function make_new_transitions(integ, cache, repeat_step)::Bool
+    # Similar to OrdinaryDiffEq.do_newJ
+    if integ.iter <= 1
+        return true
+    elseif repeat_step
+        return false
+    elseif !integ.opts.adaptive
+        return false
+    else
+        return true
+    end
+end
+
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
@@ -41,16 +54,15 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
     @unpack x, x_pred, x_filt, err_tmp = integ.cache
-    @unpack A, Q, Ah, Qh = integ.cache
-
-    make_preconditioners!(cache, dt)
-    @unpack P, PI = integ.cache
+    @unpack A, Q, Ah, Qh, P, PI = integ.cache
 
     tnew = t + dt
 
-    # Build the correct matrices
-    @. Ah .= PI.diag .* A .* P.diag'
-    X_A_Xt!(Qh, Q, PI)
+    if make_new_transitions(integ, cache, repeat_step)
+        make_preconditioners!(cache, dt)
+        @. Ah .= PI.diag .* A .* P.diag'
+        X_A_Xt!(Qh, Q, PI)
+    end
 
     # Predict the mean
     predict_mean!(x_pred, x, Ah)
