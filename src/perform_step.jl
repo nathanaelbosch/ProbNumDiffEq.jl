@@ -40,7 +40,7 @@ For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
-    @unpack x, x_pred, u_pred, x_filt, err_tmp = integ.cache
+    @unpack x, x_pred, x_filt, err_tmp = integ.cache
     @unpack A, Q, Ah, Qh = integ.cache
 
     make_preconditioners!(cache, dt)
@@ -54,7 +54,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Predict the mean
     predict_mean!(x_pred, x, Ah)
-    mul!(view(u_pred, :), SolProj, x_pred.μ)
+    mul!(view(integ.u, :), SolProj, x_pred.μ)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -106,148 +106,20 @@ as in OrdinaryDiffEq.jl.
 
 For second-order ODEs and the `EK1FDB` algorithm a specialized implementation is called.
 """
-evaluate_ode!(integ, x_pred, t) =
-    evaluate_ode!(integ, integ.alg, x_pred, t, Val(integ.f isa DynamicalODEFunction))
-function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{false})
+function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ
-    @unpack u_pred, du, ddu, measurement, R, H = integ.cache
+    @unpack du, ddu, measurement, R, H = integ.cache
     @assert iszero(R)
 
-    @unpack E0, E1, E2 = integ.cache
+    z = integ.cache.measurement
+    z_tmp = integ.cache.m_tmp
 
-    # Mean
-    f(du, u_pred, p, t)
+    integ.cache.measurement_model(z.μ, x_pred.μ, p, t)
     integ.destats.nf += 1
-    # z .= MM*E1*x_pred.μ .- du
-    if f.mass_matrix == I
-        H .= E1
-    elseif f.mass_matrix isa UniformScaling
-        H .= f.mass_matrix.λ .* E1
-    else
-        _matmul!(H, f.mass_matrix, E1)
-    end
 
-    z = measurement.μ
-    _matmul!(z, H, x_pred.μ)
-    z .-= view(du, :)
-
-    # If EK1, evaluate the Jacobian and adjust H
-    if alg isa EK1
-
-        # Jacobian is computed either with the given jac, or ForwardDiff
-        if !isnothing(f.jac)
-            f.jac(ddu, u_pred, p, t)
-        else
-            @unpack du1, uf, jac_config = integ.cache
-            uf.f = OrdinaryDiffEq.nlsolve_f(f, alg)
-            uf.t = t
-            if !(p isa DiffEqBase.NullParameters)
-                uf.p = p
-            end
-            OrdinaryDiffEq.jacobian!(ddu, uf, u_pred, du1, integ, jac_config)
-        end
-        integ.destats.njacs += 1
-
-        # _matmul!(H, f.mass_matrix, E1) # This is already the case (see above)
-        _matmul!(H, ddu, E0, -1.0, 1.0)
-    end
+    calc_H!(H, integ, integ.cache)
 
     return nothing
-end
-
-function evaluate_ode!(integ, alg::EK1FDB, x_pred, t, second_order::Val{false})
-    @unpack f, p = integ
-    @unpack d, u_pred, du, ddu, measurement, R, H = integ.cache
-    @assert iszero(R)
-
-    @unpack E0, E1, E2 = integ.cache
-
-    (f.mass_matrix != I) && error("EK1FDB does not support mass-matrices right now")
-
-    # Mean
-    f(du, u_pred, p, t)
-    integ.destats.nf += 1
-    # z .= MM*E1*x_pred.μ .- du
-    H1, H2 = view(H, 1:d, :), view(H, d+1:2d, :)
-    z = measurement.μ
-    z1, z2 = view(z, 1:d), view(z, d+1:2d)
-
-    H1 .= E1
-    _matmul!(z1, H1, x_pred.μ)
-    z1 .-= @view du[:]
-
-    # If EK1, evaluate the Jacobian and adjust H
-    if !isnothing(f.jac)
-        f.jac(ddu, u_pred, p, t)
-    else
-        ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
-        integ.destats.nf += 1
-    end
-    integ.destats.njacs += 1
-    _matmul!(H1, ddu, E0, -1.0, 1.0)
-
-    z2 .= (E2 * x_pred.μ .- ddu * du)
-    if integ.alg.jac_quality == 1
-        # EK0-type approach
-        H2 .= E2
-    elseif integ.alg.jac_quality == 2
-        H2 .= E2 - ddu * ddu * E0
-    elseif integ.alg.jac_quality == 3
-        _z2(m) = begin
-            u_pred = E0 * m
-            du = zeros(eltype(m), d)
-            ddu = zeros(eltype(m), d, d)
-            f(du, u_pred, p, t)
-            if !isnothing(f.jac)
-                f.jac(ddu, u_pred, p, t)
-            else
-                ForwardDiff.jacobian!(ddu, (du, u) -> f(du, u, p, t), du, u_pred)
-                # integ.destats.nf += 1
-            end
-            # integ.destats.njacs += 1
-            return (E2 * m .- ddu * du)
-        end
-        H2 .= ForwardDiff.jacobian(_z2, x_pred.μ)
-    else
-        error("EK1FDB's `jac_quality` has to be in [1,2,3]")
-    end
-    return nothing
-end
-
-function evaluate_ode!(integ, alg::AbstractEK, x_pred, t, second_order::Val{true})
-    @unpack f, p = integ
-    @unpack d, u_pred, du, ddu, measurement, H = integ.cache
-    du2 = du
-
-    @unpack E0, E1, E2 = integ.cache
-
-    # Mean
-    # _u_pred = E0 * x_pred.μ
-    # _du_pred = E1 * x_pred.μ
-    f.f1(du2, view(u_pred, 1:d), view(u_pred, d+1:2d), p, t)
-    integ.destats.nf += 1
-
-    z = measurement.μ
-    _matmul!(z, E2, x_pred.μ)
-    z .-= @view du2[:]
-
-    # Cov
-    if alg isa EK1
-        H .= E2
-
-        J = ddu
-        ForwardDiff.jacobian!(
-            J,
-            (du2, du_u) -> f.f1(du2, view(du_u, 1:d), view(du_u, d+1:2d), p, t),
-            du2,
-            u_pred,
-        )
-        integ.destats.nf += 1
-        integ.destats.njacs += 1
-        _matmul!(H, J, integ.cache.SolProj, -1.0, 1.0)
-    end
-
-    return measurement
 end
 
 compute_measurement_covariance!(cache) =
@@ -271,7 +143,7 @@ tolerances, and `integ.opts.internalnorm` provides the norm that should be used 
 only a scalar.
 """
 function compute_scaled_error_estimate!(integ, cache)
-    @unpack u_pred, err_tmp = cache
+    @unpack err_tmp = cache
     t = integ.t + integ.dt
     err_est_unscaled = estimate_errors!(cache)
     err_est_unscaled .*= integ.dt
@@ -280,7 +152,7 @@ function compute_scaled_error_estimate!(integ, cache)
             err_tmp,
             err_est_unscaled,
             integ.u[1, :],
-            u_pred[1, :],
+            integ.uprev[1, :],
             integ.opts.abstol,
             integ.opts.reltol,
             integ.opts.internalnorm,
@@ -291,7 +163,7 @@ function compute_scaled_error_estimate!(integ, cache)
             err_tmp,
             err_est_unscaled,
             integ.u,
-            u_pred,
+            integ.uprev,
             integ.opts.abstol,
             integ.opts.reltol,
             integ.opts.internalnorm,

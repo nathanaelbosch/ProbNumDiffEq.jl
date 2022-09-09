@@ -28,6 +28,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Preconditioning" begin
                 include("core/preconditioning.jl")
             end
+            @timedsafetestset "Measurement Models" begin
+                include("core/measurement_models.jl")
+            end
             #
             @timedsafetestset "State Initialization" begin
                 include("state_init.jl")
