@@ -99,7 +99,8 @@ function OrdinaryDiffEq.alg_cache(
 
     # Prior dynamics
     P, PI = init_preconditioner(d, q, uElType)
-    A, Q = ibm(d, q, uElType)
+    prior = IWP{uElType}(d, q)
+    A, Q = preconditioned_discretize(prior)
     Ah, Qh = copy(A), copy(Q)
 
     # Initial State

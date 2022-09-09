@@ -12,15 +12,13 @@ prob = remake(prob, tspan=(0.0, 10.0))
 
     d, q = 2, 3
 
-    A!, Q! = ProbNumDiffEq.vanilla_ibm(d, q)
-    Ah = diagm(0 => ones(d * (q + 1)))
-    Qh = zeros(d * (q + 1), d * (q + 1))
-    A!(Ah, h)
-    Q!(Qh, h, σ^2)
+    prior = ProbNumDiffEq.IWP(d, q)
 
-    A_p, Q_p = ProbNumDiffEq.ibm(d, q)
-    Ah_p = A_p
-    Qh_p = PSDMatrix(σ * Q_p.R)
+    Ah, Qh = discretize(prior, h)
+    Qh = apply_diffusion(Qh, σ^2)
+
+    Ah_p, Qh_p = preconditioned_discretize(prior)
+    Qh_p = apply_diffusion(Qh_p, σ^2)
 
     # First test that they're both equivalent
     D = d * (q + 1)

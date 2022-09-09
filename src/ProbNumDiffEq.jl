@@ -7,6 +7,7 @@ using Reexport
 import DiffEqBase: check_error!, AbstractODEFunction
 using OrdinaryDiffEq
 using DiffEqDevTools
+using SpecialMatrices, ToeplitzMatrices
 
 # Current working solution to depending on functions that moved from DiffEqBase to SciMLBase
 try

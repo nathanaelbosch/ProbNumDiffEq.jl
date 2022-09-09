@@ -10,11 +10,9 @@ h = rand()
 @testset "Test vanilla (ie. non-preconditioned) IBM (d=2,q=2)" begin
     d, q = 2, 2
 
-    A!, Q! = ProbNumDiffEq.vanilla_ibm(d, q)
-    Ah = diagm(0 => ones(d * (q + 1)))
-    Qh = zeros(d * (q + 1), d * (q + 1))
-    A!(Ah, h)
-    Q!(Qh, h, σ^2)
+    prior = ProbNumDiffEq.IWP(d, q)
+    Ah, Qh = discretize(prior, h)
+    Qh = apply_diffusion(Qh, σ^2)
 
     AH_22_IBM = [
         1 h h^2/2 0 0 0
@@ -41,8 +39,9 @@ end
 @testset "Test IBM with preconditioning (d=1,q=2)" begin
     d, q = 2, 2
 
-    A, Q = ProbNumDiffEq.ibm(d, q)
-    Qh = PSDMatrix(σ * Q.R)
+    prior = ProbNumDiffEq.IWP(d, q)
+    A, Q = preconditioned_discretize(prior)
+    Qh = apply_diffusion(Q, σ^2)
 
     AH_22_PRE = [
         1 2 1 0 0 0
