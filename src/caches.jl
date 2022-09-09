@@ -183,10 +183,11 @@ function OrdinaryDiffEq.alg_cache(
     return EKCache{
         typeof(R),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(A),typeof(Q),matType,typeof(initdiff),
-        typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),uEltypeNoUnits,
-        typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
+        typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
+        uEltypeNoUnits,typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
-        d, q, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI, E0, E1, E2,
+        d, q, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI,
+        E0, E1, E2,
         u, u_pred, u_filt, tmp, atmp,
         x0, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
