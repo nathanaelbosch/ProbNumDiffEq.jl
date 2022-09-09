@@ -26,13 +26,6 @@ end
 #     return m.f.mass_matrix * E1x - du
 # end
 
-struct WrappedF{F,P,T}
-    f::F
-    p::P
-    t::T
-end
-(wf::WrappedF)(du, u) = wf.f(du, u, wf.p, wf.t)
-
 struct SecondOrderODEMeasurementModel{IIP,F} <: AbstractMeasurementModel
     f1::F
 end
