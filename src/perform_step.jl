@@ -117,9 +117,7 @@ function evaluate_ode!(integ, x_pred, t)
     integ.cache.measurement_model(z.μ, x_pred.μ, p, t)
     integ.destats.nf += 1
 
-    if integ.alg isa EK1
-        calc_H!(H, integ, integ.cache)
-    end
+    calc_H!(H, integ, integ.cache)
 
     return nothing
 end
