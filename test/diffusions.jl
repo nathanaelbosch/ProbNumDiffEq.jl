@@ -1,6 +1,7 @@
 using Test
 using ProbNumDiffEq
 using OrdinaryDiffEq
+using DiffEqDevTools
 import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
 @testset "Test the different diffusion models" begin
@@ -13,9 +14,10 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             EK0(diffusionmodel=DynamicDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
-            dt=1e-4,
+            dt=1e-3,
         )
-        @test sol.u[end] ≈ true_sol.(sol.t)[end]
+        appxsol = appxtrue(sol, true_sol, dense_errors=false)
+        @test appxsol.errors[:final] < 1e-5
     end
 
     @testset "Time-Fixed Diffusion" begin
@@ -24,9 +26,10 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             EK0(diffusionmodel=FixedDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
-            dt=1e-4,
+            dt=1e-3,
         )
-        @test sol.u[end] ≈ true_sol.(sol.t)[end]
+        appxsol = appxtrue(sol, true_sol, dense_errors=false)
+        @test appxsol.errors[:final] < 1e-5
     end
 
     @testset "Time-Fixed Diffusion - uncalibrated and with custom initial value" begin
@@ -35,9 +38,10 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             EK0(diffusionmodel=FixedDiffusion(1e3, false), smooth=false),
             dense=false,
             adaptive=false,
-            dt=1e-4,
+            dt=1e-3,
         )
-        @test sol.u[end] ≈ true_sol.(sol.t)[end]
+        appxsol = appxtrue(sol, true_sol, dense_errors=false)
+        @test appxsol.errors[:final] < 1e-5
     end
 
     @testset "Time-Varying Diagonal Diffusion" begin
@@ -46,9 +50,10 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             EK0(diffusionmodel=DynamicMVDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
-            dt=1e-4,
+            dt=1e-3,
         )
-        @test sol.u[end] ≈ true_sol.(sol.t)[end]
+        appxsol = appxtrue(sol, true_sol, dense_errors=false)
+        @test appxsol.errors[:final] < 1e-5
     end
 
     @testset "Time-Fixed Diagonal Diffusion" begin
@@ -57,9 +62,10 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             EK0(diffusionmodel=FixedMVDiffusion(), smooth=false),
             dense=false,
             adaptive=false,
-            dt=1e-4,
+            dt=1e-3,
         )
-        @test sol.u[end] ≈ true_sol.(sol.t)[end]
+        appxsol = appxtrue(sol, true_sol, dense_errors=false)
+        @test appxsol.errors[:final] < 1e-5
     end
 
     @testset "Time-Fixed Diagonal Diffusion - uncalibrated and with custom values" begin
@@ -70,8 +76,9 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             EK0(diffusionmodel=FixedMVDiffusion(initial_diffusion, false), smooth=false),
             dense=false,
             adaptive=false,
-            dt=1e-4,
+            dt=1e-3,
         )
-        @test sol.u[end] ≈ true_sol.(sol.t)[end]
+        appxsol = appxtrue(sol, true_sol, dense_errors=false)
+        @test appxsol.errors[:final] < 1e-5
     end
 end
