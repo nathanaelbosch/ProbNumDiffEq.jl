@@ -1,79 +1,76 @@
 ########################################################################################
 # Integrated Brownian Motion
 ########################################################################################
+abstract type AbstractODEFilterPrior end
 """
-    ibm(d::Integer, q::Integer, elType=typeof(1.0))
+    IWP(wiener_process_dimension::Integer, num_derivatives::Integer)
 
-Generate the discrete dynamics for a q-IBM model.
-
-The returned matrices `A::AbstractMatrix` and `Q::ProbNumDiffEq.SquarerootMatrix` should be
-used in combination with the preconditioners (see `./src/preconditioning.jl`).
+Integrated Brownian motion
 """
-function ibm(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {elType}
-    # Make A
-    A_breve = zeros(elType, q + 1, q + 1)
-    @simd ivdep for j in 1:q+1
-        @simd ivdep for i in 1:j
-            @inbounds A_breve[i, j] = binomial(q - i + 1, q - j + 1)
-        end
-    end
+struct IWP{elType} <: AbstractODEFilterPrior
+    wiener_process_dimension::Int32
+    num_derivatives::Int32
+end
+IWP(wiener_process_dimension, num_derivatives) =
+    IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
+
+function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
+    q = iwp.num_derivatives
+
+    A_breve = binomial.(q:-1:0, (q:-1:0)')
+    Q_breve = Cauchy(collect(q:-1.0:0.0), collect((q+1):-1.0:1.0)) |> Matrix  # for Julia1.6
+
+    QR_breve = cholesky(Q_breve).L'
+    A_breve, QR_breve = elType.(A_breve), elType.(QR_breve)
+    Q_breve = PSDMatrix(QR_breve)
+
+    return A_breve, Q_breve
+end
+
+"""
+    preconditioned_discretize(iwp::IWP)
+
+Generate the discrete dynamics for a q-times integrated Wiener process (IWP).
+
+The returned matrices `A::AbstractMatrix` and `Q::PSDMatrix` should be used in combination
+with the preconditioners; see `./src/preconditioning.jl`.
+"""
+function preconditioned_discretize(iwp::IWP)
+    A_breve, Q_breve = preconditioned_discretize_1d(iwp)
+    QR_breve = Q_breve.R
+
+    d = iwp.wiener_process_dimension
     A = kron(I(d), A_breve)
-    @assert istriu(A)
-    # A = UpperTriangular(A)
-
-    # Make Q
-    Q_breve = zeros(elType, q + 1, q + 1)
-    @fastmath _transdiff_ibm_element(row::Int, col::Int) =
-        one(elType) / (2 * q + 1 - row - col)
-    @simd ivdep for col in 0:q
-        @simd ivdep for row in 0:q
-            val = _transdiff_ibm_element(row, col)
-            @inbounds Q_breve[1+row, 1+col] = val
-        end
-    end
-    QL_breve = cholesky(Q_breve).L
-    Q = PSDMatrix(kron(I(d), QL_breve'))
+    QR = kron(I(d), QR_breve)
+    Q = PSDMatrix(QR)
 
     return A, Q
 end
 
-"""
-    vanilla_ibm(d::Integer, q::Integer)
+function discretize_1d(iwp::IWP{elType}, dt::Real) where {elType}
+    q = iwp.num_derivatives
 
-**This function serves only for tests and is not used anywhere in the main package!**
-"""
-function vanilla_ibm(d::Integer, q::Integer)
-    @fastmath function A!(A::AbstractMatrix, h::Real)
-        # Assumes that A comes from a previous computation => zeros and one-diag
-        val = one(h)
-        for i in 1:q
-            val = val * h / i
-            for k in 0:d-1
-                for j in 1:q+1-i
-                    @inbounds A[j+k*(q+1), j+k*(q+1)+i] = val
-                end
-            end
-        end
-    end
+    v = 0:q
 
-    @fastmath function _transdiff_ibm_element(row::Int, col::Int, h::Real)
-        idx = 2 * q + 1 - row - col
-        fact_rw = factorial(q - row)
-        fact_cl = factorial(q - col)
-        return h^idx / (idx * fact_rw * fact_cl)
-    end
-    @fastmath function Q!(Q::AbstractMatrix, h::Real, σ²::Real=1.0)
-        val = one(h)
-        @simd for col in 0:q
-            @simd for row in col:q
-                val = _transdiff_ibm_element(row, col, h) * σ²
-                @simd for i in 0:d-1
-                    @inbounds Q[1+col+i*(q+1), 1+row+i*(q+1)] = val
-                    @inbounds Q[1+row+i*(q+1), 1+col+i*(q+1)] = val
-                end
-            end
-        end
-    end
+    f = factorial.(v)
+    A_breve = TriangularToeplitz(dt .^ v ./ f, :U) |> Matrix
 
-    return A!, Q!
+    e = (2 * q + 1 .- v .- v')
+    fr = reverse(f)
+    Q_breve = @. dt^e / (e * fr * fr')
+
+    QR_breve = cholesky(Q_breve).L'
+    A_breve, QR_breve = elType.(A_breve), elType.(QR_breve)
+    Q_breve = PSDMatrix(QR_breve)
+
+    return A_breve, Q_breve
+end
+
+function discretize(p::IWP, dt::Real)
+    A_breve, Q_breve = discretize_1d(p, dt)
+    d = p.wiener_process_dimension
+    A = kron(I(d), A_breve)
+    QR = kron(I(d), Q_breve.R)
+    Q = PSDMatrix(QR)
+    return A, Q
 end

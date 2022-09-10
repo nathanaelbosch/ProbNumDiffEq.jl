@@ -1,4 +1,5 @@
 using ProbNumDiffEq
+import ProbNumDiffEq as PNDE
 using Test
 using LinearAlgebra
 
@@ -10,11 +11,9 @@ h = rand()
 @testset "Test vanilla (ie. non-preconditioned) IBM (d=2,q=2)" begin
     d, q = 2, 2
 
-    A!, Q! = ProbNumDiffEq.vanilla_ibm(d, q)
-    Ah = diagm(0 => ones(d * (q + 1)))
-    Qh = zeros(d * (q + 1), d * (q + 1))
-    A!(Ah, h)
-    Q!(Qh, h, σ^2)
+    prior = PNDE.IWP(d, q)
+    Ah, Qh = PNDE.discretize(prior, h)
+    Qh = PNDE.apply_diffusion(Qh, σ^2)
 
     AH_22_IBM = [
         1 h h^2/2 0 0 0
@@ -35,14 +34,15 @@ h = rand()
             0 0 0 h^4/8 h^3/3 h^2/2
             0 0 0 h^3/6 h^2/2 h
         ]
-    @test QH_22_IBM ≈ Qh
+    @test QH_22_IBM ≈ Matrix(Qh)
 end
 
 @testset "Test IBM with preconditioning (d=1,q=2)" begin
     d, q = 2, 2
 
-    A, Q = ProbNumDiffEq.ibm(d, q)
-    Qh = PSDMatrix(σ * Q.R)
+    prior = PNDE.IWP(d, q)
+    A, Q = PNDE.preconditioned_discretize(prior)
+    Qh = PNDE.apply_diffusion(Q, σ^2)
 
     AH_22_PRE = [
         1 2 1 0 0 0
