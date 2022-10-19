@@ -10,6 +10,7 @@ function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::
 
     # Update the initial state to the known (given or computed with AD) initial values
     initial_update!(integ, cache)
+    copy!(integ.cache.xprev, integ.cache.x)
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
