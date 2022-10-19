@@ -55,7 +55,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d, SolProj = integ.cache
     @unpack xprev, x_pred, u_pred, x_filt, err_tmp = integ.cache
-    @unpack A, Q, Ah, Qh = integ.cache
+    @unpack A, Q, Ah, Qh, P, PI = integ.cache
 
     tnew = t + dt
 
