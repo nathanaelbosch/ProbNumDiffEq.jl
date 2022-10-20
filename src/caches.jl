@@ -31,6 +31,7 @@ mutable struct EKCache{
     tmp::uType
     atmp::uNoUnitsType
     x::xType
+    xprev::xType
     x_pred::xType
     x_filt::xType
     x_tmp::xType
@@ -151,6 +152,7 @@ function OrdinaryDiffEq.alg_cache(
     u_pred = copy(u)
     u_filt = copy(u)
     tmp = copy(u)
+    xprev = copy(x0)
     x_pred = copy(x0)
     x_filt = copy(x0)
     x_tmp = copy(x0)
@@ -179,7 +181,7 @@ function OrdinaryDiffEq.alg_cache(
         d, q, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI,
         E0, E1, E2,
         u, u_pred, u_filt, tmp, atmp,
-        x0, x_pred, x_filt, x_tmp, x_tmp2,
+        x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
         H, du, ddu, K, G, Smat,
         C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,

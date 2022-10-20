@@ -162,3 +162,13 @@ function DiffEqBase.savevalues!(
 
     return out
 end
+
+function OrdinaryDiffEq.update_uprev!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
+    @assert !OrdinaryDiffEq.alg_extrapolates(integ.alg)
+    @assert isinplace(integ.sol.prob)
+    @assert !(integ.alg isa OrdinaryDiffEq.DAEAlgorithm)
+
+    recursivecopy!(integ.uprev, integ.u)
+    recursivecopy!(integ.cache.xprev, integ.cache.x)
+    nothing
+end
