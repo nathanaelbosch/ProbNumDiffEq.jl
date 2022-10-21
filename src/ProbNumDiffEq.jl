@@ -22,6 +22,8 @@ using SciMLBase
 import Base: copy, copy!, show, size, ndims, similar
 stack(x) = copy(reduce(hcat, x)')
 
+import ArrayInterfaceCore: zeromatrix
+
 using LinearAlgebra
 import LinearAlgebra: mul!
 """LAPACK.geqrf! seems to be faster on small matrices than LAPACK.geqrt!"""
@@ -39,33 +41,33 @@ using Octavian
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
 # Some special cases
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = (C .= A .* B.diag')
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::AbstractMatrix{T},
-) where {T<:LinearAlgebra.BlasFloat} = (C .= A.diag .* B)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = @. C = A * B
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-    alpha::Number,
-    beta::Number,
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::AbstractMatrix{T},
+#     B::Diagonal{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = (C .= A .* B.diag')
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::Diagonal{T},
+#     B::AbstractMatrix{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = (C .= A.diag .* B)
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::Diagonal{T},
+#     B::Diagonal{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = @. C = A * B
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::AbstractVecOrMat{T},
+#     B::AbstractVecOrMat{T},
+#     alpha::Number,
+#     beta::Number,
+# ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::AbstractVecOrMat{T},
+#     B::AbstractVecOrMat{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!
@@ -124,26 +126,26 @@ export ManifoldUpdate
 # Do as they do here:
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/v6.21.0/src/OrdinaryDiffEq.jl#L195-L221
 import SnoopPrecompile
-SnoopPrecompile.@precompile_all_calls begin
-    function lorenz(du, u, p, t)
-        du[1] = 10.0(u[2] - u[1])
-        du[2] = u[1] * (28.0 - u[3]) - u[2]
-        du[3] = u[1] * u[2] - (8 / 3) * u[3]
-        return nothing
-    end
+# SnoopPrecompile.@precompile_all_calls begin
+#     function lorenz(du, u, p, t)
+#         du[1] = 10.0(u[2] - u[1])
+#         du[2] = u[1] * (28.0 - u[3]) - u[2]
+#         du[3] = u[1] * u[2] - (8 / 3) * u[3]
+#         return nothing
+#     end
 
-    prob_list = [
-        ODEProblem{true,true}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
-    ]
-    alg_list = [
-        EK0()
-        EK1()
-    ]
-    for prob in prob_list, solver in alg_list
-        solve(prob, solver)(5.0)
-    end
-end
+#     prob_list = [
+#         ODEProblem{true,true}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
+#         ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
+#         ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
+#     ]
+#     alg_list = [
+#         EK0()
+#         EK1()
+#     ]
+#     for prob in prob_list, solver in alg_list
+#         solve(prob, solver)(5.0)
+#     end
+# end
 
 end

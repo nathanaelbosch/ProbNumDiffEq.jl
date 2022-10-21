@@ -91,11 +91,13 @@ function OrdinaryDiffEq.alg_cache(
     uType = typeof(u)
     # uElType = eltype(u_vec)
     uElType = uBottomEltypeNoUnits
-    matType = Matrix{uElType}
+    # matType = Matrix{uElType}
+    matType = typeof(similar(u, 1, 1))
 
     # Projections
     Proj = projection(d, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
+    E0, E1, E2 = matType(E0), matType(E1), matType(E2)
     @assert f isa AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
@@ -103,6 +105,7 @@ function OrdinaryDiffEq.alg_cache(
     P, PI = init_preconditioner(d, q, uElType)
     prior = IWP{uElType}(d, q)
     A, Q = preconditioned_discretize(prior)
+    A, Q = matType(A), PSDMatrix(matType(Q.R))
     Ah, Qh = copy(A), copy(Q)
 
     # Measurement Model
@@ -110,7 +113,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Initial State
     initial_variance = ones(uElType, D)
-    x0 = Gaussian(zeros(uElType, D), PSDMatrix(diagm(sqrt.(initial_variance))))
+    x0 = Gaussian(similar(u, D), PSDMatrix(matType(diagm(sqrt.(initial_variance)))))
 
     # Diffusion Model
     diffmodel = alg.diffusionmodel
@@ -118,35 +121,35 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     # Measurement model related things
-    R = zeros(uElType, d, d)
-    H = zeros(uElType, d, D)
-    v = zeros(uElType, d)
-    S = PSDMatrix(zeros(uElType, D, d))
+    R = matType(zeros(uElType, d, d))
+    H = similar(u, d, D)
+    v = similar(u, d)
+    S = PSDMatrix(similar(u, D, d))
     measurement = Gaussian(v, S)
 
     # Caches
     du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
-    ddu = zeros(uElType, length(u), length(u))
+    ddu = similar(u, length(u), length(u))
     pu_tmp =
         f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), PSDMatrix(zeros(uElType, D, 2d))) : copy(measurement)
-    K = zeros(uElType, D, d)
-    G = zeros(uElType, D, D)
-    Smat = zeros(uElType, d, d)
+        Gaussian(similar(u, 2d), PSDMatrix(similar(u, D, 2d))) : copy(measurement)
+    K = similar(u, D, d)
+    G = similar(u, D, D)
+    Smat = similar(u, d, d)
 
-    C_dxd = zeros(uElType, d, d)
-    C_dxD = zeros(uElType, d, D)
-    C_Dxd = zeros(uElType, D, d)
-    C_DxD = zeros(uElType, D, D)
-    C_2DxD = zeros(uElType, 2D, D)
-    C_3DxD = zeros(uElType, 3D, D)
+    C_dxd = similar(u, d, d)
+    C_dxD = similar(u, d, D)
+    C_Dxd = similar(u, D, d)
+    C_DxD = similar(u, D, D)
+    C_2DxD = similar(u, 2D, D)
+    C_3DxD = similar(u, 3D, D)
 
     if alg isa EK1FDB
         H = [E1; E2]
         v = [v; v]
-        S = PSDMatrix(zeros(uElType, D, 2d))
+        S = PSDMatrix(similar(u, D, 2d))
         measurement = Gaussian(v, S)
-        K = zeros(uElType, D, 2d)
+        K = similar(u, D, 2d)
     end
 
     u_pred = copy(u)

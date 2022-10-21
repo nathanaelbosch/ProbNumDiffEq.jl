@@ -59,7 +59,9 @@ function predict_cov!(
     R, M = C_2DxD, C_DxD
     D, D = size(Qh)
 
-    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, Ah')
+    @info "what's the issue here officer?" view(R, 1:D, 1:D) x_curr.Σ.R Ah'
+    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, Ah)
+    @info "or is this alright?"
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
     _matmul!(M, R', R)
     chol = cholesky!(M, check=false)

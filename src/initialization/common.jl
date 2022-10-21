@@ -69,6 +69,7 @@ function condition_on!(
     K = K1 ./= S_diag'
 
     # x.μ .+= K*(data - z)
+    @info "hmm?" data H x.μ
     datadiff = _matmul!(data, H, x.μ, -1, 1)
     _matmul!(x.μ, K, datadiff, 1, 1)
 

@@ -43,6 +43,7 @@ function taylormode_get_derivatives(u, f::AbstractODEFunction{true}, p, t, q)
     @inbounds @simd ivdep for i in eachindex(u)
         uT[i] = Taylor1(u[i], q)
     end
+    @info "error?" uT
     duT = zero(uT)
     uauxT = similar(uT)
     TaylorIntegration.jetcoeffs!(f, tT, uT, duT, uauxT, p)
