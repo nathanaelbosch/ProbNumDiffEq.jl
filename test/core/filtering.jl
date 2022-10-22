@@ -87,7 +87,6 @@ end
             K_cache,
             K2_cache,
             M_cache,
-            m_tmp.Σ,
             O_cache,
         )
         @test m ≈ x_out.μ
