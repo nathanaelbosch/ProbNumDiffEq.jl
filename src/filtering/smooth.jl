@@ -109,7 +109,7 @@ function smooth!(
     R = C_3DxD
 
     G2 = _matmul!(C_DxD, G, Ah)
-    copy!(view(R, 1:D, 1:D), x_curr.Σ.R')
+    copy!(view(R, 1:D, 1:D), x_curr.Σ.R)
     _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, G2', -1.0, 1.0)
 
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
