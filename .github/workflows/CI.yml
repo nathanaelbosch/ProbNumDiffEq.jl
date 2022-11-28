@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - main
+      - bugfix/octavian
     tags: '*'
   pull_request:
 concurrency:
