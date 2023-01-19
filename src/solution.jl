@@ -135,7 +135,7 @@ mutable struct MeanProbODESolution{
     dense::Bool
     tslocation::Int
     destats::DE
-    retcode::Symbol
+    retcode::ReturnCode.T
     probsol::PSolType
 end
 MeanProbODESolution{T,N}(
