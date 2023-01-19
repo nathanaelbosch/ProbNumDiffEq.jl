@@ -42,19 +42,19 @@ function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
         i_diffusion = sum(difftimes .<= ts[i])
         diffusion = diffusions[i_diffusion]
 
+        make_transition_matrices!(posterior, dt)
+        Ah, Qh = posterior.Ah, posterior.Qh
         Qh = apply_diffusion(Q, diffusion)
-        make_preconditioners!(posterior, dt)
-        P, PI = posterior.P, posterior.PI
 
         for j in 1:n
-            sample_p = P * sample_path[i+1, :, j]
-            x_prev_p = P * xs[i]
+            sample_p = sample_path[i+1, :, j]
+            x_prev_p = xs[i]
 
             prev_sample_p, _ =
-                smooth(x_prev_p, Gaussian(sample_p, PSDMatrix(zeros(D, D))), A, Qh)
+                smooth(x_prev_p, Gaussian(sample_p, PSDMatrix(zeros(D, D))), Ah, Qh)
 
             # sample_path[i, :, j] .= PI*prev_sample_p.μ
-            sample_path[i, :, j] .= PI * _rand(prev_sample_p)[:]
+            sample_path[i, :, j] .= _rand(prev_sample_p)[:]
         end
     end
 
