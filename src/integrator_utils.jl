@@ -106,7 +106,7 @@ function smooth_solution!(integ)
             continue
         end
 
-        make_transition_densities!(integ.cache, dt)
+        make_transition_matrices!(integ.cache, dt)
         @unpack Ah, Qh = integ.cache
         smooth!(x[i], x[i+1], Ah, Qh, integ.cache, diffusions[i])
 

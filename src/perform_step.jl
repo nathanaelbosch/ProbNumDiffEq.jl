@@ -60,7 +60,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     tnew = t + dt
 
     if make_new_transitions(integ, cache, repeat_step)
-        make_transition_densities!(cache, dt)
+        make_transition_matrices!(cache, dt)
     end
 
     # Predict the mean

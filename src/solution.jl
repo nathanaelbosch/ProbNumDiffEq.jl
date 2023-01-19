@@ -232,7 +232,7 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Extrapolate
     h1 = tval - prev_t
-    make_transition_densities!(posterior, h1)
+    make_transition_matrices!(posterior, h1)
     Ah, Qh = posterior.Ah, posterior.Qh
     Qh = apply_diffusion(Qh, diffusion)
     goal_pred = predict(prev_rv, Ah, Qh)
@@ -247,7 +247,7 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Smooth
     h2 = next_t - tval
-    make_transition_densities!(posterior, h1)
+    make_transition_matrices!(posterior, h1)
     Ah, Qh = posterior.Ah, posterior.Qh
     Qh = apply_diffusion(Qh, diffusion)
     goal_pred = predict(prev_rv, Ah, Qh)
