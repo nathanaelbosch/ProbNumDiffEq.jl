@@ -232,11 +232,10 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Extrapolate
     h1 = tval - prev_t
-    make_preconditioners!(posterior, h1)
-    P, PI = posterior.P, posterior.PI
-    Qh = apply_diffusion(Q, diffusion)
-    goal_pred = predict(P * prev_rv, A, Qh)
-    goal_pred = PI * goal_pred
+    make_transition_densities!(posterior, h1)
+    Ah, Qh = posterior.Ah, posterior.Qh
+    Qh = apply_diffusion(Qh, diffusion)
+    goal_pred = predict(prev_rv, Ah, Qh)
 
     if !smoothed || tval >= t[end]
         return goal_pred
@@ -248,11 +247,10 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Smooth
     h2 = next_t - tval
-    make_preconditioners!(posterior, h2)
-    P, PI = posterior.P, posterior.PI
-    goal_pred = P * goal_pred
-    next_smoothed = P * next_smoothed
-    Qh = apply_diffusion(Q, diffusion)
+    make_transition_densities!(posterior, h1)
+    Ah, Qh = posterior.Ah, posterior.Qh
+    Qh = apply_diffusion(Qh, diffusion)
+    goal_pred = predict(prev_rv, Ah, Qh)
 
     goal_smoothed, _ = smooth(goal_pred, next_smoothed, A, Qh)
 
