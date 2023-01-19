@@ -217,7 +217,7 @@ function (posterior::GaussianODEFilterPosterior)(
     diffusions;
     smoothed=posterior.smooth,
 )
-    @unpack A, Q, d, q = posterior
+    @unpack Ah, Qh, d, q = posterior
 
     if tval < t[1]
         error("Invalid t<t0")
@@ -236,7 +236,6 @@ function (posterior::GaussianODEFilterPosterior)(
     # Extrapolate
     h1 = tval - prev_t
     make_transition_matrices!(posterior, h1)
-    Ah, Qh = posterior.Ah, posterior.Qh
     Qh = apply_diffusion(Qh, diffusion)
     goal_pred = predict(prev_rv, Ah, Qh)
 
@@ -251,11 +250,10 @@ function (posterior::GaussianODEFilterPosterior)(
     # Smooth
     h2 = next_t - tval
     make_transition_matrices!(posterior, h1)
-    Ah, Qh = posterior.Ah, posterior.Qh
     Qh = apply_diffusion(Qh, diffusion)
     goal_pred = predict(prev_rv, Ah, Qh)
 
-    goal_smoothed, _ = smooth(goal_pred, next_smoothed, A, Qh)
+    goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
 
     return goal_smoothed
 end
