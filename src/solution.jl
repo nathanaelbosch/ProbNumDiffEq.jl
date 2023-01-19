@@ -179,12 +179,14 @@ struct GaussianODEFilterPosterior{SPType,PriorType,AType,QType,PType} <:
     prior::PriorType
     A::AType
     Q::QType
+    Ah::AType
+    Qh::QType
     P::PType
     PI::PType
     smooth::Bool
 end
 set_smooth(p::GaussianODEFilterPosterior) =
-    GaussianODEFilterPosterior(p.d, p.q, p.SolProj, p.prior, p.A, p.Q, p.P, p.PI, true)
+    GaussianODEFilterPosterior(p.d, p.q, p.SolProj, p.prior, p.A, p.Q, p.Ah, p.Qh, p.P, p.PI, true)
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = u0 isa ArrayPartition ? length(u0) ÷ 2 : length(u0)
@@ -200,8 +202,9 @@ function GaussianODEFilterPosterior(alg, u0)
         error("Invalid prior $(alg.prior); use :IWP")
     end
     A, Q = preconditioned_discretize(prior)
+    Ah, Qh = copy(A), copy(Q)
     P, PI = init_preconditioner(d, q, uElType)
-    return GaussianODEFilterPosterior(d, q, SolProj, prior, A, Q, P, PI, false)
+    return GaussianODEFilterPosterior(d, q, SolProj, prior, A, Q, Ah, Qh, P, PI, false)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) =
     "Gaussian ODE Filter Posterior"
@@ -254,7 +257,7 @@ function (posterior::GaussianODEFilterPosterior)(
 
     goal_smoothed, _ = smooth(goal_pred, next_smoothed, A, Qh)
 
-    return PI * goal_smoothed
+    return goal_smoothed
 end
 (sol::ProbODESolution)(t::Real, args...) =
     sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions)
