@@ -171,10 +171,12 @@ DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) 
 # Dense Output
 ########################################################################################
 abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
-struct GaussianODEFilterPosterior{SPType,AType,QType,PType} <: AbstractODEFilterPosterior
+struct GaussianODEFilterPosterior{SPType,PriorType,AType,QType,PType} <:
+       AbstractODEFilterPosterior
     d::Int
     q::Int
     SolProj::SPType
+    prior::PriorType
     A::AType
     Q::QType
     P::PType
@@ -182,7 +184,7 @@ struct GaussianODEFilterPosterior{SPType,AType,QType,PType} <: AbstractODEFilter
     smooth::Bool
 end
 set_smooth(p::GaussianODEFilterPosterior) =
-    GaussianODEFilterPosterior(p.d, p.q, p.SolProj, p.A, p.Q, p.P, p.PI, true)
+    GaussianODEFilterPosterior(p.d, p.q, p.SolProj, p.prior, p.A, p.Q, p.P, p.PI, true)
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = u0 isa ArrayPartition ? length(u0) ÷ 2 : length(u0)
@@ -192,10 +194,14 @@ function GaussianODEFilterPosterior(alg, u0)
     Proj = projection(d, q, uElType)
     SolProj = u0 isa ArrayPartition ? [Proj(1); Proj(0)] : Proj(0)
 
-    prior = IWP{uElType}(d, q)
+    prior = if alg.prior == :IWP
+        IWP{uElType}(d, q)
+    else
+        error("Invalid prior $(alg.prior); use :IWP")
+    end
     A, Q = preconditioned_discretize(prior)
     P, PI = init_preconditioner(d, q, uElType)
-    return GaussianODEFilterPosterior(d, q, SolProj, A, Q, P, PI, false)
+    return GaussianODEFilterPosterior(d, q, SolProj, prior, A, Q, P, PI, false)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) =
     "Gaussian ODE Filter Posterior"
