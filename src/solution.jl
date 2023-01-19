@@ -186,7 +186,19 @@ struct GaussianODEFilterPosterior{SPType,PriorType,AType,QType,PType} <:
     smooth::Bool
 end
 set_smooth(p::GaussianODEFilterPosterior) =
-    GaussianODEFilterPosterior(p.d, p.q, p.SolProj, p.prior, p.A, p.Q, p.Ah, p.Qh, p.P, p.PI, true)
+    GaussianODEFilterPosterior(
+        p.d,
+        p.q,
+        p.SolProj,
+        p.prior,
+        p.A,
+        p.Q,
+        p.Ah,
+        p.Qh,
+        p.P,
+        p.PI,
+        true,
+    )
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = u0 isa ArrayPartition ? length(u0) ÷ 2 : length(u0)
