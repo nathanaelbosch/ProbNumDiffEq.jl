@@ -106,13 +106,9 @@ function smooth_solution!(integ)
             continue
         end
 
-        make_preconditioners!(integ.cache, dt)
-        P, PI = integ.cache.P, integ.cache.PI
-
-        _gaussian_mul!(x_tmp, P, x[i])
-        _gaussian_mul!(x_tmp2, P, x[i+1])
-        smooth!(x_tmp, x_tmp2, A, Q, integ.cache, diffusions[i])
-        _gaussian_mul!(x[i], PI, x_tmp)
+        make_transition_densities!(integ.cache, dt)
+        @unpack Ah, Qh = integ.cache
+        smooth!(x[i], x[i+1], Ah, Qh, integ.cache, diffusions[i])
 
         # Save the smoothed state into the solution
         _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
