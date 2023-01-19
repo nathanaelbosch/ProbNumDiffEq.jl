@@ -33,6 +33,16 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     end
 end
 
+make_transition_matrices!(cache::EKCache, dt) =
+    make_transition_matrices!(cache, cache.prior, dt)
+function make_transition_matrices!(cache::EKCache, prior::IWP, dt)
+    @unpack A, Q, Ah, Qh, P, PI = cache
+    make_preconditioners!(cache, dt)
+    @. Ah .= PI.diag .* A .* P.diag'
+    X_A_Xt!(Qh, Q, PI)
+end
+
+
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
@@ -102,13 +112,6 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     copy!(integ.cache.x, integ.cache.x_filt)
 
     return nothing
-end
-
-function make_transition_matrices!(cache::EKCache, dt)
-    @unpack A, Q, Ah, Qh, P, PI = cache
-    make_preconditioners!(cache, dt)
-    @. Ah .= PI.diag .* A .* P.diag'
-    X_A_Xt!(Qh, Q, PI)
 end
 
 """
