@@ -100,6 +100,11 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
     # Prior dynamics
+    prior = if alg.prior == :IWP
+        IWP{uElType}(d, q)
+    else
+        error("Invalid prior $(alg.prior); use :IWP")
+    end
     P, PI = init_preconditioner(d, q, uElType)
     prior = IWP{uElType}(d, q)
     A, Q = preconditioned_discretize(prior)
