@@ -30,7 +30,7 @@ mutable struct ProbODESolution{
     dense::Bool
     tslocation::Int
     destats::DE
-    retcode::Symbol
+    retcode::ReturnCode.T
 end
 ProbODESolution{T,N}(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob,
@@ -59,7 +59,7 @@ function DiffEqBase.build_solution(
     t,
     u;
     k=nothing,
-    retcode=:Default,
+    retcode=ReturnCode.Default,
     destats=nothing,
     dense=true,
     kwargs...,
@@ -135,7 +135,7 @@ mutable struct MeanProbODESolution{
     dense::Bool
     tslocation::Int
     destats::DE
-    retcode::Symbol
+    retcode::ReturnCode.T
     probsol::PSolType
 end
 MeanProbODESolution{T,N}(
