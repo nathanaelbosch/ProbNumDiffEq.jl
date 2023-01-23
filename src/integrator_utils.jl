@@ -107,8 +107,16 @@ function smooth_solution!(integ)
         end
 
         make_transition_matrices!(integ.cache, dt)
-        @unpack Ah, Qh = integ.cache
-        smooth!(x[i], x[i+1], Ah, Qh, integ.cache, diffusions[i])
+        # In principle the smoothing would look like this (without preconditioning):
+        # @unpack Ah, Qh = integ.cache
+        # smooth!(x[i], x[i+1], Ah, Qh, integ.cache, diffusions[i])
+
+        # To be numerically more stable, use the preconditioning:
+        @unpack P, PI = integ.cache
+        _gaussian_mul!(x_tmp, P, x[i])
+        _gaussian_mul!(x_tmp2, P, x[i+1])
+        smooth!(x_tmp, x_tmp2, A, Q, integ.cache, diffusions[i])
+        _gaussian_mul!(x[i], PI, x_tmp)
 
         # Save the smoothed state into the solution
         _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])

@@ -229,7 +229,7 @@ function (posterior::GaussianODEFilterPosterior)(
     diffusions;
     smoothed=posterior.smooth,
 )
-    @unpack Ah, Qh, d, q = posterior
+    @unpack d, q = posterior
 
     if tval < t[1]
         error("Invalid t<t0")
@@ -248,8 +248,18 @@ function (posterior::GaussianODEFilterPosterior)(
     # Extrapolate
     h1 = tval - prev_t
     make_transition_matrices!(posterior, h1)
-    Qh = apply_diffusion(Qh, diffusion)
-    goal_pred = predict(prev_rv, Ah, Qh)
+
+    # In principle the smoothing would look like this (without preconditioning):
+    # @unpack Ah, Qh = posterior
+    # Qh = apply_diffusion(Qh, diffusion)
+    # goal_pred = predict(prev_rv, Ah, Qh)
+
+    # To be numerically more stable, use the preconditioning:
+    @unpack A, Q = posterior
+    P, PI = posterior.P, posterior.PI
+    Qh = apply_diffusion(Q, diffusion)
+    goal_pred = predict(P * prev_rv, A, Qh)
+    goal_pred = PI * goal_pred
 
     if !smoothed || tval >= t[end]
         return goal_pred
@@ -261,11 +271,21 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Smooth
     h2 = next_t - tval
-    make_transition_matrices!(posterior, h1)
-    Qh = apply_diffusion(Qh, diffusion)
-    goal_pred = predict(prev_rv, Ah, Qh)
+    make_transition_matrices!(posterior, h2)
 
-    goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
+    # In principle the smoothing would look like this (without preconditioning):
+    # @unpack Ah, Qh = posterior
+    # Qh = apply_diffusion(Qh, diffusion)
+    # goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
+
+    # To be numerically more stable, use the preconditioning:
+    @unpack A, Q = posterior
+    P, PI = posterior.P, posterior.PI
+    goal_pred = P * goal_pred
+    next_smoothed = P * next_smoothed
+    Qh = apply_diffusion(Q, diffusion)
+    goal_smoothed, _ = smooth(goal_pred, next_smoothed, A, Qh)
+    goal_smoothed = PI * goal_smoothed
 
     return goal_smoothed
 end
