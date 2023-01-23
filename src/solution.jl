@@ -171,18 +171,34 @@ DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) 
 # Dense Output
 ########################################################################################
 abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
-struct GaussianODEFilterPosterior{SPType,AType,QType,PType} <: AbstractODEFilterPosterior
+struct GaussianODEFilterPosterior{SPType,PriorType,AType,QType,PType} <:
+       AbstractODEFilterPosterior
     d::Int
     q::Int
     SolProj::SPType
+    prior::PriorType
     A::AType
     Q::QType
+    Ah::AType
+    Qh::QType
     P::PType
     PI::PType
     smooth::Bool
 end
 set_smooth(p::GaussianODEFilterPosterior) =
-    GaussianODEFilterPosterior(p.d, p.q, p.SolProj, p.A, p.Q, p.P, p.PI, true)
+    GaussianODEFilterPosterior(
+        p.d,
+        p.q,
+        p.SolProj,
+        p.prior,
+        p.A,
+        p.Q,
+        p.Ah,
+        p.Qh,
+        p.P,
+        p.PI,
+        true,
+    )
 function GaussianODEFilterPosterior(alg, u0)
     uElType = eltype(u0)
     d = u0 isa ArrayPartition ? length(u0) ÷ 2 : length(u0)
@@ -192,10 +208,15 @@ function GaussianODEFilterPosterior(alg, u0)
     Proj = projection(d, q, uElType)
     SolProj = u0 isa ArrayPartition ? [Proj(1); Proj(0)] : Proj(0)
 
-    prior = IWP{uElType}(d, q)
+    prior = if alg.prior == :IWP
+        IWP{uElType}(d, q)
+    else
+        error("Invalid prior $(alg.prior); use :IWP")
+    end
     A, Q = preconditioned_discretize(prior)
+    Ah, Qh = copy(A), copy(Q)
     P, PI = init_preconditioner(d, q, uElType)
-    return GaussianODEFilterPosterior(d, q, SolProj, A, Q, P, PI, false)
+    return GaussianODEFilterPosterior(d, q, SolProj, prior, A, Q, Ah, Qh, P, PI, false)
 end
 DiffEqBase.interp_summary(interp::GaussianODEFilterPosterior) =
     "Gaussian ODE Filter Posterior"
@@ -208,7 +229,7 @@ function (posterior::GaussianODEFilterPosterior)(
     diffusions;
     smoothed=posterior.smooth,
 )
-    @unpack A, Q, d, q = posterior
+    @unpack d, q = posterior
 
     if tval < t[1]
         error("Invalid t<t0")
@@ -226,7 +247,15 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Extrapolate
     h1 = tval - prev_t
-    make_preconditioners!(posterior, h1)
+    make_transition_matrices!(posterior, h1)
+
+    # In principle the smoothing would look like this (without preconditioning):
+    # @unpack Ah, Qh = posterior
+    # Qh = apply_diffusion(Qh, diffusion)
+    # goal_pred = predict(prev_rv, Ah, Qh)
+
+    # To be numerically more stable, use the preconditioning:
+    @unpack A, Q = posterior
     P, PI = posterior.P, posterior.PI
     Qh = apply_diffusion(Q, diffusion)
     goal_pred = predict(P * prev_rv, A, Qh)
@@ -242,15 +271,23 @@ function (posterior::GaussianODEFilterPosterior)(
 
     # Smooth
     h2 = next_t - tval
-    make_preconditioners!(posterior, h2)
+    make_transition_matrices!(posterior, h2)
+
+    # In principle the smoothing would look like this (without preconditioning):
+    # @unpack Ah, Qh = posterior
+    # Qh = apply_diffusion(Qh, diffusion)
+    # goal_smoothed, _ = smooth(goal_pred, next_smoothed, Ah, Qh)
+
+    # To be numerically more stable, use the preconditioning:
+    @unpack A, Q = posterior
     P, PI = posterior.P, posterior.PI
     goal_pred = P * goal_pred
     next_smoothed = P * next_smoothed
     Qh = apply_diffusion(Q, diffusion)
-
     goal_smoothed, _ = smooth(goal_pred, next_smoothed, A, Qh)
+    goal_smoothed = PI * goal_smoothed
 
-    return PI * goal_smoothed
+    return goal_smoothed
 end
 (sol::ProbODESolution)(t::Real, args...) =
     sol.interp.SolProj * sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions)

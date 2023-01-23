@@ -19,6 +19,7 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 # [References](@ref references)
 """
 Base.@kwdef struct EK0{DT,IT} <: AbstractEK
+    prior::Symbol = :IWP
     order::Int = 3
     diffusionmodel::DT = DynamicDiffusion()
     smooth::Bool = true
@@ -51,12 +52,14 @@ ForwardDiff.jl to compute Jacobians.
 # [References](@ref references)
 """
 struct EK1{CS,AD,DiffType,ST,CJ,DT,IT} <: AbstractEK
+    prior::Symbol
     order::Int
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
 end
 EK1(;
+    prior=:IWP,
     order=3,
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
@@ -76,6 +79,7 @@ EK1(;
         DT,
         IT,
     }(
+        prior,
         order,
         diffusionmodel,
         smooth,

@@ -60,9 +60,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     tnew = t + dt
 
     if make_new_transitions(integ, cache, repeat_step)
-        make_preconditioners!(cache, dt)
-        @. Ah .= PI.diag .* A .* P.diag'
-        X_A_Xt!(Qh, Q, PI)
+        make_transition_matrices!(cache, dt)
     end
 
     # Predict the mean
@@ -104,6 +102,13 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     copy!(integ.cache.x, integ.cache.x_filt)
 
     return nothing
+end
+
+function make_transition_matrices!(cache::Union{EKCache,GaussianODEFilterPosterior}, dt)
+    @unpack A, Q, Ah, Qh, P, PI = cache
+    make_preconditioners!(cache, dt)
+    @. Ah .= PI.diag .* A .* P.diag'
+    X_A_Xt!(Qh, Q, PI)
 end
 
 """

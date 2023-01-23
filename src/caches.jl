@@ -2,13 +2,14 @@
 # Caches
 ########################################################################################
 mutable struct EKCache{
-    RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,AType,QType,
+    RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
     matType,diffusionType,diffModelType,measModType,measType,puType,llType,rateType,UF,JC,
     uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
+    prior::PriorType
     A::AType
     Q::QType
     Ah::AType
@@ -100,6 +101,11 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
     # Prior dynamics
+    prior = if alg.prior == :IWP
+        IWP{uElType}(d, q)
+    else
+        error("Invalid prior $(alg.prior); use :IWP")
+    end
     P, PI = init_preconditioner(d, q, uElType)
     prior = IWP{uElType}(d, q)
     A, Q = preconditioned_discretize(prior)
@@ -174,11 +180,12 @@ function OrdinaryDiffEq.alg_cache(
     ll = zero(uEltypeNoUnits)
     return EKCache{
         typeof(R),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
-        uType,typeof(du),typeof(x0),typeof(A),typeof(Q),matType,typeof(initdiff),
+        uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),matType,
+        typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
-        d, q, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI,
+        d, q, prior, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI,
         E0, E1, E2,
         u, u_pred, u_filt, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
