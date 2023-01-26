@@ -74,23 +74,47 @@ end
     end
 
     @testset "update!" begin
-        K_cache = copy(K)
-        K2_cache = copy(K)
-        M_cache = zeros(d, d)
-        m_tmp = copy(measurement)
-        O_cache = zeros(o, o)
-        ProbNumDiffEq.update!(
-            x_out,
-            x_pred,
-            measurement,
-            H,
-            K_cache,
-            K2_cache,
-            M_cache,
-            O_cache,
-        )
-        @test m ≈ x_out.μ
-        @test P ≈ Matrix(x_out.Σ)
+        @testset "Array" begin
+            K_cache = copy(K)
+            K2_cache = copy(K)
+            M_cache = zeros(d, d)
+            O_cache = zeros(o, o)
+            ProbNumDiffEq.update!(
+                x_out,
+                x_pred,
+                measurement,
+                H,
+                K_cache,
+                K2_cache,
+                M_cache,
+                O_cache,
+            )
+            @test m ≈ x_out.μ
+            @test P ≈ Matrix(x_out.Σ)
+        end
+        @testset "PSDMatrix" begin
+            K_cache = copy(K)
+            K2_cache = copy(K)
+            M_cache = zeros(d, d)
+            S = measurement.Σ
+            SR = cholesky(S).U
+            measurement = Gaussian(measurement.μ, PSDMatrix(SR))
+            O_cache = zeros(o, o)
+            x_pred = Gaussian(x_pred.μ, PSDMatrix(R_P_p))
+            x_out = copy(x_pred)
+            ProbNumDiffEq.update!(
+                x_out,
+                x_pred,
+                measurement,
+                H,
+                K_cache,
+                K2_cache,
+                M_cache,
+                O_cache,
+            )
+            @test m ≈ x_out.μ
+            @test P ≈ Matrix(x_out.Σ)
+        end
     end
 end
 
