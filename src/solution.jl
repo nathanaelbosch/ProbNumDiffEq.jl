@@ -160,11 +160,13 @@ mutable struct MeanProbODESolution{
     probsol::PSolType
 end
 MeanProbODESolution{T,N}(
-    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode, probsol,
+    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode,
+    probsol,
 ) where {T,N} = MeanProbODESolution{
     T,N,typeof(u),typeof(u_analytic),typeof(errs),typeof(t),typeof(k),typeof(prob),
     typeof(alg),typeof(interp),typeof(cache),typeof(destats),typeof(probsol)}(
-    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode, probsol,
+    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode,
+    probsol,
 )
 
 DiffEqBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) where {T,N} =
@@ -178,8 +180,8 @@ function mean(sol::ProbODESolution{T,N}) where {T,N}
         typeof(sol.k),typeof(sol.prob),typeof(sol.alg),typeof(sol.interp),typeof(sol.cache),
         typeof(sol.destats),typeof(sol),
     }(
-        sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp, sol.cache,
-        sol.dense, sol.tslocation, sol.destats, sol.retcode, sol,
+        sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp,
+        sol.cache, sol.dense, sol.tslocation, sol.destats, sol.retcode, sol,
     )
 end
 (sol::MeanProbODESolution)(t::Real, args...) = mean(sol.probsol(t, args...))

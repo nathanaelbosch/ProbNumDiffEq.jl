@@ -22,7 +22,7 @@ function sample(sol::ProbODESolution, n::Int=1)
     sample_path = sample_states(sol, n)
     return sample_path[:, 1:q+1:d*(q+1), :]
 end
-function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1; )
+function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1)
     @assert length(diffusions) + 1 == length(difftimes)
 
     @unpack A, Q, d, q = cache
@@ -64,7 +64,15 @@ function dense_sample_states(sol::ProbODESolution, n::Int=1; density=1000)
     @assert sol.alg.smooth "sampling not implemented for non-smoothed posteriors"
     times = range(sol.t[1], sol.t[end], length=density)
     states = StructArray([
-        interpolate(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions, sol.cache; smoothed=sol.alg.smooth)
+        interpolate(
+            t,
+            sol.t,
+            sol.x_filt,
+            sol.x_smooth,
+            sol.diffusions,
+            sol.cache;
+            smoothed=sol.alg.smooth,
+        )
         for t in times
     ])
 
