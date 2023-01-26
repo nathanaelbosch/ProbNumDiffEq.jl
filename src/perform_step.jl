@@ -104,7 +104,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     return nothing
 end
 
-function make_transition_matrices!(cache::Union{EKCache,GaussianODEFilterPosterior}, dt)
+function make_transition_matrices!(cache::EKCache, dt)
     @unpack A, Q, Ah, Qh, P, PI = cache
     make_preconditioners!(cache, dt)
     @. Ah .= PI.diag .* A .* P.diag'
