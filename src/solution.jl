@@ -64,6 +64,25 @@ function DiffEqBase.build_solution(
     dense=true,
     kwargs...,
 )
+    # By making an actual cache, interpolation can be written very closely to the solver
+    cache = OrdinaryDiffEq.alg_cache(
+        alg,
+        prob.u0,
+        recursivecopy(prob.u0),
+        recursive_unitless_eltype(prob.u0),
+        recursive_unitless_bottom_eltype(prob.u0),
+        eltype(t),
+        recursivecopy(prob.u0),
+        recursivecopy(prob.u0),
+        prob.f,
+        t,
+        eltype(prob.tspan)(1),
+        nothing,
+        prob.p,
+        true,
+        Val(isinplace(prob)),
+    )
+
     T = eltype(eltype(u))
     N = length((size(prob.u0)..., length(u)))
 
