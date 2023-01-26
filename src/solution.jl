@@ -142,7 +142,7 @@ Since it is the mean and does never return Gaussians, it can basically be treate
 were a classic ODE solution and is well-compatible with e.g. DiffEqDevtools.jl.
 """
 mutable struct MeanProbODESolution{
-    T,N,uType,uType2,DType,tType,rateType,P,A,IType,DE,PSolType,
+    T,N,uType,uType2,DType,tType,rateType,P,A,IType,CType,DE,PSolType,
 } <: DiffEqBase.AbstractODESolution{T,N,uType}
     u::uType
     u_analytic::uType2
@@ -152,6 +152,7 @@ mutable struct MeanProbODESolution{
     prob::P
     alg::A
     interp::IType
+    cache::CType
     dense::Bool
     tslocation::Int
     destats::DE
@@ -159,11 +160,11 @@ mutable struct MeanProbODESolution{
     probsol::PSolType
 end
 MeanProbODESolution{T,N}(
-    u, u_analytic, errs, t, k, prob, alg, interp, dense, tsl, destats, retcode, probsol,
+    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode, probsol,
 ) where {T,N} = MeanProbODESolution{
     T,N,typeof(u),typeof(u_analytic),typeof(errs),typeof(t),typeof(k),typeof(prob),
-    typeof(alg),typeof(interp),typeof(destats),typeof(probsol)}(
-    u, u_analytic, errs, t, k, prob, alg, interp, dense, tsl, destats, retcode, probsol,
+    typeof(alg),typeof(interp),typeof(cache),typeof(destats),typeof(probsol)}(
+    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode, probsol,
 )
 
 DiffEqBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) where {T,N} =
@@ -174,10 +175,10 @@ DiffEqBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) whe
 function mean(sol::ProbODESolution{T,N}) where {T,N}
     return MeanProbODESolution{
         T,N,typeof(sol.u),typeof(sol.u_analytic),typeof(sol.errors),typeof(sol.t),
-        typeof(sol.k),typeof(sol.prob),typeof(sol.alg),typeof(sol.interp),
+        typeof(sol.k),typeof(sol.prob),typeof(sol.alg),typeof(sol.interp),typeof(sol.cache),
         typeof(sol.destats),typeof(sol),
     }(
-        sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp,
+        sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp, sol.cache,
         sol.dense, sol.tslocation, sol.destats, sol.retcode, sol,
     )
 end
