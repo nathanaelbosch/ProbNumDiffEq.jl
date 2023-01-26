@@ -14,18 +14,18 @@ function _rand(x::SRGaussian, n::Integer=1)
 end
 
 function sample_states(sol::ProbODESolution, n::Int=1)
-    @assert sol.interp.smooth "sampling not implemented for non-smoothed posteriors"
-    return sample_states(sol.t, sol.x_filt, sol.diffusions, sol.t, sol.interp, n)
+    @assert sol.alg.smooth "sampling not implemented for non-smoothed posteriors"
+    return sample_states(sol.t, sol.x_filt, sol.diffusions, sol.t, sol.cache, n)
 end
 function sample(sol::ProbODESolution, n::Int=1)
-    d, q = sol.interp.d, sol.interp.q
+    @unpack d, q = sol.cache
     sample_path = sample_states(sol, n)
     return sample_path[:, 1:q+1:d*(q+1), :]
 end
-function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
+function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1)
     @assert length(diffusions) + 1 == length(difftimes)
 
-    @unpack A, Q, d, q = posterior
+    @unpack A, Q, d, q = cache
     D = d * (q + 1)
 
     x = xs[end]
@@ -42,8 +42,8 @@ function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
         i_diffusion = sum(difftimes .<= ts[i])
         diffusion = diffusions[i_diffusion]
 
-        make_transition_matrices!(posterior, dt)
-        Ah, Qh = posterior.Ah, posterior.Qh
+        make_transition_matrices!(cache, dt)
+        Ah, Qh = cache.Ah, cache.Qh
         Qh = apply_diffusion(Q, diffusion)
 
         for j in 1:n
@@ -61,17 +61,25 @@ function sample_states(ts, xs, diffusions, difftimes, posterior, n::Int=1)
     return sample_path
 end
 function dense_sample_states(sol::ProbODESolution, n::Int=1; density=1000)
-    @assert sol.interp.smooth "sampling not implemented for non-smoothed posteriors"
+    @assert sol.alg.smooth "sampling not implemented for non-smoothed posteriors"
     times = range(sol.t[1], sol.t[end], length=density)
     states = StructArray([
-        sol.interp(t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions; smoothed=false)
+        interpolate(
+            t,
+            sol.t,
+            sol.x_filt,
+            sol.x_smooth,
+            sol.diffusions,
+            sol.cache;
+            smoothed=sol.alg.smooth,
+        )
         for t in times
     ])
 
-    return sample_states(times, states, sol.diffusions, sol.t, sol.interp, n), times
+    return sample_states(times, states, sol.diffusions, sol.t, sol.cache, n), times
 end
 function dense_sample(sol::ProbODESolution, n::Int=1; density=1000)
     samples, times = dense_sample_states(sol, n; density=density)
-    d, q = sol.interp.d, sol.interp.q
+    @unpack d, q = sol.cache
     return samples[:, 1:q+1:d*(q+1), :], times
 end

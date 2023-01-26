@@ -11,13 +11,6 @@ function make_preconditioners!(cache::AbstractODEFilterCache, dt)
     make_preconditioner_inv!(PI, dt, d, q)
     return nothing
 end
-function make_preconditioners!(post::GaussianODEFilterPosterior, dt)
-    @unpack P, PI, d, q = post
-    make_preconditioner!(P, dt, d, q)
-    # make_preconditioner_inv!(PI, dt, d, q)
-    PI.diag .= 1 ./ P.diag
-    return nothing
-end
 
 @fastmath @inbounds function make_preconditioner!(P, h, d, q)
     val = factorial(q) / h^(q + 1 / 2)

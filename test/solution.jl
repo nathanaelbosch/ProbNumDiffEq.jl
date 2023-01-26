@@ -84,14 +84,14 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
 
         m, n, o = size(samples)
         @test m == length(sol)
-        @test n == length(sol.u[1]) * (sol.interp.q + 1)
+        @test n == length(sol.u[1]) * (sol.cache.q + 1)
         @test o == n_samples
 
         # Dense sampling
         dense_samples, dense_times = ProbNumDiffEq.dense_sample_states(sol, n_samples)
         m, n, o = size(dense_samples)
         @test m == length(dense_times)
-        @test n == length(sol.u[1]) * (sol.interp.q + 1)
+        @test n == length(sol.u[1]) * (sol.cache.q + 1)
         @test o == n_samples
     end
 
