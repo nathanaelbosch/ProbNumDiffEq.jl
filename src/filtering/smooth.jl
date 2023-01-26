@@ -82,13 +82,12 @@ function smooth!(
     x_next::SRGaussian,
     Ah::AbstractMatrix,
     Qh::PSDMatrix,
-    cache::AbstractODEFilterCache,
+    cache,
     diffusion::Union{Number,Diagonal}=1,
 )
     D = length(x_curr.μ)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
-    @unpack d, q = cache
     @unpack x_pred = cache
     @unpack G1, C_DxD, C_2DxD, C_3DxD = cache
 
@@ -109,7 +108,7 @@ function smooth!(
     R = C_3DxD
 
     G2 = _matmul!(C_DxD, G, Ah)
-    copy!(view(R, 1:D, 1:D), x_curr.Σ.R')
+    copy!(view(R, 1:D, 1:D), x_curr.Σ.R)
     _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, G2', -1.0, 1.0)
 
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
