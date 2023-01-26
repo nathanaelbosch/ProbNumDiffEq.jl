@@ -82,13 +82,12 @@ function smooth!(
     x_next::SRGaussian,
     Ah::AbstractMatrix,
     Qh::PSDMatrix,
-    cache::AbstractODEFilterCache,
+    cache,
     diffusion::Union{Number,Diagonal}=1,
 )
     D = length(x_curr.μ)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
-    @unpack d, q = cache
     @unpack x_pred = cache
     @unpack G1, C_DxD, C_2DxD, C_3DxD = cache
 

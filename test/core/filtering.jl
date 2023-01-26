@@ -116,18 +116,39 @@ end
     P_smoothed = P + G * (P_s - P_p) * G'
 
     x_curr = Gaussian(m, P)
-    x_smoothed = Gaussian(m_s, P_s)
+    x_next = Gaussian(m_s, P_s)
+    x_smoothed = Gaussian(m_smoothed, P_smoothed)
 
     @testset "smooth" begin
-        x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q)
+        x_out, _ = ProbNumDiffEq.smooth(x_curr, x_next, A, Q)
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ x_out.Σ
     end
     @testset "smooth with PSDMatrix" begin
-        x_curr = Gaussian(m, PSDMatrix(R_P))
-        x_smoothed = Gaussian(m_s, PSDMatrix(R_P_s))
-        x_out, _ = ProbNumDiffEq.smooth(x_curr, x_smoothed, A, Q_SR)
+        x_curr_psd = Gaussian(m, PSDMatrix(R_P))
+        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s))
+        x_out, _ = ProbNumDiffEq.smooth(x_curr_psd, x_next_psd, A, Q_SR)
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ Matrix(x_out.Σ)
+    end
+    @testset "smooth!" begin
+        x_curr_psd = Gaussian(m, PSDMatrix(R_P))
+        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s))
+        cache = (
+            x_pred=copy(x_curr_psd),
+            G1=zeros(d, d),
+            C_DxD=zeros(d, d),
+            C_2DxD=zeros(2d, d),
+            C_3DxD=zeros(3d, d),
+        )
+        ProbNumDiffEq.smooth!(
+            x_curr_psd,
+            x_next_psd,
+            A,
+            Q_SR,
+            cache,
+        )
+        @test m_smoothed ≈ x_curr_psd.μ
+        @test P_smoothed ≈ Matrix(x_curr_psd.Σ)
     end
 end
