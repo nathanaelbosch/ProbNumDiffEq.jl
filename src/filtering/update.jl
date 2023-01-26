@@ -61,7 +61,6 @@ function update!(
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
-    S_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
 )
     z, S = measurement.μ, measurement.Σ

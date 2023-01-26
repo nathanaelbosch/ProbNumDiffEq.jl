@@ -115,7 +115,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
         measurement.μ .= H * x_pred.μ .- u
         X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
-        update!(x_filt, x_pred, measurement, H, K1, C_Dxd, C_DxD, cache.m_tmp.Σ, C_dxd)
+        update!(x_filt, x_pred, measurement, H, K1, C_Dxd, C_DxD, C_dxd)
         push!(filts, copy(x_filt))
 
         x = x_filt
