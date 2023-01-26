@@ -56,6 +56,10 @@ function predict_cov!(
     C_2DxD::AbstractMatrix,
     diffusion=1,
 )
+    if iszero(diffusion)
+        copy!(x_out.Σ, x_curr.Σ)
+        return x_out.Σ
+    end
     R, M = C_2DxD, C_DxD
     D, D = size(Qh)
 

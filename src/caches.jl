@@ -103,12 +103,13 @@ function OrdinaryDiffEq.alg_cache(
     # Prior dynamics
     prior = if alg.prior == :IWP
         IWP{uElType}(d, q)
+    elseif alg.prior == :IOUP
+        IOUP{uElType}(d, q, one(uElType) * 1)
     else
         error("Invalid prior $(alg.prior); use :IWP")
     end
     P, PI = init_preconditioner(d, q, uElType)
-    prior = IWP{uElType}(d, q)
-    A, Q = preconditioned_discretize(prior)
+    A, Q = preconditioned_discretize(prior, one(dt))
     Ah, Qh = copy(A), copy(Q)
 
     # Measurement Model

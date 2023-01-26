@@ -65,6 +65,11 @@ function update!(
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
+    if iszero(P_p.R)
+        copy!(x_out, x_pred)
+        return x_out
+    end
+
     D = length(m_p)
 
     # K = P_p * H' / S
@@ -81,7 +86,15 @@ function update!(
         _matmul!(K2_cache, P_p, H')
     end
 
-    S_chol = cholesky!(_S)
+    S_chol = try
+        cholesky!(_S)
+    catch e
+        if !(e isa PosDefException)
+            throw(e)
+        end
+        @error "Can't compute the update step with cholesky; using qr instead"
+        Cholesky(qr(S.R).R, :U, 0)
+    end
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)

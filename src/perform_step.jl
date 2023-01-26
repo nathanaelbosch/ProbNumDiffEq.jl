@@ -33,6 +33,28 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     end
 end
 
+"""
+    make_transition_matrices!(cache::EKCache, dt)
+
+Construct all the matrices that relate to the transition model, for a specified step size.
+
+The transition model (specified in `cache.prior`) is of the form
+```math
+X(t+h) \\mid X(t) \\sim \\mathcal{N} \\left( X(t+h); A(h) X(t), Q(h) \\right).
+```
+This function constructs ``A(h)`` and ``Q(h)`` and writes them into `cache.Ah` and `cache.Qh`.
+
+In addition, for improved numerical stability it computes preconditioning matrices ``P, P^{-1}`` as described in [1], as well as transition matrices
+```math
+\\begin{aligned}
+A = P A(h) P^{-1}, \\\\
+Q = P Q(h) P.\\\\
+\\end{aligned}
+```
+The preconditioning matricesnd the preconditioned state transition matrices are saved in `cache.P, cache.PI, cache.A, cache.Q`.`
+
+[1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
+"""
 make_transition_matrices!(cache::EKCache, dt) =
     make_transition_matrices!(cache, cache.prior, dt)
 function make_transition_matrices!(cache::EKCache, prior::IWP, dt)
@@ -41,7 +63,15 @@ function make_transition_matrices!(cache::EKCache, prior::IWP, dt)
     @. Ah .= PI.diag .* A .* P.diag'
     X_A_Xt!(Qh, Q, PI)
 end
-
+function make_transition_matrices!(cache::EKCache, prior::IOUP, dt)
+    @unpack A, Q, Ah, Qh, P, PI = cache
+    make_preconditioners!(cache, dt)
+    _Ah, _Qh = discretize(cache.prior, dt)
+    copy!(Ah, _Ah)
+    copy!(Qh, _Qh)
+    A .= P.diag .* Ah .* PI.diag'
+    X_A_Xt!(Q, Qh, P)
+end
 
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])

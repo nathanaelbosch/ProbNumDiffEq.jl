@@ -34,6 +34,7 @@ using UnPack
 using RecipesBase
 using RecursiveArrayTools
 using ForwardDiff
+using ExponentialUtilities
 using Octavian
 # By default use mul!
 _matmul!(C, A, B) = mul!(C, A, B)
