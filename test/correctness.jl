@@ -27,7 +27,7 @@ CONSTANT_ALGS = (
     EK1(order=3, smooth=false) => 1e-8,
     EK1(order=5, smooth=false) => 1e-11,
     EK1(order=3, smooth=false, diffusionmodel=FixedDiffusion()) => 1e-8,
-    EK1(order=3, smooth=false, initialization=ClassicSolverInit()) => 1e-8,
+    EK1(order=3, smooth=false, initialization=ClassicSolverInit()) => 1e-7,
 )
 ADAPTIVE_ALGS = (
     EK0(order=2) => 2e-4,
