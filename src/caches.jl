@@ -108,9 +108,7 @@ function OrdinaryDiffEq.alg_cache(
     else
         error("Invalid prior $(alg.prior); use :IWP")
     end
-    P, PI = init_preconditioner(d, q, uElType)
-    A, Q = preconditioned_discretize(prior, one(dt))
-    Ah, Qh = copy(A), copy(Q)
+    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior)
 
     # Measurement Model
     measurement_model = make_measurement_model(f)

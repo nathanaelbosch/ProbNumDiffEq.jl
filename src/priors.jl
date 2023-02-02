@@ -46,10 +46,6 @@ function preconditioned_discretize(iwp::IWP)
 
     return A, Q
 end
-preconditioned_discretize(iwp::IWP, dt) = begin
-    # in the iWP case `dt` is not needed
-    preconditioned_discretize(iwp)
-end
 
 function discretize_1d(iwp::IWP{elType}, dt::Real) where {elType}
     q = iwp.num_derivatives
@@ -77,6 +73,13 @@ function discretize(p::IWP, dt::Real)
     QR = kron(I(d), Q_breve.R)
     Q = PSDMatrix(QR)
     return A, Q
+end
+
+function initialize_transition_matrices(p::IWP{T}) where T
+    A, Q = preconditioned_discretize(p)
+    P, PI = init_preconditioner(p.wiener_process_dimension, p.num_derivatives, T)
+    Ah, Qh = copy(A), copy(Q)
+    return A, Q, Ah, Qh, P, PI
 end
 
 Base.@kwdef struct IOUP{elType,R} <: AbstractODEFilterPrior
@@ -139,27 +142,9 @@ end
 
 discretize_1d(p::IOUP, dt::Real) = discretize(to_1d_sde(p), dt)
 
-function preconditioned_discretize(p::IOUP, dt::Real)
-    A_breve, Q_breve = preconditioned_discretize_1d(p, dt)
-    d = p.wiener_process_dimension
-
-    # @info "prec_disc" p dt Q_breve
-    # QR_breve = cholesky!(Symmetric(Q_breve)).L'
-    E = eigen(Q_breve)
-    QR_breve = Diagonal(sqrt.(E.values)) * E.vectors'
-
-    A = kron(I(d), A_breve)
-    QR = kron(I(d), QR_breve)
-    Q = PSDMatrix(QR)
-    return A, Q
-end
-
-preconditioned_discretize_1d(p::IOUP, dt::Real) = preconditioned_discretize(to_1d_sde(p), dt)
-preconditioned_discretize(sde::LTISDE, dt::Real) = begin
-    q = size(drift(sde), 1) - 1
-    d = 1
-    P, PI = init_preconditioner(1, q)
-    make_preconditioner!(P, dt, d, q)
-    make_preconditioner_inv!(PI, dt, d, q)
-    return matrix_fraction_decomposition(drift(sde), dispersion(sde), dt)
+function initialize_transition_matrices(p::IOUP{T}) where {T}
+    A, Q = discretize(p, one(T))
+    P, PI = init_preconditioner(p.wiener_process_dimension, p.num_derivatives, T)
+    Ah, Qh = copy(A), copy(Q)
+    return A, Q, Ah, Qh, P, PI
 end
