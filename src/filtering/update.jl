@@ -65,6 +65,7 @@ function update!(
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
+    @assert P_p isa PSDMatrix || P_p isa Matrix
     if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
         iszero(P_p)
         copy!(x_out, x_pred)
