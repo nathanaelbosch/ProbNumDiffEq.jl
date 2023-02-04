@@ -84,6 +84,7 @@ import Statistics: mean, var, std
 include("gaussians.jl")
 
 include("priors.jl")
+export IWP, IOUP
 include("diffusions.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 

@@ -3,14 +3,18 @@
 ########################################################################################
 abstract type AbstractODEFilterPrior end
 """
-    IWP(wiener_process_dimension::Integer, num_derivatives::Integer)
+    IWP([wiener_process_dimension::Integer,] num_derivatives::Integer)
 
 Integrated Brownian motion
 """
-Base.@kwdef struct IWP{elType} <: AbstractODEFilterPrior
-    wiener_process_dimension::Int32
-    num_derivatives::Int32
+struct IWP{elType,dimType} <: AbstractODEFilterPrior
+    wiener_process_dimension::dimType
+    num_derivatives::Int
 end
+# most convenient user-facing constructor:
+IWP(num_derivatives) = IWP{typeof(1.0)}(missing, num_derivatives)
+IWP{elType}(wiener_process_dimension, num_derivatives) where {elType} =
+    IWP{elType,typeof(wiener_process_dimension)}(wiener_process_dimension, num_derivatives)
 IWP(wiener_process_dimension, num_derivatives) =
     IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
 
@@ -75,20 +79,27 @@ function discretize(p::IWP, dt::Real)
     return A, Q
 end
 
-function initialize_transition_matrices(p::IWP{T}) where T
+function initialize_transition_matrices(p::IWP{T}) where {T}
     A, Q = preconditioned_discretize(p)
     P, PI = init_preconditioner(p.wiener_process_dimension, p.num_derivatives, T)
     Ah, Qh = copy(A), copy(Q)
     return A, Q, Ah, Qh, P, PI
 end
 
-Base.@kwdef struct IOUP{elType,R} <: AbstractODEFilterPrior
-    wiener_process_dimension::Int32
-    num_derivatives::Int32
+struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior
+    wiener_process_dimension::dimType
+    num_derivatives::Int
     rate_parameter::R
 end
+IOUP(num_derivatives, rate_parameter) =
+    IOUP{typeof(1.0)}(missing, num_derivatives, rate_parameter)
+IOUP(; num_derivatives, rate_parameter) = IOUP(num_derivatives, rate_parameter)
 IOUP{T}(wiener_process_dimension, num_derivatives, rate_parameter) where {T} =
-    IOUP{T, typeof(rate_parameter)}(wiener_process_dimension, num_derivatives, rate_parameter)
+    IOUP{T,typeof(wiener_process_dimension),typeof(rate_parameter)}(
+        wiener_process_dimension,
+        num_derivatives,
+        rate_parameter,
+    )
 
 function to_1d_sde(p::IOUP)
     q = p.num_derivatives
@@ -122,7 +133,6 @@ function matrix_fraction_decomposition(
     Mexp = exponential!(dt * M)
     A = Mexp[1:d, 1:d]
     Q = Mexp[1:d, d+1:end] * A'
-    # @info "matrix fraction decomposition" A Q
     return A, Q
 end
 function discretize(p::IOUP, dt::Real)

@@ -19,8 +19,8 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 # [References](@ref references)
 """
 Base.@kwdef struct EK0{PT,DT,IT} <: AbstractEK
-    prior::PT = :IWP
-    order::Int = 3
+    prior::PT = IWP(3)
+    order::Int = prior.num_derivatives
     diffusionmodel::DT = DynamicDiffusion()
     smooth::Bool = true
     initialization::IT = TaylorModeInit()
@@ -59,8 +59,8 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT} <: AbstractEK
     initialization::IT
 end
 EK1(;
-    prior=:IWP,
-    order=3,
+    prior::PT=IWP(3),
+    order=prior.num_derivatives,
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
     initialization::IT=TaylorModeInit(),
@@ -69,13 +69,14 @@ EK1(;
     diff_type=Val{:forward},
     standardtag=Val{true}(),
     concrete_jac=nothing,
-) where {DT,IT} =
+) where {PT,DT,IT} =
     EK1{
         _unwrap_val(chunk_size),
         _unwrap_val(autodiff),
         diff_type,
         _unwrap_val(standardtag),
         _unwrap_val(concrete_jac),
+        PT,
         DT,
         IT,
     }(
