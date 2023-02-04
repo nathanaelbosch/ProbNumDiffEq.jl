@@ -125,7 +125,7 @@ function to_sde(p::IOUP)
         @assert length(r) == d
         Diagonal(r)
     elseif r isa AbstractMatrix
-        @assert size(r,1) == size(r,2) == d
+        @assert size(r, 1) == size(r, 2) == d
         r
     end
 

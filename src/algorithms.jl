@@ -32,7 +32,7 @@ EK0(;
     prior=IWP(order),
     diffusionmodel=DynamicDiffusion(),
     smooth=true,
-    initialization=TaylorModeInit()
+    initialization=TaylorModeInit(),
 ) = EK0(prior, diffusionmodel, smooth, initialization)
 
 _unwrap_val(::Val{B}) where {B} = B
