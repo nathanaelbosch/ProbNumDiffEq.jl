@@ -19,12 +19,12 @@ err_iwp = norm(ref[end] - sol_iwp[end])
 A_noisy = A + 1e-3 * randn(Xoshiro(42), 2, 2)
 
 @testset "Adaptive steps" begin
-    sol_ioup_noisy = solve(prob, EK1(prior=IOUP(3, A_noisy)));
+    sol_ioup_noisy = solve(prob, EK1(prior=IOUP(3, A_noisy)))
     err_ioup_noisy = norm(ref[end] - sol_ioup_noisy[end])
     @test sol_ioup_noisy.destats.nf < sol_iwp.destats.nf
     @test err_ioup_noisy < 1e-6
 
-    sol_ioup = solve(prob, EK1(prior=IOUP(3, A)));
+    sol_ioup = solve(prob, EK1(prior=IOUP(3, A)))
     err_ioup = norm(ref[end] - sol_ioup[end])
     @test sol_ioup.destats.nf < sol_ioup_noisy.destats.nf
     @test err_ioup < 5e-10
@@ -34,9 +34,9 @@ end
     last_error = 1.0
     for order in (1, 2, 3, 5)
         sol = solve(prob, EK1(
-            prior=IOUP(order, A_noisy),
-            diffusionmodel=FixedDiffusion(),
-        ), adaptive=false, dt=1e-1)
+                prior=IOUP(order, A_noisy),
+                diffusionmodel=FixedDiffusion(),
+            ), adaptive=false, dt=1e-1)
         err = norm(ref[end] - sol[end])
         @test err < last_error
         last_error = err
