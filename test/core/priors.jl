@@ -37,7 +37,7 @@ h = rand()
     @test QH_22_IBM ≈ Matrix(Qh)
 end
 
-@testset "Test IBM with preconditioning (d=1,q=2)" begin
+@testset "Test IBM with preconditioning (d=2,q=2)" begin
     d, q = 2, 2
 
     prior = PNDE.IWP(d, q)
@@ -77,4 +77,37 @@ end
         @test length(integ.cache.x.μ) == d * (q + 1)
         @test length(sol.x_filt[end].μ) == d * (q + 1)
     end
+end
+
+@testset "Test IOUP (d=2,q=2)" begin
+    d, q = 2, 2
+    r = randn(d, d)
+
+    prior = PNDE.IOUP(d, q, r)
+
+    sde = PNDE.to_sde(prior)
+    F = [
+        0 1 0 0 0 0
+        0 0 1 0 0 0
+        0 0 r[1, 1] 0 0 r[1, 2]
+        0 0 0 0 1 0
+        0 0 0 0 0 1
+        0 0 r[2, 1] 0 0 r[2, 2]
+    ]
+    L = [
+        0 0
+        0 0
+        1 0
+        0 0
+        0 0
+        0 1
+    ]
+    @test sde.F ≈ F
+    @test sde.L ≈ L
+
+    A1, Q1 = PNDE.discretize(sde, h)
+    A2, Q2 = PNDE.discretize(prior, h)
+
+    @test A1 ≈ A2
+    @test Q1 ≈ Matrix(Q2)
 end
