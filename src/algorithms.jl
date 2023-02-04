@@ -4,14 +4,16 @@
 abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 """
-    EK0(; smooth=true,
-          prior=IWP(3),
+    EK0(; order=3,
+          smooth=true,
+          prior=IWP(order),
           diffusionmodel=DynamicDiffusion(),
           initialization=TaylorModeInit())
 
 **Gaussian ODE filter with zeroth order vector field linearization.**
 
 # Arguments
+- `order::Integer`: Order of the integrated Brownian motion (IBM) prior.
 - `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter. By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
@@ -19,18 +21,27 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 # [References](@ref references)
 """
-Base.@kwdef struct EK0{PT,DT,IT} <: AbstractEK
-    prior::PT = IWP(3)
-    diffusionmodel::DT = DynamicDiffusion()
-    smooth::Bool = true
-    initialization::IT = TaylorModeInit()
+struct EK0{PT,DT,IT} <: AbstractEK
+    prior::PT
+    diffusionmodel::DT
+    smooth::Bool
+    initialization::IT
 end
+EK0(;
+    order=3,
+    prior=IWP(order),
+    diffusionmodel=DynamicDiffusion(),
+    smooth=true,
+    initialization=TaylorModeInit()
+) = EK0(prior, diffusionmodel, smooth, initialization)
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
 
 """
-    EK1(; smooth=true,
+    EK1(; order=3,
+          smooth=true,
+          prior=IWP(order),
           prior=IWP(3),
           diffusionmodel=DynamicDiffusion(),
           initialization=TaylorModeInit(),
@@ -39,6 +50,7 @@ _unwrap_val(B) = B
 **Gaussian ODE filter with first order vector field linearization.**
 
 # Arguments
+- `order::Integer`: Order of the integrated Brownian motion (IBM) prior.
 - `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter. By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
@@ -59,7 +71,8 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT} <: AbstractEK
     initialization::IT
 end
 EK1(;
-    prior::PT=IWP(3),
+    order=3,
+    prior::PT=IWP(order),
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
     initialization::IT=TaylorModeInit(),
