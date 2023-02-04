@@ -92,8 +92,9 @@ struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior
     rate_parameter::R
 end
 IOUP(num_derivatives, rate_parameter) =
-    IOUP{typeof(1.0)}(missing, num_derivatives, rate_parameter)
-IOUP(; num_derivatives, rate_parameter) = IOUP(num_derivatives, rate_parameter)
+    IOUP(missing, num_derivatives, rate_parameter)
+IOUP(wiener_process_dimension, num_derivatives, rate_parameter) =
+    IOUP{typeof(1.0)}(wiener_process_dimension, num_derivatives, rate_parameter)
 IOUP{T}(wiener_process_dimension, num_derivatives, rate_parameter) where {T} =
     IOUP{T,typeof(wiener_process_dimension),typeof(rate_parameter)}(
         wiener_process_dimension,
@@ -112,6 +113,32 @@ function to_1d_sde(p::IOUP)
     L_breve[end] = 1.0
 
     return LTISDE(F_breve, L_breve)
+end
+function to_sde(p::IOUP)
+    d = p.wiener_process_dimension
+    q = p.num_derivatives
+    r = p.rate_parameter
+
+    R = if r isa Number
+        r * I(d)
+    elseif r isa AbstractVector
+        @assert length(r) == d
+        Diagonal(r)
+    elseif r isa AbstractMatrix
+        @assert size(r,1) == size(r,2) == d
+        r
+    end
+
+    F_breve = diagm(1 => ones(q))
+    # F_breve[end, end] = r
+    F = kron(I(d), F_breve)
+    F[q+1:q+1:end, q+1:q+1:end] = R
+
+    L_breve = zeros(q + 1)
+    L_breve[end] = 1.0
+    L = kron(I(d), L_breve)
+
+    return LTISDE(F, L)
 end
 
 struct LTISDE{AT<:AbstractMatrix,BT<:AbstractVecOrMat}
@@ -136,21 +163,29 @@ function matrix_fraction_decomposition(
     return A, Q
 end
 function discretize(p::IOUP, dt::Real)
-    A_breve, Q_breve = discretize_1d(p, dt)
-    d = p.wiener_process_dimension
+    r = p.rate_parameter
+    A, Q = if p.rate_parameter isa Number
+        A_breve, Q_breve = discretize(to_1d_sde(p), dt)
+        d = p.wiener_process_dimension
+        # QR_breve = cholesky!(Symmetric(Q_breve)).L'
+        E = eigen(Symmetric(Q_breve))
+        QR_breve = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
 
-    # @info "discretize" p dt
-    # QR_breve = cholesky!(Symmetric(Q_breve)).L'
-    E = eigen(Q_breve)
-    QR_breve = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
+        A = kron(I(d), A_breve)
+        QR = kron(I(d), QR_breve)
+        Q = PSDMatrix(QR)
+        A, Q
+    else
+        @assert r isa AbstractVector || r isa AbstractMatrix
+        A, Q = discretize(to_sde(p), dt)
+        E = eigen(Symmetric(Q))
+        QR = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
+        Q = PSDMatrix(QR)
+        A, Q
+    end
 
-    A = kron(I(d), A_breve)
-    QR = kron(I(d), QR_breve)
-    Q = PSDMatrix(QR)
     return A, Q
 end
-
-discretize_1d(p::IOUP, dt::Real) = discretize(to_1d_sde(p), dt)
 
 function initialize_transition_matrices(p::IOUP{T}) where {T}
     A, Q = discretize(p, one(T))
