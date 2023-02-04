@@ -21,7 +21,7 @@ OrdinaryDiffEq.isimplicit(::EK1) = true
 ############################################
 # Step size control
 OrdinaryDiffEq.isadaptive(::AbstractEK) = true
-OrdinaryDiffEq.alg_order(alg::AbstractEK) = alg.order
+OrdinaryDiffEq.alg_order(alg::AbstractEK) = alg.prior.num_derivatives
 # OrdinaryDiffEq.alg_adaptive_order(alg::AbstractEK) =
 
 # PI control is the default!
@@ -30,8 +30,8 @@ OrdinaryDiffEq.ispredictive(::AbstractEK) = false # not sure, maybe Gustafsson a
 
 # OrdinaryDiffEq.qmin_default(alg::AbstractEK) =
 # OrdinaryDiffEq.qmax_default(alg::AbstractEK) =
-# OrdinaryDiffEq.beta2_default(alg::AbstractEK) = 2 // (5(alg.order + 1))
-# OrdinaryDiffEq.beta1_default(alg::AbstractEK, beta2) = 7 // (10(alg.order + 1))
+# OrdinaryDiffEq.beta2_default(alg::AbstractEK) = 2 // (5(alg.prior.num_derivatives + 1))
+# OrdinaryDiffEq.beta1_default(alg::AbstractEK, beta2) = 7 // (10(alg.prior.num_derivatives + 1))
 # OrdinaryDiffEq.gamma_default(alg::AbstractEK) =
 
 # OrdinaryDiffEq.uses_uprev(alg::, adaptive::Bool) = adaptive

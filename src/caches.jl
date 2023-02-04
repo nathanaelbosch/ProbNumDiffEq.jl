@@ -85,7 +85,6 @@ function OrdinaryDiffEq.alg_cache(
 
     is_secondorder_ode = f isa DynamicalODEFunction
 
-    # q = alg.order
     q = alg.prior.num_derivatives
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)

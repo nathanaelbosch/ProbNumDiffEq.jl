@@ -1,7 +1,6 @@
 function initial_update!(integ, cache, ::ClassicSolverInit)
     @unpack u, f, p, t = integ
-    @unpack d, x, Proj = cache
-    q = integ.alg.order
+    @unpack d, q, x, Proj = cache
     @assert isinplace(f)
 
     if q > 5
