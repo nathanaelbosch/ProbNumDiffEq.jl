@@ -94,7 +94,7 @@ function update!(
         if !(e isa PosDefException)
             throw(e)
         end
-        @error "Can't compute the update step with cholesky; using qr instead"
+        @warn "Can't compute the update step with cholesky; using qr instead"
         Cholesky(qr(S.R).R, :U, 0)
     end
     rdiv!(K, S_chol)
