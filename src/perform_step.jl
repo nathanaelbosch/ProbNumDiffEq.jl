@@ -51,7 +51,9 @@ A = P A(h) P^{-1}, \\\\
 Q = P Q(h) P.\\\\
 \\end{aligned}
 ```
-The preconditioning matricesnd the preconditioned state transition matrices are saved in `cache.P, cache.PI, cache.A, cache.Q`.`
+The preconditioning matrices and the preconditioned state transition matrices are saved in `cache.P, cache.PI, cache.A, cache.Q`.`
+
+See also: [`initialize_transition_matrices`](@ref).
 
 [1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
