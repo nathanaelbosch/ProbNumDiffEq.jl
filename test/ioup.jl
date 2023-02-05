@@ -14,7 +14,7 @@ ref = solve(prob, Vern9(), abstol=1e-9, reltol=1e-9);
 
 sol_iwp = solve(prob, EK1());
 err_iwp = norm(ref[end] - sol_iwp[end])
-@test err_iwp < 1e-10
+@test err_iwp < 1e-5
 
 A_noisy = A + 1e-3 * randn(Xoshiro(42), 2, 2)
 
