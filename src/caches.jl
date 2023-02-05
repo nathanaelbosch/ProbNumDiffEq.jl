@@ -106,7 +106,7 @@ function OrdinaryDiffEq.alg_cache(
     elseif alg.prior isa IOUP
         IOUP{uElType}(d, q, alg.prior.rate_parameter)
     else
-        error("Invalid prior $(alg.prior); use IWP(order)")
+        error("Invalid prior $(alg.prior)")
     end
     A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior)
 

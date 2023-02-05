@@ -1,6 +1,3 @@
-########################################################################################
-# Integrated Brownian Motion
-########################################################################################
 abstract type AbstractODEFilterPrior{elType} end
 
 """
@@ -36,11 +33,18 @@ function initialize_transition_matrices(p::AbstractODEFilterPrior{T}) where {T}
     return A, Q, Ah, Qh, P, PI
 end
 
-
 """
     IWP([wiener_process_dimension::Integer,] num_derivatives::Integer)
 
-Integrated Brownian motion
+Integrated Wiener process.
+
+The IWP can be created without specifying the dimension of the Wiener process, in which case it will be inferred from the dimension of the ODE during the solve.
+This is typically the preferred usage.
+
+# Examples
+```julia-repl
+julia> solve(prob, EK1(prior=IWP(2)))
+```
 """
 struct IWP{elType,dimType} <: AbstractODEFilterPrior{elType}
     wiener_process_dimension::dimType
@@ -121,6 +125,20 @@ function initialize_transition_matrices(p::IWP{T}) where {T}
     return A, Q, Ah, Qh, P, PI
 end
 
+"""
+    IOUP([wiener_process_dimension::Integer,] num_derivatives::Integer, rate_parameter::Union{Number,AbstractVector,AbstractMatrix})
+
+Integrated Ornstein--Uhlenbeck process.
+
+As with the [`IWP`](@ref), the IOUP can be created without specifying its dimension, in which case it will be inferred from the dimension of the ODE during the solve.
+This is typically the preferred usage.
+The rate parameter however always needs to be specified.
+
+# Examples
+```julia-repl
+julia> solve(prob, EK1(prior=IOUP(2, -1)))
+```
+"""
 struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior{elType}
     wiener_process_dimension::dimType
     num_derivatives::Int
@@ -176,6 +194,22 @@ function to_sde(p::IOUP)
     return LTISDE(F, L)
 end
 
+"""
+    LTISDE(F::AbstractMatrix, L::AbstractMatrix)
+
+Linear time-invariant stochastic differential equation.
+
+A LTI-SDE is a stochastic differential equation of the form
+```math
+dX_t = F X_t dt + L dW_t
+```
+where ``X_t`` is the state, ``W_t`` is a Wiener process, and ``F`` and ``L`` are matrices.
+This `LTISDE` object holds the matrices ``F`` and ``L``.
+It also provides some functionality to discretize the SDE via a matrix-fraction decomposition.
+See: [`discretize(::LTISDE, ::Real)`](@ref).
+
+In this package, the LTISDE is mostly used to implement the discretization of the [`IOUP`](@ref) prior.
+"""
 struct LTISDE{AT<:AbstractMatrix,BT<:AbstractVecOrMat}
     F::AT
     L::BT
