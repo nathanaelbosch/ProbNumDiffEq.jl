@@ -10,11 +10,13 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
           diffusionmodel=DynamicDiffusion(),
           initialization=TaylorModeInit())
 
-**Gaussian ODE filter with zeroth order vector field linearization.**
+**Gaussian ODE filter with zeroth-order vector field linearization.**
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
-- `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter. By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
+- `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter.
+   By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
+   See also: [Priors](@ref).
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
@@ -47,11 +49,13 @@ _unwrap_val(B) = B
           initialization=TaylorModeInit(),
           kwargs...)
 
-**Gaussian ODE filter with first order vector field linearization.**
+**Gaussian ODE filter with first-order vector field linearization.**
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
-- `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter. By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
+- `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter.
+   By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
+   See also: [Priors](@ref).
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
