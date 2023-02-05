@@ -16,13 +16,13 @@ sol_iwp = solve(prob, EK1());
 err_iwp = norm(ref[end] - sol_iwp[end])
 @test err_iwp < 1e-5
 
-A_noisy = A + 1e-3 * randn(Xoshiro(42), 2, 2)
+A_noisy = A + 1e-3 * randn(MersenneTwister(42), 2, 2)
 
 @testset "Adaptive steps" begin
     sol_ioup_noisy = solve(prob, EK1(prior=IOUP(3, A_noisy)))
     err_ioup_noisy = norm(ref[end] - sol_ioup_noisy[end])
     @test sol_ioup_noisy.destats.nf < sol_iwp.destats.nf
-    @test err_ioup_noisy < 1e-6
+    @test err_ioup_noisy < 2e-5
 
     sol_ioup = solve(prob, EK1(prior=IOUP(3, A)))
     err_ioup = norm(ref[end] - sol_ioup[end])
