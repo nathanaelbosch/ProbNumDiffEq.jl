@@ -42,3 +42,12 @@ end
         last_error = err
     end
 end
+
+@testset "Different rate types" begin
+    @testset "$(typeof(r))" for r in (1, [1, 1], [1 0; 0 1], 1*I(2))
+    sol = solve(prob, EK1(prior=IOUP(3, r)))
+
+    err = norm(ref[end] - sol[end])
+    @test err < 5e-6
+    end
+end
