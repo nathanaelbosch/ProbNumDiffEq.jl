@@ -9,7 +9,6 @@ const q = 3
         EK0(order=q, smooth=false, initialization=init),
         EK1(order=q, smooth=false, initialization=init),
         EK1(order=q, smooth=false, initialization=init, autodiff=false),
-        # EK1FDB(order=q, smooth=false, initialization=init, jac_quality=1),
     )
 
     f_counter = [0]
@@ -32,7 +31,6 @@ end
         EK0(order=q, smooth=false, initialization=init),
         EK1(order=q, smooth=false, initialization=init),
         EK1(order=q, smooth=false, initialization=init, autodiff=false),
-        # EK1FDB(order=q, smooth=false, initialization=init, jac_quality=1),
     )
 
     f_counter = [0]

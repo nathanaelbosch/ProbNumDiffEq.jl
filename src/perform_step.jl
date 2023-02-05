@@ -156,8 +156,6 @@ Results are saved into `integ.cache.du`, `integ.cache.ddu`, `integ.cache.measure
 and `integ.cache.H`.
 Jacobians are computed either with the supplied `f.jac`, or via automatic differentiation,
 as in OrdinaryDiffEq.jl.
-
-For second-order ODEs and the `EK1FDB` algorithm a specialized implementation is called.
 """
 function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ
