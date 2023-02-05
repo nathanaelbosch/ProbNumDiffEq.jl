@@ -35,3 +35,10 @@ FixedMVDiffusion
 TaylorModeInit
 ClassicSolverInit
 ```
+
+## Priors
+
+```@docs
+IWP
+IOUP
+```

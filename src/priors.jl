@@ -38,7 +38,8 @@ end
 
 Integrated Wiener process.
 
-The IWP can be created without specifying the dimension of the Wiener process, in which case it will be inferred from the dimension of the ODE during the solve.
+The IWP can be created without specifying the dimension of the Wiener process,
+in which case it will be inferred from the dimension of the ODE during the solve.
 This is typically the preferred usage.
 
 # Examples
@@ -126,11 +127,14 @@ function initialize_transition_matrices(p::IWP{T}) where {T}
 end
 
 """
-    IOUP([wiener_process_dimension::Integer,] num_derivatives::Integer, rate_parameter::Union{Number,AbstractVector,AbstractMatrix})
+    IOUP([wiener_process_dimension::Integer,]
+         num_derivatives::Integer,
+         rate_parameter::Union{Number,AbstractVector,AbstractMatrix})
 
 Integrated Ornstein--Uhlenbeck process.
 
-As with the [`IWP`](@ref), the IOUP can be created without specifying its dimension, in which case it will be inferred from the dimension of the ODE during the solve.
+As with the [`IWP`](@ref), the IOUP can be created without specifying its dimension,
+in which case it will be inferred from the dimension of the ODE during the solve.
 This is typically the preferred usage.
 The rate parameter however always needs to be specified.
 
