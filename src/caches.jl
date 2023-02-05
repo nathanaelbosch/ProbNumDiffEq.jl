@@ -85,7 +85,7 @@ function OrdinaryDiffEq.alg_cache(
 
     is_secondorder_ode = f isa DynamicalODEFunction
 
-    q = alg.order
+    q = alg.prior.num_derivatives
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
@@ -101,15 +101,14 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
     # Prior dynamics
-    prior = if alg.prior == :IWP
-        IWP{uElType}(d, q)
+    prior = if alg.prior isa IWP
+        IWP{uElType}(d, alg.prior.num_derivatives)
+    elseif alg.prior isa IOUP
+        IOUP{uElType}(d, q, alg.prior.rate_parameter)
     else
-        error("Invalid prior $(alg.prior); use :IWP")
+        error("Invalid prior $(alg.prior)")
     end
-    P, PI = init_preconditioner(d, q, uElType)
-    prior = IWP{uElType}(d, q)
-    A, Q = preconditioned_discretize(prior)
-    Ah, Qh = copy(A), copy(Q)
+    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior)
 
     # Measurement Model
     measurement_model = make_measurement_model(f)

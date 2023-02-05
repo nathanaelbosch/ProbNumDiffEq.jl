@@ -34,6 +34,7 @@ using UnPack
 using RecipesBase
 using RecursiveArrayTools
 using ForwardDiff
+using ExponentialUtilities
 using Octavian
 # By default use mul!
 _matmul!(C, A, B) = mul!(C, A, B)
@@ -83,6 +84,7 @@ import Statistics: mean, var, std
 include("gaussians.jl")
 
 include("priors.jl")
+export IWP, IOUP
 include("diffusions.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 

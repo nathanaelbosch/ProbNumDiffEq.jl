@@ -55,6 +55,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedtestset "Test all diffusion models" begin
                 include("diffusions.jl")
             end
+            @timedtestset "IOUP" begin
+                include("ioup.jl")
+            end
         end
     end
 

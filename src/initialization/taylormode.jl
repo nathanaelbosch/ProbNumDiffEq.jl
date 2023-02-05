@@ -1,7 +1,6 @@
 function initial_update!(integ, cache, init::TaylorModeInit)
     @unpack u, f, p, t = integ
-    @unpack d, q, x, Proj = cache
-    q = integ.alg.order
+    @unpack d, q, q, x, Proj = cache
     D = d * (q + 1)
 
     @unpack x_tmp, K1 = cache
