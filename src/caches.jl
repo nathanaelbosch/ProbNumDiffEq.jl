@@ -146,14 +146,6 @@ function OrdinaryDiffEq.alg_cache(
     C_2DxD = zeros(uElType, 2D, D)
     C_3DxD = zeros(uElType, 3D, D)
 
-    if alg isa EK1FDB
-        H = [E1; E2]
-        v = [v; v]
-        S = PSDMatrix(zeros(uElType, D, 2d))
-        measurement = Gaussian(v, S)
-        K = zeros(uElType, D, 2d)
-    end
-
     u_pred = copy(u)
     u_filt = copy(u)
     tmp = copy(u)

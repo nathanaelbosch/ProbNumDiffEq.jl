@@ -98,13 +98,6 @@ EK1(;
         initialization,
     )
 
-Base.@kwdef struct EK1FDB{DT,IT} <: AbstractEK
-    diffusionmodel::DT = DynamicDiffusion()
-    smooth::Bool = true
-    initialization::IT = TaylorModeInit()
-    jac_quality::Int = 1
-end
-
 function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
     T = SciMLBase.remaker_of(thing)
     T(;
