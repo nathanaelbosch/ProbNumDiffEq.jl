@@ -94,6 +94,7 @@ function update!(
             throw(e)
         end
         @warn "Can't compute the update step with cholesky; using qr instead"
+        @assert S isa PSDMatrix
         Cholesky(qr(S.R).R, :U, 0)
     end
     rdiv!(K, S_chol)
