@@ -38,6 +38,15 @@ using LinearAlgebra
         @test m_p == x_out.μ
         @test P_p ≈ Matrix(x_out.Σ)
     end
+
+    @testset "predict! with zero diffusion" begin
+        x_curr = Gaussian(m, PSDMatrix(R_p))
+        x_out = copy(x_curr)
+        Q_SR = PSDMatrix(R_Q)
+        ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, zeros(d, d), zeros(2d, d), 0)
+        @test m_p == x_out.μ
+        @test Matrix(x_out.Σ) ≈ Matrix(X_A_Xt(x_curr.Σ, A))
+    end
 end
 
 @testset "UPDATE" begin
@@ -98,14 +107,14 @@ end
             M_cache = zeros(d, d)
             S = measurement.Σ
             SR = cholesky(S).U
-            measurement = Gaussian(measurement.μ, PSDMatrix(SR))
+            msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
             O_cache = zeros(o, o)
             x_pred = Gaussian(x_pred.μ, PSDMatrix(R_P_p))
             x_out = copy(x_pred)
             ProbNumDiffEq.update!(
                 x_out,
                 x_pred,
-                measurement,
+                msmnt,
                 H,
                 K_cache,
                 K2_cache,
@@ -115,6 +124,29 @@ end
             @test m ≈ x_out.μ
             @test P ≈ Matrix(x_out.Σ)
         end
+        @testset "Zero predicted covariance" begin
+            K_cache = copy(K)
+            K2_cache = copy(K)
+            M_cache = zeros(d, d)
+            S = measurement.Σ
+            SR = cholesky(S).U
+            msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
+            O_cache = zeros(o, o)
+            x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(R_P_p)))
+            x_out = copy(x_pred)
+            ProbNumDiffEq.update!(
+                x_out,
+                x_pred,
+                msmnt,
+                H,
+                K_cache,
+                K2_cache,
+                M_cache,
+                O_cache,
+            )
+            @test x_out == x_pred
+        end
+        @testset "Positive semi-definite measurement cov" begin end
     end
 end
 

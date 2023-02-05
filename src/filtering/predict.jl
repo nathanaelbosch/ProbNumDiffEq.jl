@@ -57,7 +57,7 @@ function predict_cov!(
     diffusion=1,
 )
     if iszero(diffusion)
-        copy!(x_out.Σ, x_curr.Σ)
+        X_A_Xt!(x_out.Σ, x_curr.Σ, Ah)
         return x_out.Σ
     end
     R, M = C_2DxD, C_DxD
