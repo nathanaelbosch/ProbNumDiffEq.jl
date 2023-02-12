@@ -29,7 +29,6 @@ import LinearAlgebra: mul!
 custom_qr!(A; cachemat=nothing) = qr!(A)
 # custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
 function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; blocksize=36)
-    # qr!(A)
     nb = min(min(size(A)...), blocksize)
     cachemat = similar(A, nb, minimum(size(A)))
     return custom_qr!(A; cachemat)
