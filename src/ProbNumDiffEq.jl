@@ -24,9 +24,25 @@ stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
 import LinearAlgebra: mul!
-"""LAPACK.geqrf! seems to be faster on small matrices than LAPACK.geqrt!"""
-custom_qr!(A) = qr!(A)
+
+"""Speed-up QR by removing some allocations"""
+custom_qr!(A; cachemat=nothing) = qr!(A)
+function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; blocksize=36)
+    # qr!(A)
+    nb = min(min(size(A)...), blocksize)
+    cachemat = similar(A, nb, minimum(size(A)))
+    return custom_qr!(A; cachemat)
+end
+function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
+    X = LinearAlgebra.LAPACK.geqrt!(A, cachemat)
+    return LinearAlgebra.QRCompactWY(X...)
+end
+custom_get_r_from_qr(F::LinearAlgebra.QRCompactWY) = begin
+    m, n = size(F)
+    return triu!(@view getfield(F, :factors)[1:min(m, n), 1:n])
+end
 # custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
+
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays
