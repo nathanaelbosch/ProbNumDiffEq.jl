@@ -29,6 +29,13 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
         @test sol.u == sol.pu.μ
     end
 
+    @testset "Prob u properties" begin
+        @test_nowarn mean(sol.pu[1])
+        @test_nowarn cov(sol.pu[1])
+        @test_nowarn var(sol.pu[1])
+        @test_nowarn std(sol.pu[1])
+    end
+
     @testset "Call on known t" begin
         @test sol(sol.t).u == sol.pu
     end
