@@ -15,6 +15,8 @@ show(io::IO, ::MIME"text/plain", g::Gaussian{T,S}) where {T,S} =
     print(io, "Gaussian{$T,$S}($(g.μ), $(g.Σ))")
 size(g::Gaussian) = size(g.μ)
 ndims(g::Gaussian) = ndims(g.μ)
+var(g::Gaussian) = diag(g.Σ)
+std(g::Gaussian) = sqrt.(diag(g.Σ))
 
 ############################################################################################
 # `SRGaussian`: Gaussians with PDFMatrix covariances

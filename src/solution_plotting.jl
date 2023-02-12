@@ -16,8 +16,8 @@
         sol_rvs = sol_rvs[tstart.<=times.<=tend]
         times = times[tstart.<=times.<=tend]
     end
-    values = stack(mean(sol_rvs))
-    stds = sqrt.(stack(diag.(sol_rvs.Σ)))
+    values = stack(mean.(sol_rvs))
+    stds = stack(std.(sol_rvs))
 
     if isnothing(vars)
         ribbon --> ribbon_width * stds
