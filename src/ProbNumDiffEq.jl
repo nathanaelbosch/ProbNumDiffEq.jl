@@ -27,6 +27,7 @@ import LinearAlgebra: mul!
 
 """Speed-up QR by removing some allocations"""
 custom_qr!(A; cachemat=nothing) = qr!(A)
+# custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
 function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; blocksize=36)
     # qr!(A)
     nb = min(min(size(A)...), blocksize)
@@ -41,7 +42,10 @@ custom_get_r_from_qr(F::LinearAlgebra.QRCompactWY) = begin
     m, n = size(F)
     return triu!(@view getfield(F, :factors)[1:min(m, n), 1:n])
 end
-# custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
+custom_get_r_from_qr(F::LinearAlgebra.QR) = begin
+    m, n = size(F)
+    return triu!(@view getfield(F, :factors)[1:min(m, n), 1:n])
+end
 
 using TaylorSeries
 using TaylorIntegration
