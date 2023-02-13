@@ -88,7 +88,7 @@ function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
     _matmul!(out.R, A.R, X')
     return out
 end
-apply_diffusion(Q, diffusion::Diagonal) = fast_X_A_Xt(Q, sqrt.(diffusion))
+apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
 apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
 
 # All the Gaussian things
