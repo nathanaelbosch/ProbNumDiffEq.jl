@@ -24,9 +24,20 @@ stack(x) = copy(reduce(hcat, x)')
 
 using LinearAlgebra
 import LinearAlgebra: mul!
-"""LAPACK.geqrf! seems to be faster on small matrices than LAPACK.geqrt!"""
-custom_qr!(A) = qr!(A)
-# custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
+
+function getupperright(A)
+    m, n = size(A)
+    return triu!(@view A[1:min(m, n), 1:n])
+end
+function triangularize!(A; cachemat=nothing)
+    QR = qr!(A)
+    return getupperright(getfield(QR, :factors))
+end
+function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
+    A, _ = LinearAlgebra.LAPACK.geqrt!(A, cachemat)
+    return getupperright(A)
+end
+
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays
