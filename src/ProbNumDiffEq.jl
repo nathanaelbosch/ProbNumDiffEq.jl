@@ -28,11 +28,11 @@ import LinearAlgebra: mul!
 """Speed-up QR by removing some allocations"""
 custom_qr!(A; cachemat=nothing) = qr!(A)
 # custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
-function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; blocksize=36)
-    nb = min(min(size(A)...), blocksize)
-    cachemat = similar(A, nb, minimum(size(A)))
-    return custom_qr!(A; cachemat)
-end
+# function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; blocksize=36)
+#     nb = min(min(size(A)...), blocksize)
+#     cachemat = similar(A, nb, minimum(size(A)))
+#     return custom_qr!(A; cachemat)
+# end
 function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     X = LinearAlgebra.LAPACK.geqrt!(A, cachemat)
     return LinearAlgebra.QRCompactWY(X...)
