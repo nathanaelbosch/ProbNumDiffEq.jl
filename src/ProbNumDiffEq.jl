@@ -38,7 +38,6 @@ function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     return getupperright(A)
 end
 
-
 using TaylorSeries
 using TaylorIntegration
 @reexport using StructArrays
