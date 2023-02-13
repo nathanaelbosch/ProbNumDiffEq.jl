@@ -25,26 +25,19 @@ stack(x) = copy(reduce(hcat, x)')
 using LinearAlgebra
 import LinearAlgebra: mul!
 
-"""Speed-up QR by removing some allocations"""
-custom_qr!(A; cachemat=nothing) = qr!(A)
-# custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}) = QR(LAPACK.geqrf!(A)...)
-# function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; blocksize=36)
-#     nb = min(min(size(A)...), blocksize)
-#     cachemat = similar(A, nb, minimum(size(A)))
-#     return custom_qr!(A; cachemat)
-# end
-function custom_qr!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
-    X = LinearAlgebra.LAPACK.geqrt!(A, cachemat)
-    return LinearAlgebra.QRCompactWY(X...)
+function getupperright(A)
+    m, n = size(A)
+    return triu!(@view A[1:min(m, n), 1:n])
 end
-custom_get_r_from_qr(F::LinearAlgebra.QRCompactWY) = begin
-    m, n = size(F)
-    return triu!(@view getfield(F, :factors)[1:min(m, n), 1:n])
+function triangularize!(A; cachemat=nothing)
+    QR = qr!(A)
+    return getupperright(getfield(QR, :factors))
 end
-custom_get_r_from_qr(F::LinearAlgebra.QR) = begin
-    m, n = size(F)
-    return triu!(@view getfield(F, :factors)[1:min(m, n), 1:n])
+function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
+    A, _ = LinearAlgebra.LAPACK.geqrt!(A, cachemat)
+    return getupperright(A)
 end
+
 
 using TaylorSeries
 using TaylorIntegration

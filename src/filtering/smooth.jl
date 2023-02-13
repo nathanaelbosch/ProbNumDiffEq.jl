@@ -115,7 +115,7 @@ function smooth!(
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
     _matmul!(view(R, 2D+1:3D, 1:D), x_next.Σ.R, G')
 
-    Q_R = custom_qr!(R, cachemat=@view C_DxD[1:min(36, D), :]) |> custom_get_r_from_qr
+    Q_R = triangularize!(R, cachemat=@view C_DxD[1:min(36, D), :])
     copy!(x_curr.Σ.R, Q_R)
 
     return nothing

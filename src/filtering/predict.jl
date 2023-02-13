@@ -71,7 +71,7 @@ function predict_cov!(
     Q_R = if issuccess(chol)
         chol.U
     else
-        custom_qr!(R, cachemat=@view C_DxD[1:min(36, D), :]) |> custom_get_r_from_qr
+        triangularize!(R, cachemat=@view C_DxD[1:min(36, D), :])
     end
     copy!(x_out.Σ.R, Q_R)
     return x_out.Σ
