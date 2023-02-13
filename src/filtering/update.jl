@@ -108,7 +108,7 @@ function update!(
         M_cache[i, i] += 1
     end
 
-    X_A_Xt!(x_out.Σ, P_p, M_cache)
+    fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     return x_out
 end

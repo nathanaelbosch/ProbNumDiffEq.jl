@@ -138,7 +138,7 @@ function local_scalar_diffusion(cache)
     @unpack d, R, H, Qh, measurement, m_tmp, Smat = cache
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
-    X_A_Xt!(HQH, Qh, H)
+    fast_X_A_Xt!(HQH, Qh, H)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     C = cholesky!(HQHmat)
     e .= z
@@ -166,7 +166,7 @@ function local_diagonal_diffusion(cache)
     @unpack d, q, H, Qh, measurement, m_tmp, tmp = cache
     @unpack local_diffusion = cache
     z = measurement.μ
-    HQH = X_A_Xt!(m_tmp.Σ, Qh, H)
+    HQH = fast_X_A_Xt!(m_tmp.Σ, Qh, H)
     # Q0_11 = diag(HQH)[1]
     c1 = view(HQH.R, :, 1)
     Q0_11 = dot(c1, c1)
