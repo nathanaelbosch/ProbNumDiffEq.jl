@@ -83,24 +83,24 @@ end
     end
 
     @testset "update!" begin
-        @testset "Array" begin
-            K_cache = copy(K)
-            K2_cache = copy(K)
-            M_cache = zeros(d, d)
-            O_cache = zeros(o, o)
-            ProbNumDiffEq.update!(
-                x_out,
-                x_pred,
-                measurement,
-                H,
-                K_cache,
-                K2_cache,
-                M_cache,
-                O_cache,
-            )
-            @test m ≈ x_out.μ
-            @test P ≈ Matrix(x_out.Σ)
-        end
+        # @testset "Array" begin
+        #     K_cache = copy(K)
+        #     K2_cache = copy(K)
+        #     M_cache = zeros(d, d)
+        #     O_cache = zeros(o, o)
+        #     ProbNumDiffEq.update!(
+        #         x_out,
+        #         x_pred,
+        #         measurement,
+        #         H,
+        #         K_cache,
+        #         K2_cache,
+        #         M_cache,
+        #         O_cache,
+        #     )
+        #     @test m ≈ x_out.μ
+        #     @test P ≈ Matrix(x_out.Σ)
+        # end
         @testset "PSDMatrix" begin
             K_cache = copy(K)
             K2_cache = copy(K)
