@@ -54,9 +54,9 @@ and `S_cache` of same type as `measurement.Σ`.
 See also: [`update`](@ref).
 """
 function update!(
-    x_out::Gaussian,
-    x_pred::Gaussian,
-    measurement::Gaussian,
+    x_out::SRGaussian,
+    x_pred::SRGaussian,
+    measurement::SRGaussian,
     H::AbstractMatrix,
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
@@ -108,7 +108,7 @@ function update!(
         M_cache[i, i] += 1
     end
 
-    X_A_Xt!(x_out.Σ, P_p, M_cache)
+    fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     return x_out
 end

@@ -27,7 +27,7 @@ Base.:*(M::AbstractMatrix, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 
 function _gaussian_mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
     _matmul!(g_out.μ, M, g_in.μ)
-    X_A_Xt!(g_out.Σ, g_in.Σ, M)
+    fast_X_A_Xt!(g_out.Σ, g_in.Σ, M)
     return g_out
 end
 

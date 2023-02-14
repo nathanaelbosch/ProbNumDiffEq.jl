@@ -8,6 +8,7 @@ import DiffEqBase: check_error!, AbstractODEFunction
 using OrdinaryDiffEq
 using DiffEqDevTools
 using SpecialMatrices, ToeplitzMatrices
+using FastBroadcast
 
 # Current working solution to depending on functions that moved from DiffEqBase to SciMLBase
 try
@@ -55,17 +56,17 @@ _matmul!(
     C::AbstractMatrix{T},
     A::AbstractMatrix{T},
     B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = (C .= A .* B.diag')
+) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
 _matmul!(
     C::AbstractMatrix{T},
     A::Diagonal{T},
     B::AbstractMatrix{T},
-) where {T<:LinearAlgebra.BlasFloat} = (C .= A.diag .* B)
+) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
 _matmul!(
     C::AbstractMatrix{T},
     A::Diagonal{T},
     B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = @. C = A * B
+) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
 _matmul!(
     C::AbstractMatrix{T},
     A::AbstractVecOrMat{T},
@@ -83,6 +84,10 @@ _matmul!(
 import PSDMatrices: X_A_Xt, X_A_Xt!
 X_A_Xt(A, X) = X * A * X'
 X_A_Xt!(out, A, X) = (out .= X * A * X')
+function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
+    _matmul!(out.R, A.R, X')
+    return out
+end
 apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
 apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
 

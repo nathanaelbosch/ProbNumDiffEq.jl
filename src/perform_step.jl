@@ -62,8 +62,10 @@ make_transition_matrices!(cache::EKCache, dt) =
 function make_transition_matrices!(cache::EKCache, prior::IWP, dt)
     @unpack A, Q, Ah, Qh, P, PI = cache
     make_preconditioners!(cache, dt)
-    @. Ah .= PI.diag .* A .* P.diag'
-    X_A_Xt!(Qh, Q, PI)
+    # Ah = PI * A * P
+    @.. Ah = PI.diag * A * P.diag'
+    # X_A_Xt!(Qh, Q, PI)
+    @.. Qh.R = Q.R * PI.diag'
 end
 function make_transition_matrices!(cache::EKCache, prior::IOUP, dt)
     @unpack A, Q, Ah, Qh, P, PI = cache
@@ -72,7 +74,7 @@ function make_transition_matrices!(cache::EKCache, prior::IOUP, dt)
     copy!(Ah, _Ah)
     copy!(Qh, _Qh)
     A .= P.diag .* Ah .* PI.diag'
-    X_A_Xt!(Q, Qh, P)
+    fast_X_A_Xt!(Q, Qh, P)
 end
 
 """
@@ -174,7 +176,7 @@ function evaluate_ode!(integ, x_pred, t)
 end
 
 compute_measurement_covariance!(cache) =
-    X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
+    fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
 
 function update!(cache, prediction)
     @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = cache

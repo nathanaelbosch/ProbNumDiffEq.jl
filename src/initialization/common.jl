@@ -58,7 +58,7 @@ function condition_on!(
     covcache = x_tmp.Σ
     Mcache = cache.C_DxD
 
-    X_A_Xt!(S, x.Σ, H)
+    fast_X_A_Xt!(S, x.Σ, H)
     # @assert isdiag(Matrix(S))
     S_diag = diag(S)
     if any(iszero.(S_diag)) # could happen with a singular mass-matrix
@@ -77,7 +77,7 @@ function condition_on!(
     @inbounds @simd ivdep for i in 1:D
         Mcache[i, i] += 1
     end
-    X_A_Xt!(x_tmp.Σ, x.Σ, Mcache)
+    fast_X_A_Xt!(x_tmp.Σ, x.Σ, Mcache)
     copy!(x.Σ, covcache)
     return nothing
 end
