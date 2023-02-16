@@ -44,7 +44,6 @@ _unwrap_val(B) = B
     EK1(; order=3,
           smooth=true,
           prior=IWP(order),
-          prior=IWP(3),
           diffusionmodel=DynamicDiffusion(),
           initialization=TaylorModeInit(),
           kwargs...)
