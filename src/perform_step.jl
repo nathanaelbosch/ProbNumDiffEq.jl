@@ -24,6 +24,8 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     # Similar to OrdinaryDiffEq.do_newJ
     if integ.iter <= 1
         return true
+    elseif cache.prior isa IOUP
+        return true
     elseif repeat_step
         return false
     elseif integ.dt == cache.dt_last
@@ -60,7 +62,14 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     tnew = t + dt
 
     if make_new_transitions(integ, cache, repeat_step)
-        make_transition_matrices!(cache, cache.prior, dt)
+        # Rosenbrock-style update of the IOUP rate parameter
+        if cache.prior isa IOUP
+            @unpack f, p, u = integ
+            J = ForwardDiff.jacobian(u -> (du = copy(u); f(du, u, p, t); du), u)
+            copy!(cache.prior.rate_parameter, J)
+        end
+
+        make_transition_matrices!(cache, dt)
     end
 
     # Predict the mean
