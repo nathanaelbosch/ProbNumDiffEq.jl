@@ -71,7 +71,7 @@ function make_transition_matrices!(cache, prior::AbstractODEFilterPrior, dt)
     _Ah, _Qh = discretize(cache.prior, dt)
     copy!(Ah, _Ah)
     copy!(Qh, _Qh)
-    A .= P.diag .* Ah .* PI.diag'
+    @.. A = P.diag * Ah * PI.diag'
     fast_X_A_Xt!(Q, Qh, P)
 end
 
