@@ -36,3 +36,19 @@ function matrix_fraction_decomposition(
     Q = Mexp[1:d, d+1:end] * A'
     return A, Q
 end
+
+function discretize_sqrt(sde::LTISDE, dt::Real)
+    F, L = drift(sde), dispersion(sde)
+
+    Ah = exp(dt * F)
+
+    chol_integrand(τ) = L' * exp(F' * (dt - τ))
+    nodes, weights = gausslegendre(10)
+    b, a = dt, 0
+    @. nodes = (b - a) / 2 * nodes + (a + b) / 2
+    @. weights = (b - a) / 2 * weights
+    M = reduce(vcat, @. sqrt(weights) * chol_integrand(nodes))
+    Qh_R = qr(M).R
+
+    return Ah, Qh_R
+end

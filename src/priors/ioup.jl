@@ -92,25 +92,17 @@ end
 
 function discretize(p::IOUP, dt::Real)
     r = p.rate_parameter
-    A, Q = if p.rate_parameter isa Number
-        A_breve, Q_breve = discretize(to_1d_sde(p), dt)
-        d = p.wiener_process_dimension
-        # QR_breve = cholesky!(Symmetric(Q_breve)).L'
-        E = eigen(Symmetric(Q_breve))
-        QR_breve = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
-
+    d = p.wiener_process_dimension
+    if p.rate_parameter isa Number
+        A_breve, QR_breve = discretize_sqrt(to_1d_sde(p), dt)
         A = kron(I(d), A_breve)
         QR = kron(I(d), QR_breve)
         Q = PSDMatrix(QR)
-        A, Q
+        return A, Q
     else
         @assert r isa AbstractVector || r isa AbstractMatrix
-        A, Q = discretize(to_sde(p), dt)
-        E = eigen(Symmetric(Q))
-        QR = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
+        A, QR = discretize_sqrt(to_sde(p), dt)
         Q = PSDMatrix(QR)
-        A, Q
+        return A, Q
     end
-
-    return A, Q
 end

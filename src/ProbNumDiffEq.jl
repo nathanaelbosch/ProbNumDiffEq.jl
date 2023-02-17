@@ -14,6 +14,7 @@ import SciMLBase: interpret_vars, getsyms
 using OrdinaryDiffEq
 using DiffEqDevTools
 using SpecialMatrices, ToeplitzMatrices
+using FastGaussQuadrature
 using FastBroadcast
 using StaticArrayInterface
 using FunctionWrappersWrappers
