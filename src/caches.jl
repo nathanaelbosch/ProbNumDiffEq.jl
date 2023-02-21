@@ -3,8 +3,8 @@
 ########################################################################################
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
-    matType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,rateType,UF,JC,
-    uNoUnitsType,
+    matType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,rateType,
+    UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
     d::Int                  # Dimension of the problem
