@@ -35,6 +35,11 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     end
 end
 
+function update_rate_parameter!(cache, f, u, p, t)
+    J = ForwardDiff.jacobian(u -> (du = copy(u); f(du, u, p, t); du), u)
+    copy!(cache.prior.rate_parameter, J)
+end
+
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
@@ -64,9 +69,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
         if cache.prior isa IOUP
-            @unpack f, p, u = integ
-            J = ForwardDiff.jacobian(u -> (du = copy(u); f(du, u, p, t); du), u)
-            copy!(cache.prior.rate_parameter, J)
+            update_rate_parameter!(cache, integ.f, integ.u, integ.p, integ.t)
         end
 
         make_transition_matrices!(cache, dt)
