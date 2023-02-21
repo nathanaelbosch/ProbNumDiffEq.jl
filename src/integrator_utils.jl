@@ -92,6 +92,7 @@ This function handles the iteration and preconditioning.
 The actual smoothing step happens in [`smooth!`](@ref).
 """
 function smooth_solution!(integ)
+    cache = integ.cache
     integ.sol.x_smooth = copy(integ.sol.x_filt)
 
     @unpack A, Q = integ.cache
@@ -106,6 +107,11 @@ function smooth_solution!(integ)
             continue
         end
 
+        if cache.prior isa IOUP
+            # The following is only a hotfix for now!
+            update_rate_parameter!(cache, integ.f, cache.SolProj * x[i].μ, integ.p, t[i])
+            # TODO: Make this more efficient, or even switch to backward kernels
+        end
         make_transition_matrices!(integ.cache, dt)
         # In principle the smoothing would look like this (without preconditioning):
         # @unpack Ah, Qh = integ.cache
