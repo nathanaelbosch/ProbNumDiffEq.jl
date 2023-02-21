@@ -113,8 +113,9 @@ end
 
 function initialize_transition_matrices(p::IWP{T}, dt) where {T}
     A, Q = preconditioned_discretize(p)
-    P, PI = init_preconditioner(p.wiener_process_dimension, p.num_derivatives, T)
-    make_preconditioner!(P, dt, p.wiener_process_dimension, p.num_derivatives)
+    d, q = p.wiener_process_dimension, p.num_derivatives
+    P, PI = init_preconditioner(d, q, T)
+    make_preconditioner!(P, dt, d, q)
     Ah = PI * A * P
     Qh = X_A_Xt(Q, PI)
     return A, Q, Ah, Qh, P, PI
@@ -256,8 +257,9 @@ end
 
 function initialize_transition_matrices(p::IOUP{T}, dt) where {T}
     Ah, Qh = discretize(p, dt)
-    P, PI = init_preconditioner(p.wiener_process_dimension, p.num_derivatives, T)
-    make_preconditioner!(P, dt, p.wiener_process_dimension, p.num_derivatives)
+    d, q = p.wiener_process_dimension, p.num_derivatives
+    P, PI = init_preconditioner(d, q, T)
+    make_preconditioner!(P, dt, d, q)
     A = P * Ah * PI
     Q = X_A_Xt(Qh, P)
     return A, Q, Ah, Qh, P, PI

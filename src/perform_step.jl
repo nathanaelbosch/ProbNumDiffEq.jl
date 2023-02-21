@@ -20,13 +20,13 @@ function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::
     return nothing
 end
 
-function make_new_transitions(integ, cache, dt, repeat_step)::Bool
+function make_new_transitions(integ, cache, repeat_step)::Bool
     # Similar to OrdinaryDiffEq.do_newJ
     if integ.iter <= 1
         return true
     elseif repeat_step
         return false
-    elseif dt == cache.dt_last
+    elseif integ.dt == cache.dt_last
         return false
     else
         return true
@@ -103,7 +103,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     tnew = t + dt
 
-    if make_new_transitions(integ, cache, dt, repeat_step)
+    if make_new_transitions(integ, cache, repeat_step)
         make_transition_matrices!(cache, dt)
     end
 
