@@ -56,7 +56,7 @@ See also: [`update`](@ref).
 function update!(
     x_out::SRGaussian,
     x_pred::SRGaussian,
-    measurement::SRGaussian,
+    measurement::Gaussian,
     H::AbstractMatrix,
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
