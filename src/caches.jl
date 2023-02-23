@@ -3,8 +3,8 @@
 ########################################################################################
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
-    matType,diffusionType,diffModelType,measModType,measType,puType,llType,rateType,UF,JC,
-    uNoUnitsType,
+    matType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,rateType,
+    UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
     d::Int                  # Dimension of the problem
@@ -57,6 +57,7 @@ mutable struct EKCache{
     global_diffusion::diffusionType
     err_tmp::duType
     log_likelihood::llType
+    dt_last::dtType
     du1::rateType
     uf::UF
     jac_config::JC
@@ -108,7 +109,7 @@ function OrdinaryDiffEq.alg_cache(
     else
         error("Invalid prior $(alg.prior)")
     end
-    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior)
+    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior, dt)
 
     # Measurement Model
     measurement_model = make_measurement_model(f)
@@ -174,7 +175,7 @@ function OrdinaryDiffEq.alg_cache(
         uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),matType,
         typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
-        uEltypeNoUnits,typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
+        uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
         d, q, prior, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI,
         E0, E1, E2,
@@ -184,7 +185,7 @@ function OrdinaryDiffEq.alg_cache(
         H, du, ddu, K, G, Smat,
         C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,
         initdiff, initdiff * NaN, initdiff * NaN,
-        err_tmp, ll, du1, uf, jac_config,
+        err_tmp, ll, dt, du1, uf, jac_config,
     )
 end
 

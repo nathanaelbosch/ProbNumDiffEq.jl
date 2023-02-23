@@ -23,14 +23,14 @@ See also: [`make_transition_matrices`](@ref).
 
 [1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
-function initialize_transition_matrices(p::AbstractODEFilterPrior{T}) where {T}
+initialize_transition_matrices(p::AbstractODEFilterPrior, dt)
+
+function initialize_preconditioner(p::AbstractODEFilterPrior{T}, dt) where {T}
     d, q = p.wiener_process_dimension, p.num_derivatives
-    D = d * (q + 1)
-    A = Matrix{T}(undef, D, D)
-    Q = PSDMatrix(Matrix{T}(undef, D, D))
-    Ah, Qh = copy(A), copy(Q)
-    P, PI = init_preconditioner(p.wiener_process_dimension, p.num_derivatives, T)
-    return A, Q, Ah, Qh, P, PI
+    P, PI = init_preconditioner(d, q, T)
+    make_preconditioner!(P, dt, d, q)
+    make_preconditioner_inv!(PI, dt, d, q)
+    return P, PI
 end
 
 """
@@ -119,10 +119,11 @@ function discretize(p::IWP, dt::Real)
     return A, Q
 end
 
-function initialize_transition_matrices(p::IWP{T}) where {T}
+function initialize_transition_matrices(p::IWP{T}, dt) where {T}
     A, Q = preconditioned_discretize(p)
-    P, PI = init_preconditioner(p.wiener_process_dimension, p.num_derivatives, T)
-    Ah, Qh = copy(A), copy(Q)
+    P, PI = initialize_preconditioner(p, dt)
+    Ah = PI * A * P
+    Qh = X_A_Xt(Q, PI)
     return A, Q, Ah, Qh, P, PI
 end
 
@@ -258,4 +259,12 @@ function discretize(p::IOUP, dt::Real)
     end
 
     return A, Q
+end
+
+function initialize_transition_matrices(p::IOUP{T}, dt) where {T}
+    Ah, Qh = discretize(p, dt)
+    P, PI = initialize_preconditioner(p, dt)
+    A = P * Ah * PI
+    Q = X_A_Xt(Qh, P)
+    return A, Q, Ah, Qh, P, PI
 end

@@ -26,7 +26,7 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
         return true
     elseif repeat_step
         return false
-    elseif !integ.opts.adaptive
+    elseif integ.dt == cache.dt_last
         return false
     else
         return true
