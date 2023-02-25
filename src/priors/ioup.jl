@@ -35,7 +35,8 @@ function to_1d_sde(p::IOUP)
     q = p.num_derivatives
     r = p.rate_parameter
     if !(r isa Number)
-        throw(ArgumentError("The rate parameter must be a scalar to convert the IOUP to a 1D SDE."))
+        m = "The rate parameter must be a scalar to convert the IOUP to a 1D SDE."
+        throw(ArgumentError(m))
     end
 
     F_breve = diagm(1 => ones(q))
