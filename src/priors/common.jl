@@ -1,5 +1,13 @@
 abstract type AbstractODEFilterPrior{elType} end
 
+function initialize_preconditioner(p::AbstractODEFilterPrior{T}, dt) where {T}
+    d, q = p.wiener_process_dimension, p.num_derivatives
+    P, PI = init_preconditioner(d, q, T)
+    make_preconditioner!(P, dt, d, q)
+    make_preconditioner_inv!(PI, dt, d, q)
+    return P, PI
+end
+
 """
     initilize_transition_matrices!(p::AbstractODEFilterPrior)
 
@@ -23,12 +31,10 @@ See also: [`make_transition_matrices`](@ref).
 
 [1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
-initialize_transition_matrices(p::AbstractODEFilterPrior, dt)
-
-function initialize_preconditioner(p::AbstractODEFilterPrior{T}, dt) where {T}
-    d, q = p.wiener_process_dimension, p.num_derivatives
-    P, PI = init_preconditioner(d, q, T)
-    make_preconditioner!(P, dt, d, q)
-    make_preconditioner_inv!(PI, dt, d, q)
-    return P, PI
+function initialize_transition_matrices(p::AbstractODEFilterPrior{T}, dt) where {T}
+    Ah, Qh = discretize(p, dt)
+    P, PI = initialize_preconditioner(p, dt)
+    A = P * Ah * PI
+    Q = X_A_Xt(Qh, P)
+    return A, Q, Ah, Qh, P, PI
 end

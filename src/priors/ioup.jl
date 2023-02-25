@@ -94,11 +94,3 @@ function discretize(p::IOUP, dt::Real)
 
     return A, Q
 end
-
-function initialize_transition_matrices(p::IOUP{T}, dt) where {T}
-    Ah, Qh = discretize(p, dt)
-    P, PI = initialize_preconditioner(p, dt)
-    A = P * Ah * PI
-    Q = X_A_Xt(Qh, P)
-    return A, Q, Ah, Qh, P, PI
-end
