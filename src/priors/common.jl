@@ -76,7 +76,7 @@ function make_transition_matrices!(cache, prior::AbstractODEFilterPrior, dt)
 end
 
 # convenience function
-make_transition_matrices!(cache::EKCache, dt) =
+make_transition_matrices!(cache::AbstractODEFilterCache, dt) =
     make_transition_matrices!(cache, cache.prior, dt)
 
 """

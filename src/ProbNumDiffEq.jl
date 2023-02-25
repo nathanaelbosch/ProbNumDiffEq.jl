@@ -97,6 +97,8 @@ using GaussianDistributions: logpdf
 
 import Statistics: mean, var, std
 
+abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
+
 include("gaussians.jl")
 
 include("priors/common.jl")
@@ -114,7 +116,6 @@ export TaylorModeInit, ClassicSolverInit
 include("algorithms.jl")
 export EK0, EK1
 
-abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 include("alg_utils.jl")
 include("caches.jl")
 
