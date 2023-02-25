@@ -99,7 +99,10 @@ import Statistics: mean, var, std
 
 include("gaussians.jl")
 
-include("priors.jl")
+include("priors/common.jl")
+include("priors/iwp.jl")
+include("priors/ltisde.jl")
+include("priors/ioup.jl")
 export IWP, IOUP
 include("diffusions.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
