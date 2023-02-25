@@ -15,8 +15,4 @@ notebook("multi-language-wrappers.jmd")
 ```
 where you can replace `multi-language-wrappers.jmd` with the benchmark of your choice.
 
-To generate the markdown files used in the documentation, we run
-```julia
-using Weave
-weave("multi-language-wrappers.jmd"; doctype="github", out_path="../docs/src/benchmarks/")
-```
+The markdown files from the documentation are generated with `runall.jl`
