@@ -14,7 +14,7 @@ makedocs(
         ],
         "Solvers and Options" => "solvers.md",
         "Benchmarks" => [
-            "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrapper.md",
+            "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
         ],
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md"
