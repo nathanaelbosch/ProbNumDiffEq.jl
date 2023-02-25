@@ -91,3 +91,13 @@ function initialize_transition_matrices(p::IWP{T}, dt) where {T}
     Qh = X_A_Xt(Q, PI)
     return A, Q, Ah, Qh, P, PI
 end
+
+function make_transition_matrices!(cache, prior::IWP, dt)
+    @unpack A, Q, Ah, Qh, P, PI = cache
+    make_preconditioners!(cache, dt)
+    # A, Q = preconditioned_discretize(p) # not necessary since it's dt-independent
+    # Ah = PI * A * P
+    @.. Ah = PI.diag * A * P.diag'
+    # X_A_Xt!(Qh, Q, PI)
+    @.. Qh.R = Q.R * PI.diag'
+end
