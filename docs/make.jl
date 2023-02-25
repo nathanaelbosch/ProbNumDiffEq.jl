@@ -13,7 +13,9 @@ makedocs(
             "Differential Algebraic Equations" => "dae.md"
         ],
         "Solvers and Options" => "solvers.md",
-        "Benchmark" => "benchmark.md",
+        "Benchmarks" => [
+            "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrapper.md",
+        ],
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md"
             "Implementation via OrdinaryDiffEq.jl" => "implementation.md"
