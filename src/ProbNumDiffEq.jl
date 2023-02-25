@@ -97,10 +97,16 @@ using GaussianDistributions: logpdf
 
 import Statistics: mean, var, std
 
+abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
+
 include("gaussians.jl")
 
-include("priors.jl")
-export IWP, IOUP
+include("priors/common.jl")
+include("priors/iwp.jl")
+include("priors/ltisde.jl")
+include("priors/ioup.jl")
+include("priors/matern.jl")
+export IWP, IOUP, Matern
 include("diffusions.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 
@@ -110,7 +116,6 @@ export TaylorModeInit, ClassicSolverInit
 include("algorithms.jl")
 export EK0, EK1
 
-abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 include("alg_utils.jl")
 include("caches.jl")
 

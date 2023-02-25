@@ -41,4 +41,5 @@ ClassicSolverInit
 ```@docs
 IWP
 IOUP
+Matern
 ```

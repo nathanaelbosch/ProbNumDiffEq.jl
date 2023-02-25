@@ -106,6 +106,8 @@ function OrdinaryDiffEq.alg_cache(
         IWP{uElType}(d, alg.prior.num_derivatives)
     elseif alg.prior isa IOUP
         IOUP{uElType}(d, q, alg.prior.rate_parameter)
+    elseif alg.prior isa Matern
+        Matern{uElType}(d, q, alg.prior.lengthscale)
     else
         error("Invalid prior $(alg.prior)")
     end
