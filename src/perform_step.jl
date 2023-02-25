@@ -24,7 +24,7 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     # Similar to OrdinaryDiffEq.do_newJ
     if integ.iter <= 1
         return true
-    elseif cache.prior isa IOUP
+    elseif cache.prior isa IOUP && cache.prior.update_rate_parameter
         return true
     elseif repeat_step
         return false
@@ -36,6 +36,10 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
 end
 
 function update_rate_parameter!(cache, f, u, p, t)
+    # Ideally, for best efficiency, we'd want this:
+    # OrdinaryDiffEq.calc_J!(cache.prior.rate_parameter, integ, cache, true)
+    # But this does not work with the EK0. So instead just manually call ForwardDiff for now
+    f = SciMLBase.unwrapped_f(f)
     J = ForwardDiff.jacobian(u -> (du = copy(u); f(du, u, p, t); du), u)
     copy!(cache.prior.rate_parameter, J)
 end
@@ -68,7 +72,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
-        if cache.prior isa IOUP
+        if cache.prior isa IOUP && cache.prior.update_rate_parameter
             update_rate_parameter!(cache, integ.f, integ.u, integ.p, integ.t)
         end
 

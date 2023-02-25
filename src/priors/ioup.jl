@@ -28,16 +28,28 @@ struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior{elType}
     wiener_process_dimension::dimType
     num_derivatives::Int
     rate_parameter::R
+    update_rate_parameter::Bool
 end
-IOUP(num_derivatives, rate_parameter) =
-    IOUP(missing, num_derivatives, rate_parameter)
-IOUP(wiener_process_dimension, num_derivatives, rate_parameter) =
-    IOUP{typeof(1.0)}(wiener_process_dimension, num_derivatives, rate_parameter)
-IOUP{T}(wiener_process_dimension, num_derivatives, rate_parameter) where {T} =
+IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
+    IOUP(missing, num_derivatives, rate_parameter, update_rate_parameter)
+IOUP(wiener_process_dimension, num_derivatives, rate_parameter, update_rate_parameter) =
+    IOUP{typeof(1.0)}(
+        wiener_process_dimension,
+        num_derivatives,
+        rate_parameter,
+        update_rate_parameter,
+    )
+IOUP{T}(
+    wiener_process_dimension,
+    num_derivatives,
+    rate_parameter,
+    update_rate_parameter,
+) where {T} =
     IOUP{T,typeof(wiener_process_dimension),typeof(rate_parameter)}(
         wiener_process_dimension,
         num_derivatives,
         rate_parameter,
+        update_rate_parameter,
     )
 
 function to_1d_sde(p::IOUP)
