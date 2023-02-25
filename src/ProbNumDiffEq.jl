@@ -103,7 +103,8 @@ include("priors/common.jl")
 include("priors/iwp.jl")
 include("priors/ltisde.jl")
 include("priors/ioup.jl")
-export IWP, IOUP
+include("priors/matern.jl")
+export IWP, IOUP, Matern
 include("diffusions.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 
