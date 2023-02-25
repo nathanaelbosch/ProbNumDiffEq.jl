@@ -105,7 +105,7 @@ function OrdinaryDiffEq.alg_cache(
     prior = if alg.prior isa IWP
         IWP{uElType}(d, alg.prior.num_derivatives)
     elseif alg.prior isa IOUP
-        IOUP{uElType}(d, q, alg.prior.rate_parameter)
+        IOUP{uElType}(d, q, alg.prior.rate_parameter, alg.prior.update_rate_parameter)
     elseif alg.prior isa Matern
         Matern{uElType}(d, q, alg.prior.lengthscale)
     else
