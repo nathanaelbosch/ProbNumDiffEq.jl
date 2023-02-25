@@ -5,5 +5,11 @@ FILES = [
 ]
 
 for file in FILES
-    weave(file; doctype="github", out_path="../docs/src/benchmarks/", cache=:all)
+    weave(
+        file;
+        doctype="github",
+        out_path="../docs/src/benchmarks/",
+        cache=:all,
+        fig_ext=".svg",
+    )
 end

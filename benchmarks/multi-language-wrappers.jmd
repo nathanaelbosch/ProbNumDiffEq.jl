@@ -144,8 +144,9 @@ f = @ode_def RigidBodyBench begin
   dy3  = -0.5*y1*y2 + 0.25*sin(t)^2
 end
 u0 = [1.0;0.0;0.9]
-prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f,u0,(0.0,100.0))
-staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{3}(u0),(0.0,100.0))
+tspan = (0.0, 10.0)
+prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f,u0,tspan)
+staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{3}(u0),tspan)
 sol = solve(prob,Vern7(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
 plot(sol, title="Rigid Body Solution", legend=false)

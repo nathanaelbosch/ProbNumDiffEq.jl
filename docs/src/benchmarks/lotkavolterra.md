@@ -1,7 +1,8 @@
 ---
-title : Lotka-Volterra benchmark
-author : Nathanael Bosch
+author: "Nathanael Bosch"
+title: "Lotka-Volterra benchmark"
 ---
+
 
 # Lotka-Volterra benchmark
 
@@ -16,6 +17,7 @@ using SciMLBase, OrdinaryDiffEq
 
 using ProbNumDiffEq
 ```
+
 
 ```julia
 # Plotting theme
@@ -43,12 +45,17 @@ test_sol = sol
 plot(sol, title="Lotka-Volterra Solution", legend=false)
 ```
 
+![](figures/lotkavolterra_3_1.svg)
+
+
+
 ## EK0 accross orders
 
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
 ```
+
 
 ```julia
 _setups = [
@@ -75,8 +82,12 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], 10))
+plot(wp, palette=Plots.palette([:red, :blue], 10))
 ```
+
+![](figures/lotkavolterra_5_1.svg)
+
+
 
 ## EK1 accross orders
 
@@ -105,5 +116,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], 10))
+plot(wp, palette=Plots.palette([:red, :blue], 10))
 ```
+
+![](figures/lotkavolterra_6_1.svg)
