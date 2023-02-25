@@ -1,12 +1,5 @@
----
-title: ProbNumDiffEq.jl vs. various solver packages
-author: Nathanael Bosch
- date: `j import Dates; Dates.Date(Dates.now())`
----
 
- ```julia; echo = false
- using Dates
- ```
+# ProbNumDiffEq.jl vs. various solver packages
 
 Adapted from
 [SciMLBenchmarks.jl multi-language wrapper benchmark](https://benchmarks.sciml.ai/html/MultiLanguage/wrapper_packages.html).
@@ -34,7 +27,7 @@ theme(:dao;
     markerstrokewidth=0.5,
     legend=:outertopleft,
     bottom_margin=5Plots.mm,
-    size = (800, 350),
+    size = (900, 400),
 )
 ```
 
