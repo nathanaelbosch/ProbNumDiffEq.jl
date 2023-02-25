@@ -34,6 +34,9 @@ IOUP{T}(wiener_process_dimension, num_derivatives, rate_parameter) where {T} =
 function to_1d_sde(p::IOUP)
     q = p.num_derivatives
     r = p.rate_parameter
+    if !(r isa Number)
+        throw(ArgumentError("The rate parameter must be a scalar to convert the IOUP to a 1D SDE."))
+    end
 
     F_breve = diagm(1 => ones(q))
     F_breve[end, end] = r
@@ -48,9 +51,16 @@ function to_sde(p::IOUP)
     q = p.num_derivatives
     r = p.rate_parameter
 
-    R = if r isa Number
-        r * I(d)
-    elseif r isa AbstractVector
+    if r isa Number
+        d = p.wiener_process_dimension
+        _sde = to_1d_sde(p)
+        F_breve, L_breve = drift(_sde), dispersion(_sde)
+        F = kron(I(d), F_breve)
+        L = kron(I(d), L_breve)
+        return LTISDE(F, L)
+    end
+
+    R = if r isa AbstractVector
         @assert length(r) == d
         Diagonal(r)
     elseif r isa AbstractMatrix

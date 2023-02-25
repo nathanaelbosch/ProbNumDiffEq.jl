@@ -23,6 +23,14 @@ IWP{elType}(wiener_process_dimension, num_derivatives) where {elType} =
 IWP(wiener_process_dimension, num_derivatives) =
     IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
 
+function to_1d_sde(p::IWP)
+    q = p.num_derivatives
+    F_breve = diagm(1 => ones(q))
+    L_breve = zeros(q + 1)
+    L_breve[end] = 1.0
+    return LTISDE(F_breve, L_breve)
+end
+
 function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
     q = iwp.num_derivatives
 

@@ -76,4 +76,21 @@ function make_transition_matrices!(cache, prior::AbstractODEFilterPrior, dt)
 end
 
 # convenience function
-make_transition_matrices!(cache::EKCache, dt) = make_transition_matrices!(cache, cache.prior, dt)
+make_transition_matrices!(cache::EKCache, dt) =
+    make_transition_matrices!(cache, cache.prior, dt)
+
+"""
+    to_1d_sde(p::AbstractODEFilterPrior)
+
+Convert the prior to a 1-dimensional SDE. This is only possible for independent dimensions.
+"""
+to_1d_sde(p::AbstractODEFilterPrior)
+
+function to_sde(p::AbstractODEFilterPrior)
+    d = p.wiener_process_dimension
+    _sde = to_1d_sde(p)
+    F_breve, L_breve = drift(_sde), dispersion(_sde)
+    F = kron(I(d), F_breve)
+    L = kron(I(d), L_breve)
+    return LTISDE(F, L)
+end
