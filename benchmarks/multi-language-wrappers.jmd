@@ -1,7 +1,7 @@
 # ProbNumDiffEq.jl vs. various solver packages
 
 Adapted from
-[SciMLBenchmarks.jl multi-language wrapper benchmark](https://benchmarks.sciml.ai/html/MultiLanguage/wrapper_packages.html).
+[SciMLBenchmarks.jl multi-language wrapper benchmark](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/MultiLanguage/ode_wrapper_packages/).
 
 ```julia
 # Imports
