@@ -7,7 +7,7 @@ tutorial by
 It turns out that __our probabilistic numerical solvers can directly solve the index-3 DAE__:
 
 ```@example 2
-using ProbNumDiffEq, LinearAlgebra, Plots
+using ProbNumDiffEq, LinearAlgebra, Plots, ModelingToolkit
 function pendulum!(du, u, p, t)
     x, dx, y, dy, T = u
     g, L = p
