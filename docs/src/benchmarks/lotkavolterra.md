@@ -249,7 +249,6 @@ plot(wp, color=[2 2 2 4 4 4 5 5 5], xticks = 10.0 .^ (-16:1:5))
 - Orders behave as in classic solvers:
   Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy.
 - Most likely, the default choice of `diffusionmodel=DynamicDiffusion` and `initialization=TaylorModeInit` are fine.
-  Though `ClassicSolverInit(init_on_du=true)` could sometimes give a small performance boost.
 
 
 
