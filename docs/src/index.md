@@ -42,10 +42,6 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
   - Specialized solvers for second-order ODEs (demo will be added)
   - Compatible with DAEs in mass-matrix ODE form (demo will be added)
 
-## Benchmarks
-
-  - [Multi-Language Wrapper Benchmark](https://nbviewer.org/github/nathanaelbosch/ProbNumDiffEq.jl/blob/main/benchmarks/multi-language-wrappers.ipynb):
-    ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
 
 ## [References](@id references)
 
