@@ -1,9 +1,12 @@
+/benchmarks/.ipynb_checkpoints/
+/docs/src/benchmarks/cache/
+
 build/
 .ob-jupyter/
 /.vscode/
-*.svg
-*.png
-*.pdf
+# *.svg
+# *.png
+# *.pdf
 *.bson
 
 
@@ -33,4 +36,3 @@ docs/site/
 # committed for packages, but should be committed for applications that require a static
 # environment.
 Manifest.toml
-/benchmarks/.ipynb_checkpoints/
