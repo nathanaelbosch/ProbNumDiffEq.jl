@@ -1,8 +1,3 @@
----
-title : ProbNumDiffEq.jl vs. various solver packages
-author : Nathanael Bosch
----
-
 # ProbNumDiffEq.jl vs. various solver packages
 
 Adapted from
@@ -10,16 +5,9 @@ Adapted from
 
 ```julia
 # Imports
-using LinearAlgebra, Statistics
-using StaticArrays, DiffEqDevTools, ParameterizedFunctions, Plots
-using SciMLBase
-using OrdinaryDiffEq
-using ODEInterface, ODEInterfaceDiffEq
-using Sundials
-using SciPyDiffEq
-using deSolveDiffEq
-using MATLABDiffEq
-using LSODA
+using LinearAlgebra, Statistics, InteractiveUtils
+using StaticArrays, DiffEqDevTools, ParameterizedFunctions, Plots, SciMLBase, OrdinaryDiffEq
+using ODEInterface, ODEInterfaceDiffEq, Sundials, SciPyDiffEq, deSolveDiffEq, MATLABDiffEq, LSODA
 using LoggingExtras
 
 using ProbNumDiffEq
@@ -29,9 +17,9 @@ using ProbNumDiffEq
 # Plotting theme
 theme(:dao;
     markerstrokewidth=0.5,
-    legend=:outertopleft,
+    legend=:outertopright,
     bottom_margin=5Plots.mm,
-    size = (900, 400),
+    size = (1000, 400),
 )
 ```
 
@@ -68,9 +56,9 @@ f = @ode_def LotkaVolterra begin
   dx = a*x - b*x*y
   dy = -c*y + d*x*y
 end a b c d
-p = [1.5,1,3,1]
-tspan = (0.0,10.0)
-u0 = [1.0,1.0]
+p = [1.5, 1, 3, 1]
+tspan = (0.0, 10.0)
+u0 = [1.0, 1.0]
 prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f,u0,tspan,p)
 staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{2}(u0),tspan,SVector{4}(p))
 
@@ -84,9 +72,6 @@ _setups = [
   "Julia: DP5" => Dict(:alg=>DP5())
   "Julia: Tsit5" => Dict(:alg=>Tsit5())
   "Julia: Vern7" => Dict(:alg=>Vern7())
-  "Julia (static): DP5" => Dict(:prob_choice => 2, :alg=>DP5())
-  "Julia (static): Tsit5" => Dict(:prob_choice => 2, :alg=>Tsit5())
-  "Julia (static): Vern7" => Dict(:prob_choice => 2, :alg=>Vern7())
   "Hairer: dopri5" => Dict(:alg=>ODEInterfaceDiffEq.dopri5())
   "MATLAB: ode45" => Dict(:alg=>MATLABDiffEq.ode45())
   "MATLAB: ode113" => Dict(:alg=>MATLABDiffEq.ode113())
@@ -96,12 +81,10 @@ _setups = [
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "deSolve: ode45" => Dict(:alg=>deSolveDiffEq.ode45())
   "Sundials: Adams" => Dict(:alg=>Sundials.CVODE_Adams())
+  "ProbNumDiffEq: EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
-  "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK0(7)" => Dict(:alg=>EK0(order=7, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK1(7)" => Dict(:alg=>EK1(order=7, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -157,9 +140,6 @@ _setups = [
   "Julia: DP5" => Dict(:alg=>DP5())
   "Julia: Tsit5" => Dict(:alg=>Tsit5())
   "Julia: Vern7" => Dict(:alg=>Vern7())
-  "Julia (static): DP5" => Dict(:prob_choice => 2, :alg=>DP5())
-  "Julia (static): Tsit5" => Dict(:prob_choice => 2, :alg=>Tsit5())
-  "Julia (static): Vern7" => Dict(:prob_choice => 2, :alg=>Vern7())
   "Hairer: dopri5" => Dict(:alg=>dopri5())
   "MATLAB: ode45" => Dict(:alg=>MATLABDiffEq.ode45())
   "MATLAB: ode113" => Dict(:alg=>MATLABDiffEq.ode113())
@@ -169,12 +149,10 @@ _setups = [
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "deSolve: ode45" => Dict(:alg=>deSolveDiffEq.ode45())
   "Sundials: Adams" => Dict(:alg=>CVODE_Adams())
+  "ProbNumDiffEq: EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
-  "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK0(7)" => Dict(:alg=>EK0(order=7, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK1(7)" => Dict(:alg=>EK1(order=7, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -230,9 +208,6 @@ _setups = [
   "Julia: Rosenbrock23" => Dict(:alg=>Rosenbrock23())
   "Julia: Rodas4" => Dict(:alg=>Rodas4())
   "Julia: Rodas5" => Dict(:alg=>Rodas5())
-  "Julia (static): Rosenbrock23" => Dict(:prob_choice => 2, :alg=>Rosenbrock23())
-  "Julia (static): Rodas4" => Dict(:prob_choice => 2, :alg=>Rodas4())
-  "Julia (static): Rodas5" => Dict(:prob_choice => 2, :alg=>Rodas5())
   "Hairer: rodas" => Dict(:alg=>rodas())
   "Hairer: radau" => Dict(:alg=>radau())
   "MATLAB: ode23s" => Dict(:alg=>MATLABDiffEq.ode23s())
@@ -242,17 +217,17 @@ _setups = [
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "Sundials: CVODE" => Dict(:alg=>CVODE_BDF())
+  "ProbNumDiffEq: EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK1(7)" => Dict(:alg=>EK1(order=7, smooth=DENSE))
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 colors = tocolor.(labels) |> permutedims
 
-abstols = 1.0 ./ 10.0 .^ (7:12)
-reltols = 1.0 ./ 10.0 .^ (3:8)
+abstols = 1.0 ./ 10.0 .^ (5:12)
+reltols = 1.0 ./ 10.0 .^ (2:9)
 
 wp = with_logger(filtered_logger) do
     WorkPrecisionSet(
@@ -307,9 +282,6 @@ _setups = [
   "Julia: Rosenbrock23" => Dict(:alg=>Rosenbrock23())
   "Julia: Rodas4" => Dict(:alg=>Rodas4())
   "Julia: radau" => Dict(:alg=>RadauIIA5())
-  "Julia (static): Rosenbrock23" => Dict(:prob_choice => 2, :alg=>Rosenbrock23())
-  "Julia (static): Rodas4" => Dict(:prob_choice => 2, :alg=>Rodas4())
-  "Julia (static): radau" => Dict(:prob_choice => 2, :alg=>RadauIIA5())
   "Hairer: rodas" => Dict(:alg=>rodas())
   "Hairer: radau" => Dict(:alg=>radau())
   "MATLAB: ode23s" => Dict(:alg=>MATLABDiffEq.ode23s())
@@ -352,4 +324,13 @@ plot(
     xticks = 10.0 .^ (-16:1:4),
     yticks = 10.0 .^ (-6:1:5),
 )
+```
+
+
+## Appendix
+
+Computer information:
+
+```julia
+InteractiveUtils.versioninfo()
 ```
