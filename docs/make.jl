@@ -16,6 +16,7 @@ makedocs(
         "Benchmarks" => [
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
             "Lotka-Volterra" => "benchmarks/lotkavolterra.md",
+            "Van der Pol" => "benchmarks/vanderpol.md",
         ],
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md"
