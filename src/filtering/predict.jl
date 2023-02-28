@@ -66,7 +66,7 @@ function predict_cov!(
     _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, Ah')
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
     _matmul!(M, R', R)
-    chol = cholesky!(M, check=false)
+    chol = cholesky!(Symmetric(M), check=false)
 
     Q_R = if issuccess(chol)
         chol.U
