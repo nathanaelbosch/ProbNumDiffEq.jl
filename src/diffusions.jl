@@ -30,6 +30,9 @@ estimate_local_diffusion(::DynamicDiffusion, integ) = local_scalar_diffusion(int
 A multi-variate version of [`DynamicDiffusion`](@ref), where instead of a scalar a
 vector-valued diffusion is estimated. When using the EK0, this can be helpful when the
 scales of the different dimensions vary a lot.
+
+# References
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicMVDiffusion, d, q, Eltype) =
@@ -87,6 +90,9 @@ end
 A multi-variate version of [`FixedDiffusion`](@ref), where instead of a scalar a
 vector-valued diffusion is estimated. When using the EK0, this can be helpful when the
 scales of the different dimensions vary a lot.
+
+# References
+- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
 """
 Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0

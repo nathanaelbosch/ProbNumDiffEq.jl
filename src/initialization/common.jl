@@ -9,7 +9,7 @@ Exact initialization via Taylor-mode automatic differentiation.
 Uses [TaylorIntegration.jl](https://perezhz.github.io/TaylorIntegration.jl/latest/).
 In case of errors, try [`ClassicSolverInit`](@ref).
 
-# References:
+# References
 - N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
 struct TaylorModeInit <: InitializationScheme end
