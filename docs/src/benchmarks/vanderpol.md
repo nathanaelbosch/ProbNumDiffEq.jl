@@ -100,9 +100,11 @@ SAVE_EVERYSTEP = false;
 _setups = [
   "EK1(2) 1st order" => Dict(:alg => EK1(order=2, smooth=DENSE))
   "EK1(3) 1st order" => Dict(:alg => EK1(order=3, smooth=DENSE))
+  "EK1(4) 1st order" => Dict(:alg => EK1(order=4, smooth=DENSE))
   "EK1(5) 1st order" => Dict(:alg => EK1(order=5, smooth=DENSE))
   "EK1(2) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=2, smooth=DENSE))
   "EK1(3) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=3, smooth=DENSE))
+  "EK1(4) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=4, smooth=DENSE))
   "EK1(5) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=5, smooth=DENSE))
 ]
 
@@ -125,7 +127,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, color=[1 1 1 2 2 2], xticks = 10.0 .^ (-16:1:5))
+plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
 ```
 
 ![](figures/vanderpol_5_1.svg)
