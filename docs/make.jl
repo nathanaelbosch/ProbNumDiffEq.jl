@@ -17,6 +17,7 @@ makedocs(
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
             "Non-stiff: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
             "Stiff: Van der Pol" => "benchmarks/vanderpol.md",
+            "DAE: ROBER" => "benchmarks/rober.md",
         ],
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md"
