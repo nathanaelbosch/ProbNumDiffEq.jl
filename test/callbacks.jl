@@ -1,7 +1,7 @@
 using ProbNumDiffEq
 using OrdinaryDiffEq
 using LinearAlgebra
-using UnPack
+using SimpleUnPack
 using Test
 
 u0 = ones(2)
