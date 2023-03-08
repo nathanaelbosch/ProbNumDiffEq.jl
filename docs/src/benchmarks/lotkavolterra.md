@@ -54,8 +54,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:13)
+reltols = 1.0 ./ 10.0 .^ (1:10)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -70,7 +70,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], 10), xticks = 10.0 .^ (-16:1:5))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
 ![](figures/lotkavolterra_3_1.svg)
@@ -91,8 +91,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:13)
+reltols = 1.0 ./ 10.0 .^ (1:10)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -107,7 +107,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], 10), xticks = 10.0 .^ (-16:1:5))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
 ![](figures/lotkavolterra_4_1.svg)
