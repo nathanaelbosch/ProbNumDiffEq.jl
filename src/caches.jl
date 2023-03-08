@@ -98,7 +98,7 @@ function OrdinaryDiffEq.alg_cache(
     # Projections
     Proj = projection(d, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
-    @assert f isa AbstractODEFunction
+    @assert f isa SciMLBase.AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
 
     # Prior dynamics

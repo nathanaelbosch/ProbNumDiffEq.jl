@@ -2,47 +2,22 @@ __precompile__()
 
 module ProbNumDiffEq
 
+import Base: copy, copy!, show, size, ndims, similar
+
+using LinearAlgebra
+import Statistics: mean, var, std
+
 using Reexport
 @reexport using DiffEqBase
-import DiffEqBase: check_error!, AbstractODEFunction
+using SciMLBase
+import SciMLBase: interpret_vars, getsyms
 using OrdinaryDiffEq
 using DiffEqDevTools
 using SpecialMatrices, ToeplitzMatrices
 using FastBroadcast
 using StaticArrayInterface
 using FunctionWrappersWrappers
-
-# Current working solution to depending on functions that moved from DiffEqBase to SciMLBase
-try
-    DiffEqBase.interpret_vars
-    DiffEqBase.getsyms # these are here to trigger an error
-    import DiffEqBase: interpret_vars, getsyms
-catch
-    import DiffEqBase.SciMLBase: interpret_vars, getsyms
-end
-using SciMLBase
-
-import Base: copy, copy!, show, size, ndims, similar
-stack(x) = copy(reduce(hcat, x)')
-
-using LinearAlgebra
-import LinearAlgebra: mul!
-
-function getupperright(A)
-    m, n = size(A)
-    return triu!(@view A[1:min(m, n), 1:n])
-end
-function triangularize!(A; cachemat=nothing)
-    QR = qr!(A)
-    return getupperright(getfield(QR, :factors))
-end
-function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
-    A, _ = LinearAlgebra.LAPACK.geqrt!(A, cachemat)
-    return getupperright(A)
-end
-
-using TaylorSeries
-using TaylorIntegration
+using TaylorSeries, TaylorIntegration
 @reexport using StructArrays
 using UnPack
 using RecipesBase
@@ -50,54 +25,19 @@ using RecursiveArrayTools
 using ForwardDiff
 using ExponentialUtilities
 using Octavian
-# By default use mul!
-_matmul!(C, A, B) = mul!(C, A, B)
-_matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
-# Some special cases
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::AbstractMatrix{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-    alpha::Number,
-    beta::Number,
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
+
+@reexport using GaussianDistributions
+using GaussianDistributions: logpdf
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!
 X_A_Xt(A, X) = X * A * X'
 X_A_Xt!(out, A, X) = (out .= X * A * X')
-function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
-    _matmul!(out.R, A.R, X')
-    return out
-end
-apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
 
-# All the Gaussian things
-@reexport using GaussianDistributions
-using GaussianDistributions: logpdf
+stack(x) = copy(reduce(hcat, x)')
+vecvec2mat(x) = reduce(hcat, x)'
 
-import Statistics: mean, var, std
+include("fast_linalg.jl")
 
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 
@@ -146,29 +86,6 @@ include("devtools.jl")
 include("callbacks.jl")
 export ManifoldUpdate
 
-# Do as they do here:
-# https://github.com/SciML/OrdinaryDiffEq.jl/blob/v6.21.0/src/OrdinaryDiffEq.jl#L195-L221
-import SnoopPrecompile
-SnoopPrecompile.@precompile_all_calls begin
-    function lorenz(du, u, p, t)
-        du[1] = 10.0(u[2] - u[1])
-        du[2] = u[1] * (28.0 - u[3]) - u[2]
-        du[3] = u[1] * u[2] - (8 / 3) * u[3]
-        return nothing
-    end
-
-    prob_list = [
-        ODEProblem{true,true}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
-    ]
-    alg_list = [
-        EK0()
-        EK1()
-    ]
-    for prob in prob_list, solver in alg_list
-        solve(prob, solver)(5.0)
-    end
-end
+include("precompile.jl")
 
 end

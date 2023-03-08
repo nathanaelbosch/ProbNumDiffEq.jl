@@ -35,7 +35,7 @@ end
 """
     Compute initial derivatives of an IIP ODEProblem with TaylorIntegration.jl
 """
-function taylormode_get_derivatives(u, f::AbstractODEFunction{true}, p, t, q)
+function taylormode_get_derivatives(u, f::SciMLBase.AbstractODEFunction{true}, p, t, q)
     tT = Taylor1(typeof(t), q)
     tT[0] = t
     uT = similar(u, Taylor1{eltype(u)})
