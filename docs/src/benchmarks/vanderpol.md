@@ -133,6 +133,11 @@ plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
 ![](figures/vanderpol_5_1.svg)
 
 
+## Conclusion
+
+- Use the `EK1` to solve stiff problems, with orders $\leq 6$ depending on the error tolerance.
+- When the problem is actually a second-order ODE, as is the case for the Van der Pol system here, _solve it as a second-order ODE_.
+
 
 ## Appendix
 
