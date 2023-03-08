@@ -1,3 +1,4 @@
+ignore = [".git"]
 # The SciML Style defaults; with some adjustments
 always_for_in = true
 always_use_return = false
