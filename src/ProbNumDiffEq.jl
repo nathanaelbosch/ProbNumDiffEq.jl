@@ -9,6 +9,8 @@ using OrdinaryDiffEq
 using DiffEqDevTools
 using SpecialMatrices, ToeplitzMatrices
 using FastBroadcast
+using StaticArrayInterface
+using FunctionWrappersWrappers
 
 # Current working solution to depending on functions that moved from DiffEqBase to SciMLBase
 try

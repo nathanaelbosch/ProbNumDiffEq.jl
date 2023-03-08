@@ -113,31 +113,28 @@ function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,D
         kwargs...,
     )
 end
+
 function DiffEqBase.prepare_alg(alg::EK1{0}, u0::AbstractArray{T}, p, prob) where {T}
     # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
-    # In the future we might want to make EK1 an OrdinaryDiffEqAdaptivmImplicitAlgorithm and
+    # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
     # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which
     # is a requirement.
 
     if (isbitstype(T) && sizeof(T) > 24) || (
         prob.f isa ODEFunction &&
-        prob.f.f isa OrdinaryDiffEq.FunctionWrappersWrappers.FunctionWrappersWrapper
+        prob.f.f isa FunctionWrappersWrappers.FunctionWrappersWrapper
     )
         return remake(alg, chunk_size=Val{1}())
     end
 
-    L = OrdinaryDiffEq.ArrayInterface.known_length(typeof(u0))
-    if L === nothing
-        x = if prob.f.colorvec === nothing
-            length(u0)
-        else
-            maximum(prob.f.colorvec)
-        end
+    L = StaticArrayInterface.known_length(typeof(u0))
+    @assert L === nothing "ProbNumDiffEq.jl does not support StaticArrays yet."
 
-        cs = ForwardDiff.pickchunksize(x)
-        remake(alg, chunk_size=Val{cs}())
+    x = if prob.f.colorvec === nothing
+        length(u0)
     else
-        cs = pick_static_chunksize(Val{L}())
-        remake(alg, chunk_size=cs)
+        maximum(prob.f.colorvec)
     end
+    cs = ForwardDiff.pickchunksize(x)
+    return remake(alg, chunk_size=Val{cs}())
 end
