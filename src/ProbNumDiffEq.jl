@@ -19,7 +19,7 @@ using StaticArrayInterface
 using FunctionWrappersWrappers
 using TaylorSeries, TaylorIntegration
 @reexport using StructArrays
-using UnPack
+using SimpleUnPack
 using RecipesBase
 using RecursiveArrayTools
 using ForwardDiff
