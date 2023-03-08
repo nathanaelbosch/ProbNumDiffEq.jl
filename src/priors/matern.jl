@@ -12,7 +12,7 @@ The lengthscale parameter however always needs to be specified.
 
 # Examples
 ```julia-repl
-julia> solve(prob, EK1(prior=lengthscale(2, 1)))
+julia> solve(prob, EK1(prior=Matern(2, 1)))
 ```
 """
 struct Matern{elType,dimType,R} <: AbstractODEFilterPrior{elType}

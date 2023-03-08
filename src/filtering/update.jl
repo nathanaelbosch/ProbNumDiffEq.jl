@@ -47,7 +47,16 @@ end
 In-place and square-root implementation of [`update`](@ref)
 which saves the result into `x_out`.
 
-Implemented in Joseph Form; works best when called with `SquarerootMatrix` covariances.
+Implemented in Joseph Form to retain the `PSDMatrix` covariances:
+```math
+\\begin{aligned}
+K &= Σ^P H^T S^{-1}, \\\\
+μ^F &= μ + K (0 - \\hat{z}), \\\\
+\\sqrt{Σ}^F &= (I - KH) \\sqrt(Σ),
+\\end{aligned}
+```
+where ``\\sqrt{M}`` denotes the left square-root of a matrix M, i.e. ``M = \\sqrt{M} \\sqrt{M}^T``.
+
 To prevent allocations, write into caches `K_cache` and `M_cache`, both of size `D × D`,
 and `S_cache` of same type as `measurement.Σ`.
 

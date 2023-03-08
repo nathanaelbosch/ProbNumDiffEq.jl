@@ -8,12 +8,16 @@ makedocs(
     pages=[
         "Home" => "index.md",
         "Tutorials" => [
-            "Introduction to ODE Filters" => "getting_started.md"
+            "Getting Started" => "getting_started.md"
             "Second Order ODEs and Energy Preservation" => "dynamical_odes.md"
             "Differential Algebraic Equations" => "dae.md"
         ],
         "Solvers and Options" => "solvers.md",
-        "Benchmark" => "benchmark.md",
+        "Benchmarks" => [
+            "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
+            "Non-stiff: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
+            "Stiff: Van der Pol" => "benchmarks/vanderpol.md",
+        ],
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md"
             "Implementation via OrdinaryDiffEq.jl" => "implementation.md"
