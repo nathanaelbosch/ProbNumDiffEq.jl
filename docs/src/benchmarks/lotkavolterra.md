@@ -48,14 +48,14 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK0(order=$order)" => Dict(:alg => EK0(order=order, smooth=DENSE))
-  for order in 1:10
+  for order in 1:7
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:14)
+reltols = 1.0 ./ 10.0 .^ (1:11)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -85,14 +85,14 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1(order=$order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 1:10
+  for order in 1:7
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:14)
+reltols = 1.0 ./ 10.0 .^ (1:11)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
