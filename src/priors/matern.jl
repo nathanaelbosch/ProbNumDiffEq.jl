@@ -1,4 +1,4 @@
-"""
+@doc raw"""
     Matern([wiener_process_dimension::Integer,]
            num_derivatives::Integer,
            lengthscale::Number)
@@ -9,6 +9,18 @@ As with the [`IWP`](@ref), the Matern can be created without specifying its dime
 in which case it will be inferred from the dimension of the ODE during the solve.
 This is typically the preferred usage.
 The lengthscale parameter however always needs to be specified.
+
+# In math
+```math
+\begin{aligned}
+\text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
+\text{d} Y^{(q)}(t) &= - \sum_{j=0}^q \left(
+  \begin{pmatrix} q+1 \\ j \end{pmatrix}
+  \left( \frac{\sqrt{2q - 1}}{l} \right)^{q-j}
+  Y^{(j)}(t) \right) \ \text{d}t + \Gamma \ \text{d}W(t).
+\end{aligned}
+```
+where ``l`` is the `lengthscale`.
 
 # Examples
 ```julia-repl
