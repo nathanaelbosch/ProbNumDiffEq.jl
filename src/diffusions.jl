@@ -14,9 +14,10 @@ estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = N
 """
     DynamicDiffusion()
 
-**Recommended with adaptive steps**
+Time-varying, isotropic diffusion, which is quasi-maximum-likelihood-estimated at each step.
 
-A local diffusion parameter is estimated at each step. Works well with adaptive steps.
+**This is the recommended diffusion when using adaptive step-size selection,** and in
+particular also when solving stiff systems.
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicDiffusion, d, q, Eltype) = one(Eltype)
@@ -25,14 +26,16 @@ estimate_local_diffusion(::DynamicDiffusion, integ) = local_scalar_diffusion(int
 """
     DynamicMVDiffusion()
 
-**Only works with the [`EK0`](@ref)**
+Time-varying, diagonal diffusion, which is quasi-maximum-likelihood-estimated at each step.
 
-A multi-variate version of [`DynamicDiffusion`](@ref), where instead of a scalar a
-vector-valued diffusion is estimated. When using the EK0, this can be helpful when the
-scales of the different dimensions vary a lot.
+**Only works with the [`EK0`](@ref)!**
 
-# References
-- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
+A multi-variate version of [`DynamicDiffusion`](@ref), where instead of an isotropic matrix,
+a diagonal matrix is estimated. This can be helpful to get more expressive posterior
+covariances when using the [`EK0`](@ref), since the individual dimensions can be adjusted
+separately.
+
+See also [[1]](@ref diffusionrefs).
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicMVDiffusion, d, q, Eltype) =
@@ -43,11 +46,14 @@ estimate_local_diffusion(::DynamicMVDiffusion, integ) =
 """
     FixedDiffusion(; initial_diffusion=1.0, calibrate=true)
 
-**Recommended with fixed steps**
+Time-fixed, isotropic diffusion, which is (optionally) quasi-maximum-likelihood-estimated.
 
-If `calibrate=true`, the probabilistic solution is calibrated once at the end of the solve.
-An initial diffusion parameter can be passed, but this only has an effect if
-`calibrate=false` - which is typically not recommended.
+**This is the recommended diffusion when using fixed steps.**
+
+By default with `calibrate=true`, all covariances are re-scaled at the end of the solve
+with the MLE diffusion. Set `calibrate=false` to skip this step, e.g. when setting the
+`initial_diffusion` and then estimating the diffusion outside of the solver
+(e.g. with [Fenrir.jl](https://github.com/nathanaelbosch/Fenrir.jl)).
 """
 Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
@@ -85,14 +91,16 @@ end
 """
     FixedMVDiffusion(; initial_diffusion=1.0, calibrate=true)
 
-**Only works with the [`EK0`](@ref)**
+Time-fixed, diagonal diffusion, which is quasi-maximum-likelihood-estimated at each step.
 
-A multi-variate version of [`FixedDiffusion`](@ref), where instead of a scalar a
-vector-valued diffusion is estimated. When using the EK0, this can be helpful when the
-scales of the different dimensions vary a lot.
+**Only works with the [`EK0`](@ref)!**
 
-# References
-- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
+A multi-variate version of [`FixedDiffusion`](@ref), where instead of an isotropic matrix,
+a diagonal matrix is estimated. This can be helpful to get more expressive posterior
+covariances when using the [`EK0`](@ref), since the individual dimensions can be adjusted
+separately.
+
+See also [[1]](@ref diffusionrefs).
 """
 Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
