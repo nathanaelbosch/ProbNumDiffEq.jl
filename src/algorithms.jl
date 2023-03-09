@@ -21,6 +21,11 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
 
+# Examples
+```julia-repl
+julia> solve(prob, EK0())
+```
+
 # [References](@ref references)
 """
 struct EK0{PT,DT,IT} <: AbstractEK
@@ -64,6 +69,11 @@ check out DifferentialEquations.jl's [Extra Options](https://diffeq.sciml.ai/sta
 Right now, we support `autodiff`, `chunk_size`, and `diff_type`.
 In particular, `autodiff=false` can come in handy to use finite differences instead of
 ForwardDiff.jl to compute Jacobians.
+
+# Examples
+```julia-repl
+julia> solve(prob, EK1())
+```
 
 # [References](@ref references)
 """
