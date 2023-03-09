@@ -3,6 +3,7 @@ using Weave
 FILES = [
     "lotkavolterra.jmd",
     "vanderpol.jmd",
+    "rober.jmd",
     "multi-language-wrappers.jmd",
 ]
 

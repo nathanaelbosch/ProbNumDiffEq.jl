@@ -15,8 +15,9 @@ makedocs(
         "Solvers and Options" => "solvers.md",
         "Benchmarks" => [
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
-            "Non-stiff: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
-            "Stiff: Van der Pol" => "benchmarks/vanderpol.md",
+            "Non-stiff ODE: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
+            "Stiff ODE: Van der Pol" => "benchmarks/vanderpol.md",
+            "DAE: ROBER" => "benchmarks/rober.md",
         ],
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md"
