@@ -14,25 +14,27 @@ Y(t) = \left[ Y^{(0)}(t), Y^{(1)}(t), \dots Y^{(q)}(t) \right],
 be the solution to the SDE
 ```math
 \begin{aligned}
-\text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
-\text{d} Y^{(q)}(t) &= \textcolor{forestgreen}{A} Y(t) \ \text{d}t + \textcolor{royalblue}{\Gamma} \ \text{d}W(t).
+\text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1, \\
+\text{d} Y^{(q)}(t) &= \textcolor{#389826}{A} Y(t) \ \text{d}t + \textcolor{#4063D8}{\Gamma} \ \text{d}W(t), \\
+Y(0) &\sim \textcolor{purple}{ \mathcal{N} \left( \mu_0, \Sigma_0 \right) }.
 \end{aligned}
 ```
 Then ``Y^{(i)}(t)`` models the ``i``-th derivative of ``y(t)``.
-**In this section, we consider choices relating to the _"diffusion"_ ``\textcolor{royalblue}{\Gamma}``.**
-If you're more interested in the _drift matrix_ ``\textcolor{forestgreen}{A}``, check out the [Priors](@ref) section.
+**In this section, we consider choices relating to the _"diffusion"_ ``\textcolor{#4063D8}{\Gamma}``.**
+If you're more interested in the _drift matrix_ ``\textcolor{#389826}{A}`` check out the [Priors](@ref) section,
+and for info on the initial distribution ``\textcolor{purple}{ \mathcal{N} \left( \mu_0, \Sigma_0 \right) }`` check out the [Initialization](@ref) section.
 
 
 ## Diffusion and calibration
 
-We call ``\textcolor{royalblue}{\Gamma}`` the _"diffusion"_ parameter.
+We call ``\textcolor{#4063D8}{\Gamma}`` the _"diffusion"_ parameter.
 Since it is typically not known we need to estimate it; this is called _"calibration"_.
 
-There are a few different choices for how to model and estimate ``\textcolor{royalblue}{\Gamma}``:
-- [`FixedDiffusion`](@ref) assumes an isotropic, time-fixed ``\textcolor{royalblue}{\Gamma} = \sigma \cdot I_d``,
-- [`DynamicDiffusion`](@ref) assumes an isotropic, time-varying ``\textcolor{royalblue}{\Gamma}(t) = \sigma(t) \cdot I_d`` (**recommended**),
-- [`FixedMVDiffusion`](@ref) assumes a diagonal, time-fixed ``\textcolor{royalblue}{\Gamma} = \operatorname{diag}(\sigma_1, \dots, \sigma_d)``,
-- [`DynamicMVDiffusion`](@ref) assumes a diagonal, time-varying ``\textcolor{royalblue}{\Gamma}(t) = \operatorname{diag}(\sigma_1(t), \dots, \sigma_d(t))``.
+There are a few different choices for how to model and estimate ``\textcolor{#4063D8}{\Gamma}``:
+- [`FixedDiffusion`](@ref) assumes an isotropic, time-fixed ``\textcolor{#4063D8}{\Gamma} = \sigma \cdot I_d``,
+- [`DynamicDiffusion`](@ref) assumes an isotropic, time-varying ``\textcolor{#4063D8}{\Gamma}(t) = \sigma(t) \cdot I_d`` (**recommended**),
+- [`FixedMVDiffusion`](@ref) assumes a diagonal, time-fixed ``\textcolor{#4063D8}{\Gamma} = \operatorname{diag}(\sigma_1, \dots, \sigma_d)``,
+- [`DynamicMVDiffusion`](@ref) assumes a diagonal, time-varying ``\textcolor{#4063D8}{\Gamma}(t) = \operatorname{diag}(\sigma_1(t), \dots, \sigma_d(t))``.
 
 Or more compactly:
 

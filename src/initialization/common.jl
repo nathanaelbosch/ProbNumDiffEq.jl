@@ -3,25 +3,46 @@ abstract type InitializationScheme end
 """
     TaylorModeInit()
 
-**Recommended**
-
 Exact initialization via Taylor-mode automatic differentiation.
-Uses [TaylorIntegration.jl](https://perezhz.github.io/TaylorIntegration.jl/latest/).
-In case of errors, try [`ClassicSolverInit`](@ref).
+
+**This is the recommended initialization method!**
+
+It uses [TaylorIntegration.jl](https://perezhz.github.io/TaylorIntegration.jl/latest/)
+to efficiently compute the higher-order derivatives of the solution at the initial value,
+via Taylor-mode automatic differentiation.
+
+In some special cases it can happen that TaylorIntegration.jl is incompatible with the
+given problem (typically because the problem definition does not allow for elements of type
+ `Taylor`). If this happens, try [`ClassicSolverInit`](@ref).
 
 # References
-- N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
+[[1]](@ref initrefs) N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
 struct TaylorModeInit <: InitializationScheme end
 
 """
     ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_du=false)
 
-Exact initialization with a classic ODE solver. The solver to be used can be set with the
-`alg` keyword argument. `init_on_du` specifies if ForwardDiff.jl should be used to compute
-the jacobian and initialize on the exact second derivative.
+Initialization via regression on a few steps of a classic ODE solver.
 
-Not recommended for large solver orders, say `order>4`.
+In a nutshell, instead of specifying ``\\mu_0`` exactly and setting ``\\Sigma_0=0`` (which
+is what [`TaylorModeInit`](@ref) does), use a classic ODE solver to compute a few steps
+of the solution, and then regress on the computed values (by running a smoother) to compute
+``\\mu_0`` and ``\\Sigma_0`` as the mean and covariance of the smoothing posterior at
+time 0. See also [[2]](@ref initrefs).
+
+The initial value and derivative are set directly from the given initial value problem;
+optionally the second derivative can also be set via automatic differentiation by setting
+`init_on_ddu=true`.
+
+# Arguments
+- `alg`: The solver to be used. Can be any solver from OrdinaryDiffEq.jl.
+- `init_on_ddu`: If `true`, the second derivative is also initialized exactly via
+  automatic differentiation with ForwardDiff.jl.
+
+# References
+[[2]](@ref initrefs) M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018)
+
 """
 Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG = Tsit5()
