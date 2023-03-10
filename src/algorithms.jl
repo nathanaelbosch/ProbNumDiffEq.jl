@@ -14,10 +14,10 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
-- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
 
@@ -57,10 +57,10 @@ _unwrap_val(B) = B
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
-- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
 

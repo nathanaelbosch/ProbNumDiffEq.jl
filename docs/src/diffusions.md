@@ -20,7 +20,7 @@ be the solution to the SDE
 ```
 Then ``Y^{(i)}(t)`` models the ``i``-th derivative of ``y(t)``.
 **In this section, we consider choices relating to the _"diffusion"_ ``\textcolor{royalblue}{\Gamma}``.**
-If you're more interested in the _drift matrix_``\textcolor{forestgreen}{A}``, check out the [Priors](@ref) section.
+If you're more interested in the _drift matrix_ ``\textcolor{forestgreen}{A}``, check out the [Priors](@ref) section.
 
 
 ## Diffusion and calibration
@@ -30,16 +30,16 @@ Since it is typically not known we need to estimate it; this is called _"calibra
 
 There are a few different choices for how to model and estimate ``\textcolor{royalblue}{\Gamma}``:
 - [`FixedDiffusion`](@ref) assumes an isotropic, time-fixed ``\textcolor{royalblue}{\Gamma} = \sigma \cdot I_d``,
-- [`DynamicDiffusion`](@ref) assumes an isotropic, time-varying ``\textcolor{royalblue}{\Gamma}(t) = \sigma(t) \cdot I_d``,
+- [`DynamicDiffusion`](@ref) assumes an isotropic, time-varying ``\textcolor{royalblue}{\Gamma}(t) = \sigma(t) \cdot I_d`` (**recommended**),
 - [`FixedMVDiffusion`](@ref) assumes a diagonal, time-fixed ``\textcolor{royalblue}{\Gamma} = \operatorname{diag}(\sigma_1, \dots, \sigma_d)``,
 - [`DynamicMVDiffusion`](@ref) assumes a diagonal, time-varying ``\textcolor{royalblue}{\Gamma}(t) = \operatorname{diag}(\sigma_1(t), \dots, \sigma_d(t))``.
 
 Or more compactly:
 
-|              | Isotropic:                   | Diagonal (only for the `EK0`(@ref)) |
-|--------------|----------------------------|-------------------------------------|
-| Time-varying | [`DynamicDiffusion`](@ref) | [`DynamicMVDiffusion`](@ref)        |
-| Time-fixed   | [`FixedDiffusion`](@ref)   | [`FixedMVDiffusion`](@ref)          |
+|              | Isotropic:                 | Diagonal (only for the [`EK0`](@ref)) |
+|--------------|----------------------------|---------------------------------------|
+| Time-varying | [`DynamicDiffusion`](@ref) | [`DynamicMVDiffusion`](@ref)          |
+| Time-fixed   | [`FixedDiffusion`](@ref)   | [`FixedMVDiffusion`](@ref)            |
 
 
 For more details on diffusions and calibration, check out this paper [[1]](@ref diffusionrefs).
