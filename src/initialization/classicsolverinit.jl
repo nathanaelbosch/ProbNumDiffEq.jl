@@ -23,7 +23,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     end
 
     # Use a jac or autodiff to initialize on ddu0
-    if f isa ODEFunction && integ.alg.initialization.init_on_du
+    if f isa ODEFunction && integ.alg.initialization.init_on_ddu
         _f = if f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
             ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
         else

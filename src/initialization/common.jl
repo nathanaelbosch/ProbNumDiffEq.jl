@@ -15,7 +15,7 @@ In case of errors, try [`ClassicSolverInit`](@ref).
 struct TaylorModeInit <: InitializationScheme end
 
 """
-    ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_du=false)
+    ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_ddu=false)
 
 Exact initialization with a classic ODE solver. The solver to be used can be set with the
 `alg` keyword argument. `init_on_du` specifies if ForwardDiff.jl should be used to compute
@@ -25,7 +25,7 @@ Not recommended for large solver orders, say `order>4`.
 """
 Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG = Tsit5()
-    init_on_du::Bool = false
+    init_on_ddu::Bool = false
 end
 
 """

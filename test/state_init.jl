@@ -54,7 +54,8 @@ end
     Proj1 = integ1.cache.Proj
 
     @testset "Order $o" for o in (1, 2, 3, 4, 5)
-        integ2 = init(prob, EK0(order=o, initialization=ClassicSolverInit(init_on_du=true)))
+        integ2 =
+            init(prob, EK0(order=o, initialization=ClassicSolverInit(init_on_ddu=true)))
         rk_init = integ2.cache.x.μ
         Proj2 = integ2.cache.Proj
 

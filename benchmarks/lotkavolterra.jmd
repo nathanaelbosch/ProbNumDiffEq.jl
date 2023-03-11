@@ -188,9 +188,9 @@ _setups = [
   "EK1(2) Tsit5Init" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=ClassicSolverInit()))
   "EK1(3) Tsit5Init" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=ClassicSolverInit()))
   "EK1(5) Tsit5Init" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=ClassicSolverInit()))
-  "EK1(2) Tsit5Init+du" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=ClassicSolverInit(init_on_du=true)))
-  "EK1(3) Tsit5Init+du" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=ClassicSolverInit(init_on_du=true)))
-  "EK1(5) Tsit5Init+du" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=ClassicSolverInit(init_on_du=true)))
+  "EK1(2) Tsit5Init+ddu" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=ClassicSolverInit(init_on_ddu=true)))
+  "EK1(3) Tsit5Init+ddu" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=ClassicSolverInit(init_on_ddu=true)))
+  "EK1(5) Tsit5Init+ddu" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=ClassicSolverInit(init_on_ddu=true)))
 ]
 
 labels = first.(_setups)
