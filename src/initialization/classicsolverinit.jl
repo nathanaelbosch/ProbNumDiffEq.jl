@@ -15,7 +15,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     Mcache = cache.C_DxD
     condition_on!(x, Proj(0), _u, cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
-    integ.destats.nf += 1
+    integ.stats.nf += 1
     condition_on!(x, Proj(1), view(du, :), cache)
 
     if q < 2
@@ -59,7 +59,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             integ.sol.prob,
             integ,
         )
-    integ.destats.nf += 2
+    integ.stats.nf += 2
 
     nsteps = q + 2
     tmax = t0 + nsteps * dt
@@ -75,13 +75,13 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         saveat=tstops,
     )
     # This is necessary in order to fairly account for the cost of initialization!
-    integ.destats.nf += sol.destats.nf
-    integ.destats.njacs += sol.destats.njacs
-    integ.destats.nsolve += sol.destats.nsolve
-    integ.destats.nw += sol.destats.nw
-    integ.destats.nnonliniter += sol.destats.nnonliniter
-    integ.destats.nnonlinconvfail += sol.destats.nnonlinconvfail
-    integ.destats.ncondition += sol.destats.ncondition
+    integ.stats.nf += sol.stats.nf
+    integ.stats.njacs += sol.stats.njacs
+    integ.stats.nsolve += sol.stats.nsolve
+    integ.stats.nw += sol.stats.nw
+    integ.stats.nnonliniter += sol.stats.nnonliniter
+    integ.stats.nnonlinconvfail += sol.stats.nnonlinconvfail
+    integ.stats.ncondition += sol.stats.ncondition
 
     # Filter & smooth to fit these values!
     us = [u for u in sol.u]

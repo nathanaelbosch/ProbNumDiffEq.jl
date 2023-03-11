@@ -30,26 +30,26 @@ mutable struct ProbODESolution{
     cache::CType
     dense::Bool
     tslocation::Int
-    destats::DE
+    stats::DE
     retcode::ReturnCode.T
 end
 ProbODESolution{T,N}(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob,
-    alg, interp, cache, dense, tslocation, destats, retcode,
+    alg, interp, cache, dense, tslocation, stats, retcode,
 ) where {T,N} = ProbODESolution{
     T,N,typeof(u),typeof(pu),typeof(u_analytic),typeof(errors),typeof(t),typeof(k),
     typeof(x_filt),typeof(diffusions),typeof(log_likelihood),typeof(prob),typeof(alg),
-    typeof(interp),typeof(cache),typeof(destats),
+    typeof(interp),typeof(cache),typeof(stats),
 }(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob,
-    alg, interp, cache, dense, tslocation, destats, retcode,
+    alg, interp, cache, dense, tslocation, stats, retcode,
 )
 
 function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
         sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp, sol.cache,
-        sol.dense, sol.tslocation, sol.destats, retcode,
+        sol.dense, sol.tslocation, sol.stats, retcode,
     )
 end
 
@@ -61,7 +61,7 @@ function DiffEqBase.build_solution(
     u;
     k=nothing,
     retcode=ReturnCode.Default,
-    destats=nothing,
+    stats=nothing,
     dense=true,
     kwargs...,
 )
@@ -114,7 +114,7 @@ function DiffEqBase.build_solution(
     return ProbODESolution{T,N}(
         u, pu, u_analytic, errors, t, k, x_filt, x_smooth, typeof(diffusion_prototype)[],
         ll, prob, alg, interp, cache,
-        dense, 0, destats, retcode,
+        dense, 0, stats, retcode,
     )
 end
 
@@ -126,7 +126,7 @@ function DiffEqBase.build_solution(
     return ProbODESolution{T,N}(
         sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
         sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp, sol.cache,
-        sol.dense, sol.tslocation, sol.destats, sol.retcode,
+        sol.dense, sol.tslocation, sol.stats, sol.retcode,
     )
 end
 
@@ -155,33 +155,33 @@ mutable struct MeanProbODESolution{
     cache::CType
     dense::Bool
     tslocation::Int
-    destats::DE
+    stats::DE
     retcode::ReturnCode.T
     probsol::PSolType
 end
 MeanProbODESolution{T,N}(
-    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode,
+    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, stats, retcode,
     probsol,
 ) where {T,N} = MeanProbODESolution{
     T,N,typeof(u),typeof(u_analytic),typeof(errs),typeof(t),typeof(k),typeof(prob),
-    typeof(alg),typeof(interp),typeof(cache),typeof(destats),typeof(probsol)}(
-    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, destats, retcode,
+    typeof(alg),typeof(interp),typeof(cache),typeof(stats),typeof(probsol)}(
+    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, stats, retcode,
     probsol,
 )
 
 DiffEqBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) where {T,N} =
     MeanProbODESolution{T,N}(
         sol.u, u_analytic, errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp, sol.cache,
-        sol.dense, sol.tslocation, sol.destats, sol.retcode, sol.probsol)
+        sol.dense, sol.tslocation, sol.stats, sol.retcode, sol.probsol)
 
 function mean(sol::ProbODESolution{T,N}) where {T,N}
     return MeanProbODESolution{
         T,N,typeof(sol.u),typeof(sol.u_analytic),typeof(sol.errors),typeof(sol.t),
         typeof(sol.k),typeof(sol.prob),typeof(sol.alg),typeof(sol.interp),typeof(sol.cache),
-        typeof(sol.destats),typeof(sol),
+        typeof(sol.stats),typeof(sol),
     }(
         sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp,
-        sol.cache, sol.dense, sol.tslocation, sol.destats, sol.retcode, sol,
+        sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode, sol,
     )
 end
 (sol::MeanProbODESolution)(t::Real, args...) = mean(sol.probsol(t, args...))

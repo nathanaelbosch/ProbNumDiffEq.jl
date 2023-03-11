@@ -14,10 +14,10 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
     @test length(sol.t) == length(sol.u)
     @test length(prob.u0) == length(sol.u[end])
 
-    # Destats
-    @testset "DEStats" begin
-        @test length(sol.t) == sol.destats.naccept + 1
-        @test sol.destats.naccept <= sol.destats.nf
+    # Stats
+    @testset "Stats" begin
+        @test length(sol.t) == sol.stats.naccept + 1
+        @test sol.stats.naccept <= sol.stats.nf
     end
 
     @testset "Hit the provided tspan" begin
