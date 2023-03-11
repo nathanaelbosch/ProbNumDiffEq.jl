@@ -67,7 +67,7 @@ const GROUP = get(ENV, "GROUP", "All")
                 include("solution.jl")
             end
             @timedsafetestset "DE-stats" begin
-                include("destats.jl")
+                include("stats.jl")
             end
             @timedsafetestset "Errors Thrown" begin
                 include("errors_thrown.jl")

@@ -14,7 +14,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     end
 
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
-    integ.destats.nf += q
+    integ.stats.nf += q
     @assert length(0:q) == length(f_derivatives)
     m_cache = Gaussian(zeros(eltype(u), d), PSDMatrix(zeros(eltype(u), D, d)))
     for (o, df) in zip(0:q, f_derivatives)

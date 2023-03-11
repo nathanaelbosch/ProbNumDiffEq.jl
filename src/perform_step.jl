@@ -124,7 +124,7 @@ function evaluate_ode!(integ, x_pred, t)
     z_tmp = integ.cache.m_tmp
 
     integ.cache.measurement_model(z.μ, x_pred.μ, p, t)
-    integ.destats.nf += 1
+    integ.stats.nf += 1
 
     calc_H!(H, integ, integ.cache)
 

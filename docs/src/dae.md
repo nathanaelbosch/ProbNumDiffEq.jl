@@ -124,9 +124,9 @@ sol1 = solve(prob_index1, EK1())
 truesol = solve(prob_index1, Rodas4(), abstol=1e-10, reltol=1e-10)
 
 sol1_final_error = norm(sol1.u[end] - truesol.u[end])
-sol1_f_evals     = sol1.destats.nf
+sol1_f_evals     = sol1.stats.nf
 sol3_final_error = norm(sol3.u[end] - truesol.u[end])
-sol3_f_evals     = sol3.destats.nf
+sol3_f_evals     = sol3.stats.nf
 @info "Results" sol1_final_error sol1_f_evals sol3_final_error sol3_f_evals
 ```
 

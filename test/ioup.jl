@@ -21,12 +21,12 @@ A_noisy = A + 1e-3 * randn(MersenneTwister(42), 2, 2)
 @testset "Adaptive steps" begin
     sol_ioup_noisy = solve(prob, EK1(prior=IOUP(3, A_noisy)))
     err_ioup_noisy = norm(ref[end] - sol_ioup_noisy[end])
-    @test sol_ioup_noisy.destats.nf < sol_iwp.destats.nf
+    @test sol_ioup_noisy.stats.nf < sol_iwp.stats.nf
     @test err_ioup_noisy < 2e-5
 
     sol_ioup = solve(prob, EK1(prior=IOUP(3, A)))
     err_ioup = norm(ref[end] - sol_ioup[end])
-    @test sol_ioup.destats.nf < sol_ioup_noisy.destats.nf
+    @test sol_ioup.stats.nf < sol_ioup_noisy.stats.nf
     @test err_ioup < 5e-10
 end
 

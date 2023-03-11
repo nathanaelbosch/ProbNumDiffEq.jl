@@ -4,7 +4,7 @@ using LinearAlgebra
 
 const q = 3
 
-@testset "destats.nf testing $alg" for init in (TaylorModeInit(), ClassicSolverInit()),
+@testset "stats.nf testing $alg" for init in (TaylorModeInit(), ClassicSolverInit()),
     alg in (
         EK0(order=q, smooth=false, initialization=init),
         EK1(order=q, smooth=false, initialization=init),
@@ -22,10 +22,10 @@ const q = 3
     tspan = (0.0, 1.0)
     prob = ODEProblem(f, u0, tspan, p)
     sol = solve(prob, alg, save_everystep=false, dense=false)
-    @test sol.destats.nf == f_counter[1]
+    @test sol.stats.nf == f_counter[1]
 end
 
-@testset "SecondOrderODEProblem destats.nf testing $alg" for init in (TaylorModeInit(),),
+@testset "SecondOrderODEProblem stats.nf testing $alg" for init in (TaylorModeInit(),),
     # ClassicSolverInit does not work for second order ODEs right now
     alg in (
         EK0(order=q, smooth=false, initialization=init),
@@ -45,5 +45,5 @@ end
     tspan = (0.0, 1.0)
     prob = SecondOrderODEProblem(f, du0, u0, tspan, p)
     sol = solve(prob, alg, save_everystep=false, dense=false)
-    @test sol.destats.nf == f_counter[1]
+    @test sol.stats.nf == f_counter[1]
 end
