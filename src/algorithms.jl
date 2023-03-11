@@ -14,12 +14,17 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
-- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
+
+# Examples
+```julia-repl
+julia> solve(prob, EK0())
+```
 
 # [References](@ref references)
 """
@@ -52,10 +57,10 @@ _unwrap_val(B) = B
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `prior::AbstractODEFilterPrior`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
-- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
 
@@ -64,6 +69,11 @@ check out DifferentialEquations.jl's [Extra Options](https://diffeq.sciml.ai/sta
 Right now, we support `autodiff`, `chunk_size`, and `diff_type`.
 In particular, `autodiff=false` can come in handy to use finite differences instead of
 ForwardDiff.jl to compute Jacobians.
+
+# Examples
+```julia-repl
+julia> solve(prob, EK1())
+```
 
 # [References](@ref references)
 """

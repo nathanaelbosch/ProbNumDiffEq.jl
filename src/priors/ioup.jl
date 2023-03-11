@@ -1,4 +1,4 @@
-"""
+@doc raw"""
     IOUP([wiener_process_dimension::Integer,]
          num_derivatives::Integer,
          rate_parameter::Union{Number,AbstractVector,AbstractMatrix})
@@ -9,6 +9,15 @@ As with the [`IWP`](@ref), the IOUP can be created without specifying its dimens
 in which case it will be inferred from the dimension of the ODE during the solve.
 This is typically the preferred usage.
 The rate parameter however always needs to be specified.
+
+# In math
+```math
+\begin{aligned}
+\text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
+\text{d} Y^{(q)}(t) &= L Y^{(q)}(t) \ \text{d}t + \Gamma \ \text{d}W(t),
+\end{aligned}
+```
+where ``L`` is the `rate_parameter`.
 
 # Examples
 ```julia-repl

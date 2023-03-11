@@ -1,11 +1,24 @@
-"""
+@doc raw"""
     IWP([wiener_process_dimension::Integer,] num_derivatives::Integer)
 
 Integrated Wiener process.
 
+**This is the recommended prior!** It is the most well-tested prior, both in this package
+and in the probabilistic numerics literature in general
+(see the [references](@ref references)).
+It is also the prior that has the most efficient implementation.
+
 The IWP can be created without specifying the dimension of the Wiener process,
 in which case it will be inferred from the dimension of the ODE during the solve.
 This is typically the preferred usage.
+
+# In math
+```math
+\begin{aligned}
+\text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
+\text{d} Y^{(q)}(t) &= \Gamma \ \text{d}W(t).
+\end{aligned}
+```
 
 # Examples
 ```julia-repl

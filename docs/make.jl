@@ -12,7 +12,12 @@ makedocs(
             "Second Order ODEs and Energy Preservation" => "dynamical_odes.md"
             "Differential Algebraic Equations" => "dae.md"
         ],
-        "Solvers and Options" => "solvers.md",
+        "Solvers and Options" => [
+            "solvers.md",
+            "diffusions.md",
+            "initialization.md",
+            "priors.md",
+        ],
         "Benchmarks" => [
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
             "Non-stiff ODE: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
