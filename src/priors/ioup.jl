@@ -32,7 +32,7 @@ struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior{elType}
 end
 IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
     IOUP(missing, num_derivatives, rate_parameter, update_rate_parameter)
-IOUP(wiener_process_dimension, num_derivatives, rate_parameter, update_rate_parameter) =
+IOUP(wiener_process_dimension, num_derivatives, rate_parameter, update_rate_parameter=false) =
     IOUP{typeof(1.0)}(
         wiener_process_dimension,
         num_derivatives,
@@ -43,7 +43,7 @@ IOUP{T}(
     wiener_process_dimension,
     num_derivatives,
     rate_parameter,
-    update_rate_parameter,
+    update_rate_parameter=false,
 ) where {T} =
     IOUP{T,typeof(wiener_process_dimension),typeof(rate_parameter)}(
         wiener_process_dimension,
