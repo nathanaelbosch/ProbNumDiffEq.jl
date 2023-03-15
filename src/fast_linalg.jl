@@ -71,8 +71,10 @@ function triangularize!(A; cachemat=nothing)
     return getupperright(getfield(QR, :factors))
 end
 function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
-    A, _ = LinearAlgebra.LAPACK.geqrt!(A, cachemat)
-    return getupperright(A)
+    D = size(A, 2)
+    BLOCKSIZE = 36
+    R, _ = LinearAlgebra.LAPACK.geqrt!(A, @view cachemat[1:min(BLOCKSIZE, D), :])
+    return getupperright(R)
 end
 
 """
