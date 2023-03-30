@@ -127,3 +127,30 @@ function discretize(p::IOUP, dt::Real)
         return A, Q
     end
 end
+
+function make_transition_matrices!(cache, prior::IOUP, dt)
+    @unpack A, Q, Ah, Qh, P, PI = cache
+    make_preconditioners!(cache, dt)
+    discretize!(cache, cache.prior, dt)
+    @.. A = P.diag * Ah * PI.diag'
+    fast_X_A_Xt!(Q, Qh, P)
+end
+
+function discretize!(cache, p::IOUP, dt::Real)
+    r = p.rate_parameter
+    d = p.wiener_process_dimension
+    if p.rate_parameter isa Number
+        A_breve, QR_breve = discretize_sqrt(to_1d_sde(p), dt)
+        A = kron(I(d), A_breve)
+        QR = kron(I(d), QR_breve)
+        Q = PSDMatrix(QR)
+        return A, Q
+    else
+        @assert r isa AbstractVector || r isa AbstractMatrix
+        A, QR = discretize_sqrt!(cache, to_sde(p), dt)
+        Q = PSDMatrix(QR)
+        copy!(cache.Ah, A)
+        copy!(cache.Qh, Q)
+        return A, Q
+    end
+end
