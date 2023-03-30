@@ -104,6 +104,9 @@ function OrdinaryDiffEq.alg_cache(
     # Prior dynamics
     prior = if alg.prior isa IWP
         IWP{uElType}(d, alg.prior.num_derivatives)
+    elseif alg.prior isa IOUP && ismissing(alg.prior.rate_parameter)
+        r = zeros(uElType, d, d)
+        IOUP{uElType}(d, q, r, alg.prior.update_rate_parameter)
     elseif alg.prior isa IOUP
         IOUP{uElType}(d, q, alg.prior.rate_parameter, alg.prior.update_rate_parameter)
     elseif alg.prior isa Matern
