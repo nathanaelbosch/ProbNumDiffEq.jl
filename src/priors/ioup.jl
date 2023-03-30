@@ -30,9 +30,18 @@ struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior{elType}
     rate_parameter::R
     update_rate_parameter::Bool
 end
+IOUP(num_derivatives; update_rate_parameter) = begin
+    @assert update_rate_parameter
+    IOUP(missing, num_derivatives, missing, update_rate_parameter)
+end
 IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
     IOUP(missing, num_derivatives, rate_parameter, update_rate_parameter)
-IOUP(wiener_process_dimension, num_derivatives, rate_parameter, update_rate_parameter=false) =
+IOUP(
+    wiener_process_dimension,
+    num_derivatives,
+    rate_parameter,
+    update_rate_parameter=false,
+) =
     IOUP{typeof(1.0)}(
         wiener_process_dimension,
         num_derivatives,
