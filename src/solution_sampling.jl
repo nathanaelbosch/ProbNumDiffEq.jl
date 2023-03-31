@@ -40,11 +40,11 @@ function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1)
         dt = ts[i+1] - ts[i]
 
         i_diffusion = sum(difftimes .<= ts[i])
-        diffusion = diffusions[i_diffusion]
+        diffusion = diffusions[min(i_diffusion, length(diffusions))]
 
         make_transition_matrices!(cache, dt)
         Ah, Qh = cache.Ah, cache.Qh
-        Qh = apply_diffusion(Q, diffusion)
+        Qh = apply_diffusion(Qh, diffusion)
 
         for j in 1:n
             sample_p = sample_path[i+1, :, j]
