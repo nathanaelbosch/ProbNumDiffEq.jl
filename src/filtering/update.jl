@@ -84,7 +84,7 @@ function update!(
 
     # K = P_p * H' / S
     _S = if S isa PSDMatrix
-        mul!(C_dxd, S.R', S.R)
+        _matmul!(C_dxd, S.R', S.R)
     else
         copy!(C_dxd, S)
     end

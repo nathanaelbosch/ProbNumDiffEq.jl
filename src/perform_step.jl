@@ -71,7 +71,9 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     evaluate_ode!(integ, x_pred, tnew)
 
     # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
-    cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ)
+    if integ.opts.adaptive || isdynamic(cache.diffusionmodel)
+        cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ)
+    end
     if integ.opts.adaptive
         integ.EEst = compute_scaled_error_estimate!(integ, cache)
         if integ.EEst >= one(integ.EEst)
@@ -91,7 +93,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Update state and save the ODE solution value
     x_filt = update!(cache, x_pred)
-    mul!(view(integ.u, :), SolProj, x_filt.μ)
+    _matmul!(view(integ.u, :), SolProj, x_filt.μ)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
