@@ -29,16 +29,16 @@ _matmul!(
     B::Diagonal{T},
 ) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
 _matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
+    C::Matrix{T},
+    A::VecOrMat{T},
+    B::VecOrMat{T},
     alpha::Number,
     beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
 _matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
+    C::Matrix{T},
+    A::VecOrMat{T},
+    B::VecOrMat{T},
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 """
