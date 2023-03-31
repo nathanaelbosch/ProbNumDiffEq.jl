@@ -75,13 +75,13 @@ H = vcat(sol.cache.E0, sol.cache.E1, sol.cache.E2)
 m = vecvec2mat(xs.μ) * H'
 std = sqrt.(vecvec2mat(diag.(xs.Σ))) * H'
 plot!(ts, m, ribbon=3std,
-    color= [COLORS[1] COLORS[2] COLORS[3]],
+    color=[COLORS[1] COLORS[2] COLORS[3]],
     label="",
     alpha=0, fillalpha=0.15)
 
 # plot samples
 plot!(ts, samples[1],
-    color=COLORS,
+    color=[COLORS[1] COLORS[2] COLORS[3]],
     label=["y(t)" "ẏ(t)" "ÿ(t)"],
     linewidth=1, alpha=0.8)
 for s in samples[2:N]

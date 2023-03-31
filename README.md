@@ -49,14 +49,28 @@ p = (0.2, 0.2, 3.0)
 prob = ODEProblem(f, u0, tspan, p)
 
 # Solve the ODE with a probabilistic numerical solver: EK0
-sol = solve(prob, EK0(order=1), abstol=1e-2, reltol=1e-1)
+sol = solve(prob, EK1())
 
 # Plot the solution with Plots.jl
 using Plots
-plot(sol, color=["#107D79" "#FF9933"])
+plot(sol, color=["#389826" "#9558B2"], size=(700, 250))
+savefig("fitzhughnagumo.svg")
 ```
 
 ![Fitzhugh-Nagumo Solution](./examples/fitzhughnagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
+
+Since we're doing probabilistic numerics the solution also contains error estimates, it just happens that they are too small to be visible in the plot above.
+But we can just plot them directly:
+
+```julia
+using Statistics
+stds = std.(sol.pu)
+plot(sol.t, hcat(stds...)', label=["std(u1(t))" "std(u2(t))"], xlabel="t",
+     ylabel="standard-deviation", color=["#389826" "#9558B2"], size=(900, 300))
+```
+
+![Fitzhugh-Nagumo Standard-Deviations](./examples/fitzhughnagumo_stddevs.svg?raw=true "Fitzhugh-Nagumo Standard-Deviations")
+
 
 ## Benchmarks
 
