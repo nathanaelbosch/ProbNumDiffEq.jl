@@ -79,7 +79,14 @@ function discretize_sqrt!(cache, sde::LTISDE, dt::Real)
     for i in 1:N
         mul!(view(M, (i-1)*d+1:i*d, 1:D), sqrt(weights[i]), chol_integrand(nodes[i]))
     end
-    Qh_R = qr!(M).R
+
+    ASDF = M'M |> Symmetric
+    chol = cholesky!(ASDF, check=false)
+    Qh_R = if issuccess(chol)
+        chol.U
+    else
+        qr!(M).R
+    end
 
     return Ah, Qh_R
 end
