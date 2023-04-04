@@ -53,8 +53,7 @@ sol = solve(prob, EK1())
 
 # Plot the solution with Plots.jl
 using Plots
-plot(sol, color=["#389826" "#9558B2"], size=(700, 250))
-savefig("fitzhughnagumo.svg")
+plot(sol, color=["#CB3C33" "#389826" "#9558B2"])
 ```
 
 ![Fitzhugh-Nagumo Solution](./examples/fitzhughnagumo.svg?raw=true "Fitzhugh-Nagumo Solution")
@@ -65,8 +64,8 @@ But we can just plot them directly:
 ```julia
 using Statistics
 stds = std.(sol.pu)
-plot(sol.t, hcat(stds...)', label=["std(u1(t))" "std(u2(t))"], xlabel="t",
-     ylabel="standard-deviation", color=["#389826" "#9558B2"], size=(900, 300))
+plot(sol.t, hcat(stds...)', color=["#CB3C33" "#389826" "#9558B2"]
+     label=["std(u1(t))" "std(u2(t))"], xlabel="t", ylabel="standard-deviation")
 ```
 
 ![Fitzhugh-Nagumo Standard-Deviations](./examples/fitzhughnagumo_stddevs.svg?raw=true "Fitzhugh-Nagumo Standard-Deviations")
