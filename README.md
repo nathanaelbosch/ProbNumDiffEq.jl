@@ -48,7 +48,7 @@ tspan = (0.0, 20.0)
 p = (0.2, 0.2, 3.0)
 prob = ODEProblem(f, u0, tspan, p)
 
-# Solve the ODE with a probabilistic numerical solver: EK0
+# Solve the ODE with a probabilistic numerical solver: EK1
 sol = solve(prob, EK1())
 
 # Plot the solution with Plots.jl
