@@ -71,11 +71,6 @@ plot(sol.t, hcat(stds...)', color=["#CB3C33" "#389826" "#9558B2"]
 ![Fitzhugh-Nagumo Standard-Deviations](./examples/fitzhughnagumo_stddevs.svg?raw=true "Fitzhugh-Nagumo Standard-Deviations")
 
 
-## Benchmarks
-
-  - [Multi-Language Wrapper Benchmark](./benchmarks/multi-language-wrappers.ipynb):
-    ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
-
 ## References
 
 The main references _for this package_ include:
