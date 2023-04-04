@@ -5,10 +5,10 @@ using ProbNumDiffEq, Plots, LinearAlgebra
 ############################################################################################
 du0 = [0.0]
 u0 = [2.0]
-tspan = (0.0, 3.0)
-p = [1e0]
+tspan = (0.0, 5.0)
+p = [2e0]
 
-evaltspan = (0.0, 5.0)
+evaltspan = (0.0, 8.0)
 
 function vanderpol!(ddu, du, u, p, t)
     μ = p[1]
@@ -16,7 +16,12 @@ function vanderpol!(ddu, du, u, p, t)
 end
 prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
 ref = solve(remake(prob, tspan=evaltspan), EK1(), abstol=1e-9, reltol=1e-9);
-sol = solve(prob, EK1(prior=Matern(2, 1.5), diffusionmodel=FixedDiffusion()));
+sol = solve(prob, EK1(
+    prior=Matern(3, 3),
+    # prior=IOUP(2, -1),
+    # prior=IWP(3),
+    diffusionmodel=FixedDiffusion())
+);
 
 ############################################################################################
 # Sampling
@@ -62,7 +67,7 @@ plot(size=(900, 300), grid=false, ticks=false)
 # plot reference
 refH = vcat(ref.cache.E0, ref.cache.E1, ref.cache.E2);
 refm = vecvec2mat(ref.x_smooth.μ) * refH';
-plot!(ref.t, refm, color=:black, linestyle=:dash, label="")
+plot!(ref.t, refm, color=:black, linestyle=:dash, label="", linewidth=2)
 
 # plot vline to show extrapolation
 vline!(sol.t[end:end], color=:black, linewidth=1, label=false)
@@ -75,19 +80,22 @@ std = sqrt.(vecvec2mat(diag.(xs.Σ))) * H'
 plot!(ts, m, ribbon=3std,
     color=[COLORS[1] COLORS[2] COLORS[3]],
     label="",
-    alpha=0, fillalpha=0.15)
+    alpha=0, fillalpha=0.1,
+    # linestyle=:dash,
+    linewidth=3
+)
 
 # plot samples
 plot!(ts, samples[1],
     color=[COLORS[1] COLORS[2] COLORS[3]],
     label=["y(t)" "ẏ(t)" "ÿ(t)"],
-    linewidth=1, alpha=0.8)
+    linewidth=2, alpha=0.6)
 for s in samples[2:N]
     for d in 3:-1:1
         plot!(ts, s[:, d], color=COLORS[d],
             label="",
             # linewidth=0.5, alpha=0.2
-            alpha=0.8,
+            alpha=0.6, linewidth=2,
         )
     end
 end
@@ -96,7 +104,8 @@ end
 plot!(
     xlims=evaltspan,
     legend=:topright,
-    ylims=(-3, 5),
+    # ylims=(-3, 5),
+    ylims=(-15, 15),
     dpi=1000,
 )
 
