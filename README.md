@@ -79,6 +79,6 @@ The main references _for this package_ include:
   - F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig: **Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective** (2019) ([link](https://link.springer.com/article/10.1007/s11222-019-09900-1))
   - N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020) ([link](https://arxiv.org/abs/2012.10106))
   - N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021) ([link](http://proceedings.mlr.press/v130/bosch21a.html))
-  - N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022) ([link](https://arxiv.org/abs/2110.10770))
+  - N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022) ([link](https://proceedings.mlr.press/v151/bosch22a.html))
 
 A more extensive list of references relevant to ODE filters is provided [here](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/stable/#References).
