@@ -17,10 +17,11 @@ end
 prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
 ref = solve(remake(prob, tspan=evaltspan), EK1(), abstol=1e-9, reltol=1e-9);
 sol = solve(prob, EK1(
-    prior=Matern(3, 3),
-    # prior=IOUP(2, -1),
-    # prior=IWP(3),
-    diffusionmodel=FixedDiffusion())
+        prior=Matern(3, 3),
+        # prior=IOUP(2, -1),
+        # prior=IWP(3),
+        diffusionmodel=FixedDiffusion()),
+    abstol=1e-3, reltol=1e-2,
 );
 
 ############################################################################################
@@ -82,7 +83,14 @@ plot!(ts, m, ribbon=3std,
     label="",
     alpha=0, fillalpha=0.1,
     # linestyle=:dash,
-    linewidth=3
+    linewidth=3,
+)
+
+scatter!(sol.t, vecvec2mat(sol.x_smooth.μ)[:, 1:3],
+    color=[COLORS[1] COLORS[2] COLORS[3]],
+    markersize=3,
+    markerstrokewidth=0.2,
+    label="",
 )
 
 # plot samples
@@ -103,7 +111,7 @@ end
 # aesthetics
 plot!(
     xlims=evaltspan,
-    legend=:topright,
+    legend=:topleft,
     # ylims=(-3, 5),
     ylims=(-15, 15),
     dpi=1000,
