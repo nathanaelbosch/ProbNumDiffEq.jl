@@ -112,7 +112,10 @@ function smooth_solution!(integ)
             update_rate_parameter!(cache, integ.f, cache.SolProj * x[i].μ, integ.p, t[i])
             # TODO: Make this more efficient, or even switch to backward kernels
         end
-        make_transition_matrices!(integ.cache, dt)
+        integ.dt = dt
+        if make_new_transitions(integ, cache, false)
+            make_transition_matrices!(integ.cache, dt)
+        end
         # In principle the smoothing would look like this (without preconditioning):
         # @unpack Ah, Qh = integ.cache
         # smooth!(x[i], x[i+1], Ah, Qh, integ.cache, diffusions[i])
@@ -127,6 +130,7 @@ function smooth_solution!(integ)
         # Save the smoothed state into the solution
         _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
         integ.sol.u[i][:] .= integ.sol.pu[i].μ
+        cache.dt_last = dt
     end
     return nothing
 end

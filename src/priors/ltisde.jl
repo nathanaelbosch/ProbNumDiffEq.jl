@@ -59,17 +59,20 @@ function discretize_sqrt!(cache, sde::LTISDE, dt::Real)
 
     D = size(F, 1)
     d = size(L, 2)
-    N = Int(D/d)
-    M = similar(F, N*d, D)
+    N = Int(D / d)
+    M = similar(F, N * d, D)
     method = ExpMethodHigham2005()
     expcache = ExponentialUtilities.alloc_mem(F, method)
     @unpack C_DxD, C_dxD = cache
 
-    Ah = exponential!(dt*F, method, expcache)
+    # @. C_DxD = dt * F
+    # Ah = exponential!(C_DxD, method, expcache)
+    Ah = exponential!(dt * F, method, expcache)
 
     chol_integrand(τ) = begin
-        mul!(C_DxD, F', (dt - τ))
-        E = exponential!(C_DxD, method, expcache)
+        # mul!(C_DxD, F', (dt - τ))
+        # E = exponential!(C_DxD, method, expcache)
+        E = exponential!((dt - τ) * F', method, expcache)
         out = mul!(C_dxD, L', E)
     end
     nodes, weights = gausslegendre(N)
@@ -83,9 +86,9 @@ function discretize_sqrt!(cache, sde::LTISDE, dt::Real)
     ASDF = M'M |> Symmetric
     chol = cholesky!(ASDF, check=false)
     Qh_R = if issuccess(chol)
-        chol.U
+        chol.U |> UpperTriangular
     else
-        qr!(M).R
+        qr!(M).R |> UpperTriangular
     end
 
     return Ah, Qh_R
