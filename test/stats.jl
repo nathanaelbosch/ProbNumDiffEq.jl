@@ -4,13 +4,15 @@ using LinearAlgebra
 
 const q = 3
 
-@testset "stats.nf testing $alg" for init in (TaylorModeInit(), ClassicSolverInit()),
-    alg in (
-        EK0(order=q, smooth=false, initialization=init),
-        EK1(order=q, smooth=false, initialization=init),
-        EK1(order=q, smooth=false, initialization=init, autodiff=false),
-    )
-
+@testset "stats.nf testing $alg" for alg in (
+    EK0(prior=IWP(q), smooth=false),
+    EK0(prior=IWP(q), smooth=false, initialization=ClassicSolverInit()),
+    EK1(prior=IWP(q), smooth=false),
+    EK1(prior=IWP(q), smooth=false, autodiff=false),
+    EK1(prior=IOUP(q, -1), smooth=false),
+    EK1(prior=IOUP(q, update_rate_parameter=true), smooth=false),
+    EK1(prior=IOUP(q, update_rate_parameter=true), smooth=true),
+)
     f_counter = [0]
     function f(du, u, p, t; f_counter=f_counter)
         f_counter .+= 1
@@ -21,18 +23,17 @@ const q = 3
     p = [-0.1]
     tspan = (0.0, 1.0)
     prob = ODEProblem(f, u0, tspan, p)
-    sol = solve(prob, alg, save_everystep=false, dense=false)
+    sol = solve(prob, alg, save_everystep=alg.smooth, dense=alg.smooth)
     @test sol.stats.nf == f_counter[1]
 end
 
-@testset "SecondOrderODEProblem stats.nf testing $alg" for init in (TaylorModeInit(),),
+@testset "SecondOrderODEProblem stats.nf testing $alg" for alg in (
+    EK0(prior=IWP(q), smooth=false),
+    # EK0(prior=IWP(q), smooth=false, initialization=ClassicSolverInit()),
     # ClassicSolverInit does not work for second order ODEs right now
-    alg in (
-        EK0(order=q, smooth=false, initialization=init),
-        EK1(order=q, smooth=false, initialization=init),
-        EK1(order=q, smooth=false, initialization=init, autodiff=false),
-    )
-
+    EK1(prior=IWP(q), smooth=false),
+    EK1(prior=IWP(q), smooth=false, autodiff=false),
+)
     f_counter = [0]
     function f(ddu, du, u, p, t; f_counter=f_counter)
         f_counter .+= 1
@@ -44,6 +45,6 @@ end
     p = [-1.0]
     tspan = (0.0, 1.0)
     prob = SecondOrderODEProblem(f, du0, u0, tspan, p)
-    sol = solve(prob, alg, save_everystep=false, dense=false)
+    sol = solve(prob, alg, save_everystep=alg.smooth, dense=alg.smooth)
     @test sol.stats.nf == f_counter[1]
 end

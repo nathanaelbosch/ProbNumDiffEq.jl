@@ -3,17 +3,19 @@
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/master/src/alg_utils.jl
 ############################################################################################
 
-OrdinaryDiffEq.alg_autodiff(alg::AbstractEK) = true
 OrdinaryDiffEq.alg_autodiff(::EK1{CS,AD}) where {CS,AD} = AD
+OrdinaryDiffEq.alg_autodiff(::EK0{CS,AD}) where {CS,AD} = AD
 OrdinaryDiffEq.alg_difftype(::EK1{CS,AD,DiffType}) where {CS,AD,DiffType} = DiffType
-OrdinaryDiffEq.standardtag(::AbstractEK) = false
+OrdinaryDiffEq.alg_difftype(::EK0{CS,AD,DiffType}) where {CS,AD,DiffType} = DiffType
 OrdinaryDiffEq.standardtag(::EK1{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} = ST
-OrdinaryDiffEq.concrete_jac(::AbstractEK) = nothing
+OrdinaryDiffEq.standardtag(::EK0{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} = ST
 OrdinaryDiffEq.concrete_jac(::EK1{CS,AD,DiffType,ST,CJ}) where {CS,AD,DiffType,ST,CJ} = CJ
+OrdinaryDiffEq.concrete_jac(::EK0{CS,AD,DiffType,ST,CJ}) where {CS,AD,DiffType,ST,CJ} = CJ
 
 @inline DiffEqBase.get_tmp_cache(integ, alg::AbstractEK, cache::AbstractODEFilterCache) =
     (cache.tmp, cache.atmp)
 OrdinaryDiffEq.get_chunksize(::EK1{CS}) where {CS} = Val(CS)
+OrdinaryDiffEq.get_chunksize(::EK0{CS}) where {CS} = Val(CS)
 OrdinaryDiffEq.isfsal(::AbstractEK) = false
 
 OrdinaryDiffEq.isimplicit(::EK1) = true
