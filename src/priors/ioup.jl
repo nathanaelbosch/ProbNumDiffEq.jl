@@ -144,6 +144,8 @@ function discretize!(cache, p::IOUP, dt::Real)
         A = kron(I(d), A_breve)
         QR = kron(I(d), QR_breve)
         Q = PSDMatrix(QR)
+        copy!(cache.Ah, A)
+        copy!(cache.Qh, Q)
         return A, Q
     else
         @assert r isa AbstractVector || r isa AbstractMatrix
