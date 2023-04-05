@@ -100,7 +100,6 @@ function to_sde(p::IOUP)
     end
 
     F_breve = diagm(1 => ones(q))
-    # F_breve[end, end] = r
     F = kron(I(d), F_breve)
     F[q+1:q+1:end, q+1:q+1:end] = R
 

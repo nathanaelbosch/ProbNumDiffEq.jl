@@ -114,7 +114,8 @@ function smooth_solution!(integ)
             )
             # TODO: Make this more efficient, or even switch to backward kernels
         end
-        integ.dt = dt
+
+        integ.dt = dt # needed for `make_new_transitions` to work
         if make_new_transitions(integ, cache, false)
             make_transition_matrices!(integ.cache, dt)
         end
@@ -132,7 +133,8 @@ function smooth_solution!(integ)
         # Save the smoothed state into the solution
         _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
         integ.sol.u[i][:] .= integ.sol.pu[i].μ
-        cache.dt_last = dt
+
+        cache.dt_last = dt # needed for `make_new_transitions` to work
     end
     return nothing
 end

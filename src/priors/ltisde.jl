@@ -43,7 +43,7 @@ function discretize_sqrt(sde::LTISDE, dt::Real)
     D = size(F, 1)
     d = size(L, 2)
     N = Int(D / d)
-    M = similar(F, N * d, D)
+    R = similar(F, N * d, D)
     method = ExpMethodHigham2005()
     expcache = ExponentialUtilities.alloc_mem(F, method)
 
@@ -57,16 +57,16 @@ function discretize_sqrt(sde::LTISDE, dt::Real)
     b, a = dt, 0
     @. nodes = (b - a) / 2 * nodes + (a + b) / 2
     @. weights = (b - a) / 2 * weights
-    for i in 1:N
-        mul!(view(M, (i-1)*d+1:i*d, 1:D), sqrt(weights[i]), chol_integrand(nodes[i]))
+    @simd ivdep for i in 1:N
+        R[(i-1)*d+1:i*d, 1:D] .= sqrt(weights[i]) .* chol_integrand(nodes[i])
     end
 
-    ASDF = M'M |> Symmetric
-    chol = cholesky!(ASDF, check=false)
+    M = R'R |> Symmetric
+    chol = cholesky!(M, check=false)
     Qh_R = if issuccess(chol)
         chol.U |> Matrix
     else
-        qr!(M).R |> Matrix
+        qr!(R).R |> Matrix
     end
 
     return Ah, Qh_R
