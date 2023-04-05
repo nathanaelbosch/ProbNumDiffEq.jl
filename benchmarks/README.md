@@ -1,11 +1,6 @@
 # Benchmarks
 
-
-- **Multi-Language Wrapper Benchmark**:
-  ProbNumDiffEq.jl vs. OrdinaryDiffEq.jl, Hairer's FORTRAN solvers, Sundials, LSODA, MATLAB, and SciPy.
-  Results either [here in the docs](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/dev/benchmarks/multi-language-wrappers/),
-  or [directly on github](../docs/src/benchmarks/multi-language-wrappers.md).
-
+To see the results, have a look at the Benchmarks section in the [documentation](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/dev/).
 
 ## How to run the benchmarks
 
