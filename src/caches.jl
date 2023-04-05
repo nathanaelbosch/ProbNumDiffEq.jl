@@ -168,11 +168,7 @@ function OrdinaryDiffEq.alg_cache(
     du1 = similar(rate_prototype)
     dw1 = zero(u)
     atmp = similar(u, uEltypeNoUnits)
-    if OrdinaryDiffEq.isimplicit(alg)
-        jac_config = OrdinaryDiffEq.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
-    else
-        jac_config = nothing
-    end
+    jac_config = OrdinaryDiffEq.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
 
     ll = zero(uEltypeNoUnits)
     return EKCache{

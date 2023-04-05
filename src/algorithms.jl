@@ -28,7 +28,7 @@ julia> solve(prob, EK0())
 
 # [References](@ref references)
 """
-struct EK0{PT,DT,IT} <: AbstractEK
+struct EK0{CS,AD,DiffType,ST,CJ,PT,DT,IT} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
@@ -36,11 +36,25 @@ struct EK0{PT,DT,IT} <: AbstractEK
 end
 EK0(;
     order=3,
-    prior=IWP(order),
-    diffusionmodel=DynamicDiffusion(),
+    prior::PT=IWP(order),
+    diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
-    initialization=TaylorModeInit(),
-) = EK0(prior, diffusionmodel, smooth, initialization)
+    initialization::IT=TaylorModeInit(),
+    chunk_size=Val{0}(),
+    autodiff=Val{true}(),
+    diff_type=Val{:forward},
+    standardtag=Val{true}(),
+    concrete_jac=nothing,
+) where {PT,DT,IT} = EK0{
+    _unwrap_val(chunk_size),
+    _unwrap_val(autodiff),
+    diff_type,
+    _unwrap_val(standardtag),
+    _unwrap_val(concrete_jac),
+    PT,
+    DT,
+    IT,
+}(prior, diffusionmodel, smooth, initialization)
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
@@ -111,7 +125,7 @@ EK1(;
         initialization,
     )
 
-function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
+function DiffEqBase.remake(thing::Union{EK1{CS,AD,DT,ST,CJ},EK0{CS,AD,DT,ST,CJ}}; kwargs...) where {CS,AD,DT,ST,CJ}
     T = SciMLBase.remaker_of(thing)
     T(;
         SciMLBase.struct_as_namedtuple(thing)...,
@@ -124,7 +138,7 @@ function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,D
     )
 end
 
-function DiffEqBase.prepare_alg(alg::EK1{0}, u0::AbstractArray{T}, p, prob) where {T}
+function DiffEqBase.prepare_alg(alg::Union{EK1{0},EK0{0}}, u0::AbstractArray{T}, p, prob) where {T}
     # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
     # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
     # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which
