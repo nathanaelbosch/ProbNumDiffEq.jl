@@ -80,33 +80,34 @@ m = vecvec2mat(xs.μ) * H'
 std = sqrt.(vecvec2mat(diag.(xs.Σ))) * H'
 plot!(ts, m, ribbon=3std,
     color=[COLORS[1] COLORS[2] COLORS[3]],
-    label="",
-    alpha=0, fillalpha=0.1,
+    # label="",
+    label=["y(t)" "ẏ(t)" "ÿ(t)"],
+    alpha=1, fillalpha=0.1,
     # linestyle=:dash,
     linewidth=3,
 )
 
 scatter!(sol.t, vecvec2mat(sol.x_smooth.μ)[:, 1:3],
     color=[COLORS[1] COLORS[2] COLORS[3]],
-    markersize=3,
+    markersize=4,
     markerstrokewidth=0.2,
     label="",
 )
 
 # plot samples
-plot!(ts, samples[1],
-    color=[COLORS[1] COLORS[2] COLORS[3]],
-    label=["y(t)" "ẏ(t)" "ÿ(t)"],
-    linewidth=2, alpha=0.6)
-for s in samples[2:N]
-    for d in 3:-1:1
-        plot!(ts, s[:, d], color=COLORS[d],
-            label="",
-            # linewidth=0.5, alpha=0.2
-            alpha=0.6, linewidth=2,
-        )
-    end
-end
+# plot!(ts, samples[1],
+#     color=[COLORS[1] COLORS[2] COLORS[3]],
+#     label=["y(t)" "ẏ(t)" "ÿ(t)"],
+#     linewidth=2, alpha=0.6)
+# for s in samples[2:N]
+#     for d in 3:-1:1
+#         plot!(ts, s[:, d], color=COLORS[d],
+#             label="",
+#             # linewidth=0.5, alpha=0.2
+#             alpha=0.6, linewidth=2,
+#         )
+#     end
+# end
 
 # aesthetics
 plot!(
