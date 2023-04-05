@@ -54,7 +54,12 @@ EK0(;
     PT,
     DT,
     IT,
-}(prior, diffusionmodel, smooth, initialization)
+}(
+    prior,
+    diffusionmodel,
+    smooth,
+    initialization,
+)
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
@@ -125,7 +130,10 @@ EK1(;
         initialization,
     )
 
-function DiffEqBase.remake(thing::Union{EK1{CS,AD,DT,ST,CJ},EK0{CS,AD,DT,ST,CJ}}; kwargs...) where {CS,AD,DT,ST,CJ}
+function DiffEqBase.remake(
+    thing::Union{EK1{CS,AD,DT,ST,CJ},EK0{CS,AD,DT,ST,CJ}};
+    kwargs...,
+) where {CS,AD,DT,ST,CJ}
     T = SciMLBase.remaker_of(thing)
     T(;
         SciMLBase.struct_as_namedtuple(thing)...,
@@ -138,7 +146,12 @@ function DiffEqBase.remake(thing::Union{EK1{CS,AD,DT,ST,CJ},EK0{CS,AD,DT,ST,CJ}}
     )
 end
 
-function DiffEqBase.prepare_alg(alg::Union{EK1{0},EK0{0}}, u0::AbstractArray{T}, p, prob) where {T}
+function DiffEqBase.prepare_alg(
+    alg::Union{EK1{0},EK0{0}},
+    u0::AbstractArray{T},
+    p,
+    prob,
+) where {T}
     # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
     # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
     # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which

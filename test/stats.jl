@@ -27,15 +27,13 @@ const q = 3
     @test sol.stats.nf == f_counter[1]
 end
 
-@testset "SecondOrderODEProblem stats.nf testing $alg" for
-    alg in (
-        EK0(prior=IWP(q), smooth=false),
-        # EK0(prior=IWP(q), smooth=false, initialization=ClassicSolverInit()),
-        # ClassicSolverInit does not work for second order ODEs right now
-        EK1(prior=IWP(q), smooth=false),
-        EK1(prior=IWP(q), smooth=false, autodiff=false),
-    )
-
+@testset "SecondOrderODEProblem stats.nf testing $alg" for alg in (
+    EK0(prior=IWP(q), smooth=false),
+    # EK0(prior=IWP(q), smooth=false, initialization=ClassicSolverInit()),
+    # ClassicSolverInit does not work for second order ODEs right now
+    EK1(prior=IWP(q), smooth=false),
+    EK1(prior=IWP(q), smooth=false, autodiff=false),
+)
     f_counter = [0]
     function f(ddu, du, u, p, t; f_counter=f_counter)
         f_counter .+= 1

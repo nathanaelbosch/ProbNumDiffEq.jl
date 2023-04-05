@@ -109,7 +109,9 @@ function smooth_solution!(integ)
 
         if cache.prior isa IOUP && cache.prior.update_rate_parameter
             # The following is only a hotfix for now!
-            update_rate_parameter!(integ, cache, integ.f, cache.SolProj * x[i].μ, integ.p, t[i])
+            update_rate_parameter!(
+                integ, cache, integ.f, cache.SolProj * x[i].μ, integ.p, t[i],
+            )
             # TODO: Make this more efficient, or even switch to backward kernels
         end
         integ.dt = dt
