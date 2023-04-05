@@ -16,12 +16,6 @@ The implemented _ODE filters_ solve differential equations via Bayesian filterin
 
 For a short intro video, check out our [poster presentation at JuliaCon2021](https://www.youtube.com/watch?v=EMFl6ytP3iQ).
 
-* * *
-
-__For more probabilistic numerics check out the [ProbNum](https://probnum.readthedocs.io/en/latest/) Python package.__
-It implements probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
-
-* * *
 
 ## Installation
 
@@ -31,6 +25,7 @@ Run Julia, enter `]` to bring up Julia's package manager, and add the ProbNumDif
 julia> ]
 (v1.8) pkg> add ProbNumDiffEq
 ```
+
 
 ## Example: Solving the FitzHugh-Nagumo ODE
 
@@ -69,6 +64,13 @@ plot(sol.t, hcat(stds...)', color=["#CB3C33" "#389826" "#9558B2"]
 ```
 
 ![Fitzhugh-Nagumo Standard-Deviations](./examples/fitzhughnagumo_stddevs.svg?raw=true "Fitzhugh-Nagumo Standard-Deviations")
+
+
+## Related packages
+
+- [probdiffeq](https://pnkraemer.github.io/probdiffeq/): Fast and feature-rich filtering-based probabilistic ODE solvers in JAX.
+- [ProbNum](https://probnum.readthedocs.io/en/latest/): Probabilistic numerics in Python. It has not only probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
+- [Fenrir.jl](https://github.com/nathanaelbosch/Fenrir.jl): Parameter-inference in ODEs with probabilistic ODE solvers. This package builds on ProbNumDiffEq.jl to provide a negative marginal log-likelihood function, which can then be used with an optimizer or with MCMC for parameter inference.
 
 
 ## References
