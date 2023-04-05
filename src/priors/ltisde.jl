@@ -40,40 +40,18 @@ end
 function discretize_sqrt(sde::LTISDE, dt::Real)
     F, L = drift(sde), dispersion(sde)
 
-    Ah = exp(dt * F)
-
-    chol_integrand(τ) = L' * exp(F' * (dt - τ))
-    nodes, weights = gausslegendre(10)
-    b, a = dt, 0
-    @. nodes = (b - a) / 2 * nodes + (a + b) / 2
-    @. weights = (b - a) / 2 * weights
-    mats = @. sqrt(weights) * chol_integrand(nodes)
-    M = reduce(vcat, mats)
-    Qh_R = qr!(M).R
-
-    return Ah, Qh_R
-end
-
-function discretize_sqrt!(cache, sde::LTISDE, dt::Real)
-    F, L = drift(sde), dispersion(sde)
-
     D = size(F, 1)
     d = size(L, 2)
     N = Int(D / d)
     M = similar(F, N * d, D)
     method = ExpMethodHigham2005()
     expcache = ExponentialUtilities.alloc_mem(F, method)
-    @unpack C_DxD, C_dxD = cache
 
-    # @. C_DxD = dt * F
-    # Ah = exponential!(C_DxD, method, expcache)
     Ah = exponential!(dt * F, method, expcache)
 
     chol_integrand(τ) = begin
-        # mul!(C_DxD, F', (dt - τ))
-        # E = exponential!(C_DxD, method, expcache)
         E = exponential!((dt - τ) * F', method, expcache)
-        out = mul!(C_dxD, L', E)
+        L'E
     end
     nodes, weights = gausslegendre(N)
     b, a = dt, 0
@@ -86,9 +64,9 @@ function discretize_sqrt!(cache, sde::LTISDE, dt::Real)
     ASDF = M'M |> Symmetric
     chol = cholesky!(ASDF, check=false)
     Qh_R = if issuccess(chol)
-        chol.U |> UpperTriangular
+        chol.U |> Matrix
     else
-        qr!(M).R |> UpperTriangular
+        qr!(M).R |> Matrix
     end
 
     return Ah, Qh_R
