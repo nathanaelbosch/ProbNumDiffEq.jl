@@ -116,8 +116,7 @@ function smooth_solution!(integ)
         end
 
         K = backward_kernels[i]
-        marginalize_mean!(x_smooth[i], x_smooth[i+1], K)
-        marginalize_cov!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_2DxD)
+        marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_2DxD)
 
         # Save the smoothed state into the solution
         _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x_smooth[i])

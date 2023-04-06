@@ -10,11 +10,11 @@ using LinearAlgebra
     # Setup
     d = 5
     m = rand(d)
-    R_p = Matrix(LowerTriangular(rand(d, d)))
+    R_p = Matrix(UpperTriangular(rand(d, d)))
     P = R_p'R_p
 
     A = rand(d, d)
-    R_Q = Matrix(LowerTriangular(rand(d, d)))
+    R_Q = Matrix(UpperTriangular(rand(d, d)))
     Q = R_Q'R_Q
 
     # PREDICT
@@ -47,13 +47,23 @@ using LinearAlgebra
         @test m_p == x_out.μ
         @test Matrix(x_out.Σ) ≈ Matrix(X_A_Xt(x_curr.Σ, A))
     end
+
+    @testset "predict with kernel and marginalize!" begin
+        x_curr = Gaussian(m, PSDMatrix(R_p))
+        x_out = copy(x_curr)
+        Q_SR = PSDMatrix(R_Q)
+        K = ProbNumDiffEq.AffineNormalKernel(A, Q_SR)
+        ProbNumDiffEq.marginalize!(x_out, x_curr, K; C_DxD=zeros(d, d), C_2DxD=zeros(2d, d))
+        @test m_p == x_out.μ
+        @test P_p ≈ Matrix(x_out.Σ)
+    end
 end
 
 @testset "UPDATE" begin
     # Setup
     d = 5
     m_p = rand(d)
-    R_P_p = Matrix(LowerTriangular(rand(d, d)))
+    R_P_p = Matrix(UpperTriangular(rand(d, d)))
     P_p = R_P_p'R_P_p
 
     # Measure
@@ -181,17 +191,19 @@ end
     # Setup
     d = 5
     m, m_s = rand(d), rand(d)
-    R_P, R_P_s = Matrix(LowerTriangular(rand(d, d))), Matrix(LowerTriangular(rand(d, d)))
+    R_P, R_P_s = Matrix(UpperTriangular(rand(d, d))), Matrix(UpperTriangular(rand(d, d)))
     P, P_s = R_P'R_P, R_P_s'R_P_s
 
     A = rand(d, d)
-    R_Q = Matrix(LowerTriangular(rand(d, d)))
+    R_Q = Matrix(UpperTriangular(rand(d, d)))
     Q = R_Q'R_Q
     Q_SR = PSDMatrix(R_Q)
 
     # PREDICT first
     m_p = A * m
+    R_P_p = qr([R_P * A'; R_Q]).R |> Matrix
     P_p = A * P * A' + Q
+    @assert P_p ≈ R_P_p'R_P_p
 
     # SMOOTH
     G = P * A' * inv(P_p)
@@ -208,15 +220,15 @@ end
         @test P_smoothed ≈ x_out.Σ
     end
     @testset "smooth with PSDMatrix" begin
-        x_curr_psd = Gaussian(m, PSDMatrix(R_P))
-        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s))
+        x_curr_psd = Gaussian(m, PSDMatrix(R_P)) |> copy
+        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s)) |> copy
         x_out, _ = ProbNumDiffEq.smooth(x_curr_psd, x_next_psd, A, Q_SR)
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ Matrix(x_out.Σ)
     end
     @testset "smooth!" begin
-        x_curr_psd = Gaussian(m, PSDMatrix(R_P))
-        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s))
+        x_curr_psd = Gaussian(m, PSDMatrix(R_P)) |> copy
+        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s)) |> copy
         cache = (
             x_pred=copy(x_curr_psd),
             G1=zeros(d, d),
@@ -233,5 +245,26 @@ end
         )
         @test m_smoothed ≈ x_curr_psd.μ
         @test P_smoothed ≈ Matrix(x_curr_psd.Σ)
+    end
+
+    @testset "smooth via backward kernels" begin
+        K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
+        K_backward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(m_p), copy(Q_SR))
+
+        x_curr = Gaussian(m, PSDMatrix(R_P)) |> copy
+        x_next_pred = Gaussian(m_p, PSDMatrix(R_P_p)) |> copy
+        x_next_smoothed = Gaussian(m_s, PSDMatrix(R_P_s)) |> copy
+
+        C_DxD = zeros(d, d)
+        C_2DxD = zeros(2d, d)
+        cachemat = zeros(2d, d)
+        ProbNumDiffEq.compute_backward_kernel!(
+            K_backward, x_next_pred, x_curr, K_forward; C_DxD, C_2DxD, cachemat)
+
+        ProbNumDiffEq.marginalize_mean!(x_curr, x_next_smoothed, K_backward)
+        ProbNumDiffEq.marginalize_cov!(x_curr, x_next_smoothed, K_backward; C_DxD, C_2DxD)
+
+        @test m_smoothed ≈ x_curr.μ
+        @test P_smoothed ≈ Matrix(x_curr.Σ)
     end
 end
