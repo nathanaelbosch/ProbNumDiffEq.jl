@@ -3,7 +3,7 @@
 ########################################################################################
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
-    matType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,rateType,
+    matType,bkType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,rateType,
     UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
@@ -52,6 +52,7 @@ mutable struct EKCache{
     C_DxD::matType
     C_2DxD::matType
     C_3DxD::matType
+    backward_kernel::bkType
     default_diffusion::diffusionType
     local_diffusion::diffusionType
     global_diffusion::diffusionType
@@ -149,6 +150,9 @@ function OrdinaryDiffEq.alg_cache(
     C_2DxD = zeros(uElType, 2D, D)
     C_3DxD = zeros(uElType, 3D, D)
 
+    backward_kernel = AffineNormalKernel(
+        zeros(uElType, D, D), zeros(uElType, D), PSDMatrix(zeros(uElType, D, D)))
+
     u_pred = copy(u)
     u_filt = copy(u)
     tmp = copy(u)
@@ -175,7 +179,7 @@ function OrdinaryDiffEq.alg_cache(
     return EKCache{
         typeof(R),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),matType,
-        typeof(initdiff),
+        typeof(backward_kernel), typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
@@ -186,6 +190,7 @@ function OrdinaryDiffEq.alg_cache(
         measurement, m_tmp, pu_tmp,
         H, du, ddu, K, G, Smat,
         C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,
+        backward_kernel,
         initdiff, initdiff * NaN, initdiff * NaN,
         err_tmp, ll, dt, du1, uf, jac_config,
     )

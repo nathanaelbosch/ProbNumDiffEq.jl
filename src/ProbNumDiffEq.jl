@@ -2,7 +2,7 @@ __precompile__()
 
 module ProbNumDiffEq
 
-import Base: copy, copy!, show, size, ndims, similar
+import Base: copy, copy!, show, size, ndims, similar, isapprox
 
 using LinearAlgebra
 import Statistics: mean, var, std
@@ -71,6 +71,7 @@ include("solution_sampling.jl")
 include("solution_plotting.jl")
 
 include("integrator_utils.jl")
+include("filtering/markov_kernel.jl")
 include("filtering/predict.jl")
 include("filtering/update.jl")
 include("filtering/smooth.jl")
