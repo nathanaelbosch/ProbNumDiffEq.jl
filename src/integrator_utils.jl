@@ -108,7 +108,7 @@ function smooth_solution!(integ)
 
     @assert length(x_smooth) == length(backward_kernels) + 1
 
-    for i in length(x)-1:-1:1
+    for i in length(x_smooth)-1:-1:1
         dt = t[i+1] - t[i]
         if iszero(dt)
             copy!(x_smooth[i], x_smooth[i+1])
