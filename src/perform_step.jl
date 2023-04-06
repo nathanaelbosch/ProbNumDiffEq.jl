@@ -86,6 +86,13 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
     predict_cov!(x_pred, xprev, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
+    if integ.alg.smooth
+        @unpack C_DxD, C_2DxD, C_3DxD, backward_kernel = cache
+        K = AffineNormalKernel(Ah, Qh)
+        compute_backward_kernel!(backward_kernel, x_pred, xprev, K;
+            C_DxD, C_2DxD, cachemat=C_3DxD)
+    end
+
     # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
     # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
