@@ -106,7 +106,7 @@ end
             K2_cache = copy(K)
             M_cache = zeros(d, d)
             S = measurement.Σ
-            SR = cholesky(S).U
+            SR = cholesky(S).U |> Matrix
             msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
             O_cache = zeros(o, o)
             x_pred = Gaussian(x_pred.μ, PSDMatrix(R_P_p))

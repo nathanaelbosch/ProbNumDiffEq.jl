@@ -88,10 +88,11 @@ function compute_backward_kernel!(
     Kout.b .= x.μ .- _matmul!(Kout.b, G, xpred.μ)
 
     # M = [(I - G*K.A)'; (G*K.C.R')']
-    _matmul!(view(C_2DxD, 1:D, 1:D), K.A', G', -1.0, 0.0)
+    _matmul!(C_DxD, K.A', G', -1.0, 0.0)
     @inbounds @simd ivdep for i in 1:D
-        C_2DxD[i, i] += 1
+        C_DxD[i, i] += 1
     end
+    _matmul!(view(C_2DxD, 1:D, 1:D), x.Σ.R, C_DxD)
     _matmul!(view(C_2DxD, D+1:2D, 1:D), K.C.R, G')
     ΛR = triangularize!(C_2DxD; cachemat)
     copy!(Kout.C.R, ΛR)

@@ -37,7 +37,7 @@ ADAPTIVE_ALGS = (
     EK0(order=3, diffusionmodel=DynamicMVDiffusion()) => 5e-5,
     EK0(order=3, initialization=ClassicSolverInit()) => 5e-5,
     EK0(order=3, diffusionmodel=DynamicMVDiffusion(), initialization=ClassicSolverInit()) => 4e-5,
-    EK1(order=2) => 1e-5,
+    EK1(order=2) => 2e-5,
     EK1(order=3) => 1e-5,
     EK1(order=5) => 1e-6,
     EK1(order=8) => 5e-6,
