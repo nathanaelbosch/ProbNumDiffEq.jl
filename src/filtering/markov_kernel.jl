@@ -49,7 +49,11 @@ function marginalize_cov!(
     D, D = size(K.C)
 
     _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, K.A')
-    _matmul!(view(R, D+1:2D, 1:D), K.C.R, sqrt.(diffusion))
+    if !isone(diffusion)
+        _matmul!(view(R, D+1:2D, 1:D), K.C.R, sqrt.(diffusion))
+    else
+        @.. R[D+1:2D, 1:D] = K.C.R
+    end
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
 
@@ -70,6 +74,7 @@ function compute_backward_kernel!(
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     cachemat::AbstractMatrix,
+    diffusion=1,
 ) where {
     XT<:SRGaussian,
     KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
@@ -93,7 +98,12 @@ function compute_backward_kernel!(
         C_DxD[i, i] += 1
     end
     _matmul!(view(C_2DxD, 1:D, 1:D), x.Σ.R, C_DxD)
-    _matmul!(view(C_2DxD, D+1:2D, 1:D), K.C.R, G')
+    if !isone(diffusion)
+        _matmul!(C_DxD, K.C.R, sqrt.(diffusion))
+        _matmul!(view(C_2DxD, D+1:2D, 1:D), C_DxD, G')
+    else
+        _matmul!(view(C_2DxD, D+1:2D, 1:D), K.C.R, G')
+    end
     ΛR = triangularize!(C_2DxD; cachemat)
     copy!(Kout.C.R, ΛR)
 

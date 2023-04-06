@@ -90,7 +90,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
         @unpack C_DxD, C_2DxD, C_3DxD, backward_kernel = cache
         K = AffineNormalKernel(Ah, Qh)
         compute_backward_kernel!(backward_kernel, x_pred, xprev, K;
-            C_DxD, C_2DxD, cachemat=C_3DxD)
+            C_DxD, C_2DxD, cachemat=C_3DxD, diffusion=extrapolation_diff)
     end
 
     # Compute measurement covariance only now; likelihood computation is currently broken
