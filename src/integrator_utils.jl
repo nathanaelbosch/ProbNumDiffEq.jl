@@ -56,6 +56,15 @@ function calibrate_solution!(integ, mle_diffusion)
             error()
         end
     end
+    @simd ivdep for S in integ.sol.backward_kernels.C
+        if mle_diffusion isa Number
+            S.R .*= sqrt(mle_diffusion)
+        elseif mle_diffusion isa Diagonal
+            S.R .= S.R .* sqrt.(mle_diffusion.diag)'
+        else
+            error()
+        end
+    end
 
     # Re-write into the solution estimates
     for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
@@ -94,32 +103,24 @@ The actual smoothing step happens in [`smooth!`](@ref).
 function smooth_solution!(integ)
     integ.sol.x_smooth = copy(integ.sol.x_filt)
 
-    @unpack A, Q = integ.cache
-    @unpack x_smooth, t, diffusions = integ.sol
-    @unpack x_tmp, x_tmp2 = integ.cache
-    x = x_smooth
+    @unpack x_smooth, t, backward_kernels = integ.sol
+    @unpack C_DxD, C_2DxD = integ.cache
+
+    @assert length(x_smooth) == length(backward_kernels) + 1
 
     for i in length(x)-1:-1:1
         dt = t[i+1] - t[i]
         if iszero(dt)
-            copy!(x[i], x[i+1])
+            copy!(x_smooth[i], x_smooth[i+1])
             continue
         end
 
-        make_transition_matrices!(integ.cache, dt)
-        # In principle the smoothing would look like this (without preconditioning):
-        # @unpack Ah, Qh = integ.cache
-        # smooth!(x[i], x[i+1], Ah, Qh, integ.cache, diffusions[i])
-
-        # To be numerically more stable, use the preconditioning:
-        @unpack P, PI = integ.cache
-        _gaussian_mul!(x_tmp, P, x[i])
-        _gaussian_mul!(x_tmp2, P, x[i+1])
-        smooth!(x_tmp, x_tmp2, A, Q, integ.cache, diffusions[i])
-        _gaussian_mul!(x[i], PI, x_tmp)
+        K = backward_kernels[i]
+        marginalize_mean!(x_smooth[i], x_smooth[i+1], K)
+        marginalize_cov!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_2DxD)
 
         # Save the smoothed state into the solution
-        _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
+        _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x_smooth[i])
         integ.sol.u[i][:] .= integ.sol.pu[i].μ
     end
     return nothing
