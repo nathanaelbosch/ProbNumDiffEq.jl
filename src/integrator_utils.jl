@@ -116,7 +116,20 @@ function smooth_solution!(integ)
         end
 
         K = backward_kernels[i]
-        marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_2DxD)
+
+        # marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_2DxD)
+
+        make_transition_matrices!(integ.cache, dt)
+        @unpack P, PI = integ.cache
+        @unpack x_tmp, x_tmp2, backward_kernel = integ.cache
+        K_tmp = backward_kernel
+        _gaussian_mul!(x_tmp, P, x_smooth[i])
+        _gaussian_mul!(x_tmp2, P, x_smooth[i+1])
+        _matmul!(K_tmp.A, P, _matmul!(C_DxD, K.A, PI))
+        _matmul!(K_tmp.b, P, K.b)
+        X_A_Xt!(K_tmp.C, K.C, PI)
+        marginalize!(x_tmp, x_tmp2, K_tmp; C_DxD, C_2DxD)
+        _gaussian_mul!(x_smooth[i], PI, x_tmp)
 
         # Save the smoothed state into the solution
         _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x_smooth[i])
