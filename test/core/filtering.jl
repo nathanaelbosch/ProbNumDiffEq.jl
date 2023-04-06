@@ -57,6 +57,17 @@ using LinearAlgebra
         @test m_p == x_out.μ
         @test P_p ≈ Matrix(x_out.Σ)
     end
+
+    @testset "predict with kernel and marginalize! with zero diffusion" begin
+        x_curr = Gaussian(m, PSDMatrix(R_p))
+        x_out = copy(x_curr)
+        Q_SR = PSDMatrix(R_Q)
+        K = ProbNumDiffEq.AffineNormalKernel(A, Q_SR)
+        ProbNumDiffEq.marginalize!(
+            x_out, x_curr, K; C_DxD=zeros(d, d), C_2DxD=zeros(2d, d), diffusion=0)
+        @test m_p == x_out.μ
+        @test Matrix(x_out.Σ) ≈ Matrix(X_A_Xt(x_curr.Σ, A))
+    end
 end
 
 @testset "UPDATE" begin
