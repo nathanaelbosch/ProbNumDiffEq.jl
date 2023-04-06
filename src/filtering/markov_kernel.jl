@@ -21,7 +21,6 @@ isapprox(K1::AffineNormalKernel, K2::AffineNormalKernel; kwargs...) =
     isapprox(K1.b, K2.b; kwargs...) &&
     isapprox(K1.C, K2.C; kwargs...)
 
-
 function marginalize!(xout, x, K; C_DxD, C_2DxD, diffusion=1)
     marginalize_mean!(xout, x, K)
     marginalize_cov!(xout, x, K; C_DxD, C_2DxD, diffusion)
@@ -41,8 +40,7 @@ function marginalize_cov!(
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     diffusion=1,
-    )
-
+)
     if iszero(diffusion)
         fast_X_A_Xt!(x_out.Σ, x_curr.Σ, K.A)
         return x_out.Σ
@@ -72,11 +70,11 @@ function compute_backward_kernel!(
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     cachemat::AbstractMatrix,
-    ) where {
-        XT <: SRGaussian,
-        KT1 <: AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
-        KT2 <: AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
-    }
+) where {
+    XT<:SRGaussian,
+    KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
+    KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
+}
     D = length(x.μ)
 
     # G = Matrix(x.Σ) * K.A' / Matrix(xpred.Σ)

@@ -3,8 +3,8 @@
 ########################################################################################
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
-    matType,bkType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,rateType,
-    UF,JC,uNoUnitsType,
+    matType,bkType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,
+    rateType, UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
     d::Int                  # Dimension of the problem
@@ -179,7 +179,7 @@ function OrdinaryDiffEq.alg_cache(
     return EKCache{
         typeof(R),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),matType,
-        typeof(backward_kernel), typeof(initdiff),
+        typeof(backward_kernel),typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(

@@ -12,7 +12,8 @@ It contains filtering and smoothing state estimates which enables plots with unc
 sampling, and dense evaluation.
 """
 mutable struct ProbODESolution{
-    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,bkType,llType,P,A,IType,CType,DE,
+    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,bkType,llType,P,A,IType,
+    CType,DE,
 } <: AbstractProbODESolution{T,N,uType}
     u::uType
     pu::puType
@@ -40,7 +41,7 @@ ProbODESolution{T,N}(
 ) where {T,N} = ProbODESolution{
     T,N,typeof(u),typeof(pu),typeof(u_analytic),typeof(errors),typeof(t),typeof(k),
     typeof(x_filt),typeof(diffusions),typeof(backward_kernels),typeof(log_likelihood),
-    typeof(prob),typeof(alg), typeof(interp),typeof(cache),typeof(stats),
+    typeof(prob),typeof(alg),typeof(interp),typeof(cache),typeof(stats),
 }(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
     log_likelihood, prob, alg, interp, cache, dense, tslocation, stats, retcode,
