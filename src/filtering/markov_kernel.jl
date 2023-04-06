@@ -1,3 +1,17 @@
+"""
+    AffineNormalKernel(A, b, C)
+
+Structure to represent affine Normal Markov kernels, i.e. conditional distributions
+```math
+\\begin{aligned}
+y \\mid x \\sim \\mathcal{N} \\left( y; A x + b, C \\right).
+\\end{aligned}
+```
+
+At the point of writing, it is mostly used to precompute and store the backward
+representation of the posterior (via [`compute_backward_kernel!`](@ref)), and to then
+smooth (via [`marginalize!`](@ref)).
+"""
 struct AffineNormalKernel{TA,Tb,TC}
     A::TA
     b::Tb
@@ -21,6 +35,14 @@ isapprox(K1::AffineNormalKernel, K2::AffineNormalKernel; kwargs...) =
     isapprox(K1.b, K2.b; kwargs...) &&
     isapprox(K1.C, K2.C; kwargs...)
 
+"""
+    marginalize!(xout, x, K; C_DxD, C_2DxD[, diffusion=1])
+
+Basically the same as [`predict!`](@ref)), but in kernel language and with support for
+affine transitions. At the time of writing, this is mostly used to smooth the posterior
+using it's backward representation, where the kernels are precomputed with
+[`compute_backward_kernel!`](@ref).
+"""
 function marginalize!(xout, x, K; C_DxD, C_2DxD, diffusion=1)
     marginalize_mean!(xout, x, K)
     marginalize_cov!(xout, x, K; C_DxD, C_2DxD, diffusion)
@@ -66,6 +88,51 @@ function marginalize_cov!(
     return x_out.Σ
 end
 
+"""
+    compute_backward_kernel!(Kout, xpred, x, K; C_DxD, C_2DxD, cachemat[, diffusion=1])
+
+Compute the backward representation of the posterior, i.e. the conditional
+distribution of the current state given the next state and the transition kernel.
+
+More precisely, given a distribution (`x`)
+```math
+\\begin{aligned}
+x \\sim \\mathcal{N} \\left( x; μ, Σ \\right),
+\\end{aligned}
+```
+a kernel (`K`)
+```math
+\\begin{aligned}
+y \\mid x \\sim \\mathcal{N} \\left( y; A x + b, C \\right),
+\\end{aligned}
+```
+and a distribution (`xpred`) obtained via marginalization
+```math
+\\begin{aligned}
+y &\\sim \\mathcal{N} \\left( y; μ^P, Σ^P \\right), \\\\
+μ^P &= A μ + b, \\\\
+Σ^P &= A Σ A^\\top + C,
+\\end{aligned}
+```
+this function computes the conditional distribution
+```math
+\\begin{aligned}
+x \\mid y \\sim \\mathcal{N} \\left( x; G x + d, Λ \\right),
+\\end{aligned}
+```
+where
+```math
+\\begin{aligned}
+G &= Σ A^\\top (Σ^P)^{-1}, \\\\
+d &= μ - G μ^P, \\\\
+Λ &= Σ - G Σ^P G^\\top.
+\\end{aligned}
+```
+Though, everything is computed in square-root form, and with minimal allocations (thus the
+cache objects `C_DxD`, `C_2DxD`, `cachemat`).
+
+The resulting backward kernels are used to smooth the posterior, via [`marginalize!`](@ref).
+"""
 function compute_backward_kernel!(
     Kout::KT1,
     xpred::XT,
