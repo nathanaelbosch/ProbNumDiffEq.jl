@@ -161,6 +161,11 @@ function DiffEqBase.savevalues!(
         OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
+
+        if integ.alg.smooth
+            OrdinaryDiffEq.copyat_or_push!(
+                integ.sol.backward_kernels, i, integ.cache.backward_kernel)
+        end
     end
 
     return out
