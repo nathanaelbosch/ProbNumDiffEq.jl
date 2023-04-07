@@ -181,11 +181,12 @@ function compute_backward_kernel!(
     # b = μ - G * μ_pred
     b .= x.μ .- _matmul!(b, G, xpred.μ)
 
-    # Λ.R[1:D, 1:D] = (I - G * A)'
-    _matmul!(view(Λ.R, 1:D, 1:D), A', G', -1.0, 0.0)
+    # Λ.R[1:D, 1:D] = x.Σ.R * (I - G * A)'
+    _matmul!(C_DxD, A', G', -1.0, 0.0)
     @inbounds @simd ivdep for i in 1:D
-        Λ.R[i, i] += 1
+        C_DxD[i, i] += 1
     end
+    _matmul!(view(Λ.R, 1:D, 1:D), x.Σ.R, C_DxD)
     # Λ.R[D+1:2D, 1:D] = (G * Q.R')'
     if !isone(diffusion)
         _matmul!(C_DxD, Q.R, sqrt.(diffusion))

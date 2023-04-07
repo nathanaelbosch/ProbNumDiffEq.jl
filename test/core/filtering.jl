@@ -51,9 +51,9 @@ using LinearAlgebra
     @testset "predict with kernel and marginalize!" begin
         x_curr = Gaussian(m, PSDMatrix(P_R))
         x_out = copy(x_curr)
-        Q_SR = PSDMatrix(R_Q)
+        Q_SR = PSDMatrix([Q_R; zero(Q_R)]) # marginalize! needs tall square-roots
         K = ProbNumDiffEq.AffineNormalKernel(A, Q_SR)
-        ProbNumDiffEq.marginalize!(x_out, x_curr, K; C_DxD=zeros(d, d), C_2DxD=zeros(2d, d))
+        ProbNumDiffEq.marginalize!(x_out, x_curr, K; C_DxD=zeros(d, d), C_3DxD=zeros(3d, d))
         @test m_p == x_out.μ
         @test P_p ≈ Matrix(x_out.Σ)
     end
@@ -64,7 +64,7 @@ using LinearAlgebra
         Q_SR = PSDMatrix(Q_R)
         K = ProbNumDiffEq.AffineNormalKernel(A, Q_SR)
         ProbNumDiffEq.marginalize!(
-            x_out, x_curr, K; C_DxD=zeros(d, d), C_2DxD=zeros(2d, d), diffusion=0)
+            x_out, x_curr, K; C_DxD=zeros(d, d), C_3DxD=zeros(3d, d), diffusion=0)
         @test m_p == x_out.μ
         @test Matrix(x_out.Σ) ≈ Matrix(X_A_Xt(x_curr.Σ, A))
     end
@@ -259,22 +259,31 @@ end
 
     @testset "smooth via backward kernels" begin
         K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
-        K_backward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(m_p), copy(Q_SR))
+        K_backward = ProbNumDiffEq.AffineNormalKernel(
+            similar(A), similar(m_p), PSDMatrix(zeros(2d, d)))
 
         x_curr = Gaussian(m, PSDMatrix(P_R)) |> copy
         x_next_pred = Gaussian(m_p, PSDMatrix(P_p_R)) |> copy
         x_next_smoothed = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
 
         C_DxD = zeros(d, d)
-        C_2DxD = zeros(2d, d)
-        cachemat = zeros(2d, d)
         ProbNumDiffEq.compute_backward_kernel!(
-            K_backward, x_next_pred, x_curr, K_forward; C_DxD, C_2DxD, cachemat)
+            K_backward, x_next_pred, x_curr, K_forward; C_DxD)
 
+        G = Matrix(x_curr.Σ) * A' * inv(Matrix(x_next_pred.Σ))
+        b = x_curr.μ - G * x_next_pred.μ
+        Λ = Matrix(x_curr.Σ) - G * Matrix(x_next_pred.Σ) * G'
+        @test K_backward.A ≈ G
+        @test K_backward.b ≈ b
+        @info "" Λ Matrix(K_backward.C) K_backward.C.R
+        @test Matrix(K_backward.C) ≈ Λ
+
+        C_3DxD = zeros(3d, d)
         ProbNumDiffEq.marginalize_mean!(x_curr, x_next_smoothed, K_backward)
-        ProbNumDiffEq.marginalize_cov!(x_curr, x_next_smoothed, K_backward; C_DxD, C_2DxD)
+        ProbNumDiffEq.marginalize_cov!(x_curr, x_next_smoothed, K_backward; C_DxD, C_3DxD)
 
         @test m_smoothed ≈ x_curr.μ
+        @info "??" P_smoothed Matrix(x_curr.Σ) x_curr.Σ.R
         @test P_smoothed ≈ Matrix(x_curr.Σ)
     end
 end
