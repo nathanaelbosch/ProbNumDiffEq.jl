@@ -47,23 +47,13 @@ function calibrate_solution!(integ, mle_diffusion)
     set_diffusions!(integ.sol, mle_diffusion * integ.cache.default_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
-    @simd ivdep for S in integ.sol.x_filt.Σ
-        if mle_diffusion isa Number
-            S.R .*= sqrt(mle_diffusion)
-        elseif mle_diffusion isa Diagonal
-            S.R .= S.R .* sqrt.(mle_diffusion.diag)'
-        else
-            error()
-        end
+    @assert mle_diffusion isa Number || mle_diffusion isa Diagonal
+    sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion.diag)'
+    @simd ivdep for C in integ.sol.x_filt.Σ
+        @.. C.R *= sqrt_diff
     end
-    @simd ivdep for S in integ.sol.backward_kernels.C
-        if mle_diffusion isa Number
-            S.R .*= sqrt(mle_diffusion)
-        elseif mle_diffusion isa Diagonal
-            S.R .= S.R .* sqrt.(mle_diffusion.diag)'
-        else
-            error()
-        end
+    @simd ivdep for C in integ.sol.backward_kernels.C
+        @.. C.R *= sqrt_diff
     end
 
     # Re-write into the solution estimates
