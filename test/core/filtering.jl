@@ -275,7 +275,6 @@ end
         Λ = Matrix(x_curr.Σ) - G * Matrix(x_next_pred.Σ) * G'
         @test K_backward.A ≈ G
         @test K_backward.b ≈ b
-        @info "" Λ Matrix(K_backward.C) K_backward.C.R
         @test Matrix(K_backward.C) ≈ Λ
 
         C_3DxD = zeros(3d, d)
@@ -283,7 +282,6 @@ end
         ProbNumDiffEq.marginalize_cov!(x_curr, x_next_smoothed, K_backward; C_DxD, C_3DxD)
 
         @test m_smoothed ≈ x_curr.μ
-        @info "??" P_smoothed Matrix(x_curr.Σ) x_curr.Σ.R
         @test P_smoothed ≈ Matrix(x_curr.Σ)
     end
 end
