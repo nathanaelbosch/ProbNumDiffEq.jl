@@ -47,14 +47,13 @@ function calibrate_solution!(integ, mle_diffusion)
     set_diffusions!(integ.sol, mle_diffusion * integ.cache.default_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
-    @simd ivdep for S in integ.sol.x_filt.Σ
-        if mle_diffusion isa Number
-            S.R .*= sqrt(mle_diffusion)
-        elseif mle_diffusion isa Diagonal
-            S.R .= S.R .* sqrt.(mle_diffusion.diag)'
-        else
-            error()
-        end
+    @assert mle_diffusion isa Number || mle_diffusion isa Diagonal
+    sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion.diag)'
+    @simd ivdep for C in integ.sol.x_filt.Σ
+        @.. C.R *= sqrt_diff
+    end
+    @simd ivdep for C in integ.sol.backward_kernels.C
+        @.. C.R *= sqrt_diff
     end
 
     # Re-write into the solution estimates
@@ -92,35 +91,26 @@ This function handles the iteration and preconditioning.
 The actual smoothing step happens in [`smooth!`](@ref).
 """
 function smooth_solution!(integ)
-    integ.sol.x_smooth = copy(integ.sol.x_filt)
+    @unpack cache, sol = integ
+    sol.x_smooth = copy(sol.x_filt)
 
-    @unpack A, Q = integ.cache
-    @unpack x_smooth, t, diffusions = integ.sol
-    @unpack x_tmp, x_tmp2 = integ.cache
-    x = x_smooth
+    @unpack x_smooth, t, backward_kernels = sol
+    @unpack C_DxD, C_3DxD = cache
 
-    for i in length(x)-1:-1:1
+    @assert length(x_smooth) == length(backward_kernels) + 1
+
+    for i in length(x_smooth)-1:-1:1
         dt = t[i+1] - t[i]
         if iszero(dt)
-            copy!(x[i], x[i+1])
+            copy!(x_smooth[i], x_smooth[i+1])
             continue
         end
 
-        make_transition_matrices!(integ.cache, dt)
-        # In principle the smoothing would look like this (without preconditioning):
-        # @unpack Ah, Qh = integ.cache
-        # smooth!(x[i], x[i+1], Ah, Qh, integ.cache, diffusions[i])
+        K = backward_kernels[i]
+        marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_3DxD)
 
-        # To be numerically more stable, use the preconditioning:
-        @unpack P, PI = integ.cache
-        _gaussian_mul!(x_tmp, P, x[i])
-        _gaussian_mul!(x_tmp2, P, x[i+1])
-        smooth!(x_tmp, x_tmp2, A, Q, integ.cache, diffusions[i])
-        _gaussian_mul!(x[i], PI, x_tmp)
-
-        # Save the smoothed state into the solution
-        _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x[i])
-        integ.sol.u[i][:] .= integ.sol.pu[i].μ
+        _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
+        sol.u[i][:] .= sol.pu[i].μ
     end
     return nothing
 end
@@ -161,6 +151,11 @@ function DiffEqBase.savevalues!(
         OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
+
+        if integ.alg.smooth
+            OrdinaryDiffEq.copyat_or_push!(
+                integ.sol.backward_kernels, i, integ.cache.backward_kernel)
+        end
     end
 
     return out

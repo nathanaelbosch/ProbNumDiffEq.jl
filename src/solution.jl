@@ -12,7 +12,8 @@ It contains filtering and smoothing state estimates which enables plots with unc
 sampling, and dense evaluation.
 """
 mutable struct ProbODESolution{
-    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,llType,P,A,IType,CType,DE,
+    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,bkType,llType,P,A,IType,
+    CType,DE,
 } <: AbstractProbODESolution{T,N,uType}
     u::uType
     pu::puType
@@ -23,6 +24,7 @@ mutable struct ProbODESolution{
     x_filt::xType
     x_smooth::xType
     diffusions::diffType
+    backward_kernels::bkType
     log_likelihood::llType
     prob::P
     alg::A
@@ -34,22 +36,22 @@ mutable struct ProbODESolution{
     retcode::ReturnCode.T
 end
 ProbODESolution{T,N}(
-    u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob,
-    alg, interp, cache, dense, tslocation, stats, retcode,
+    u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
+    log_likelihood, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 ) where {T,N} = ProbODESolution{
     T,N,typeof(u),typeof(pu),typeof(u_analytic),typeof(errors),typeof(t),typeof(k),
-    typeof(x_filt),typeof(diffusions),typeof(log_likelihood),typeof(prob),typeof(alg),
-    typeof(interp),typeof(cache),typeof(stats),
+    typeof(x_filt),typeof(diffusions),typeof(backward_kernels),typeof(log_likelihood),
+    typeof(prob),typeof(alg),typeof(interp),typeof(cache),typeof(stats),
 }(
-    u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, log_likelihood, prob,
-    alg, interp, cache, dense, tslocation, stats, retcode,
+    u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
+    log_likelihood, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 )
 
 function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp, sol.cache,
-        sol.dense, sol.tslocation, sol.stats, retcode,
+        sol.diffusions, sol.backward_kernels, sol.log_likelihood, sol.prob, sol.alg,
+        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, retcode,
     )
 end
 
@@ -96,6 +98,8 @@ function DiffEqBase.build_solution(
     x_filt = StructArray{Gaussian{Vector{uElType},typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)
 
+    backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
+
     interp = ODEFilterPosterior()
 
     if DiffEqBase.has_analytic(prob.f)
@@ -113,7 +117,7 @@ function DiffEqBase.build_solution(
     ll = zero(uElType)
     return ProbODESolution{T,N}(
         u, pu, u_analytic, errors, t, k, x_filt, x_smooth, typeof(diffusion_prototype)[],
-        ll, prob, alg, interp, cache,
+        backward_kernels, ll, prob, alg, interp, cache,
         dense, 0, stats, retcode,
     )
 end
@@ -125,8 +129,8 @@ function DiffEqBase.build_solution(
 ) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.log_likelihood, sol.prob, sol.alg, sol.interp, sol.cache,
-        sol.dense, sol.tslocation, sol.stats, sol.retcode,
+        sol.diffusions, sol.backward_kernels, sol.log_likelihood, sol.prob, sol.alg,
+        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode,
     )
 end
 

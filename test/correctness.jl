@@ -28,6 +28,10 @@ CONSTANT_ALGS = (
     EK1(order=5, smooth=false) => 1e-11,
     EK1(order=3, smooth=false, diffusionmodel=FixedDiffusion()) => 1e-8,
     EK1(order=3, smooth=false, initialization=ClassicSolverInit()) => 1e-7,
+    # smoothing
+    EK0(order=3, smooth=true, diffusionmodel=FixedMVDiffusion()) => 1e-7,
+    EK0(order=3, smooth=true, diffusionmodel=DynamicMVDiffusion()) => 1e-8,
+    EK1(order=3, smooth=true, diffusionmodel=FixedDiffusion()) => 1e-8,
 )
 ADAPTIVE_ALGS = (
     EK0(order=2) => 2e-4,
@@ -37,7 +41,7 @@ ADAPTIVE_ALGS = (
     EK0(order=3, diffusionmodel=DynamicMVDiffusion()) => 5e-5,
     EK0(order=3, initialization=ClassicSolverInit()) => 5e-5,
     EK0(order=3, diffusionmodel=DynamicMVDiffusion(), initialization=ClassicSolverInit()) => 4e-5,
-    EK1(order=2) => 1e-5,
+    EK1(order=2) => 2e-5,
     EK1(order=3) => 1e-5,
     EK1(order=5) => 1e-6,
     EK1(order=8) => 5e-6,
@@ -54,7 +58,14 @@ for (prob, probname) in PROBS
     testsol = TestSolution(true_sol)
 
     @testset "Constant steps: $probname; alg=$alg" for (alg, err) in CONSTANT_ALGS
-        sol = solve(prob, alg, adaptive=false, dt=1e-2, dense=false, save_everystep=false)
+        sol = solve(
+            prob,
+            alg,
+            adaptive=false,
+            dt=1e-2,
+            dense=alg.smooth,
+            save_everystep=alg.smooth,
+        )
         appxsol = appxtrue(sol, true_sol, dense_errors=false)
         @test appxsol.errors[:final] < err
         # @test appxsol.errors[:l2] < err
