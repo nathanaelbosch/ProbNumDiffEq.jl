@@ -1,16 +1,17 @@
 """
-    AffineNormalKernel(A, b, C)
+    AffineNormalKernel(A[, b], C)
 
-Structure to represent affine Normal Markov kernels, i.e. conditional distributions
+Structure to represent affine Normal Markov kernels, i.e. conditional distributions of the
+form
 ```math
 \\begin{aligned}
 y \\mid x \\sim \\mathcal{N} \\left( y; A x + b, C \\right).
 \\end{aligned}
 ```
 
-At the point of writing, it is mostly used to precompute and store the backward
-representation of the posterior (via [`compute_backward_kernel!`](@ref)), and to then
-smooth (via [`marginalize!`](@ref)).
+At the point of writing, `AffineNormalKernel`s are only used to precompute and store the
+backward representation of the posterior (via [`compute_backward_kernel!`](@ref)) and for
+smoothing (via [`marginalize!`](@ref)).
 """
 struct AffineNormalKernel{TA,Tb,TC}
     A::TA
@@ -21,10 +22,13 @@ AffineNormalKernel(A, C) = AffineNormalKernel(A, missing, C)
 
 iterate(K::AffineNormalKernel, args...) = iterate((K.A, K.b, K.C), args...)
 
-copy(K::AffineNormalKernel) = if !ismissing(K.b)
-    AffineNormalKernel(copy(K.A), copy(K.b), copy(K.C))
-else
-    AffineNormalKernel(copy(K.A), missing, copy(K.C))
+copy(K::AffineNormalKernel) =
+    AffineNormalKernel(copy(K.A), ismissing(K.b) ? missing : copy(K.b), copy(K.C))
+copy!(dst::AffineNormalKernel, src::AffineNormalKernel) = begin
+    copy!(dst.A, src.A)
+    copy!(dst.b, src.b)
+    copy!(dst.C, src.C)
+    return nothing
 end
 
 RecursiveArrayTools.recursivecopy(K::AffineNormalKernel) = copy(K)
@@ -37,12 +41,25 @@ isapprox(K1::AffineNormalKernel, K2::AffineNormalKernel; kwargs...) =
     isapprox(K1.C, K2.C; kwargs...)
 
 """
-    marginalize!(xout, x, K; C_DxD, C_3DxD[, diffusion=1])
+    marginalize!(
+        xout::Gaussian{Vector{T},PSDMatrix{T,S}}
+        x::Gaussian{Vector{T},PSDMatrix{T,S}},
+        K::AffineNormalKernel{<:AbstractMatrix,Union{<:Number,<:AbstractVector,Missing},<:PSDMatrix};
+        C_DxD, C_3DxD[, diffusion=1]
+    )
 
 Basically the same as [`predict!`](@ref)), but in kernel language and with support for
-affine transitions. At the time of writing, this is mostly used to smooth the posterior
+affine transitions. At the time of writing, this is only used to smooth the posterior
 using it's backward representation, where the kernels are precomputed with
 [`compute_backward_kernel!`](@ref).
+
+Note that this function assumes certain shapes:
+- `size(x.μ) == (D, D)`
+- `size(x.Σ) == (D, D)`
+- `size(K.A) == (D, D)`
+- `size(K.b) == (D,)`, or `missing`
+- `size(K.C) == (D, D)`, _but with a tall square-root `size(K.C.R) == (3D, D)`
+`xout` is assumes to have the same shapes as `x`.
 """
 function marginalize!(xout, x, K; C_DxD, C_3DxD, diffusion=1)
     marginalize_mean!(xout, x, K)
@@ -133,8 +150,9 @@ d &= μ - G μ^P, \\\\
 Λ &= Σ - G Σ^P G^\\top.
 \\end{aligned}
 ```
-Though, everything is computed in square-root form, and with minimal allocations (thus the
-cache objects `C_DxD`, `C_2DxD`, `cachemat`).
+Everything is computed in square-root form and with minimal allocations (thus the
+cache objects `C_DxD`, `C_2DxD`, `cachemat`), so the actual formulas implemented here
+differ a bit.
 
 The resulting backward kernels are used to smooth the posterior, via [`marginalize!`](@ref).
 """
