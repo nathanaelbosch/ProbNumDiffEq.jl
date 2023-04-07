@@ -104,7 +104,7 @@ function smooth_solution!(integ)
     integ.sol.x_smooth = copy(integ.sol.x_filt)
 
     @unpack x_smooth, t, backward_kernels = integ.sol
-    @unpack C_DxD, C_2DxD = integ.cache
+    @unpack C_DxD, C_3DxD = integ.cache
 
     @assert length(x_smooth) == length(backward_kernels) + 1
 
@@ -128,7 +128,7 @@ function smooth_solution!(integ)
         _matmul!(K_tmp.A, P, _matmul!(C_DxD, K.A, PI))
         _matmul!(K_tmp.b, P, K.b)
         X_A_Xt!(K_tmp.C, K.C, PI)
-        marginalize!(x_tmp, x_tmp2, K_tmp; C_DxD, C_2DxD)
+        marginalize!(x_tmp, x_tmp2, K_tmp; C_DxD, C_3DxD)
         _gaussian_mul!(x_smooth[i], PI, x_tmp)
 
         # Save the smoothed state into the solution
