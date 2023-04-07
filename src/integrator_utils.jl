@@ -91,10 +91,11 @@ This function handles the iteration and preconditioning.
 The actual smoothing step happens in [`smooth!`](@ref).
 """
 function smooth_solution!(integ)
-    integ.sol.x_smooth = copy(integ.sol.x_filt)
+    @unpack cache, sol = integ
+    sol.x_smooth = copy(sol.x_filt)
 
-    @unpack x_smooth, t, backward_kernels = integ.sol
-    @unpack C_DxD, C_3DxD = integ.cache
+    @unpack x_smooth, t, backward_kernels = sol
+    @unpack C_DxD, C_3DxD = cache
 
     @assert length(x_smooth) == length(backward_kernels) + 1
 
@@ -106,24 +107,10 @@ function smooth_solution!(integ)
         end
 
         K = backward_kernels[i]
+        marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_3DxD)
 
-        # marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_2DxD)
-
-        make_transition_matrices!(integ.cache, dt)
-        @unpack P, PI = integ.cache
-        @unpack x_tmp, x_tmp2, backward_kernel = integ.cache
-        K_tmp = backward_kernel
-        _gaussian_mul!(x_tmp, P, x_smooth[i])
-        _gaussian_mul!(x_tmp2, P, x_smooth[i+1])
-        _matmul!(K_tmp.A, P, _matmul!(C_DxD, K.A, PI))
-        _matmul!(K_tmp.b, P, K.b)
-        X_A_Xt!(K_tmp.C, K.C, PI)
-        marginalize!(x_tmp, x_tmp2, K_tmp; C_DxD, C_3DxD)
-        _gaussian_mul!(x_smooth[i], PI, x_tmp)
-
-        # Save the smoothed state into the solution
-        _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, x_smooth[i])
-        integ.sol.u[i][:] .= integ.sol.pu[i].μ
+        _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
+        sol.u[i][:] .= sol.pu[i].μ
     end
     return nothing
 end
