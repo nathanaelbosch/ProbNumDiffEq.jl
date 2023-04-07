@@ -97,15 +97,7 @@ function marginalize_cov!(
         @.. R[D+1:3D, 1:D] = C.R
     end
 
-    Q_R = begin
-        _matmul!(M, R', R)
-        chol = cholesky!(Symmetric(M), check=false)
-        if issuccess(chol)
-            chol.U
-        else
-            triangularize!(R, cachemat=C_DxD)
-        end
-    end
+    Q_R = triangularize!(R, cachemat=C_DxD)
     copy!(x_out.Σ.R, Q_R)
     return x_out.Σ
 end
