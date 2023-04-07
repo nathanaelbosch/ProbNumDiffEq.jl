@@ -45,7 +45,7 @@ isapprox(K1::AffineNormalKernel, K2::AffineNormalKernel; kwargs...) =
         xout::Gaussian{Vector{T},PSDMatrix{T,S}}
         x::Gaussian{Vector{T},PSDMatrix{T,S}},
         K::AffineNormalKernel{<:AbstractMatrix,Union{<:Number,<:AbstractVector,Missing},<:PSDMatrix};
-        C_DxD, C_3DxD[, diffusion=1]
+        C_DxD, C_3DxD
     )
 
 Basically the same as [`predict!`](@ref)), but in kernel language and with support for
@@ -61,9 +61,9 @@ Note that this function assumes certain shapes:
 - `size(K.C) == (D, D)`, _but with a tall square-root `size(K.C.R) == (3D, D)`
 `xout` is assumes to have the same shapes as `x`.
 """
-function marginalize!(xout, x, K; C_DxD, C_3DxD, diffusion=1)
+function marginalize!(xout, x, K; C_DxD, C_3DxD)
     marginalize_mean!(xout, x, K)
-    marginalize_cov!(xout, x, K; C_DxD, C_3DxD, diffusion)
+    marginalize_cov!(xout, x, K; C_DxD, C_3DxD)
 end
 function marginalize_mean!(xout::Gaussian, x::Gaussian, K::AffineNormalKernel)
     _matmul!(xout.μ, K.A, x.μ)
@@ -79,23 +79,13 @@ function marginalize_cov!(
     K::AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix};
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
-    diffusion=1,
 )
     D = length(x_curr.μ)
     A, b, C = K
     R, M = C_3DxD, C_DxD
 
-    if iszero(diffusion)
-        fast_X_A_Xt!(x_out.Σ, x_curr.Σ, A)
-        return x_out.Σ
-    end
-
     _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, A')
-    if !isone(diffusion)
-        _matmul!(view(R, D+1:3D, 1:D), C.R, sqrt.(diffusion))
-    else
-        @.. R[D+1:3D, 1:D] = C.R
-    end
+    @.. R[D+1:3D, 1:D] = C.R
 
     Q_R = triangularize!(R, cachemat=C_DxD)
     copy!(x_out.Σ.R, Q_R)
