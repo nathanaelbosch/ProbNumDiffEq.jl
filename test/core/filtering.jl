@@ -274,10 +274,14 @@ end
         @test P_smoothed ≈ Matrix(x_curr.Σ)
 
         @testset "test AffineNormalKernel functionality" begin
-            K_copy = copy(K_backward)
-            @test_nowarn copy!(K_copy, K_backward)
-            @test K_copy ≈ K_backward
-            @test K_copy == K_backward
+            K2 = similar(K_backward)
+            @test K2 != K_backward
+            @test_nowarn copy!(K2, K_backward)
+            @test K2 ≈ K_backward
+            @test K2 == K_backward
+            @test K2.A == K_backward.A
+            @test K2.b == K_backward.b
+            @test K2.C == K_backward.C
         end
     end
 end

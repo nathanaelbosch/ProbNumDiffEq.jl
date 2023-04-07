@@ -2,7 +2,7 @@ __precompile__()
 
 module ProbNumDiffEq
 
-import Base: copy, copy!, show, size, ndims, similar, isapprox, iterate
+import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==
 
 using LinearAlgebra
 import Statistics: mean, var, std

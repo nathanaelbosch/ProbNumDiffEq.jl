@@ -22,6 +22,8 @@ AffineNormalKernel(A, C) = AffineNormalKernel(A, missing, C)
 
 iterate(K::AffineNormalKernel, args...) = iterate((K.A, K.b, K.C), args...)
 
+similar(K::AffineNormalKernel) =
+    AffineNormalKernel(similar(K.A), ismissing(K.b) ? missing : similar(K.b), similar(K.C))
 copy(K::AffineNormalKernel) =
     AffineNormalKernel(copy(K.A), ismissing(K.b) ? missing : copy(K.b), copy(K.C))
 copy!(dst::AffineNormalKernel, src::AffineNormalKernel) = begin
@@ -39,6 +41,11 @@ isapprox(K1::AffineNormalKernel, K2::AffineNormalKernel; kwargs...) =
     isapprox(K1.A, K2.A; kwargs...) &&
     isapprox(K1.b, K2.b; kwargs...) &&
     isapprox(K1.C, K2.C; kwargs...)
+==(K1::AffineNormalKernel, K2::AffineNormalKernel) =
+    K1.A == K2.A && K1.b == K2.b && K1.C == K2.C
+
+# Little bit of type piracy here:
+isapprox(M1::PSDMatrix, M2::PSDMatrix; kwargs...) = isapprox(M1.R, M2.R; kwargs...)
 
 """
     marginalize!(
