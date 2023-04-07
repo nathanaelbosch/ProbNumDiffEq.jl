@@ -111,7 +111,7 @@ function marginalize_cov!(
 end
 
 """
-    compute_backward_kernel!(Kout, xpred, x, K; C_DxD, C_2DxD, cachemat[, diffusion=1])
+    compute_backward_kernel!(Kout, xpred, x, K; C_DxD[, diffusion=1])
 
 Compute the backward representation of the posterior, i.e. the conditional
 distribution of the current state given the next state and the transition kernel.
@@ -151,8 +151,7 @@ d &= μ - G μ^P, \\\\
 \\end{aligned}
 ```
 Everything is computed in square-root form and with minimal allocations (thus the
-cache objects `C_DxD`, `C_2DxD`, `cachemat`), so the actual formulas implemented here
-differ a bit.
+cache `C_DxD`), so the actual formulas implemented here differ a bit.
 
 The resulting backward kernels are used to smooth the posterior, via [`marginalize!`](@ref).
 """
@@ -162,8 +161,6 @@ function compute_backward_kernel!(
     x::XT,
     K::KT2;
     C_DxD::AbstractMatrix,
-    C_2DxD::AbstractMatrix,
-    cachemat::AbstractMatrix,
     diffusion=1,
 ) where {
     XT<:SRGaussian,
