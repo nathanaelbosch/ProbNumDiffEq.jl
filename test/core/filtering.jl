@@ -10,12 +10,12 @@ using LinearAlgebra
     # Setup
     d = 5
     m = rand(d)
-    R_p = Matrix(UpperTriangular(rand(d, d)))
-    P = R_p'R_p
+    P_R = Matrix(UpperTriangular(rand(d, d)))
+    P = P_R'P_R
 
     A = rand(d, d)
-    R_Q = Matrix(UpperTriangular(rand(d, d)))
-    Q = R_Q'R_Q
+    Q_R = Matrix(UpperTriangular(rand(d, d)))
+    Q = Q_R'Q_R
 
     # PREDICT
     m_p = A * m
@@ -31,25 +31,25 @@ using LinearAlgebra
     end
 
     @testset "predict! with PSDMatrix" begin
-        x_curr = Gaussian(m, PSDMatrix(R_p))
+        x_curr = Gaussian(m, PSDMatrix(P_R))
         x_out = copy(x_curr)
-        Q_SR = PSDMatrix(R_Q)
+        Q_SR = PSDMatrix(Q_R)
         ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, zeros(d, d), zeros(2d, d))
         @test m_p == x_out.μ
         @test P_p ≈ Matrix(x_out.Σ)
     end
 
     @testset "predict! with zero diffusion" begin
-        x_curr = Gaussian(m, PSDMatrix(R_p))
+        x_curr = Gaussian(m, PSDMatrix(P_R))
         x_out = copy(x_curr)
-        Q_SR = PSDMatrix(R_Q)
+        Q_SR = PSDMatrix(Q_R)
         ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, zeros(d, d), zeros(2d, d), 0)
         @test m_p == x_out.μ
         @test Matrix(x_out.Σ) ≈ Matrix(X_A_Xt(x_curr.Σ, A))
     end
 
     @testset "predict with kernel and marginalize!" begin
-        x_curr = Gaussian(m, PSDMatrix(R_p))
+        x_curr = Gaussian(m, PSDMatrix(P_R))
         x_out = copy(x_curr)
         Q_SR = PSDMatrix(R_Q)
         K = ProbNumDiffEq.AffineNormalKernel(A, Q_SR)
@@ -59,9 +59,9 @@ using LinearAlgebra
     end
 
     @testset "predict with kernel and marginalize! with zero diffusion" begin
-        x_curr = Gaussian(m, PSDMatrix(R_p))
+        x_curr = Gaussian(m, PSDMatrix(P_R))
         x_out = copy(x_curr)
-        Q_SR = PSDMatrix(R_Q)
+        Q_SR = PSDMatrix(Q_R)
         K = ProbNumDiffEq.AffineNormalKernel(A, Q_SR)
         ProbNumDiffEq.marginalize!(
             x_out, x_curr, K; C_DxD=zeros(d, d), C_2DxD=zeros(2d, d), diffusion=0)
@@ -74,14 +74,13 @@ end
     # Setup
     d = 5
     m_p = rand(d)
-    R_P_p = Matrix(UpperTriangular(rand(d, d)))
-    P_p = R_P_p'R_P_p
+    P_p_R = Matrix(UpperTriangular(rand(d, d)))
+    P_p = P_p_R'P_p_R
 
     # Measure
     o = 3
     H = rand(o, d)
-    R_R = 0.0 * rand(o, o)
-    R = R_R'R_R
+    R = zeros(o, o)
 
     z_data = zeros(o)
     z = H * m_p
@@ -130,7 +129,7 @@ end
             SR = cholesky(S).U |> Matrix
             msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
             O_cache = zeros(o, o)
-            x_pred = Gaussian(x_pred.μ, PSDMatrix(R_P_p))
+            x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
             x_out = copy(x_pred)
             ProbNumDiffEq.update!(
                 x_out,
@@ -153,7 +152,7 @@ end
             SR = cholesky(S).U
             msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
             O_cache = zeros(o, o)
-            x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(R_P_p)))
+            x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(P_p_R)))
             x_out = copy(x_pred)
             ProbNumDiffEq.update!(
                 x_out,
@@ -173,14 +172,14 @@ end
 
             z_data = zeros(o)
             z = H * m_p
-            S = PSDMatrix(R_P_p * H')
+            S = PSDMatrix(P_p_R * H')
 
             K_cache = copy(K)
             K2_cache = copy(K)
             M_cache = zeros(d, d)
             msmnt = Gaussian(measurement.μ, PSDMatrix(S.R))
             O_cache = zeros(o, o)
-            x_pred = Gaussian(x_pred.μ, PSDMatrix(R_P_p))
+            x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
             x_out = copy(x_pred)
 
             warnmsg = "Can't compute the update step with cholesky; using qr instead"
@@ -202,19 +201,19 @@ end
     # Setup
     d = 5
     m, m_s = rand(d), rand(d)
-    R_P, R_P_s = Matrix(UpperTriangular(rand(d, d))), Matrix(UpperTriangular(rand(d, d)))
-    P, P_s = R_P'R_P, R_P_s'R_P_s
+    P_R, P_s_R = Matrix(UpperTriangular(rand(d, d))), Matrix(UpperTriangular(rand(d, d)))
+    P, P_s = P_R'P_R, P_s_R'P_s_R
 
     A = rand(d, d)
-    R_Q = Matrix(UpperTriangular(rand(d, d)))
-    Q = R_Q'R_Q
-    Q_SR = PSDMatrix(R_Q)
+    Q_R = Matrix(UpperTriangular(rand(d, d)))
+    Q = Q_R'Q_R
+    Q_SR = PSDMatrix(Q_R)
 
     # PREDICT first
     m_p = A * m
-    R_P_p = qr([R_P * A'; R_Q]).R |> Matrix
+    P_p_R = qr([P_R * A'; Q_R]).R |> Matrix
     P_p = A * P * A' + Q
-    @assert P_p ≈ R_P_p'R_P_p
+    @assert P_p ≈ P_p_R'P_p_R
 
     # SMOOTH
     G = P * A' * inv(P_p)
@@ -231,15 +230,15 @@ end
         @test P_smoothed ≈ x_out.Σ
     end
     @testset "smooth with PSDMatrix" begin
-        x_curr_psd = Gaussian(m, PSDMatrix(R_P)) |> copy
-        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s)) |> copy
+        x_curr_psd = Gaussian(m, PSDMatrix(P_R)) |> copy
+        x_next_psd = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
         x_out, _ = ProbNumDiffEq.smooth(x_curr_psd, x_next_psd, A, Q_SR)
         @test m_smoothed ≈ x_out.μ
         @test P_smoothed ≈ Matrix(x_out.Σ)
     end
     @testset "smooth!" begin
-        x_curr_psd = Gaussian(m, PSDMatrix(R_P)) |> copy
-        x_next_psd = Gaussian(m_s, PSDMatrix(R_P_s)) |> copy
+        x_curr_psd = Gaussian(m, PSDMatrix(P_R)) |> copy
+        x_next_psd = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
         cache = (
             x_pred=copy(x_curr_psd),
             G1=zeros(d, d),
@@ -262,9 +261,9 @@ end
         K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
         K_backward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(m_p), copy(Q_SR))
 
-        x_curr = Gaussian(m, PSDMatrix(R_P)) |> copy
-        x_next_pred = Gaussian(m_p, PSDMatrix(R_P_p)) |> copy
-        x_next_smoothed = Gaussian(m_s, PSDMatrix(R_P_s)) |> copy
+        x_curr = Gaussian(m, PSDMatrix(P_R)) |> copy
+        x_next_pred = Gaussian(m_p, PSDMatrix(P_p_R)) |> copy
+        x_next_smoothed = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
 
         C_DxD = zeros(d, d)
         C_2DxD = zeros(2d, d)
