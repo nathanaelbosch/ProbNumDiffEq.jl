@@ -65,7 +65,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Predict the mean
     predict_mean!(x_pred, xprev, Ah)
-    mul!(view(u_pred, :), SolProj, x_pred.μ)
+    _matmul!(view(integ.u, :), SolProj, x_pred.μ)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
