@@ -35,10 +35,6 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     end
 end
 
-function update_rate_parameter!(integ, cache, f, u, p, t)
-    OrdinaryDiffEq.calc_J!(cache.prior.rate_parameter, integ, cache, true)
-end
-
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
@@ -68,7 +64,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
         if cache.prior isa IOUP && cache.prior.update_rate_parameter
-            update_rate_parameter!(integ, cache, integ.f, integ.u, integ.p, integ.t)
+            OrdinaryDiffEq.calc_J!(cache.prior.rate_parameter, integ, cache, false)
         end
 
         make_transition_matrices!(cache, dt)
