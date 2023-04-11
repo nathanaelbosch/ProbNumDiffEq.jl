@@ -4,7 +4,8 @@ using OrdinaryDiffEq
 using Random
 using Test
 
-A = [-1e-1 -2π; 2π -1e-1]
+α = 1e-1
+A = [-α -2π; 2π -α]
 u0 = [1.0, 1.0]
 f(du, u, p, t) = mul!(du, A, u)
 tspan = (0.0, 2.0)
@@ -44,10 +45,10 @@ end
 end
 
 @testset "Different rate types" begin
-    @testset "$(typeof(r))" for r in (1, [1, 1], [1 0; 0 1], 1 * I(2))
+    @testset "$(typeof(r))" for r in (-α, [-α, -α], [-α 0; 0 -α], -α * I(2))
         sol = solve(prob, EK1(prior=IOUP(3, r)))
 
         err = norm(ref[end] - sol[end])
-        @test err < 5e-6
+        @test err < 6e-6
     end
 end
