@@ -11,7 +11,7 @@ Currently, we recommend using the semi-implicit `EK1` algorithm.
 ## Solving mass-matrix DAEs with the `EK1`
 
 First, define the DAE (here the ROBER problem) as an ODE problem with singular mass matrix:
-```@example 2
+```@example dae
 using ProbNumDiffEq, Plots, LinearAlgebra, OrdinaryDiffEq, ModelingToolkit
 
 function rober(du, u, p, t)
@@ -30,7 +30,7 @@ prob_mm = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e5), (0.04, 3e7, 1e4))
 ```
 
 We can solve this problem directly with the `EK1`:
-```@example 2
+```@example dae
 sol = solve(prob_mm, EK1(), reltol=1e-8, abstol=1e-8)
 plot(
     sol,
@@ -58,7 +58,7 @@ which demonstrates how the classic `Rodas4` solver fails to solve a DAE due to t
 __It turns out that our probabilistic numerical solvers can directly solve the index-3 DAE!__
 
 First, define the pendulum problem as in the tutorial:
-```@example 2
+```@example dae
 function pendulum!(du, u, p, t)
     x, dx, y, dy, T = u
     g, L = p
@@ -76,7 +76,7 @@ pendulum_prob = ODEProblem(pendulum_fun!, u0, tspan, p)
 ```
 
 We can try to solve it directly with one of the classic mass-matrix DAE solvers from OrdinaryDiffEq.jl:
-```@example 2
+```@example dae
 solve(pendulum_prob, Rodas4())
 ```
 
@@ -84,12 +84,12 @@ It does not work!
 This is because of the _index_ of the DAE; see e.g. [this explenation from the tutorial](https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/#Understanding-DAE-Index).
 
 Does this also hold for the `EK1` solver? Let's find out:
-```@example 2
+```@example dae
 sol = solve(pendulum_prob, EK1())
 ```
 Nope! The `EK1` is able to solve the index-3 DAE directly. Pretty cool!
 
-```@example 2
+```@example dae
 plot(sol)
 ```
 
@@ -102,19 +102,19 @@ tutorial is to demonstrate ModelingToolkit's utility for automatic index reducti
 Let's see if that still helps in this context here.
 
 First, `modelingtoolkitize` the problem:
-```@example 2
+```@example dae
 traced_sys = modelingtoolkitize(pendulum_prob)
 ```
 (how cool is this latex output ?!?)
 
 Next, lower the DAE index and simplify it with MTK's `dae_index_lowering` and `structural_simplify`:
 
-```@example 2
+```@example dae
 simplified_sys = structural_simplify(dae_index_lowering(traced_sys))
 ```
 
 Let's build two different ODE problems, and check how well we can solve each:
-```@example 2
+```@example dae
 prob_index3 = ODEProblem(traced_sys, Pair[], tspan)
 prob_index1 = ODEProblem(simplified_sys, Pair[], tspan)
 
