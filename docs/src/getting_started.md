@@ -166,7 +166,7 @@ std(sol.pu[5])
 Probabilistic numerical ODE solvers approximate the posterior distribution
 
 ```math
-p \Big( y(t) \big\mid y(0) = y_0, \{ \dot{y}(t_i) = f_\theta(y(t_i), t_i) \} \Big),
+p \Big( y(t) ~\big|~ y(0) = y_0, \{ \dot{y}(t_i) = f_\theta(y(t_i), t_i) \} \Big),
 ```
 
 which describes a posterior not just for the discrete steps but for any ``t`` in the continuous space ``t \in [0, T]``;
