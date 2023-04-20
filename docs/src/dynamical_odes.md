@@ -45,7 +45,7 @@ to obtain
 
 This first-order ODE can then be solved using any conventional ODE solver - including our `EK1`:
 
-```@example 2
+```@example dyn
 using ProbNumDiffEq, Plots
 
 function Hénon_Heiles(du, u, p, t)
@@ -66,11 +66,11 @@ plot(sol, vars=(3, 4)) # where `vars=(3,4)` is used to plot x agains y
 Instead of first transforming the problem, we can also solve it directly as a second-order ODE, by defining it as a `SecondOrderODEProblem`.
 
 !!! note
-    
+
     The `SecondOrderODEProblem` type is not defined in ProbNumDiffEq.jl but is provided by SciMLBase.jl.
     For more information, check out the DifferentialEquations.jl documentation on [Dynamical, Hamiltonian and 2nd Order ODE Problems](https://diffeq.sciml.ai/stable/types/dynamical_types/).
 
-```@example 2
+```@example dyn
 function Hénon_Heiles2(ddu, du, u, p, t)
     ddu[1] = -u[1] - 2 * u[1] * u[2]
     ddu[2] = u[2]^2 - u[2] - u[1]^2
@@ -110,7 +110,7 @@ The total energy can be expressed as the sum of the potential and kinetic energi
 
 In code:
 
-```@example 2
+```@example dyn
 PotentialEnergy(x, y) = 1 // 2 * (x^2 + y^2 + 2x^2 * y - 2 // 3 * y^3)
 KineticEnergy(dx, dy) = 1 // 2 * (dx^2 + dy^2)
 E(dx, dy, x, y) = PotentialEnergy(x, y) + KineticEnergy(dx, dy)
@@ -120,7 +120,7 @@ E(u) = E(u...); # convenient shorthand
 So, let's have a look at how the total energy changes over time when we numerically simulate the Hénon-Heiles model over a long period of time:
 Standard solve
 
-```@example 2
+```@example dyn
 longprob = remake(prob2, tspan=(0.0, 1e3))
 longsol = solve(longprob, EK1(smooth=false), dense=false)
 plot(longsol.t, E.(longsol.u))
@@ -135,19 +135,19 @@ In the language of ODE filters, preserving energy over time amounts to just anot
 The most convenient way of updating on this additional zero measurement with ProbNumDiffEq.jl is with the `ManifoldUpdate` callback.
 
 !!! note
-    
+
     The `ManifoldUpdate` callback can be thought of a probabilistic counterpart to the [`ManifoldProjection`](https://diffeq.sciml.ai/stable/features/callback_library/#Manifold-Conservation-and-Projection) callback provided by DiffEqCallbacks.jl.
 
 To do so, first define a (vector-valued) residual function, here chosen to be the difference between the current energy and the initial energy, and build a `ManifoldUpdate` callback
 
-```@example 2
+```@example dyn
 residual(u) = [E(u) - E(du0..., u0...)]
 cb = ManifoldUpdate(residual)
 ```
 
 Then, solve the ODE with this callback
 
-```@example 2
+```@example dyn
 longsol_preserving = solve(longprob, EK1(smooth=false), dense=false, callback=cb)
 plot(longsol.t, E.(longsol.u))
 plot!(longsol_preserving.t, E.(longsol_preserving.u))
