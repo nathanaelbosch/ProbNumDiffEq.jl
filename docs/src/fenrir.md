@@ -27,10 +27,10 @@ u(t_n) = H y(t_n) + v_n, \qquad v_n \sim \mathcal{N}(0, R).
 \end{aligned}
 ```
 The question of interest is: How can we compute the marginal likelihood ``p(\mathcal{D} \mid \theta)``?
-Short answer: We can't. It's intractable, because exactly computing the true IVP solution ``y(t)`` is intractable.
+Short answer: We can't. It's intractable, because computing the true IVP solution exactly ``y(t)`` is intractable.
 What we can do however is compute an approximate marginal likelihood.
 This is what Fenrir.jl provides.
-For details, check out the [paper](https://arxiv.org/abs/2202.01287).
+For details, check out the [paper](https://proceedings.mlr.press/v162/tronarp22a.html).
 
 ## The specific problem, in code
 Let's assume that the true underlying dynamics are given by a FitzHugh-Nagumo model
@@ -56,6 +56,7 @@ odedata = [true_sol(t) .+ sqrt(observation_noise_var) * randn(length(u0)) for t 
 plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
 scatter!(times, stack(odedata), markersize=2, markerstrokewidth=0.1, color=1, label=["Noisy Data" ""])
 ```
+Our goal is then to recover the true parameter `p` (and thus also the true trajectoy plotted above) the noisy data.
 
 ## Computing the negative log-likelihood
 To do parameter inference - be it maximum-likelihod, maximum a posteriori, or full Bayesian inference with MCMC - we need to evaluate the likelihood of given a parameter estimate ``\theta_\text{est}``.
@@ -70,15 +71,15 @@ nll
 ```
 This is the negative marginal log-likelihood of the parameter `p_est`.
 You can use it as any other NLL: Optimize it to compute maximum-likelihood estimates or MAPs, or plug it into MCMC to sample from the posterior.
-In [our paper](https://arxiv.org/abs/2202.01287) we compute MLEs by pairing Fenrir with [Optimization.jl](http://optimization.sciml.ai/stable/) and [ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/).
-Let's quickly explore how to do this.
+In [our paper](https://proceedings.mlr.press/v162/tronarp22a.html) we compute MLEs by pairing Fenrir with [Optimization.jl](http://optimization.sciml.ai/stable/) and [ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/).
+Let's quickly explore how to do this next.
 
 
 ## Maximum-likelihood parameter inference
 
 To compute a maximum-likelihood estimate (MLE), we just need to maximize ``\theta \to p(\mathcal{D} \mid \theta)`` - that is, minimize the `nll` from above.
 We use [Optimization.jl](https://docs.sciml.ai/Optimization/stable/) for this.
-First, fefine a loss function and create an `OptimizationProblem`
+First, define a loss function and create an `OptimizationProblem`
 ```@example fenrir
 function loss(x, _)
     ode_params = x[begin:end-1]
@@ -101,7 +102,7 @@ p_mle = optsol.u[1:3]
 p_mle # hide
 ```
 
-That's it! The computed MLE is very close to the true parameter which we used to generate the data.
+Success! The computed MLE is quite close to the true parameter which we used to generate the data.
 As a final step, let's plot the true solution, the data, and the result of the MLE:
 
 ```@example fenrir
@@ -114,6 +115,6 @@ plot!(mle_sol, color=3, label=["MLE-parameter Solution" ""])
 Looks good!
 
 
-#### References
+#### Reference
 
-[1] F.Tronarp, N. Bosch, P. Hennig: **Fenrir: Fenrir: Physics-Enhanced Regression for Initial Value Problems** (2022)
+[1] F. Tronarp, N. Bosch, P. Hennig: **Fenrir: Fenrir: Physics-Enhanced Regression for Initial Value Problems** [(2022)](https://proceedings.mlr.press/v162/tronarp22a.html)
