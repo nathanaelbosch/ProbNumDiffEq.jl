@@ -6,7 +6,7 @@ In this tutorial we consider an _energy-preserving_, physical dynamical system, 
 
  1. To _efficiently_ solve second-order ODEs, just define the problem as a `SecondOrderODEProblem`.
  2. To preserve constant quantities, use the `ManifoldUpdate` callback; same syntax as
-    [DiffEqCallback.jl's `ManifoldProjection`](https://diffeq.sciml.ai/stable/features/callback_library/#Manifold-Conservation-and-Projection).
+    [DiffEqCallback.jl's `ManifoldProjection`](https://docs.sciml.ai/DiffEqCallbacks/stable/projection/).
 
 ## Simulating the Hénon-Heiles system
 
