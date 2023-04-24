@@ -1,9 +1,9 @@
 # Inspired by:
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/v6.21.0/src/OrdinaryDiffEq.jl#L195-L221
 
-import SnoopPrecompile
+import PrecompileTools
 
-SnoopPrecompile.@precompile_all_calls begin
+PrecompileTools.@compile_workload begin
     function lorenz(du, u, p, t)
         du[1] = 10.0(u[2] - u[1])
         du[2] = u[1] * (28.0 - u[3]) - u[2]
