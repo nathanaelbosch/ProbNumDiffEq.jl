@@ -10,7 +10,11 @@ function calc_H!(H, integ, cache)
     elseif integ.alg isa EK1
         calc_H_EK0!(H, integ, cache)
         # @assert integ.u == @view x_pred.μ[1:(q+1):end]
-        OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
+        if integ.f isa SplitFunction
+            ddu .= integ.f.f1.f
+        else
+            OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
+        end
         ProbNumDiffEq._matmul!(H, view(ddu, 1:d, :), cache.SolProj, -1.0, 1.0)
     end
     return nothing

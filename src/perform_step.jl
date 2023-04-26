@@ -64,7 +64,11 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
         if cache.prior isa IOUP && cache.prior.update_rate_parameter
-            OrdinaryDiffEq.calc_J!(cache.prior.rate_parameter, integ, cache, false)
+            if integ.f isa SplitFunction
+                cache.prior.rate_parameter .= integ.f.f1.f
+            else
+                OrdinaryDiffEq.calc_J!(cache.prior.rate_parameter, integ, cache, false)
+            end
         end
 
         make_transition_matrices!(cache, dt)
