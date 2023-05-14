@@ -5,11 +5,10 @@ function calc_H!(H, integ, cache)
     if integ.alg isa EK0
         calc_H_EK0!(H, integ, cache)
         if integ.alg.prior isa IOUP
-            H .-= cache.prior.rate_parameter * E0
+            ProbNumDiffEq._matmul!(H, cache.prior.rate_parameter, E0, -1.0, 1.0)
         end
     elseif integ.alg isa EK1
         calc_H_EK0!(H, integ, cache)
-        # @assert integ.u == @view x_pred.μ[1:(q+1):end]
         if integ.f isa SplitFunction
             ddu .= integ.f.f1.f
         else
