@@ -3,8 +3,8 @@
 # https://github.com/SciML/OrdinaryDiffEq.jl/blob/master/src/alg_utils.jl
 ############################################################################################
 
-OrdinaryDiffEq.alg_autodiff(alg::AbstractEK) = true
-OrdinaryDiffEq.alg_autodiff(::EK1{CS,AD}) where {CS,AD} = AD
+OrdinaryDiffEq._alg_autodiff(::AbstractEK) = Val{true}()
+OrdinaryDiffEq._alg_autodiff(::EK1{CS,AD}) where {CS,AD} = Val{AD}()
 OrdinaryDiffEq.alg_difftype(::EK1{CS,AD,DiffType}) where {CS,AD,DiffType} = DiffType
 OrdinaryDiffEq.standardtag(::AbstractEK) = false
 OrdinaryDiffEq.standardtag(::EK1{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} = ST
