@@ -111,6 +111,10 @@ EK1(;
         initialization,
     )
 
+ExpEK(; L, order, kwargs...) = EK0(prior=IOUP(order, L), kwargs...)
+RosenbrockExpEK(; order, kwargs...) =
+    EK1(prior=IOUP(order, update_rate_parameter=true), kwargs...)
+
 function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
     T = SciMLBase.remaker_of(thing)
     T(;
