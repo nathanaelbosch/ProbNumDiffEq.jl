@@ -13,6 +13,8 @@ They also specialize on second-order ODEs: If the problem is of type [`SecondOrd
 ```@docs
 EK1
 EK0
+ExpEK
+RosenbrockExpEK
 ```
 
 ## [References](@id solversrefs)
