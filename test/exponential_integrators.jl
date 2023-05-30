@@ -10,21 +10,21 @@ using Test
     p = -1
     prob = ODEProblem(f!, u0, tspan, p)
 
-    u_analytic = (u0, p, t) -> @. u0 * exp(p * t)
-    u(t) = u_analytic(u0, p, t)
+    u(t) = u0 * exp(p * t)
+    uend = u(tspan[2])
 
     sol0 = solve(prob, EK0(order=3));
     sol1 = solve(prob, EK1(order=3));
     solexp = solve(prob, ExpEK(L=p, order=3));
     solros = solve(prob, RosenbrockExpEK(order=3));
 
-    err0 = norm(u(tspan[2]) - sol0[end])
+    err0 = norm(uend - sol0[end])
     @test err0 < 1e-7
-    err1 = norm(u(tspan[2]) - sol1[end])
+    err1 = norm(uend - sol1[end])
     @test err1 < 1e-9
-    errexp = norm(u(tspan[2]) - solexp[end])
+    errexp = norm(uend - solexp[end])
     @test errexp < 1e-14
-    errros = norm(u(tspan[2]) - solros[end])
+    errros = norm(uend - solros[end])
     @test errros < 1e-15
 
     @test errros < errexp < err1 < err0
