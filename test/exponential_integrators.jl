@@ -30,12 +30,12 @@ using Test
     @test errros < errexp < err1 < err0
 
     @test length(solexp) < length(sol0)
-    @test solexp.destats.nf < sol0.destats.nf
+    @test solexp.stats.nf < sol0.stats.nf
     @test length(solexp) < length(sol1)
-    @test solexp.destats.nf < sol1.destats.nf
+    @test solexp.stats.nf < sol1.stats.nf
 
     @test length(solros) < length(sol0)
-    @test solros.destats.nf < sol0.destats.nf
+    @test solros.stats.nf < sol0.stats.nf
     @test length(solros) < length(sol1)
-    @test solros.destats.nf < sol1.destats.nf
+    @test solros.stats.nf < sol1.stats.nf
 end
