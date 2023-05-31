@@ -13,10 +13,10 @@ using Test
     u(t) = u0 * exp(p * t)
     uend = u(tspan[2])
 
-    sol0 = solve(prob, EK0(order=3));
-    sol1 = solve(prob, EK1(order=3));
-    solexp = solve(prob, ExpEK(L=p, order=3));
-    solros = solve(prob, RosenbrockExpEK(order=3));
+    sol0 = solve(prob, EK0(order=3))
+    sol1 = solve(prob, EK1(order=3))
+    solexp = solve(prob, ExpEK(L=p, order=3))
+    solros = solve(prob, RosenbrockExpEK(order=3))
 
     err0 = norm(uend - sol0[end])
     @test err0 < 1e-7
