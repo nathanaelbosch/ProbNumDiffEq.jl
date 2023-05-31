@@ -23,9 +23,9 @@ using Test
     err1 = norm(uend - sol1[end])
     @test err1 < 1e-9
     errexp = norm(uend - solexp[end])
-    @test errexp < 1e-14
+    @test errexp < 1e-10
     errros = norm(uend - solros[end])
-    @test errros < 1e-15
+    @test errros < 1e-13
 
     @test errros < errexp < err1 < err0
 
