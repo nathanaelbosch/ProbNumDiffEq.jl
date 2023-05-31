@@ -25,6 +25,7 @@ using RecursiveArrayTools
 using ForwardDiff
 using ExponentialUtilities
 using Octavian
+using FastGaussQuadrature
 
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
