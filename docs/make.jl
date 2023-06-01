@@ -11,6 +11,7 @@ makedocs(
             "Getting Started" => "getting_started.md"
             "Second Order ODEs and Energy Preservation" => "dynamical_odes.md"
             "Differential Algebraic Equations" => "dae.md"
+            "Probabilistic Exponential Integrators" => "exponential_integrators.md"
             "Parameter Inference" => "fenrir.md"
         ],
         "Solvers and Options" => [

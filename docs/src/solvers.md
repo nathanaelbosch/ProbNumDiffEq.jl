@@ -7,12 +7,16 @@ All solvers are compatible with DAEs in mass-matrix ODE form.
 They also specialize on second-order ODEs: If the problem is of type [`SecondOrderODEProblem`](https://docs.sciml.ai/DiffEqDocs/stable/types/dynamical_types/#SciMLBase.SecondOrderODEProblem), it solves the second-order problem directly; this is more efficient than solving the transformed first-order problem and provides more meaningful posteriors
 [[1]](@ref solversrefs).
 
-
 ## API
-
 ```@docs
 EK1
 EK0
+```
+
+### Probabilistic Exponential Integrators
+```@docs
+ExpEK
+RosenbrockExpEK
 ```
 
 ## [References](@id solversrefs)

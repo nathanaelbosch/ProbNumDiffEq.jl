@@ -28,16 +28,37 @@ struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior{elType}
     wiener_process_dimension::dimType
     num_derivatives::Int
     rate_parameter::R
+    update_rate_parameter::Bool
 end
-IOUP(num_derivatives, rate_parameter) =
-    IOUP(missing, num_derivatives, rate_parameter)
-IOUP(wiener_process_dimension, num_derivatives, rate_parameter) =
-    IOUP{typeof(1.0)}(wiener_process_dimension, num_derivatives, rate_parameter)
-IOUP{T}(wiener_process_dimension, num_derivatives, rate_parameter) where {T} =
+IOUP(num_derivatives; update_rate_parameter) = begin
+    @assert update_rate_parameter
+    IOUP(missing, num_derivatives, missing, update_rate_parameter)
+end
+IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
+    IOUP(missing, num_derivatives, rate_parameter, update_rate_parameter)
+IOUP(
+    wiener_process_dimension,
+    num_derivatives,
+    rate_parameter,
+    update_rate_parameter=false,
+) =
+    IOUP{typeof(1.0)}(
+        wiener_process_dimension,
+        num_derivatives,
+        rate_parameter,
+        update_rate_parameter,
+    )
+IOUP{T}(
+    wiener_process_dimension,
+    num_derivatives,
+    rate_parameter,
+    update_rate_parameter=false,
+) where {T} =
     IOUP{T,typeof(wiener_process_dimension),typeof(rate_parameter)}(
         wiener_process_dimension,
         num_derivatives,
         rate_parameter,
+        update_rate_parameter,
     )
 
 function to_1d_sde(p::IOUP)
@@ -93,21 +114,16 @@ end
 function discretize(p::IOUP, dt::Real)
     r = p.rate_parameter
     A, Q = if p.rate_parameter isa Number
-        A_breve, Q_breve = discretize(to_1d_sde(p), dt)
-        d = p.wiener_process_dimension
-        # QR_breve = cholesky!(Symmetric(Q_breve)).L'
-        E = eigen(Symmetric(Q_breve))
-        QR_breve = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
+        A_breve, QR_breve = discretize_sqrt(to_1d_sde(p), dt)
 
+        d = p.wiener_process_dimension
         A = kron(I(d), A_breve)
         QR = kron(I(d), QR_breve)
         Q = PSDMatrix(QR)
         A, Q
     else
         @assert r isa AbstractVector || r isa AbstractMatrix
-        A, Q = discretize(to_sde(p), dt)
-        E = eigen(Symmetric(Q))
-        QR = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
+        A, QR = discretize_sqrt(to_sde(p), dt)
         Q = PSDMatrix(QR)
         A, Q
     end

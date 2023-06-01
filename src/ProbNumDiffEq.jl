@@ -25,6 +25,7 @@ using RecursiveArrayTools
 using ForwardDiff
 using ExponentialUtilities
 using Octavian
+using FastGaussQuadrature
 
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
@@ -57,6 +58,7 @@ export TaylorModeInit, ClassicSolverInit
 
 include("algorithms.jl")
 export EK0, EK1
+export ExpEK, RosenbrockExpEK
 
 include("alg_utils.jl")
 include("caches.jl")

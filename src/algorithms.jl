@@ -111,6 +111,72 @@ EK1(;
         initialization,
     )
 
+"""
+    ExpEK(; L, order=3, kwargs...)
+
+Probabilistic exponential integrator
+
+Probabilistic exponential integrators are a class of integrators for semi-linear stiff ODEs
+that provide improved stability by essentially solving the linear part of the ODE exactly.
+In probabilistic numerics, this amounts to including the linear part into the prior model
+of the solver.
+
+`ExpEK` is therefore just a short-hand for [`EK0`](@ref) with [`IOUP`](@ref) prior:
+```julia
+ExpEK(; order=3, L, kwargs...) = EK0(; prior=IOUP(order, L), kwargs...)
+```
+
+See also [`RosenbrockExpEK`](@ref), [`EK0`](@ref), [`EK1`](@ref).
+
+# Arguments
+See [`EK0`](@ref) for available keyword arguments.
+
+# Examples
+```julia-repl
+julia> prob = ODEProblem((du, u, p, t) -> (@. du = - u + sin(u)), [1.0], (0.0, 10.0))
+julia> solve(prob, ExpEK(L=-1))
+```
+
+
+# Reference
+[1] N. Bosch, P. Hennig, F. Tronarp: **Probabilistic Exponential Integrators** (2023) ([link](https://arxiv.org/abs/2305.14978))
+"""
+ExpEK(; L, order=3, kwargs...) = EK0(; prior=IOUP(order, L), kwargs...)
+
+"""
+    RosenbrockExpEK(; order=3, kwargs...)
+
+**Probabilistic Rosenbrock-type exponential integrator**
+
+A probabilistic exponential integrator similar to [`ExpEK`](@ref), but with automatic
+linearization along the mean numerical solution. This brings the advantage that the
+linearity does not need to be specified manually, and the more accurate local linearization
+can sometimes also improve stability; but since the "prior" is adjusted at each step the
+probabilistic interpretation becomes more complicated.
+
+`RosenbrockExpEK` is just a short-hand for [`EK1`](@ref) with appropriete [`IOUP`](@ref)
+prior:
+```julia
+RosenbrockExpEK(; order=3, kwargs...) = EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
+```
+
+See also [`ExpEK`](@ref), [`EK0`](@ref), [`EK1`](@ref).
+
+# Arguments
+See [`EK1`](@ref) for available keyword arguments.
+
+# Examples
+```julia-repl
+julia> prob = ODEProblem((du, u, p, t) -> (@. du = - u + sin(u)), [1.0], (0.0, 10.0))
+julia> solve(prob, RosenbrockExpEK())
+```
+
+# Reference
+[1] N. Bosch, P. Hennig, F. Tronarp: **Probabilistic Exponential Integrators** (2023) ([link](https://arxiv.org/abs/2305.14978))
+"""
+RosenbrockExpEK(; order=3, kwargs...) =
+    EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
+
 function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
     T = SciMLBase.remaker_of(thing)
     T(;

@@ -58,6 +58,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedtestset "IOUP" begin
                 include("ioup.jl")
             end
+            @timedtestset "Exponential Integrators" begin
+                include("exponential_integrators.jl")
+            end
         end
     end
 
