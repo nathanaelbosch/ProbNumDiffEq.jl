@@ -8,11 +8,11 @@ makedocs(
     pages=[
         "Home" => "index.md",
         "Tutorials" => [
-            "Getting Started" => "getting_started.md"
-            "Second Order ODEs and Energy Preservation" => "dynamical_odes.md"
-            "Differential Algebraic Equations" => "dae.md"
-            "Probabilistic Exponential Integrators" => "exponential_integrators.md"
-            "Parameter Inference" => "fenrir.md"
+            "Getting Started" => "tutorials/getting_started.md"
+            "Second Order ODEs and Energy Preservation" => "tutorials/dynamical_odes.md"
+            "Differential Algebraic Equations" => "tutorials/dae.md"
+            "Probabilistic Exponential Integrators" => "tutorials/exponential_integrators.md"
+            "Parameter Inference" => "tutorials/fenrir.md"
         ],
         "Solvers and Options" => [
             "solvers.md",
