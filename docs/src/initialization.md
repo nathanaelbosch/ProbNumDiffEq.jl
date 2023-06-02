@@ -48,8 +48,8 @@ Y^{(0)}(0) &= y_0, \\
 Y^{(1)}(0) &= f(y_0, 0).
 \end{aligned}
 ```
-And it turns out that we can also compute higher-order derivatives of ``y`` with the chain rule,
-which we can use to initialize ``Y^{(i)}(0)``.
+It turns out that we can also compute higher-order derivatives of ``y`` with the chain rule,
+and then use these to better initialize ``Y^{(i)}(0)``.
 This, done efficiently with Taylor-mode autodiff by using
 [TaylorIntegration.jl](https://perezhz.github.io/TaylorIntegration.jl/latest/),
 is what [`TaylorModeInit`](@ref) does.

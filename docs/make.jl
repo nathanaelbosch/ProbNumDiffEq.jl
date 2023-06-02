@@ -16,9 +16,9 @@ makedocs(
         ],
         "Solvers and Options" => [
             "solvers.md",
-            "diffusions.md",
-            "initialization.md",
             "priors.md",
+            "initialization.md",
+            "diffusions.md",
         ],
         "Benchmarks" => [
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
