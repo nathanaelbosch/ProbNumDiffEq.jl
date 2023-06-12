@@ -15,3 +15,4 @@ copy!(A::KP, B::KP) = begin
     copy!(A.B, B.B)
     return A
 end
+copy(A::KP) = kronecker((A.A), copy(A.B))

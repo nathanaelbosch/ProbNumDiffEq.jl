@@ -159,7 +159,7 @@ function OrdinaryDiffEq.alg_cache(
     pu_tmp =
         f isa DynamicalODEFunction ?
         Gaussian(zeros(uElType, 2d), PSDMatrix(zeros(uElType, D, 2d))) :
-        deepcopy(measurement)
+        copy(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     Smat = zeros(uElType, d, d)
@@ -177,12 +177,12 @@ function OrdinaryDiffEq.alg_cache(
     u_pred = copy(u)
     u_filt = copy(u)
     tmp = copy(u)
-    xprev = deepcopy(x0)
-    x_pred = deepcopy(x0)
-    x_filt = deepcopy(x0)
-    x_tmp = deepcopy(x0)
-    x_tmp2 = deepcopy(x0)
-    m_tmp = deepcopy(measurement)
+    xprev = copy(x0)
+    x_pred = copy(x0)
+    x_filt = copy(x0)
+    x_tmp = copy(x0)
+    x_tmp2 = copy(x0)
+    m_tmp = copy(measurement)
     err_tmp = copy(du)
 
     # Things for calc_J
