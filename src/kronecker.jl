@@ -16,3 +16,10 @@ copy!(A::KP, B::KP) = begin
     return A
 end
 copy(A::KP) = kronecker((A.A), copy(A.B))
+
+"""
+    _mul_stable_I(d) = I(d) * I(d)
+
+Create an identity matrix that does not change its type when multiplied by another identity matrix.
+"""
+_mul_stable_I(d) = I(d) * I(d)

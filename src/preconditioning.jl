@@ -1,5 +1,5 @@
 function init_preconditioner(d, q, ::Type{elType}=typeof(1.0)) where {elType}
-    Id = I(d) * I(d)
+    Id = _mul_stable_I(d)
     P = kronecker(Id, Diagonal(ones(elType, q + 1)))
     PI = kronecker(Id, Diagonal(ones(elType, q + 1)))
     return P, PI

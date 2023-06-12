@@ -93,7 +93,7 @@ function DiffEqBase.build_solution(
     uElType = eltype(prob.u0)
     D = d
     KRONECKER = true
-    Id = I(d) * I(d)
+    Id = _mul_stable_I(d)
     pu_cov = if KRONECKER
         PSDMatrix(kronecker(Id, zeros(uElType, D ÷ d + 1)))
     else
