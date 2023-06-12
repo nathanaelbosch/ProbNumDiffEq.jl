@@ -41,6 +41,7 @@ stack(x) = copy(reduce(hcat, x)')
 vecvec2mat(x) = reduce(hcat, x)'
 
 include("fast_linalg.jl")
+include("kronecker.jl")
 
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 

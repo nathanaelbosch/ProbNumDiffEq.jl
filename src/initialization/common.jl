@@ -86,8 +86,8 @@ function condition_on!(
         S_diag .+= 1e-20
     end
 
-    _matmul!(K1, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
-    K = K1 ./= S_diag'
+    # _matmul!(K1, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
+    # K = K1 ./= S_diag'
 
     _K = x.Σ.R' * x.Σ.R * H'
     @assert all(S_diag .== 1)
