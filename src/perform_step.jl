@@ -148,13 +148,13 @@ function evaluate_ode!(integ, x_pred, t)
 end
 
 compute_measurement_covariance!(cache) =
-    fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
+    fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, get_H(cache))
 
 function update!(cache, prediction)
     @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = cache
     @unpack C_dxd, C_Dxd = cache
     K2 = C_Dxd
-    update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, C_dxd)
+    update!(x_filt, prediction, measurement, get_H(cache), K1, K2, C_DxD, C_dxd)
     return x_filt
 end
 
@@ -210,6 +210,7 @@ To save allocations, the function modifies the given `cache` and writes into
 """
 function estimate_errors!(cache::AbstractODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
+    H = get_H(cache)
 
     if local_diffusion isa Real && isinf(local_diffusion)
         return Inf
@@ -225,6 +226,16 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         error_estimate .= sqrt.(error_estimate)
         return error_estimate
     elseif local_diffusion isa Number
+
+        if H isa Kronecker.KroneckerProduct
+            error_estimate = ones(d)
+            error_estimate .*= (Qh.R.B * H.B')[1]^2
+            # error_estimate = view(cache.tmp, 1:d)
+            # sum!(abs2, error_estimate', view(R, :, 1:d))
+            error_estimate .*= local_diffusion
+            error_estimate .= sqrt.(error_estimate)
+        else
+
         _matmul!(R, Qh.R, H')
 
         # error_estimate = diag(PSDMatrix(R))
@@ -239,5 +250,6 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         error_estimate .= sqrt.(error_estimate)
 
         return error_estimate
+        end
     end
 end

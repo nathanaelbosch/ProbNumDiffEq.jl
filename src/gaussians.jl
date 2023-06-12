@@ -8,7 +8,7 @@ function Base.copy!(dst::Gaussian, src::Gaussian)
     copy!(dst.Σ, src.Σ)
     return dst
 end
-RecursiveArrayTools.recursivecopy(P::Gaussian) = copy(P)
+RecursiveArrayTools.recursivecopy(P::Gaussian) = deepcopy(P)
 RecursiveArrayTools.recursivecopy!(dst::Gaussian, src::Gaussian) = copy!(dst, src)
 show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")
 show(io::IO, ::MIME"text/plain", g::Gaussian{T,S}) where {T,S} =

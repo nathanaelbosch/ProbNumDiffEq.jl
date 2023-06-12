@@ -109,7 +109,8 @@ function update!(
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
-    x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
+    # x_out.μ .= m_p .- _matmul!(x_out.μ, K, reshape(z, 1, :))
+    x_out.μ .= m_p .- reshape(K*reshape(z, 1, :), :)
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
     _matmul!(M_cache, K, H, -1.0, 0.0)
@@ -120,4 +121,39 @@ function update!(
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     return x_out
+end
+
+
+# Kronecker version
+function update!(
+    x_out::SRGaussian,
+    x_pred::SRGaussian,
+    measurement::Gaussian,
+    H::Kronecker.KroneckerProduct,
+    K1_cache::AbstractMatrix,
+    K2_cache::AbstractMatrix,
+    M_cache::AbstractMatrix,
+    C_dxd::AbstractMatrix,
+)
+    # @info "Kronecker version of update!"
+    _x_out = Gaussian(x_out.μ, PSDMatrix(x_out.Σ.R.B))
+    _x_pred = Gaussian(x_pred.μ, PSDMatrix(x_pred.Σ.R.B))
+    _measurement = Gaussian(measurement.μ, PSDMatrix(measurement.Σ.R.B))
+    _H = H.B
+    d = length(measurement.μ)
+    _D = length(x_out.μ) ÷ d
+    _K1_cache = view(K1_cache, 1:_D, 1:1)
+    _K2_cache = view(K2_cache, 1:_D, 1:1)
+    _M_cache = view(M_cache, 1:_D, 1:_D)
+    _C_dxd = view(C_dxd, 1:1, 1:1)
+    return update!(
+        _x_out,
+        _x_pred,
+        _measurement,
+        _H,
+        _K1_cache,
+        _K2_cache,
+        _M_cache,
+        _C_dxd,
+    )
 end

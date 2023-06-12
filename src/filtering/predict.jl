@@ -76,3 +76,33 @@ function predict_cov!(
     copy!(x_out.Σ.R, Q_R)
     return x_out.Σ
 end
+
+# Kronecker version
+function predict_cov!(
+    x_out::SRGaussian,
+    x_curr::SRGaussian,
+    Ah::Kronecker.KroneckerProduct,
+    Qh::PSDMatrix,
+    C_DxD::AbstractMatrix,
+    C_2DxD::AbstractMatrix,
+    diffusion=1,
+)
+    # @info "Kronecker version of predict_cov!"
+    _x_out = Gaussian(x_out.μ, PSDMatrix(x_out.Σ.R.B))
+    _x_curr = Gaussian(x_curr.μ, PSDMatrix(x_curr.Σ.R.B))
+    _Ah = Ah.B
+    _Qh = PSDMatrix(Qh.R.B)
+    _D = size(_Qh, 1)
+    _C_DxD = view(C_DxD, 1:_D, 1:_D)
+    _C_2DxD = view(C_2DxD, 1:2*_D, 1:_D)
+
+    predict_cov!(
+        _x_out,
+        _x_curr,
+        _Ah,
+        _Qh,
+        _C_DxD,
+        _C_2DxD,
+        diffusion,
+    )
+end

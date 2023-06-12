@@ -67,11 +67,12 @@ with the preconditioners; see `./src/preconditioning.jl`.
 """
 function preconditioned_discretize(iwp::IWP)
     A_breve, Q_breve = preconditioned_discretize_1d(iwp)
-    QR_breve = Q_breve.R
+    QR_breve = Q_breve.R |> Matrix
 
     d = iwp.wiener_process_dimension
-    A = kron(I(d), A_breve)
-    QR = kron(I(d), QR_breve)
+    Id = I(d) * I(d)
+    A = kronecker(Id, A_breve)
+    QR = kronecker(Id, QR_breve)
     Q = PSDMatrix(QR)
 
     return A, Q
@@ -99,8 +100,9 @@ end
 function discretize(p::IWP, dt::Real)
     A_breve, Q_breve = discretize_1d(p, dt)
     d = p.wiener_process_dimension
-    A = kron(I(d), A_breve)
-    QR = kron(I(d), Q_breve.R)
+    Id = I(d) * I(d)
+    A = kronecker(Id, A_breve)
+    QR = kronecker(Id, Q_breve.R)
     Q = PSDMatrix(QR)
     return A, Q
 end
@@ -118,7 +120,9 @@ function make_transition_matrices!(cache, prior::IWP, dt)
     make_preconditioners!(cache, dt)
     # A, Q = preconditioned_discretize(p) # not necessary since it's dt-independent
     # Ah = PI * A * P
-    @.. Ah = PI.diag * A * P.diag'
+    # @.. Ah = PI.diag * A * P.diag'
+    Ah.B .= PI.B * A.B * P.B
     # X_A_Xt!(Qh, Q, PI)
-    @.. Qh.R = Q.R * PI.diag'
+    # @.. Qh.R = Q.R * PI.diag
+    Qh.R.B .= Q.R.B * PI.B
 end

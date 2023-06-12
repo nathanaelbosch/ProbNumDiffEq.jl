@@ -89,6 +89,10 @@ function condition_on!(
     _matmul!(K1, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
     K = K1 ./= S_diag'
 
+    _K = x.Σ.R' * x.Σ.R * H'
+    @assert all(S_diag .== 1)
+    K = _K
+
     # x.μ .+= K*(data - z)
     datadiff = _matmul!(data, H, x.μ, -1, 1)
     _matmul!(x.μ, K, datadiff, 1, 1)
@@ -98,7 +102,16 @@ function condition_on!(
     @inbounds @simd ivdep for i in 1:D
         Mcache[i, i] += 1
     end
-    fast_X_A_Xt!(x_tmp.Σ, x.Σ, Mcache)
-    copy!(x.Σ, covcache)
+
+    d, q1 = size(H.A, 1), size(x.Σ.R.B, 1)
+    _I = kronecker(I(d)*I(d), I(q1))
+    KH = K*H
+    @assert _I.A == KH.A
+    @. KH.B = _I.B - KH.B
+    M = KH
+
+    fast_X_A_Xt!(x_tmp.Σ, x.Σ, M)
+    copy!(x.Σ.R.A, covcache.R.A)
+    copy!(x.Σ.R.B, covcache.R.B)
     return nothing
 end

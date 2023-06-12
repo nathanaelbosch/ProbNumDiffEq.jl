@@ -1,6 +1,6 @@
 function calc_H!(H, integ, cache)
     @unpack f = integ
-    @unpack d, ddu, E1, E2 = cache
+    @unpack d, ddu, E0, E1, E2 = cache
 
     if integ.alg isa EK0
         calc_H_EK0!(H, integ, cache)
@@ -8,7 +8,7 @@ function calc_H!(H, integ, cache)
         calc_H_EK0!(H, integ, cache)
         # @assert integ.u == @view x_pred.μ[1:(q+1):end]
         OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
-        ProbNumDiffEq._matmul!(H, view(ddu, 1:d, :), cache.SolProj, -1.0, 1.0)
+        ProbNumDiffEq._matmul!(H, view(ddu, 1:d, :), E0, -1.0, 1.0)
     end
     return nothing
 end
@@ -31,3 +31,7 @@ function calc_H_EK0!(H, integ, cache)
     end
     return nothing
 end
+
+get_H(alg::EK1, cache) = cache.H
+get_H(alg::EK0, cache) = cache.E1
+get_H(cache) = cache.E1

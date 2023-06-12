@@ -91,6 +91,9 @@ function OrdinaryDiffEq.alg_cache(
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
+    KRONECKER = alg isa EK0
+    Id = I(d) * I(d)
+
     uType = typeof(u)
     # uElType = eltype(u_vec)
     uElType = uBottomEltypeNoUnits
@@ -121,8 +124,18 @@ function OrdinaryDiffEq.alg_cache(
     measurement_model = make_measurement_model(f)
 
     # Initial State
-    initial_variance = ones(uElType, D)
-    x0 = Gaussian(zeros(uElType, D), PSDMatrix(diagm(sqrt.(initial_variance))))
+    x0 = if KRONECKER
+        initial_variance = ones(uElType, q + 1)
+        Gaussian(
+            zeros(uElType, D),
+            PSDMatrix(
+                kronecker(Id, diagm(sqrt.(initial_variance))),
+            ),
+        )
+    else
+        initial_variance = ones(uElType, D)
+        Gaussian(zeros(uElType, D), PSDMatrix(diagm(sqrt.(initial_variance))))
+    end
 
     # Diffusion Model
     diffmodel = alg.diffusionmodel
@@ -133,7 +146,11 @@ function OrdinaryDiffEq.alg_cache(
     R = zeros(uElType, d, d)
     H = zeros(uElType, d, D)
     v = zeros(uElType, d)
-    S = PSDMatrix(zeros(uElType, D, d))
+    S = if KRONECKER
+        PSDMatrix(kronecker(Id, zeros(uElType, q + 1)))
+    else
+        PSDMatrix(zeros(uElType, D, d))
+    end
     measurement = Gaussian(v, S)
 
     # Caches
@@ -141,7 +158,8 @@ function OrdinaryDiffEq.alg_cache(
     ddu = zeros(uElType, length(u), length(u))
     pu_tmp =
         f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), PSDMatrix(zeros(uElType, D, 2d))) : copy(measurement)
+        Gaussian(zeros(uElType, 2d), PSDMatrix(zeros(uElType, D, 2d))) :
+        deepcopy(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     Smat = zeros(uElType, d, d)
@@ -159,12 +177,12 @@ function OrdinaryDiffEq.alg_cache(
     u_pred = copy(u)
     u_filt = copy(u)
     tmp = copy(u)
-    xprev = copy(x0)
-    x_pred = copy(x0)
-    x_filt = copy(x0)
-    x_tmp = copy(x0)
-    x_tmp2 = copy(x0)
-    m_tmp = copy(measurement)
+    xprev = deepcopy(x0)
+    x_pred = deepcopy(x0)
+    x_filt = deepcopy(x0)
+    x_tmp = deepcopy(x0)
+    x_tmp2 = deepcopy(x0)
+    m_tmp = deepcopy(measurement)
     err_tmp = copy(du)
 
     # Things for calc_J

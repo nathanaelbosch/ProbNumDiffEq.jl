@@ -5,6 +5,7 @@ module ProbNumDiffEq
 import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==
 
 using LinearAlgebra
+import LinearAlgebra: mul!
 import Statistics: mean, var, std
 
 using Reexport
@@ -26,6 +27,7 @@ using ForwardDiff
 using ExponentialUtilities
 using Octavian
 using FastGaussQuadrature
+using Kronecker
 
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
@@ -89,6 +91,6 @@ include("devtools.jl")
 include("callbacks.jl")
 export ManifoldUpdate
 
-include("precompile.jl")
+# include("precompile.jl")
 
 end

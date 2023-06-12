@@ -10,36 +10,38 @@ if some matrices are `Diagonal` it does some broadcasting stuff with FastBroadca
 _matmul!(C, A, B)
 
 # By default use mul!
-_matmul!(C, A, B) = mul!(C, A, B)
+_matmul!(C, A, B) = begin
+    mul!(C, A, B)
+end
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
 # Some special cases
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::AbstractMatrix{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-    alpha::Number,
-    beta::Number,
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::AbstractMatrix{T},
+#     B::Diagonal{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::Diagonal{T},
+#     B::AbstractMatrix{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::Diagonal{T},
+#     B::Diagonal{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::AbstractVecOrMat{T},
+#     B::AbstractVecOrMat{T},
+#     alpha::Number,
+#     beta::Number,
+# ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
+# _matmul!(
+#     C::AbstractMatrix{T},
+#     A::AbstractVecOrMat{T},
+#     B::AbstractVecOrMat{T},
+# ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 """
     getupperright(A)
@@ -89,3 +91,33 @@ function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
     _matmul!(out.R, A.R, X')
     return out
 end
+
+# Piracy
+const KP = Kronecker.KroneckerProduct
+mul!(A::KP, B::KP, C::KP) = begin
+    mul!(A.A, B.A, C.A)
+    mul!(A.B, B.B, C.B)
+    return A
+end
+mul!(A::KP, B::KP, C::KP, a, b) = begin
+    mul!(A.A, B.A, C.A, a, b)
+    mul!(A.B, B.B, C.B, a, b)
+    return A
+end
+copy!(A::KP, B::KP) = begin
+    copy!(A.A, B.A)
+    copy!(A.B, B.B)
+    return A
+end
+
+# OrdinaryDiffEq.copyat_or_push!(V::AbstractVector{<:KP}, i::Integer, E::KP) = begin
+#     @info "my copyat_or_push!"
+#     l = length(V)
+#     if i == l + 1
+#         push!(V, deepcopy(E))
+#     elseif i <= l
+#         copy!(V[i], E)
+#     else
+#         throw(BoundsError(V, i))
+#     end
+# end

@@ -22,7 +22,9 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             @assert df isa ArrayPartition
             df = df[2, :]
         end
-        pmat = f.mass_matrix * Proj(o)
+        # pmat = f.mass_matrix * Proj(o)
+        @assert f.mass_matrix === I
+        pmat = Proj(o)
 
         if !(df isa AbstractVector)
             df = df[:]
