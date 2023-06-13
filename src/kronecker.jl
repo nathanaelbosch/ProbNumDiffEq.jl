@@ -18,8 +18,23 @@ end
 copy(A::KP) = kronecker((A.A), copy(A.B))
 
 """
-    _mul_stable_I(d) = I(d) * I(d)
+    _I(d) = I(d) * I(d)
 
 Create an identity matrix that does not change its type when multiplied by another identity matrix.
+
+# Examples
+```julia-repl
+julia> I(2)|> typeof
+Diagonal{Bool, Vector{Bool}}
+
+julia> I(2) * I(2) |> typeof
+Diagonal{Bool, BitVector}
+
+julia> _I(2) |> typeof
+Diagonal{Bool, BitVector}
+
+julia> _I(2) * _I(2) |> typeof
+Diagonal{Bool, BitVector}
+```
 """
-_mul_stable_I(d) = I(d) * I(d)
+_I(d) = I(d) * I(d)

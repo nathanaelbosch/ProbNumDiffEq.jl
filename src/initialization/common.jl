@@ -104,7 +104,7 @@ function condition_on!(
     end
 
     d, q1 = size(H.A, 1), size(x.Σ.R.B, 1)
-    _I = kronecker(_mul_stable_I(d), I(q1))
+    _I = kronecker(I(d), I(q1))
     KH = K*H
     @assert _I.A == KH.A
     @. KH.B = _I.B - KH.B

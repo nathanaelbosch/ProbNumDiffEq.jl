@@ -92,7 +92,7 @@ function OrdinaryDiffEq.alg_cache(
     D = d * (q + 1)
 
     KRONECKER = alg isa EK0
-    Id = _mul_stable_I(d)
+    Id = _I(d)
 
     uType = typeof(u)
     # uElType = eltype(u_vec)

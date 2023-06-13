@@ -70,7 +70,7 @@ function preconditioned_discretize(iwp::IWP)
     QR_breve = Q_breve.R |> Matrix
 
     d = iwp.wiener_process_dimension
-    Id = _mul_stable_I(d)
+    Id = _I(d)
     A = kronecker(Id, A_breve)
     QR = kronecker(Id, QR_breve)
     Q = PSDMatrix(QR)
@@ -100,7 +100,7 @@ end
 function discretize(p::IWP, dt::Real)
     A_breve, Q_breve = discretize_1d(p, dt)
     d = p.wiener_process_dimension
-    Id = _mul_stable_I(d)
+    Id = _I(d)
     A = kronecker(Id, A_breve)
     QR = kronecker(Id, Q_breve.R)
     Q = PSDMatrix(QR)

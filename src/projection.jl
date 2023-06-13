@@ -1,5 +1,5 @@
 function projection(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {elType}
-    Id = _mul_stable_I(d)
+    Id = _I(d)
     Proj(deriv) = kronecker(Id, [i == (deriv + 1) ? 1 : 0 for i in 1:q+1]')
 
     # Slightly faster version of the above:
