@@ -98,10 +98,10 @@ function condition_on!(
     _matmul!(x.μ, K, datadiff, 1, 1)
 
     D = length(x.μ)
-    _matmul!(Mcache, K, H, -1, 0)
-    @inbounds @simd ivdep for i in 1:D
-        Mcache[i, i] += 1
-    end
+    # _matmul!(Mcache, K, H, -1, 0)
+    # @inbounds @simd ivdep for i in 1:D
+    #     Mcache[i, i] += 1
+    # end
 
     d, q1 = size(H.A, 1), size(x.Σ.R.B, 1)
     _I = kronecker(I(d), I(q1))

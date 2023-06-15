@@ -1,6 +1,10 @@
 function projection(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {elType}
     Id = _I(d)
-    Proj(deriv) = kronecker(Id, [i == (deriv + 1) ? 1 : 0 for i in 1:q+1]')
+    Proj(deriv) = begin
+        e_i = zeros(q+1, 1)
+        e_i[deriv+1] = 1
+        kronecker(Id, e_i')
+    end
 
     # Slightly faster version of the above:
     # D = d * (q + 1)

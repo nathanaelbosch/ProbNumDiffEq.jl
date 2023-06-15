@@ -17,6 +17,8 @@ function calc_H_EK0!(H, integ, cache)
     @unpack f = integ
     @unpack d, ddu, E1, E2 = cache
 
+    return nothing
+
     if f isa DynamicalODEFunction
         @assert f.mass_matrix === I
         H .= E2

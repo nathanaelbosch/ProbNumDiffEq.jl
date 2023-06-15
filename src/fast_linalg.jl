@@ -13,21 +13,9 @@ _matmul!(C, A, B)
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
 # Some special cases
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::AbstractMatrix{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
+_matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (@.. C = A * B.diag')
+_matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (@.. C = A.diag * B)
+_matmul!(C::AbstractMatrix, A::Diagonal, B::Diagonal) = @.. C = A * B
 _matmul!(
     C::AbstractMatrix{T},
     A::AbstractVecOrMat{T},

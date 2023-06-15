@@ -229,11 +229,12 @@ function estimate_errors!(cache::AbstractODEFilterCache)
 
         if H isa Kronecker.KroneckerProduct
             error_estimate = ones(d)
-            error_estimate .*= (Qh.R.B * H.B')[1]^2
+            error_estimate .*= sum(abs2, Qh.R.B * H.B')
             # error_estimate = view(cache.tmp, 1:d)
             # sum!(abs2, error_estimate', view(R, :, 1:d))
             error_estimate .*= local_diffusion
             error_estimate .= sqrt.(error_estimate)
+            return error_estimate
         else
 
         _matmul!(R, Qh.R, H')
