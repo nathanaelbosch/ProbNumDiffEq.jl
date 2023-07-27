@@ -1,7 +1,13 @@
-using Documenter
+using Documenter, DocumenterCitations
 using ProbNumDiffEq
 
+bib = CitationBibliography(
+    joinpath(@__DIR__, "src", "refs.bib"),
+    style=:authoryear,
+)
+
 makedocs(
+    bib,
     sitename="ProbNumDiffEq.jl",
     format=Documenter.HTML(),
     modules=[ProbNumDiffEq],
