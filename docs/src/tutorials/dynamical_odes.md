@@ -85,7 +85,7 @@ plot(sol2, vars=(3, 4))
 Solving second-order ODEs is not just a matter of convenience - in fact, SciMLBase's `SecondOrderODEProblem` is neatly designed in such a way that all the classic solvers from OrdinaryDiffEq.jl can handle it by solving the corresponding first-order ODE.
 But, transforming the ODE to first order increases the dimensionality of the problem, and comes therefore at increased computational cost; this also motivates [classic specialized solvers for second-order ODEs](https://diffeq.sciml.ai/stable/solvers/dynamical_solve/).
 
-The probabilistic numerical solvers from ProbNumDiffEq.jl have the same internal state representation for first and second order ODEs; all that changes is the _measurement model_ [1].
+The probabilistic numerical solvers from ProbNumDiffEq.jl have the same internal state representation for first and second order ODEs; all that changes is the _measurement model_ [bosch22pickandmix](@citep).
 As a result, we can use the `EK1` both for first and second order ODEs, but it automatically specializes on the latter to provide a __2x performance boost__:
 
 ```
@@ -131,7 +131,7 @@ Let's fix this to get a physically more meaningful solution.
 
 ### Energy preservation with the `ManifoldUpdate` callback
 
-In the language of ODE filters, preserving energy over time amounts to just another measurement model [1].
+In the language of ODE filters, preserving energy over time amounts to just another measurement model [bosch22pickandmix](@citep).
 The most convenient way of updating on this additional zero measurement with ProbNumDiffEq.jl is with the `ManifoldUpdate` callback.
 
 !!! note
@@ -155,6 +155,12 @@ plot!(longsol_preserving.t, E.(longsol_preserving.u))
 
 Voilà! With the `ManifoldUpdate` callback we could preserve the energy over time and obtain a more truthful probabilistic numerical long-term simulation of the Hénon-Heiles model.
 
-#### References
 
-[1] N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022)
+### References
+
+```@bibliography
+Pages = []
+Canonical = false
+
+bosch22pickandmix
+```

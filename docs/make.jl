@@ -3,13 +3,16 @@ using ProbNumDiffEq
 
 bib = CitationBibliography(
     joinpath(@__DIR__, "src", "refs.bib"),
-    style=:authoryear,
+    # style=:authoryear,
+    style=:numeric,
 )
 
 makedocs(
     bib,
     sitename="ProbNumDiffEq.jl",
-    format=Documenter.HTML(),
+    format=Documenter.HTML(
+        assets=String["assets/citations.css"],
+    ),
     modules=[ProbNumDiffEq],
     pages=[
         "Home" => "index.md",

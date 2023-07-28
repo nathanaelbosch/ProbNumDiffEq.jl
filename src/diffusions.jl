@@ -35,7 +35,8 @@ a diagonal matrix is estimated. This can be helpful to get more expressive poste
 covariances when using the [`EK0`](@ref), since the individual dimensions can be adjusted
 separately.
 
-See also [[1]](@ref diffusionrefs).
+# References
+* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicMVDiffusion, d, q, Eltype) =
@@ -100,7 +101,8 @@ a diagonal matrix is estimated. This can be helpful to get more expressive poste
 covariances when using the [`EK0`](@ref), since the individual dimensions can be adjusted
 separately.
 
-See also [[1]](@ref diffusionrefs).
+# References
+* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
@@ -149,7 +151,7 @@ Corresponds to
 where ``z, H, Q`` are taken from the passed integrator.
 
 For more background information
-- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
+* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 function local_scalar_diffusion(cache)
     @unpack d, R, H, Qh, measurement, m_tmp, Smat = cache
@@ -177,7 +179,7 @@ where ``z, H, Q`` are taken from the passed integrator.
 **This should only be used with the EK0!**
 
 For more background information
-- N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021)
+* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 function local_diagonal_diffusion(cache)
     @unpack d, q, H, Qh, measurement, m_tmp, tmp = cache

@@ -57,6 +57,11 @@ FixedMVDiffusion
 ```
 
 
-## [References](@id diffusionrefs)
+## References
 
-[1] N. Bosch, P. Hennig, F. Tronarp: **Calibrated Adaptive Probabilistic ODE Solvers** (2021) ([link](http://proceedings.mlr.press/v130/bosch21a.html))
+```@bibliography
+Pages = []
+Canonical = false
+
+bosch20capos
+```

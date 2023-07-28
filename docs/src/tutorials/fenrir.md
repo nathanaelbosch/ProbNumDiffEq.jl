@@ -115,6 +115,11 @@ plot!(mle_sol, color=3, label=["MLE-parameter Solution" ""])
 Looks good!
 
 
-#### Reference
+### Reference
 
-[1] F. Tronarp, N. Bosch, P. Hennig: **Fenrir: Fenrir: Physics-Enhanced Regression for Initial Value Problems** [(2022)](https://proceedings.mlr.press/v162/tronarp22a.html)
+```@bibliography
+Pages = []
+Canonical = false
+
+tronarp22fenrir
+```

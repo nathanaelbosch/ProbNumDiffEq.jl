@@ -92,4 +92,9 @@ plot!(sol_expek1, denseplot=false, marker=:o, markersize=2, label="EK1 + IOUP")
 
 ### References
 
-[1] N. Bosch, P. Hennig, F. Tronarp: **Probabilistic Exponential Integrators** (2023) ([link](https://arxiv.org/abs/2305.14978))
+```@bibliography
+Pages = []
+Canonical = false
+
+bosch23expint
+```

@@ -65,7 +65,13 @@ TaylorModeInit
 ClassicSolverInit
 ```
 
-## [References](@id initrefs)
 
-[1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020) ([link](https://arxiv.org/abs/2012.10106))
-[2] M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018) ([link](https://link.springer.com/article/10.1007/s11222-017-9798-7))
+## References
+
+```@bibliography
+Pages = []
+Canonical = false
+
+kraemer20stableimplementation
+schober16probivp
+```
