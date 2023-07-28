@@ -37,17 +37,6 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
 - Compatible with DAEs in mass-matrix ODE form (see [Solving DAEs with Probabilistic Numerics](@ref))
 
 
-## [References](@id references)
-
-The main references _for this package_ include:
-
-```@bibliography
-*
-```
-
-More references on ODE filters and on probabilistic numerics in general can be found on [probabilistic-numerics.org ](https://www.probabilistic-numerics.org/research/general/).
-
-
 ## Related packages
 
 - [probdiffeq](https://pnkraemer.github.io/probdiffeq/): Fast and feature-rich filtering-based probabilistic ODE solvers in JAX.

@@ -39,6 +39,7 @@ makedocs(
             "Filtering and Smoothing" => "filtering.md"
             "Implementation via OrdinaryDiffEq.jl" => "implementation.md"
         ],
+        "References" => "references.md",
     ],
 )
 
