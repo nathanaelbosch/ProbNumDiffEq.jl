@@ -2,7 +2,26 @@ using Documenter
 using ProbNumDiffEq
 
 using DocumenterCitations, Bibliography
-bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"), style=:numeric)
+
+# DocumenterCitations.bib_sorting(::Val{:numeric}) = :nyt
+# function DocumenterCitations.format_bibliography_label(
+#     ::Val{:numeric},
+#     entry,
+#     citations::DocumenterCitations.OrderedDict{String,Int64},
+# )
+#     key = entry.id
+#     sorted_bibtex_keys = citations |> keys |> collect |> sort
+#     i = findfirst(x -> x == key, sorted_bibtex_keys)
+#     @info "format_bibliography_label" entry.id citations sorted_bibtex_keys i entry.date
+#     return "[$i]"
+# end
+# Bibliography.sorting_rules[:nyt] = [:authors; :date; :title]
+
+bib = CitationBibliography(
+    joinpath(@__DIR__, "src", "refs.bib"),
+    style=:numeric,
+    # style=:authoryear,
+)
 sort_bibliography!(bib.entries, :nyt)  # name-year-title
 
 makedocs(
