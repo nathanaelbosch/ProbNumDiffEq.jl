@@ -41,33 +41,9 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
 
 The main references _for this package_ include:
 
-- N. Bosch, P. Hennig, F. Tronarp:
-  [**Probabilistic Exponential Integrators**](https://arxiv.org/abs/2305.14978)
-  (2023)
-- N. Bosch, F. Tronarp, P. Hennig:
-  [**Pick-and-Mix Information Operators for Probabilistic ODE Solvers**](https://proceedings.mlr.press/v151/bosch22a.html)
-  (2022)
-- N. Krämer, N. Bosch, J. Schmidt, P. Hennig:
-  [**Probabilistic ODE Solutions in Millions of Dimensions**](https://proceedings.mlr.press/v162/kramer22b.html)
-  (2022)
-- N. Bosch, P. Hennig, F. Tronarp:
-  [**Calibrated Adaptive Probabilistic ODE Solvers**](http://proceedings.mlr.press/v130/bosch21a.html)
-  (2021)
-- F. Tronarp, S. Särkkä, and P. Hennig:
-  [**Bayesian ODE Solvers: The Maximum A Posteriori Estimate**](https://link.springer.com/article/10.1007/s11222-021-09993-7)
-  (2021)
-- N. Krämer, P. Hennig:
-  [**Stable Implementation of Probabilistic ODE Solvers**](https://arxiv.org/abs/2012.10106v1)
-  (2020)
-- H. Kersting, T. J. Sullivan, and P. Hennig:
-  [**Convergence Rates of Gaussian Ode Filters**](https://link.springer.com/article/10.1007/s11222-020-09972-4)
-  (2020)
-- F. Tronarp, H. Kersting, S. Särkkä, and P. Hennig:
-  [**Probabilistic Solutions To Ordinary Differential Equations As Non-Linear Bayesian Filtering: A New Perspective**](https://link.springer.com/article/10.1007/s11222-019-09900-1)
-  (2019)
-- M. Schober, S. Särkkä, and P. Hennig:
-  [**A Probabilistic Model for the Numerical Solution of Initial Value Problems**](https://link.springer.com/article/10.1007/s11222-017-9798-7)
-  (2018)
+```@bibliography
+*
+```
 
 More references on ODE filters and on probabilistic numerics in general can be found on [probabilistic-numerics.org ](https://www.probabilistic-numerics.org/research/general/).
 
