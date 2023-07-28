@@ -139,7 +139,7 @@ julia> solve(prob, ExpEK(L=-1))
 
 
 # Reference
-[1] N. Bosch, P. Hennig, F. Tronarp: **Probabilistic Exponential Integrators** (2023) ([link](https://arxiv.org/abs/2305.14978))
+* [bosch23expint](@cite) Bosch et al, "Probabilistic Exponential Integrators", arXiv (2021)
 """
 ExpEK(; L, order=3, kwargs...) = EK0(; prior=IOUP(order, L), kwargs...)
 
@@ -172,7 +172,7 @@ julia> solve(prob, RosenbrockExpEK())
 ```
 
 # Reference
-[1] N. Bosch, P. Hennig, F. Tronarp: **Probabilistic Exponential Integrators** (2023) ([link](https://arxiv.org/abs/2305.14978))
+* [bosch23expint](@cite) Bosch et al, "Probabilistic Exponential Integrators", arXiv (2021)
 """
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)

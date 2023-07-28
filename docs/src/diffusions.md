@@ -44,7 +44,7 @@ Or more compactly:
 | Time-fixed   | [`FixedDiffusion`](@ref)   | [`FixedMVDiffusion`](@ref)            |
 
 
-For more details on diffusions and calibration, check out this paper [[1]](@ref diffusionrefs).
+For more details on diffusions and calibration, check out this paper [bosch20capos](@cite).
 
 
 ## API
