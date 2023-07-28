@@ -1,11 +1,9 @@
-using Documenter, DocumenterCitations
+using Documenter
 using ProbNumDiffEq
 
-bib = CitationBibliography(
-    joinpath(@__DIR__, "src", "refs.bib"),
-    # style=:authoryear,
-    style=:numeric,
-)
+using DocumenterCitations, Bibliography
+bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"), style=:numeric)
+sort_bibliography!(bib.entries, :nyt)  # name-year-title
 
 makedocs(
     bib,
