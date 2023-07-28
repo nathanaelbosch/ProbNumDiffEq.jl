@@ -66,7 +66,7 @@ ClassicSolverInit
 ```
 
 
-## References
+## [References](@id initrefs)
 
 ```@bibliography
 Pages = []

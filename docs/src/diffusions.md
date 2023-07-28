@@ -57,7 +57,7 @@ FixedMVDiffusion
 ```
 
 
-## References
+## [References](@id diffusionrefs)
 
 ```@bibliography
 Pages = []
