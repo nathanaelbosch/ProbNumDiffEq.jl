@@ -136,4 +136,9 @@ So it seems that, even if the index-3 DAE could also be solved directly, index l
 
 ### References
 
-[1] N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022) ([link](https://proceedings.mlr.press/v151/bosch22a.html))
+```@bibliography
+Pages = []
+Canonical = false
+
+bosch22pickandmix
+```

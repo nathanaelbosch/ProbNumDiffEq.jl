@@ -21,4 +21,10 @@ RosenbrockExpEK
 
 ## [References](@id solversrefs)
 
-[1] N. Bosch, F. Tronarp, P. Hennig: **Pick-and-Mix Information Operators for Probabilistic ODE Solvers** (2022) ([link](https://proceedings.mlr.press/v151/bosch22a.html))
+
+```@bibliography
+Pages = []
+Canonical = false
+
+bosch23expint
+```

@@ -1,7 +1,9 @@
 [deps]
+Bibliography = "f1be7e48-bf82-45af-a471-ae754a193061"
 DiffEqUncertainty = "ef61062a-5684-51dc-bb67-a0fcdec5c97d"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
 Fenrir = "e9b4b195-f5cd-427c-8076-5358c553c37f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LiveServer = "16fef848-5104-11e9-1b77-fb7a48bbb589"

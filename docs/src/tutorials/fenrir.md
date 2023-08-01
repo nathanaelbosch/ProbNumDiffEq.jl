@@ -71,7 +71,7 @@ nll
 ```
 This is the negative marginal log-likelihood of the parameter `p_est`.
 You can use it as any other NLL: Optimize it to compute maximum-likelihood estimates or MAPs, or plug it into MCMC to sample from the posterior.
-In [our paper](https://proceedings.mlr.press/v162/tronarp22a.html) we compute MLEs by pairing Fenrir with [Optimization.jl](http://optimization.sciml.ai/stable/) and [ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/).
+In our paper [tronarp22fenrir](@cite) we compute MLEs by pairing Fenrir with [Optimization.jl](http://optimization.sciml.ai/stable/) and [ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/).
 Let's quickly explore how to do this next.
 
 
@@ -115,6 +115,11 @@ plot!(mle_sol, color=3, label=["MLE-parameter Solution" ""])
 Looks good!
 
 
-#### Reference
+### Reference
 
-[1] F. Tronarp, N. Bosch, P. Hennig: **Fenrir: Fenrir: Physics-Enhanced Regression for Initial Value Problems** [(2022)](https://proceedings.mlr.press/v162/tronarp22a.html)
+```@bibliography
+Pages = []
+Canonical = false
+
+tronarp22fenrir
+```

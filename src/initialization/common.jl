@@ -16,7 +16,7 @@ given problem (typically because the problem definition does not allow for eleme
  `Taylor`). If this happens, try [`ClassicSolverInit`](@ref).
 
 # References
-[[1]](@ref initrefs) N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
+* [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
 """
 struct TaylorModeInit <: InitializationScheme end
 
@@ -41,8 +41,8 @@ optionally the second derivative can also be set via automatic differentiation b
   automatic differentiation with ForwardDiff.jl.
 
 # References
-[[2]](@ref initrefs) M. Schober, S. Särkkä, and P. Hennig: **A Probabilistic Model for the Numerical Solution of Initial Value Problems** (2018)
-
+* [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
+* [schober16probivp](@cite) Schober et al, "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing (2019)
 """
 Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG = Tsit5()

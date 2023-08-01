@@ -8,7 +8,7 @@ Exponential integrators are a class of numerical methods for solving semi-linear
 ```
 where $L$ is a linear operator and $f$ is a nonlinear function.
 In a nutshell, exponential integrators solve the linear part of the ODE exactly, and only approximate the nonlinear part.
-[Probabilistic exponential integrators](https://arxiv.org/abs/2305.14978) are the probabilistic numerics approach to exponential integrators.
+[Probabilistic exponential integrators](@cite bosch23expint) [bosch23expint](@cite) are the probabilistic numerics approach to exponential integrators.
 
 ## Example
 
@@ -92,4 +92,9 @@ plot!(sol_expek1, denseplot=false, marker=:o, markersize=2, label="EK1 + IOUP")
 
 ### References
 
-[1] N. Bosch, P. Hennig, F. Tronarp: **Probabilistic Exponential Integrators** (2023) ([link](https://arxiv.org/abs/2305.14978))
+```@bibliography
+Pages = []
+Canonical = false
+
+bosch23expint
+```
