@@ -50,7 +50,11 @@ function calibrate_solution!(integ, mle_diffusion)
     @assert mle_diffusion isa Number || mle_diffusion isa Diagonal
     sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion.diag)'
     @simd ivdep for C in integ.sol.x_filt.Σ
-        @.. C.R *= sqrt_diff
+        if C.R isa Kronecker.KroneckerProduct
+            @.. C.R.B *= sqrt_diff
+        else
+            @.. C.R *= sqrt_diff
+        end
     end
     @simd ivdep for C in integ.sol.backward_kernels.C
         @.. C.R *= sqrt_diff

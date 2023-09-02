@@ -70,10 +70,17 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     v, S = measurement.μ, measurement.Σ
     e = m_tmp.μ
     _S = _matmul!(Smat, S.R', S.R)
-    S_chol = cholesky!(_S)
     e .= v
-    ldiv!(S_chol, e)
+    if _S isa Kronecker.KroneckerProduct
+        @assert all(diag(_S.A) .== 1)
+        @assert length(_S.B) == 1
+        ldiv!(sqrt(_S.B[1]), e)
+    else
+        S_chol = cholesky!(_S)
+        ldiv!(S_chol, e)
+    end
     diffusion_t = dot(v, e) / d
+
 
     if integ.success_iter == 0
         # @assert length(sol_diffusions) == 0
@@ -159,14 +166,13 @@ function local_scalar_diffusion(cache)
     e, HQH = m_tmp.μ, m_tmp.Σ
     fast_X_A_Xt!(HQH, Qh, H)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
+    e .= z
     if HQHmat isa Kronecker.KroneckerProduct
         @assert all(diag(HQHmat.A) .== 1)
         @assert length(HQHmat.B) == 1
-        e .= z
         ldiv!(sqrt(HQHmat.B[1]), e)
     else
         C = cholesky!(HQHmat)
-        e .= z
         ldiv!(C, e)
     end
     σ² = dot(z, e) / d
