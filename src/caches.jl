@@ -45,7 +45,7 @@ mutable struct EKCache{
     ddu::matType
     K1::matType
     G1::matType
-    Smat::matType
+    Smat::HType
     C_dxd::matType
     C_dxD::matType
     C_Dxd::matType
@@ -166,7 +166,11 @@ function OrdinaryDiffEq.alg_cache(
         copy(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
-    Smat = zeros(uElType, d, d)
+    Smat = if KRONECKER
+        kronecker(_I(d), zeros(uElType, 1, 1))
+    else
+        zeros(uElType, d, d)
+    end
 
     C_dxd = zeros(uElType, d, d)
     C_dxD = zeros(uElType, d, D)

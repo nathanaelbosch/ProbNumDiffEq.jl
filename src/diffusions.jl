@@ -158,15 +158,18 @@ function local_scalar_diffusion(cache)
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     fast_X_A_Xt!(HQH, Qh, H)
-    # HQHmat = _matmul!(Smat, HQH.R', HQH.R)
-    # C = cholesky!(HQHmat)
-    C = (HQH.R.B'HQH.R.B)[1]
-    # @info "??" C
-    e .= z
-    ldiv!(C, e)
+    HQHmat = _matmul!(Smat, HQH.R', HQH.R)
+    if HQHmat isa Kronecker.KroneckerProduct
+        @assert all(diag(HQHmat.A) .== 1)
+        @assert length(HQHmat.B) == 1
+        e .= z
+        ldiv!(sqrt(HQHmat.B[1]), e)
+    else
+        C = cholesky!(HQHmat)
+        e .= z
+        ldiv!(C, e)
+    end
     σ² = dot(z, e) / d
-    # @info "local diffusion" σ²
-    # error()
     return σ²
 end
 
