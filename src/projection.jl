@@ -5,15 +5,5 @@ function projection(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {e
         e_i[deriv+1] = 1
         kronecker(Id, e_i')
     end
-
-    # Slightly faster version of the above:
-    # D = d * (q + 1)
-    # Proj(deriv) = begin
-    #     P = zeros(elType, d, D)
-    #     @simd ivdep for i in deriv*d+1:D+1:d*D
-    #         @inbounds P[i] = 1
-    #     end
-    #     return P
-    # end
     return Proj
 end
