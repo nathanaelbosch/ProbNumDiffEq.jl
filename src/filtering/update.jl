@@ -109,8 +109,8 @@ function update!(
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
-    # x_out.μ .= m_p .- _matmul!(x_out.μ, K, reshape(z, 1, :))
-    x_out.μ .= m_p .- reshape(K*reshape(z, 1, :), :)
+    a, b = size(K)
+    x_out.μ .= m_p .- reshape(_matmul!(reshape(x_out.μ, a, length(z)), K, reshape(z, 1, :)), :)
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
     _matmul!(M_cache, K, H, -1.0, 0.0)
