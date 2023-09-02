@@ -155,7 +155,6 @@ For more background information
 """
 function local_scalar_diffusion(cache)
     @unpack d, R, H, Qh, measurement, m_tmp, Smat = cache
-    H = get_H(cache)
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     fast_X_A_Xt!(HQH, Qh, H)

@@ -135,7 +135,6 @@ function update!(
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
 )
-    # @info "Kronecker version of update!"
     _x_out = Gaussian(x_out.μ, PSDMatrix(x_out.Σ.R.B))
     _x_pred = Gaussian(x_pred.μ, PSDMatrix(x_pred.Σ.R.B))
     _measurement = Gaussian(measurement.μ, PSDMatrix(measurement.Σ.R.B))

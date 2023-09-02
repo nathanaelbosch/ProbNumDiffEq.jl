@@ -148,13 +148,13 @@ function evaluate_ode!(integ, x_pred, t)
 end
 
 compute_measurement_covariance!(cache) =
-    fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, get_H(cache))
+    fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
 
 function update!(cache, prediction)
     @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = cache
     @unpack C_dxd, C_Dxd = cache
     K2 = C_Dxd
-    update!(x_filt, prediction, measurement, get_H(cache), K1, K2, C_DxD, C_dxd)
+    update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, C_dxd)
     return x_filt
 end
 
@@ -210,7 +210,6 @@ To save allocations, the function modifies the given `cache` and writes into
 """
 function estimate_errors!(cache::AbstractODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
-    H = get_H(cache)
 
     if local_diffusion isa Real && isinf(local_diffusion)
         return Inf

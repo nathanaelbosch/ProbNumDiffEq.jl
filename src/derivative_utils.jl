@@ -17,14 +17,12 @@ function calc_H_EK0!(H, integ, cache)
     @unpack f = integ
     @unpack d, ddu, E1, E2 = cache
 
-    return nothing
-
     if f isa DynamicalODEFunction
         @assert f.mass_matrix === I
         H .= E2
     else
         if f.mass_matrix === I
-            H .= E1
+            copy!(H, E1)
         elseif f.mass_matrix isa UniformScaling
             H .= f.mass_matrix.λ .* E1
         else
@@ -33,7 +31,3 @@ function calc_H_EK0!(H, integ, cache)
     end
     return nothing
 end
-
-get_H(alg::EK1, cache) = cache.H
-get_H(alg::EK0, cache) = cache.E1
-get_H(cache) = cache.E1
