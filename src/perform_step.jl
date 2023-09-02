@@ -215,7 +215,7 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         return Inf
     end
 
-    R = cache.C_Dxd
+    R = cache.measurement.Σ.R
 
     if local_diffusion isa Diagonal
         _QR = cache.C_DxD .= Qh.R .* sqrt.(local_diffusion.diag)'
@@ -226,16 +226,6 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         return error_estimate
     elseif local_diffusion isa Number
 
-        if H isa Kronecker.KroneckerProduct
-            error_estimate = ones(d)
-            error_estimate .*= sum(abs2, Qh.R.B * H.B')
-            # error_estimate = view(cache.tmp, 1:d)
-            # sum!(abs2, error_estimate', view(R, :, 1:d))
-            error_estimate .*= local_diffusion
-            error_estimate .= sqrt.(error_estimate)
-            return error_estimate
-        else
-
         _matmul!(R, Qh.R, H')
 
         # error_estimate = diag(PSDMatrix(R))
@@ -245,11 +235,14 @@ function estimate_errors!(cache::AbstractODEFilterCache)
 
         # faster:
         error_estimate = view(cache.tmp, 1:d)
-        sum!(abs2, error_estimate', view(R, :, 1:d))
+        if R isa Kronecker.KroneckerProduct
+            error_estimate .= sum(abs2, R.B)
+        else
+            sum!(abs2, error_estimate', view(R, :, 1:d))
+        end
         error_estimate .*= local_diffusion
         error_estimate .= sqrt.(error_estimate)
 
         return error_estimate
-        end
     end
 end
