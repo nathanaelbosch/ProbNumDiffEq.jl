@@ -74,7 +74,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     if _S isa Kronecker.KroneckerProduct
         @assert all(diag(_S.A) .== 1)
         @assert length(_S.B) == 1
-        ldiv!(sqrt(_S.B[1]), e)
+        ldiv!(_S.B[1], e)
     else
         S_chol = cholesky!(_S)
         ldiv!(S_chol, e)
@@ -170,7 +170,7 @@ function local_scalar_diffusion(cache)
     if HQHmat isa Kronecker.KroneckerProduct
         @assert all(diag(HQHmat.A) .== 1)
         @assert length(HQHmat.B) == 1
-        ldiv!(sqrt(HQHmat.B[1]), e)
+        ldiv!(HQHmat.B[1], e)
     else
         C = cholesky!(HQHmat)
         ldiv!(C, e)
