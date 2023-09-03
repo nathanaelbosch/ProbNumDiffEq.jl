@@ -72,7 +72,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     _S = _matmul!(Smat, S.R', S.R)
     e .= v
     if _S isa Kronecker.KroneckerProduct
-        @assert all(diag(_S.A) .== 1)
+        @assert iszero(_S.A.diag) || isone(_S.A.diag)
         @assert length(_S.B) == 1
         ldiv!(_S.B[1], e)
     else
