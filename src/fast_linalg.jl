@@ -77,3 +77,13 @@ function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
     _matmul!(out.R, A.R, X')
     return out
 end
+
+get_U(C::Cholesky) = begin
+    Cuplo = getfield(C, :uplo)
+    Cfactors = getfield(C, :factors)
+    if Cuplo === LinearAlgebra.char_uplo(:U)
+        return getupperright(Cfactors)
+    else
+        return getupperright(Cfactors')
+    end
+end

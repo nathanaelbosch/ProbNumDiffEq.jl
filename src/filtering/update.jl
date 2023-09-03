@@ -96,21 +96,31 @@ function update!(
         _matmul!(K2_cache, P_p, H')
     end
 
-    S_chol = try
-        cholesky!(_S)
-    catch e
-        if !(e isa PosDefException)
-            throw(e)
+    S_chol = if length(_S) == 1
+        _S[1]
+    else
+        try
+            cholesky!(_S)
+        catch e
+            if !(e isa PosDefException)
+                throw(e)
+            end
+            @warn "Can't compute the update step with cholesky; using qr instead"
+            @assert S isa PSDMatrix
+            Cholesky(qr(S.R).R, :U, 0)
         end
-        @warn "Can't compute the update step with cholesky; using qr instead"
-        @assert S isa PSDMatrix
-        Cholesky(qr(S.R).R, :U, 0)
     end
     rdiv!(K, S_chol)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
     a, b = size(K)
-    x_out.μ .= m_p .- reshape(_matmul!(reshape(x_out.μ, a, length(z)), K, reshape(z, 1, :)), :)
+    D, d = length(m_p), length(z)
+    if a == D
+        _matmul!(x_out.μ, K, z)
+    else
+        _matmul!(reshape_no_alloc(x_out.μ, a, d), K, reshape_no_alloc(z, 1, d))
+    end
+    x_out.μ .= m_p .- x_out.μ
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
     _matmul!(M_cache, K, H, -1.0, 0.0)
