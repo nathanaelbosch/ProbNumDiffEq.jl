@@ -124,18 +124,14 @@ function OrdinaryDiffEq.alg_cache(
     measurement_model = make_measurement_model(f)
 
     # Initial State
-    x0 = if KRONECKER
-        initial_variance = ones(uElType, q + 1)
-        Gaussian(
-            zeros(uElType, D),
-            PSDMatrix(
-                kronecker(Id, diagm(sqrt.(initial_variance))),
-            ),
-        )
-    else
-        initial_variance = ones(uElType, D)
-        Gaussian(zeros(uElType, D), PSDMatrix(diagm(sqrt.(initial_variance))))
-    end
+    initial_variance = ones(uElType, q + 1)
+    μ0 = zeros(uElType, D)
+    Σ0 = PSDMatrix(if KRONECKER
+                       kronecker(Id, diagm(sqrt.(initial_variance)))
+                   else
+                       kron(Id, diagm(sqrt.(initial_variance)))
+                   end)
+    x0 = Gaussian(μ0, Σ0)
 
     # Diffusion Model
     diffmodel = alg.diffusionmodel
