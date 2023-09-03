@@ -78,7 +78,7 @@ function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
     return out
 end
 
-get_U(C::Cholesky) = begin
+function get_U(C::Cholesky)
     Cuplo = getfield(C, :uplo)
     Cfactors = getfield(C, :factors)
     if Cuplo === LinearAlgebra.char_uplo(:U)
