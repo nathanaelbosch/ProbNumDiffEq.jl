@@ -15,7 +15,7 @@ copy!(A::KP, B::KP) = begin
     copy!(A.B, B.B)
     return A
 end
-copy(A::KP) = kronecker((A.A), copy(A.B))
+copy(A::KP) = kronecker(copy(A.A), copy(A.B))
 
 """
     _I(d) = I(d) * I(d)
