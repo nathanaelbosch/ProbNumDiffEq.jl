@@ -174,8 +174,16 @@ function OrdinaryDiffEq.alg_cache(
     C_2DxD = zeros(uElType, 2D, D)
     C_3DxD = zeros(uElType, 3D, D)
 
-    backward_kernel = AffineNormalKernel(
-        zeros(uElType, D, D), zeros(uElType, D), PSDMatrix(zeros(uElType, 2D, D)))
+    backward_kernel = if KRONECKER
+        AffineNormalKernel(
+            kronecker(_I(d), zeros(uElType, q+1, q+1)),
+            zeros(uElType, D),
+            PSDMatrix(kronecker(_I(d), zeros(uElType, 2*(q+1), q+1)))
+        )
+    else
+        AffineNormalKernel(
+            zeros(uElType, D, D), zeros(uElType, D), PSDMatrix(zeros(uElType, 2D, D)))
+    end
 
     u_pred = copy(u)
     u_filt = copy(u)
