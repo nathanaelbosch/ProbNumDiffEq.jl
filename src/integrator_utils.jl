@@ -48,7 +48,7 @@ function calibrate_solution!(integ, mle_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
     @assert mle_diffusion isa Number || mle_diffusion isa Diagonal
-    sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion.diag)'
+    sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion)
     @simd ivdep for C in integ.sol.x_filt.Σ
         rmul!(C.R, sqrt_diff)
     end

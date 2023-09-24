@@ -6,7 +6,7 @@ isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
-apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
+apply_diffusion(Q::PSDMatrix, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
 apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
@@ -72,7 +72,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     _S = _matmul!(Smat, S.R', S.R)
     e .= v
     if _S isa Kronecker.KroneckerProduct
-        @assert iszero(_S.A.diag) || isone(_S.A.diag)
+        @assert iszero(_S.A) || isone(_S.A)
         @assert length(_S.B) == 1
         ldiv!(_S.B[1], e)
     else
