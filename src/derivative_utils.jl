@@ -19,7 +19,7 @@ function calc_H_EK0!(H, integ, cache)
 
     if f isa DynamicalODEFunction
         @assert f.mass_matrix === I
-        H .= E2
+        copy!(H, E2)
     else
         if f.mass_matrix === I
             copy!(H, E1)

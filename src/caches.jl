@@ -102,7 +102,8 @@ function OrdinaryDiffEq.alg_cache(
     Proj = projection(d, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
-    SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
+    SolProj = f isa DynamicalODEFunction ?
+        kronecker(Proj(0).A, [Proj(1).B; Proj(0).B]) : Proj(0)
 
     # Prior dynamics
     prior = if alg.prior isa IWP
@@ -157,8 +158,12 @@ function OrdinaryDiffEq.alg_cache(
     ddu = zeros(uElType, length(u), length(u))
     pu_tmp =
         f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), PSDMatrix(zeros(uElType, D, 2d))) :
-        copy(measurement)
+        Gaussian(zeros(uElType, 2d), PSDMatrix(
+            if KRONECKER
+                kronecker(_I(d), zeros(uElType, q+1, 2))
+            else
+                zeros(uElType, D, 2d)
+            end)) : copy(measurement)
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     Smat = if KRONECKER
