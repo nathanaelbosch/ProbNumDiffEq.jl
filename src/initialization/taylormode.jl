@@ -30,7 +30,14 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[:]
         end
 
-        condition_on!(x, pmat, df, cache)
+        # condition_on!(x, pmat, df, cache)
+        x.μ[(o+1):(q+1):end] .= df
+    end
+    if x.Σ.R isa Kronecker.KroneckerProduct
+        x.Σ.R.A .= 0
+        x.Σ.R.B .= 0
+    else
+        x.Σ.R .= 0
     end
 end
 
