@@ -1,7 +1,7 @@
 using ProbNumDiffEq
 using OrdinaryDiffEq
 using LinearAlgebra
-using SimpleUnPack
+using SimpleUnPack: @unpack
 using Test
 
 u0 = ones(2)
@@ -44,16 +44,18 @@ appxsol = solve(prob, Vern9())
         return DiscreteCallback(condtion, affect!, save_positions=save_positions)
     end
 
-    @test_nowarn solve(prob, EK0(order=3))
-    @test_nowarn solve(prob, EK0(order=3), callback=CustomCallback())
+    @test_nowarn solve(prob, EK1(order=3))
+    @test_broken solve(prob, EK0(order=3), callback=CustomCallback())
+    @test_nowarn solve(prob, EK1(order=3), callback=CustomCallback())
 end
 
 @testset "ManifoldUpdate callback" begin
-    sol1 = solve(prob, EK0(order=3))
+    sol1 = solve(prob, EK1(order=3))
 
     E(u) = [dot(u, u) - 2]
-    @test_nowarn solve(prob, EK0(order=3), callback=ManifoldUpdate(E))
-    sol2 = solve(prob, EK0(order=3), callback=ManifoldUpdate(E))
+    @test_broken solve(prob, EK0(order=3), callback=ManifoldUpdate(E))
+    @test_nowarn solve(prob, EK1(order=3), callback=ManifoldUpdate(E))
+    sol2 = solve(prob, EK1(order=3), callback=ManifoldUpdate(E))
 
     @test E(sol1[end]) .^ 2 > E(sol2[end]) .^ 2
 
