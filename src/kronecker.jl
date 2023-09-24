@@ -16,6 +16,7 @@ copy!(A::KP, B::KP) = begin
     return A
 end
 copy(A::KP) = kronecker(copy(A.A), copy(A.B))
+similar(A::KP) = kronecker(similar(A.A), similar(A.B))
 
 """
     _I(d) = I(d) * I(d)
@@ -46,7 +47,8 @@ const IsoKronecker{T,M1,M2} = Kronecker.KroneckerProduct{T,M1,M2} where {T,M1<:D
 Allocation-free reshape
 Found here: https://discourse.julialang.org/t/convert-array-into-matrix-in-place/55624/5
 """
-reshape_no_alloc(a, dims::Tuple) = invoke(Base._reshape, Tuple{AbstractArray,typeof(dims)}, a, dims)
+reshape_no_alloc(a, dims::Tuple) =
+    invoke(Base._reshape, Tuple{AbstractArray,typeof(dims)}, a, dims)
 reshape_no_alloc(a, dims...) = reshape_no_alloc(a, Tuple(dims))
 
 function Kronecker.mul_vec_trick!(x::AbstractVector, A::IsoKronecker, v::AbstractVector)

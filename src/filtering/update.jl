@@ -76,10 +76,10 @@ function update!(
     m_p, P_p = x_pred.μ, x_pred.Σ
     @assert P_p isa PSDMatrix || P_p isa Matrix
     # The following could be useful; but this never really happens and `iszero` allocates
-    # if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
-    #     copy!(x_out, x_pred)
-    #     return x_out
-    # end
+    if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
+        copy!(x_out, x_pred)
+        return x_out
+    end
 
     D = length(m_p)
 
@@ -137,25 +137,26 @@ end
 
 # Kronecker version
 function update!(
-    x_out::SRGaussian,
-    x_pred::SRGaussian,
-    measurement::Gaussian,
+    x_out::SRGaussian{T,<:Kronecker.KroneckerProduct},
+    x_pred::SRGaussian{T,<:Kronecker.KroneckerProduct},
+    measurement::SRGaussian{T,<:Kronecker.KroneckerProduct},
     H::Kronecker.KroneckerProduct,
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
-)
+) where {T}
     _x_out = Gaussian(x_out.μ, PSDMatrix(x_out.Σ.R.B))
     _x_pred = Gaussian(x_pred.μ, PSDMatrix(x_pred.Σ.R.B))
     _measurement = Gaussian(measurement.μ, PSDMatrix(measurement.Σ.R.B))
     _H = H.B
-    d = length(measurement.μ)
+    o = size(_measurement.Σ, 1)
+    d = size(H.A, 1)
     _D = length(x_out.μ) ÷ d
-    _K1_cache = view(K1_cache, 1:_D, 1:1)
-    _K2_cache = view(K2_cache, 1:_D, 1:1)
+    _K1_cache = view(K1_cache, 1:_D, 1:o)
+    _K2_cache = view(K2_cache, 1:_D, 1:o)
     _M_cache = view(M_cache, 1:_D, 1:_D)
-    _C_dxd = view(C_dxd, 1:1, 1:1)
+    _C_dxd = view(C_dxd, 1:o, 1:o)
     return update!(
         _x_out,
         _x_pred,

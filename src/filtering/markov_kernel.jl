@@ -87,16 +87,36 @@ function marginalize_cov!(
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
 )
-    D = length(x_curr.μ)
+    _D = size(x_curr.Σ, 1)
     A, b, C = K
     R, M = C_3DxD, C_DxD
 
-    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, A')
-    @.. R[D+1:3D, 1:D] = C.R
+    _matmul!(view(R, 1:_D, 1:_D), x_curr.Σ.R, A')
+    @.. R[_D+1:3_D, 1:_D] = C.R
 
     Q_R = triangularize!(R, cachemat=C_DxD)
     copy!(x_out.Σ.R, Q_R)
     return x_out.Σ
+end
+
+function marginalize_cov!(
+    x_out::SRGaussian{T,<:Kronecker.KroneckerProduct},
+    x_curr::SRGaussian{T,<:Kronecker.KroneckerProduct},
+    K::AffineNormalKernel{
+        <:AbstractMatrix,
+        <:Any,
+        <:PSDMatrix{S,<:Kronecker.KroneckerProduct},
+    };
+    C_DxD::AbstractMatrix,
+    C_3DxD::AbstractMatrix,
+) where {T,S}
+    _x_out = Gaussian(x_out.μ, PSDMatrix(x_out.Σ.R.B))
+    _x_curr = Gaussian(x_curr.μ, PSDMatrix(x_curr.Σ.R.B))
+    _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
+    _D = size(_x_out.Σ, 1)
+    _C_DxD = view(C_DxD, 1:_D, 1:_D)
+    _C_3DxD = view(C_3DxD, 1:3*_D, 1:_D)
+    marginalize_cov!(_x_out, _x_curr, _K; C_DxD=_C_DxD, C_3DxD=_C_3DxD)
 end
 
 """
@@ -158,9 +178,12 @@ function compute_backward_kernel!(
 }
     # @assert Matrix(UpperTriangular(xpred.Σ.R)) == Matrix(xpred.Σ.R)
 
-    D = length(x.μ)
     A, _, Q = K
     G, b, Λ = Kout
+
+    D = length(x.μ)
+    _D = size(G, 1)
+    _a = D ÷ _D
 
     # G = Matrix(x.Σ) * A' / Matrix(xpred.Σ)
     _matmul!(C_DxD, x.Σ.R, A')
@@ -168,21 +191,44 @@ function compute_backward_kernel!(
     rdiv!(G, Cholesky(xpred.Σ.R, 'U', 0))
 
     # b = μ - G * μ_pred
-    b .= x.μ .- _matmul!(b, G, xpred.μ)
+    _matmul!(reshape_no_alloc(b, _D, _a), G, reshape_no_alloc(xpred.μ, _D, _a))
+    b .= x.μ .- b
 
     # Λ.R[1:D, 1:D] = x.Σ.R * (I - G * A)'
     _matmul!(C_DxD, A', G', -1.0, 0.0)
-    @inbounds @simd ivdep for i in 1:D
+    @inbounds @simd ivdep for i in 1:_D
         C_DxD[i, i] += 1
     end
-    _matmul!(view(Λ.R, 1:D, 1:D), x.Σ.R, C_DxD)
+    _matmul!(view(Λ.R, 1:_D, 1:_D), x.Σ.R, C_DxD)
     # Λ.R[D+1:2D, 1:D] = (G * Q.R')'
     if !isone(diffusion)
         _matmul!(C_DxD, Q.R, sqrt.(diffusion))
-        _matmul!(view(Λ.R, D+1:2D, 1:D), C_DxD, G')
+        _matmul!(view(Λ.R, _D+1:2_D, 1:_D), C_DxD, G')
     else
-        _matmul!(view(Λ.R, D+1:2D, 1:D), Q.R, G')
+        _matmul!(view(Λ.R, _D+1:2_D, 1:_D), Q.R, G')
     end
 
     return Kout
+end
+
+function compute_backward_kernel!(
+    Kout::KT1,
+    xpred::XT,
+    x::XT,
+    K::KT2;
+    C_DxD::AbstractMatrix,
+    diffusion=1,
+) where {
+    XT<:SRGaussian{<:Number,<:Kronecker.KroneckerProduct},
+    KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
+    KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
+}
+    _Kout = AffineNormalKernel(Kout.A.B, Kout.b, PSDMatrix(Kout.C.R.B))
+    _x_pred = Gaussian(xpred.μ, PSDMatrix(xpred.Σ.R.B))
+    _x = Gaussian(x.μ, PSDMatrix(x.Σ.R.B))
+    _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
+    _D = size(_Kout.A, 1)
+    _C_DxD = view(C_DxD, 1:_D, 1:_D)
+    @info "why though?" _Kout.A _C_DxD _D
+    compute_backward_kernel!(_Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
 end

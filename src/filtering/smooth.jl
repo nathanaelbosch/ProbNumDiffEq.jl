@@ -85,12 +85,12 @@ function smooth!(
     cache,
     diffusion::Union{Number,Diagonal}=1,
 )
-    D = length(x_curr.μ)
     # x_curr is the state at time t_n (filter estimate) that we want to smooth
     # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
     @unpack x_pred = cache
     @unpack G1, C_DxD, C_2DxD, C_3DxD = cache
-    D = size(C_DxD, 1)
+    D = length(x_curr.μ)
+    _D = size(C_DxD, 1)
 
     # Prediction: t -> t+1
     predict_mean!(x_pred, x_curr, Ah)
@@ -103,20 +103,52 @@ function smooth!(
 
     # x_curr.μ .+= G * (x_next.μ .- x_pred.μ) # less allocations:
     x_pred.μ .-= x_next.μ
-    _matmul!(x_curr.μ, G, x_pred.μ, -1, 1)
+    a = D ÷ _D
+    _matmul!(reshape_no_alloc(x_curr.μ, _D, a), G, reshape_no_alloc(x_pred.μ, _D, a), -1, 1)
 
     # Joseph-Form:
     R = C_3DxD
 
     G2 = _matmul!(C_DxD, G, Ah)
-    copy!(view(R, 1:D, 1:D), x_curr.Σ.R)
-    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, G2', -1.0, 1.0)
+    copy!(view(R, 1:_D, 1:_D), x_curr.Σ.R)
+    _matmul!(view(R, 1:_D, 1:_D), x_curr.Σ.R, G2', -1.0, 1.0)
 
-    _matmul!(view(R, D+1:2D, 1:D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
-    _matmul!(view(R, 2D+1:3D, 1:D), x_next.Σ.R, G')
+    _matmul!(view(R, _D+1:2_D, 1:_D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
+    _matmul!(view(R, 2_D+1:3_D, 1:_D), x_next.Σ.R, G')
 
     Q_R = triangularize!(R, cachemat=C_DxD)
     copy!(x_curr.Σ.R, Q_R)
 
     return nothing
+end
+
+
+function smooth!(
+    x_curr::SRGaussian{T,<:Kronecker.KroneckerProduct},
+    x_next::SRGaussian{T,<:Kronecker.KroneckerProduct},
+    Ah::Kronecker.KroneckerProduct,
+    Qh::PSDMatrix{S,<:Kronecker.KroneckerProduct},
+    cache,
+    diffusion::Union{Number,Diagonal}=1,
+) where {T,S}
+    _x_curr = Gaussian(x_curr.μ, PSDMatrix(x_curr.Σ.R.B))
+    _x_next = Gaussian(x_next.μ, PSDMatrix(x_next.Σ.R.B))
+    _Ah = Ah.B
+    _Qh = PSDMatrix(Qh.R.B)
+    _D = size(_Qh, 1)
+    _cache = (
+        G1 = view(cache.G1, 1:_D, 1:_D),
+        C_DxD = view(cache.C_DxD, 1:_D, 1:_D),
+        C_2DxD = view(cache.C_2DxD, 1:2*_D, 1:_D),
+        C_3DxD = view(cache.C_3DxD, 1:3*_D, 1:_D),
+        x_pred = Gaussian(cache.x_pred.μ, PSDMatrix(cache.x_pred.Σ.R.B))
+    )
+    smooth!(
+        _x_curr,
+        _x_next,
+        _Ah,
+        _Qh,
+        _cache,
+        diffusion,
+    )
 end
