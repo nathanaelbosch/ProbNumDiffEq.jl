@@ -111,6 +111,8 @@ EK1(;
         initialization,
     )
 
+iskronecker(alg) = alg isa EK0 && !(alg.diffusionmodel isa DynamicMVDiffusion || alg.diffusionmodel isa FixedMVDiffusion)
+
 """
     ExpEK(; L, order=3, kwargs...)
 

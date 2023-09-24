@@ -91,7 +91,7 @@ function OrdinaryDiffEq.alg_cache(
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
-    KRONECKER = alg isa EK0
+    KRONECKER = iskronecker(alg)
 
     uType = typeof(u)
     # uElType = eltype(u_vec)
