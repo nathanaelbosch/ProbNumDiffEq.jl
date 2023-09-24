@@ -50,7 +50,7 @@ function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
     A_breve = binomial.(q:-1:0, (q:-1:0)')
     Q_breve = Cauchy(collect(q:-1.0:0.0), collect((q+1):-1.0:1.0)) |> Matrix  # for Julia1.6
 
-    QR_breve = cholesky(Q_breve).L'
+    QR_breve = cholesky(Q_breve).L' |> collect
     A_breve, QR_breve = elType.(A_breve), elType.(QR_breve)
     Q_breve = PSDMatrix(QR_breve)
 
