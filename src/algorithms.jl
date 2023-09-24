@@ -111,11 +111,13 @@ EK1(;
         initialization,
     )
 
-iskronecker(alg) = (
+iskronecker(alg, f) = (
     alg isa EK0
-    && !(alg.diffusionmodel isa DynamicMVDiffusion ||
-         alg.diffusionmodel isa FixedMVDiffusion)
+    &&
+    !(alg.diffusionmodel isa DynamicMVDiffusion ||
+        alg.diffusionmodel isa FixedMVDiffusion)
     && alg.prior isa IWP
+    && f.mass_matrix === I
 )
 
 """
