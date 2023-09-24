@@ -93,14 +93,14 @@ function DiffEqBase.build_solution(
     uElType = eltype(prob.u0)
     D = d
     KRONECKER = true
-    Id = _I(d)
+
     pu_cov = if KRONECKER
-        PSDMatrix(kronecker(Id, zeros(uElType, D ÷ d + 1)))
+        PSDMatrix(kronecker(_I(d), zeros(uElType, D ÷ d + 1)))
     else
         PSDMatrix(zeros(uElType, D, d))
     end
     x_cov = if KRONECKER
-        PSDMatrix(kronecker(Id, zeros(uElType, D ÷ d + 1, D ÷ d + 1)))
+        PSDMatrix(kronecker(_I(d), zeros(uElType, D ÷ d + 1, D ÷ d + 1)))
     else
         PSDMatrix(zeros(uElType, D, D))
     end

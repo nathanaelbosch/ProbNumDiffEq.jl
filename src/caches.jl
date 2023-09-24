@@ -92,7 +92,6 @@ function OrdinaryDiffEq.alg_cache(
     D = d * (q + 1)
 
     KRONECKER = alg isa EK0
-    Id = _I(d)
 
     uType = typeof(u)
     # uElType = eltype(u_vec)
@@ -127,9 +126,9 @@ function OrdinaryDiffEq.alg_cache(
     initial_variance = ones(uElType, q + 1)
     μ0 = zeros(uElType, D)
     Σ0 = PSDMatrix(if KRONECKER
-                       kronecker(Id, diagm(sqrt.(initial_variance)))
+                       kronecker(_I(d), diagm(sqrt.(initial_variance)))
                    else
-                       kron(Id, diagm(sqrt.(initial_variance)))
+                       kron(_I(d), diagm(sqrt.(initial_variance)))
                    end)
     x0 = Gaussian(μ0, Σ0)
 
@@ -147,7 +146,7 @@ function OrdinaryDiffEq.alg_cache(
     end
     v = zeros(uElType, d)
     S = if KRONECKER
-        PSDMatrix(kronecker(Id, zeros(uElType, q + 1)))
+        PSDMatrix(kronecker(_I(d), zeros(uElType, q + 1)))
     else
         PSDMatrix(zeros(uElType, D, d))
     end
