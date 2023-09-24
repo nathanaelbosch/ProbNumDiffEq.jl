@@ -111,7 +111,12 @@ EK1(;
         initialization,
     )
 
-iskronecker(alg) = alg isa EK0 && !(alg.diffusionmodel isa DynamicMVDiffusion || alg.diffusionmodel isa FixedMVDiffusion)
+iskronecker(alg) = (
+    alg isa EK0
+    && !(alg.diffusionmodel isa DynamicMVDiffusion ||
+         alg.diffusionmodel isa FixedMVDiffusion)
+    && alg.prior isa IWP
+)
 
 """
     ExpEK(; L, order=3, kwargs...)

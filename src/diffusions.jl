@@ -7,7 +7,7 @@ isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
 apply_diffusion(Q::PSDMatrix, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
+apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(Q.R * sqrt.(diffusion))
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
 
