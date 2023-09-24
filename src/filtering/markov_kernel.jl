@@ -229,6 +229,5 @@ function compute_backward_kernel!(
     _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
     _D = size(_Kout.A, 1)
     _C_DxD = view(C_DxD, 1:_D, 1:_D)
-    @info "why though?" _Kout.A _C_DxD _D
     compute_backward_kernel!(_Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
 end
