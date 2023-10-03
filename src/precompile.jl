@@ -12,9 +12,9 @@ PrecompileTools.@compile_workload begin
     end
 
     prob_list = [
-        ODEProblem{true,true}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0))
-        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[])
+        ODEProblem{true,true}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0)),
+        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0)),
+        ODEProblem{true,false}(lorenz, [1.0; 0.0; 0.0], (0.0, 1.0), Float64[]),
     ]
 
     solver_list = [

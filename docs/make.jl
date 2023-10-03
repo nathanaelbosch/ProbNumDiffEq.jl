@@ -25,7 +25,7 @@ bib = CitationBibliography(
 sort_bibliography!(bib.entries, :nyt)  # name-year-title
 
 makedocs(
-    bib,
+    plugins=[bib],
     sitename="ProbNumDiffEq.jl",
     format=Documenter.HTML(
         assets=String["assets/citations.css"],
@@ -58,6 +58,7 @@ makedocs(
         ],
         "References" => "references.md",
     ],
+    warnonly=:missing_docs,
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
