@@ -25,7 +25,7 @@ bib = CitationBibliography(
 sort_bibliography!(bib.entries, :nyt)  # name-year-title
 
 makedocs(
-    bib,
+    plugins=[bib],
     sitename="ProbNumDiffEq.jl",
     format=Documenter.HTML(
         assets=String["assets/citations.css"],
