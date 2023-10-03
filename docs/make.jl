@@ -58,6 +58,7 @@ makedocs(
         ],
         "References" => "references.md",
     ],
+    warnonly=:missing_docs,
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
