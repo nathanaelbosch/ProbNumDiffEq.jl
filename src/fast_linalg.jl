@@ -18,15 +18,30 @@ _matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (@.. C = A.diag * 
 _matmul!(C::AbstractMatrix, A::Diagonal, B::Diagonal) = @.. C = A * B
 _matmul!(
     C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
+    A::AbstractMatrix{T},
+    B::Diagonal{T},
+) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
+_matmul!(
+    C::AbstractMatrix{T},
+    A::Diagonal{T},
+    B::AbstractMatrix{T},
+) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
+_matmul!(
+    C::AbstractMatrix{T},
+    A::Diagonal{T},
+    B::Diagonal{T},
+) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
+_matmul!(
+    C::Matrix{T},
+    A::VecOrMat{T},
+    B::VecOrMat{T},
     alpha::Number,
     beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
 _matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
+    C::Matrix{T},
+    A::VecOrMat{T},
+    B::VecOrMat{T},
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 """
