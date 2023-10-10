@@ -120,5 +120,5 @@ function make_transition_matrices!(cache, prior::IWP, dt)
     # Ah = PI * A * P
     @.. Ah.B = PI.B.diag * A.B * P.B.diag'
     # X_A_Xt!(Qh, Q, PI)
-    @.. Qh.R.B = Q.R.B * PI.B.diag
+    @.. Qh.R.B = Q.R.B * PI.B.diag'
 end
