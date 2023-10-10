@@ -72,7 +72,7 @@ function predict_cov!(
     chol = cholesky!(Symmetric(M), check=false)
 
     Q_R = if issuccess(chol)
-        get_U(chol)
+        alloc_free_get_U!(chol)
     else
         triangularize!(R, cachemat=C_DxD)
     end

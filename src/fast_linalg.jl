@@ -45,7 +45,7 @@ _matmul!(
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 """
-    getupperright(A)
+    getupperright!(A)
 
 Get the upper right part of a matrix `A` without allocating.
 
@@ -53,7 +53,7 @@ This function is mostly there to make accessing `R` from a `QR` object more effi
 `qr!(A).R` allocates since it does not use views. This function is not exported and is only
 ever used internally by `triangularize!`(@ref).
 """
-function getupperright(A)
+function getupperright!(A)
     m, n = size(A)
     return triu!(@view A[1:min(m, n), 1:n])
 end
@@ -71,13 +71,13 @@ triangularize!(A; cachemat)
 
 function triangularize!(A; cachemat=nothing)
     QR = qr!(A)
-    return getupperright(getfield(QR, :factors))
+    return getupperright!(getfield(QR, :factors))
 end
 function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     D = size(A, 2)
     BLOCKSIZE = 36
     R, _ = LinearAlgebra.LAPACK.geqrt!(A, @view cachemat[1:min(BLOCKSIZE, D), :])
-    return getupperright(R)
+    return getupperright!(R)
 end
 
 """
@@ -93,12 +93,19 @@ function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
     return out
 end
 
-function get_U(C::Cholesky)
+"""
+    alloc_free_get_U!(C::Cholesky)
+
+Allocation-free version of `C.U`.
+
+THIS MODIFIES `C.factors` SO AFTERWARDS `C` SHOULD NOT BE USED ANYMORE!
+"""
+function alloc_free_get_U!(C::Cholesky)
     Cuplo = getfield(C, :uplo)
     Cfactors = getfield(C, :factors)
     if Cuplo === LinearAlgebra.char_uplo(:U)
-        return getupperright(Cfactors)
+        return getupperright!(Cfactors)
     else
-        return getupperright(Cfactors')
+        return getupperright!(Cfactors')
     end
 end
