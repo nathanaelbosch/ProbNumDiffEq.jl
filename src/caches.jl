@@ -141,7 +141,7 @@ function OrdinaryDiffEq.alg_cache(
     # Measurement model related things
     R = zeros(uElType, d, d)
     H = if KRONECKER
-        copy(E1)
+        kronecker(_I(d), zeros(uElType, 1, q+1))
     else
         zeros(uElType, d, D)
     end
