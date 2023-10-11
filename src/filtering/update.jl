@@ -106,8 +106,9 @@ function update!(
             if !(e isa PosDefException)
                 throw(e)
             end
-            @warn "Can't compute the update step with cholesky; using qr instead"
+            @warn "Can't compute the update step with cholesky; using qr instead" _S
             @assert S isa PSDMatrix
+            error()
             Cholesky(qr(S.R).R, :U, 0)
         end
     end
