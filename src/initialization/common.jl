@@ -62,13 +62,15 @@ function initial_update!(integ, cache)
 end
 
 """
-    condition_on!(x, H, data, cache)
+    init_condition_on!(x, H, data, cache)
 
-Condition `x` on `data`, with linearized measurement function `H`.
+Condition `x` on `data` with linear measurement function `H`. Used only for initialization.
 
-This is basically a Kalman update. We recommend using [`update`](@ref) or [`update!`](@ref).
+Don't use this as a Kalman update! The function has quite a few assumptions, that only
+really work out in the specific context of initialization. If you actually want to update,
+use [`update`](@ref) or [`update!`](@ref).
 """
-function condition_on!(
+function init_condition_on!(
     x::SRGaussian,
     H::AbstractMatrix,
     data::AbstractVector,
