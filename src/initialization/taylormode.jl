@@ -39,7 +39,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
         end
 
         H = MM * Proj(o)
-        init_condition_on!(x, H, df, cache; meas_cov_jitter=1e-20)
+        init_condition_on!(x, H, df, cache)
     end
 end
 
