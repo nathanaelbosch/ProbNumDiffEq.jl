@@ -73,8 +73,8 @@ function make_transition_matrices!(cache, prior::AbstractODEFilterPrior, dt)
     _Ah, _Qh = discretize(cache.prior, dt)
     copy!(Ah, _Ah)
     copy!(Qh, _Qh)
-    A .= P * Ah * PI
-    @warn "`make_transition_matrices!` currently allocates more than it should!"
+    # A = P * Ah * PI
+    _matmul!(A, P, _matmul!(A, Ah, PI))
     fast_X_A_Xt!(Q, Qh, P)
 end
 
