@@ -11,7 +11,7 @@ function harmonic_oscillator(du, u, p, t)
     return nothing
 end
 prob = ODEProblem(harmonic_oscillator, u0, (0.0, 10.0))
-appxsol = solve(prob, Vern9())
+appxsol = solve(prob, Vern9(), reltol=1e-9, abstol=1e-9)
 
 @testset "Custom callback" begin
     function CustomCallback()
