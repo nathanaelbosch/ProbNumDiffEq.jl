@@ -6,33 +6,34 @@ using Test
 
 import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
 
-d = 2
-q = 6
-D = d * (q + 1)
+@testset "Testproblem" begin
+    d = 2
+    q = 6
+    D = d * (q + 1)
 
-a, b = 1.1, -0.5
-f(u, p, t) = [a * u[1], b * u[2]]
-u0 = [0.1, 1.0]
-tspan = (0.0, 5.0)
-t0, T = tspan
-prob = ODEProblem(f, u0, tspan)
-p = prob.p
+    a, b = 1.1, -0.5
+    f(u, p, t) = [a * u[1], b * u[2]]
+    u0 = [0.1, 1.0]
+    tspan = (0.0, 5.0)
+    t0, T = tspan
+    prob = ODEProblem(f, u0, tspan)
+    p = prob.p
 
-# True Solutions and derivatives
-u(t) = [a^0 * u0[1] * exp(a * t), u0[2] * exp(b * t)]
-du(t) = [a^1 * u0[1] * exp(a * t), b * u0[2] * exp(b * t)]
-ddu(t) = [a^2 * u0[1] * exp(a * t), (b)^2 * u0[2] * exp(b * t)]
-dddu(t) = [a^3 * u0[1] * exp(a * t), (b)^3 * u0[2] * exp(b * t)]
-ddddu(t) = [a^4 * u0[1] * exp(a * t), (b)^4 * u0[2] * exp(b * t)]
-dddddu(t) = [a^5 * u0[1] * exp(a * t), (b)^5 * u0[2] * exp(b * t)]
-ddddddu(t) = [a^6 * u0[1] * exp(a * t), (b)^6 * u0[2] * exp(b * t)]
-true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddddddu(t0)]
+    # True Solutions and derivatives
+    u(t) = [a^0 * u0[1] * exp(a * t), u0[2] * exp(b * t)]
+    du(t) = [a^1 * u0[1] * exp(a * t), b * u0[2] * exp(b * t)]
+    ddu(t) = [a^2 * u0[1] * exp(a * t), (b)^2 * u0[2] * exp(b * t)]
+    dddu(t) = [a^3 * u0[1] * exp(a * t), (b)^3 * u0[2] * exp(b * t)]
+    ddddu(t) = [a^4 * u0[1] * exp(a * t), (b)^4 * u0[2] * exp(b * t)]
+    dddddu(t) = [a^5 * u0[1] * exp(a * t), (b)^5 * u0[2] * exp(b * t)]
+    ddddddu(t) = [a^6 * u0[1] * exp(a * t), (b)^6 * u0[2] * exp(b * t)]
+    true_init_states =
+        [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddddddu(t0)]
 
-@testset "Taylormode initialization" begin
-    @testset "IIP" begin
-        f!(du, u, p, t) = (du .= f(u, p, t))
-        prob = ODEProblem{true,true}(f!, u0, tspan)
+    f!(du, u, p, t) = (du .= f(u, p, t))
+    prob = ODEProblem{true,true}(f!, u0, tspan)
 
+    @testset "`taylormode_get_derivatives`" begin
         dfs = ProbNumDiffEq.taylormode_get_derivatives(
             prob.u0,
             prob.f,
@@ -42,6 +43,21 @@ true_init_states = [u(t0); du(t0); ddu(t0); dddu(t0); ddddu(t0); dddddu(t0); ddd
         )
         @test length(dfs) == q + 1
         @test true_init_states ≈ vcat(dfs...)
+    end
+
+    @testset "Taylormode: `initial_update!`" begin
+        integ = init(prob, EK0(order=q))
+        ProbNumDiffEq.initial_update!(integ, integ.cache, TaylorModeInit())
+        x = integ.cache.x
+        @test reshape(x.μ, :, 2)'[:] ≈ true_init_states
+    end
+
+    @testset "Low-order exact init via ClassiSolverInit: `initial_update!`" begin
+        _q = 2
+        integ = init(prob, EK0(order=_q, initialization=ClassicSolverInit(init_on_ddu=true)))
+        ProbNumDiffEq.initial_update!(integ, integ.cache, integ.alg.initialization)
+        x = integ.cache.x
+        @test reshape(x.μ, :, 2)'[:] ≈ true_init_states[1:(_q+1)*d]
     end
 end
 
