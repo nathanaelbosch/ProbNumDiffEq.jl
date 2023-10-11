@@ -34,9 +34,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[2, :]
         end
 
-        if !(df isa AbstractVector)
-            df = df[:]
-        end
+        df = view(df, :)
 
         H = MM * Proj(o)
         init_condition_on!(x, H, df, cache)
