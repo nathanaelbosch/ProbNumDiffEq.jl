@@ -16,6 +16,18 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
     integ.stats.nf += q
     @assert length(0:q) == length(f_derivatives)
+
+    # This is hacky and should definitely be removed. But it also works so 🤷
+    MM = if f.mass_matrix === I
+        f.mass_matrix
+        else
+        _MM = copy(f.mass_matrix)
+        if any(iszero.(diag(_MM)))
+            _MM .+= 1e-20I(d)
+        end
+        _MM
+    end
+
     for (o, df) in zip(0:q, f_derivatives)
         if f isa DynamicalODEFunction
             @assert df isa ArrayPartition
@@ -26,8 +38,8 @@ function initial_update!(integ, cache, init::TaylorModeInit)
             df = df[:]
         end
 
-        H = f.mass_matrix * Proj(o)
-        condition_on!(x, H, df, cache)
+        H = MM * Proj(o)
+        init_condition_on!(x, H, df, cache; meas_cov_jitter=1e-20)
     end
 end
 
