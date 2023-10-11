@@ -27,10 +27,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
         end
 
         H = f.mass_matrix * Proj(o)
-        measurement.μ .= H*x.μ - df
-        fast_X_A_Xt!(measurement.Σ, x.Σ, H)
-        copy!(x_tmp, x)
-        update!(x, x_tmp, measurement, H, K1, C_Dxd, C_DxD, C_dxd)
+        condition_on!(x, H, df, cache)
     end
 end
 

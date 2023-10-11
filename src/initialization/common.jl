@@ -74,44 +74,10 @@ function condition_on!(
     data::AbstractVector,
     cache,
 )
-    @unpack m_tmp, K1, x_tmp, C_DxD = cache
-    S = m_tmp.Σ
-    covcache = x_tmp.Σ
-    Mcache = cache.C_DxD
-
-    fast_X_A_Xt!(S, x.Σ, H)
-    # @assert isdiag(Matrix(S))
-    S_diag = diag(S)
-    if any(iszero.(S_diag)) # could happen with a singular mass-matrix
-        S_diag .+= 1e-20
-    end
-
-    # _matmul!(K1, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
-    # K = K1 ./= S_diag'
-
-    _K = x.Σ.R' * x.Σ.R * H'
-    @assert all(S_diag .== 1)
-    K = _K
-
-    # x.μ .+= K*(data - z)
-    datadiff = _matmul!(data, H, x.μ, -1, 1)
-    _matmul!(x.μ, K, datadiff, 1, 1)
-
-    D = length(x.μ)
-    # _matmul!(Mcache, K, H, -1, 0)
-    # @inbounds @simd ivdep for i in 1:D
-    #     Mcache[i, i] += 1
-    # end
-
-    d, q1 = size(H.A, 1), size(x.Σ.R.B, 1)
-    _I = kronecker(I(d), I(q1))
-    KH = K*H
-    @assert _I.A == KH.A
-    @. KH.B = _I.B - KH.B
-    M = KH
-
-    fast_X_A_Xt!(x_tmp.Σ, x.Σ, M)
-    copy!(x.Σ.R.A, covcache.R.A)
-    copy!(x.Σ.R.B, covcache.R.B)
-    return nothing
+    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, measurement = cache
+    _matmul!(measurement.μ, H, x.μ)
+    measurement.μ .-= data
+    fast_X_A_Xt!(measurement.Σ, x.Σ, H)
+    copy!(x_tmp, x)
+    update!(x, x_tmp, measurement, H, K1, C_Dxd, C_DxD, C_dxd)
 end

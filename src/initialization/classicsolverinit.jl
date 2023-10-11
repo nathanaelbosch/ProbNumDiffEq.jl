@@ -13,24 +13,10 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    # condition_on!(x, Proj(0), _u, cache)
-    begin
-        H = Proj(0)
-        measurement.μ .= H*x.μ - _u
-        fast_X_A_Xt!(measurement.Σ, x.Σ, H)
-        copy!(x_tmp, x)
-        update!(x, x_tmp, measurement, H, K1, C_Dxd, C_DxD, C_dxd)
-    end
+    condition_on!(x, Proj(0), _u, cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.stats.nf += 1
-    # condition_on!(x, Proj(1), view(du, :), cache)
-    begin
-        H = Proj(1)
-        measurement.μ .= H*x.μ - view(du, :)
-        fast_X_A_Xt!(measurement.Σ, x.Σ, H)
-        copy!(x_tmp, x)
-        update!(x, x_tmp, measurement, H, K1, C_Dxd, C_DxD, C_dxd)
-    end
+    condition_on!(x, Proj(1), view(du, :), cache)
 
     if q < 2
         return
@@ -53,14 +39,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> _f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        # condition_on!(x, Proj(2), ddfddu, cache)
-        begin
-            H = Proj(2)
-            measurement.μ .= H*x.μ - ddfddu
-            fast_X_A_Xt!(measurement.Σ, x.Σ, H)
-            copy!(x_tmp, x)
-            update!(x, x_tmp, measurement, H, K1, C_Dxd, C_DxD, C_dxd)
-        end
+        condition_on!(x, Proj(2), ddfddu, cache)
         if q < 3
             return
         end
