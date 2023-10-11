@@ -27,7 +27,8 @@ using ForwardDiff
 using ExponentialUtilities
 using Octavian
 using FastGaussQuadrature
-using Kronecker
+import Kronecker
+import Kronecker: kronecker, getmatrices
 
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
