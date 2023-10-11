@@ -23,7 +23,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         J = DiffResults.jacobian(result)
 
         mul!(H, J, SolProj)
-        X_A_Xt!(S, C, H)
+        fast_X_A_Xt!(S, C, H)
 
         # m_i_new, C_i_new = update(x, Gaussian(z .+ (H * (m - m_i)), S), H)
         K = _matmul!(_K2, C.R', _matmul!(_K1, C.R, H' / S))
@@ -34,7 +34,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         m_i_new = m_tmp .+= m
 
         if (norm(m_i_new .- m_i) < ϵ₁ && norm(z) < ϵ₂) || (i == maxiters)
-            C_i_new = X_A_Xt!(C_tmp, C, (I - K * H))
+            C_i_new = fast_X_A_Xt!(C_tmp, C, (I - K * H))
             break
         end
         m_i = m_i_new
