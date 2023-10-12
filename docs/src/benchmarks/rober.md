@@ -53,7 +53,7 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 2:6
+  for order in 1:4
 ]
 
 labels = first.(_setups)
@@ -63,8 +63,8 @@ setups = last.(_setups)
 # abstols = 1.0 ./ 10.0 .^ (4:10)
 # reltols = 1.0 ./ 10.0 .^ (1:7)
 # test:
-abstols = 1.0 ./ 10.0 .^ (4:9)
-reltols = 1.0 ./ 10.0 .^ (1:6)
+abstols = 1.0 ./ 10.0 .^ (3:9)
+reltols = 1.0 ./ 10.0 .^ (1:7)
 
 wp = WorkPrecisionSet(
     mmprob, abstols, reltols, setups;
@@ -80,7 +80,8 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5),
-     xlims = (2e-15, 3e-7), ylims = (1e-2, 6e-1))
+     #xlims = (2e-15, 3e-7), ylims = (1e-2, 6e-1)
+     )
 ```
 
 ![](figures/rober_3_1.svg)
