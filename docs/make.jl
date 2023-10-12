@@ -50,6 +50,7 @@ makedocs(
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
             "Non-stiff ODE: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
             "Stiff ODE: Van der Pol" => "benchmarks/vanderpol.md",
+            "Second order ODE: Pleiades" => "benchmarks/pleiades.md",
             "DAE: ROBER" => "benchmarks/rober.md",
         ],
         "Internals" => [

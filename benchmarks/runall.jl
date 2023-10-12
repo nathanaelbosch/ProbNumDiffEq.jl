@@ -4,6 +4,7 @@ FILES = [
     "lotkavolterra.jmd",
     "vanderpol.jmd",
     "rober.jmd",
+    "pleiades.jmd",
     "multi-language-wrappers.jmd",
 ]
 
