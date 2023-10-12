@@ -1,7 +1,7 @@
 # Pleiades benchmark
 
 ```julia
-using LinearAlgebra, Statistics, InteractiveUtils
+using LinearAlgebra, Statistics
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
 using ModelingToolkit
 using ProbNumDiffEq
@@ -119,13 +119,23 @@ plot(wp, color=[1 1 2 2 3 3 4 4],
 ## Conclusion
 
 - If the problem is a second-order ODE, _implement it as a second-order ODE_!
-  Just use `SecondOrderODEProblem`.
 
 
 ## Appendix
 
 Computer information:
-
 ```julia
+using InteractiveUtils
 InteractiveUtils.versioninfo()
+```
+
+Package Information:
+```julia
+using Pkg
+Pkg.status()
+```
+
+And the full manifest:
+```julia
+Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
