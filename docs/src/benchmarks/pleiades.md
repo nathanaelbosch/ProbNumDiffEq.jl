@@ -1,9 +1,9 @@
-# Van der Pol benchmark
-
+# Pleiades benchmark
 
 ```julia
 using LinearAlgebra, Statistics
-using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
+using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
+using ModelingToolkit
 using ProbNumDiffEq
 
 # Plotting theme
@@ -18,48 +18,97 @@ theme(:dao;
 
 
 
-### Van der Pol problem definition
+### Pleiades problem definition
 
 ```julia
-function vanderpol!(du, u, p, t)
-    du[1] = u[2]
-    du[2] = p[1] * ((1 - u[1]^2) * u[2] - u[1])
+# first-order ODE
+@fastmath function pleiades(du, u, p, t)
+    v = view(u, 1:7)   # x
+    w = view(u, 8:14)  # y
+    x = view(u, 15:21) # x′
+    y = view(u, 22:28) # y′
+    du[15:21] .= v
+    du[22:28] .= w
+    @inbounds @simd ivdep for i in 1:14
+        du[i] = zero(eltype(u))
+    end
+    @inbounds @simd ivdep for i in 1:7
+        @inbounds @simd ivdep for j in 1:7
+            if i != j
+                r = ((x[i] - x[j])^2 + (y[i] - y[j])^2)^(3 / 2)
+                du[i] += j * (x[j] - x[i]) / r
+                du[7+i] += j * (y[j] - y[i]) / r
+            end
+        end
+    end
 end
-p = [1e5]
-tspan = (0.0, 6.3)
-u0 = [2.0, 0.0]
-prob = ODEProblem(vanderpol!, u0, tspan, p)
+x0 = [3.0, 3.0, -1.0, -3.0, 2.0, -2.0, 2.0]
+y0 = [3.0, -3.0, 2.0, 0, 0, -4.0, 4.0]
+dx0 = [0, 0, 0, 0, 0, 1.75, -1.5]
+dy0 = [0, 0, 0, -1.25, 1, 0, 0]
+u0 = [dx0; dy0; x0; y0]
+tspan = (0.0, 3.0)
+prob1 = ODEProblem(pleiades, u0, tspan)
 
-test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
-plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-2.5, 2.5))
+# second-order ODE
+function pleiades2(ddu, du, u, p, t)
+    x = view(u, 1:7)
+    y = view(u, 8:14)
+    for i in 1:14
+        ddu[i] = zero(eltype(u))
+    end
+    for i in 1:7, j in 1:7
+        if i != j
+            r = ((x[i] - x[j])^2 + (y[i] - y[j])^2)^(3 / 2)
+            ddu[i] += j * (x[j] - x[i]) / r
+            ddu[7+i] += j * (y[j] - y[i]) / r
+        end
+    end
+end
+u0 = [x0; y0]
+du0 = [dx0; dy0]
+prob2 = SecondOrderODEProblem(pleiades2, du0, u0, tspan)
+probs = [prob1, prob2]
+
+ref_sol1 = solve(prob1, Vern9(), abstol=1/10^14, reltol=1/10^14, dense=false)
+ref_sol2 = solve(prob2, Vern9(), abstol=1/10^14, reltol=1/10^14, dense=false)
+ref_sols = [ref_sol1, ref_sol2]
+
+plot(ref_sol1, idxs=[(14+i,21+i) for i in 1:7], title="Pleiades Solution", legend=false)
+scatter!(ref_sol1.u[end][15:21], ref_sol1.u[end][22:end], color=1:7)
 ```
 
-![](figures/vanderpol_2_1.svg)
+![](figures/pleiades_2_1.svg)
 
 
 
-## EK1 accross orders
-
+## First-order ODE vs. second-order ODE
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
 _setups = [
-  "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 2:6
+  "EK0(3) (1st order ODE)" => Dict(:alg => EK0(order=3, smooth=DENSE), :prob_choice => 1)
+  "EK0(5) (1st order ODE)" => Dict(:alg => EK0(order=5, smooth=DENSE), :prob_choice => 1)
+  "EK1(3) (1st order ODE)" => Dict(:alg => EK1(order=3, smooth=DENSE), :prob_choice => 1)
+  "EK1(5) (1st order ODE)" => Dict(:alg => EK1(order=5, smooth=DENSE), :prob_choice => 1)
+  "EK0(4) (2nd order ODE)" => Dict(:alg => EK0(order=4, smooth=DENSE), :prob_choice => 2)
+  "EK0(6) (2nd order ODE)" => Dict(:alg => EK0(order=6, smooth=DENSE), :prob_choice => 2)
+  "EK1(4) (2nd order ODE)" => Dict(:alg => EK1(order=4, smooth=DENSE), :prob_choice => 2)
+  "EK1(6) (2nd order ODE)" => Dict(:alg => EK1(order=6, smooth=DENSE), :prob_choice => 2)
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (6:13)
-reltols = 1.0 ./ 10.0 .^ (3:10)
+abstols = 1.0 ./ 10.0 .^ (6:11)
+reltols = 1.0 ./ 10.0 .^ (3:8)
 
 wp = WorkPrecisionSet(
-    prob, abstols, reltols, setups;
+    probs, abstols, reltols, setups;
     names = labels,
     #print_names = true,
-    appxsol = test_sol,
+    appxsol = ref_sols,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
@@ -68,77 +117,19 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
-```
-
-![](figures/vanderpol_3_1.svg)
-
-
-
-## Solving the first- vs second-order ODE
-
-```julia
-function vanderpol2!(ddu, du, u, p, t)
-    ddu[1] = p[1] * ((1 - u[1]^2) * du[1] - u[1])
-end
-p = [1e5]
-tspan = (0.0, 6.3)
-u0 = [2.0]
-du0 = [0.0]
-prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
-
-test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
-plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-2.5, 2.5))
-```
-
-![](figures/vanderpol_4_1.svg)
-
-```julia
-DENSE = false;
-SAVE_EVERYSTEP = false;
-
-_setups = [
-  "EK1(2) 1st order" => Dict(:alg => EK1(order=2, smooth=DENSE))
-  "EK1(3) 1st order" => Dict(:alg => EK1(order=3, smooth=DENSE))
-  "EK1(4) 1st order" => Dict(:alg => EK1(order=4, smooth=DENSE))
-  "EK1(5) 1st order" => Dict(:alg => EK1(order=5, smooth=DENSE))
-  "EK1(3) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=3, smooth=DENSE))
-  "EK1(4) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=4, smooth=DENSE))
-  "EK1(5) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=5, smooth=DENSE))
-  "EK1(5) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=6, smooth=DENSE))
-]
-
-labels = first.(_setups)
-setups = last.(_setups)
-
-abstols = 1.0 ./ 10.0 .^ (6:13)
-reltols = 1.0 ./ 10.0 .^ (3:10)
-
-wp = WorkPrecisionSet(
-    [prob, prob2], abstols, reltols, setups;
-    names = labels,
-    #print_names = true,
-    appxsol = [test_sol, test_sol2],
-    dense = DENSE,
-    save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
-    maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
+plot(wp, color=[1 1 2 2 3 3 4 4],
+     # xticks = 10.0 .^ (-16:1:5)
 )
-
-plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
 ```
 
-![](figures/vanderpol_5_1.svg)
+![](figures/pleiades_3_1.svg)
 
 
 
 
 ## Conclusion
 
-- Use the `EK1` to solve stiff problems, with orders $\leq 6$ depending on the error tolerance.
-- When the problem is actually a second-order ODE, as is the case for the Van der Pol system here, _solve it as a second-order ODE_.
+- If the problem is a second-order ODE, _implement it as a second-order ODE_!
 
 
 ## Appendix

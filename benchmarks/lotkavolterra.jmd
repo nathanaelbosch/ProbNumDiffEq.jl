@@ -4,7 +4,7 @@ Adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/NonStiffODE/LotkaVolterra_wpd/).
 
 ```julia
-using LinearAlgebra, Statistics, InteractiveUtils
+using LinearAlgebra, Statistics
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
 using ProbNumDiffEq
 
@@ -215,6 +215,7 @@ wp = WorkPrecisionSet(
 plot(wp, color=[2 2 2 4 4 4 5 5 5], xticks = 10.0 .^ (-16:1:5))
 ```
 
+
 ## Conclusion
 
 - **Use the EK1!** It seems to be strictly better than the EK0 here.
@@ -224,11 +225,21 @@ plot(wp, color=[2 2 2 4 4 4 5 5 5], xticks = 10.0 .^ (-16:1:5))
 - Most likely, the default choice of `diffusionmodel=DynamicDiffusion` and `initialization=TaylorModeInit` are fine.
 
 
-
 ## Appendix
 
 Computer information:
-
 ```julia
+using InteractiveUtils
 InteractiveUtils.versioninfo()
+```
+
+Package Information:
+```julia
+using Pkg
+Pkg.status()
+```
+
+And the full manifest:
+```julia
+Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```

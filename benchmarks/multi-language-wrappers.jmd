@@ -5,7 +5,7 @@ Adapted from
 
 ```julia
 # Imports
-using LinearAlgebra, Statistics, InteractiveUtils
+using LinearAlgebra, Statistics
 using StaticArrays, DiffEqDevTools, ParameterizedFunctions, Plots, SciMLBase, OrdinaryDiffEq
 using ODEInterface, ODEInterfaceDiffEq, Sundials, SciPyDiffEq, deSolveDiffEq, MATLABDiffEq, LSODA
 using LoggingExtras
@@ -330,7 +330,18 @@ plot(
 ## Appendix
 
 Computer information:
-
 ```julia
+using InteractiveUtils
 InteractiveUtils.versioninfo()
+```
+
+Package Information:
+```julia
+using Pkg
+Pkg.status()
+```
+
+And the full manifest:
+```julia
+Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```

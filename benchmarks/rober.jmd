@@ -4,7 +4,7 @@ Adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/DAE/ROBERDAE/).
 
 ```julia
-using LinearAlgebra, Statistics, InteractiveUtils
+using LinearAlgebra, Statistics
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
 using ModelingToolkit
 using ProbNumDiffEq
@@ -35,7 +35,7 @@ daeprob = DAEProblem(sys,[D(y₁)=>-0.04, D(y₂)=>0.04, D(y₃)=>0.0],[],(0.0,1
 odaeprob = ODAEProblem(structural_simplify(sys),[],(0.0,1e5)) # can't handle this yet
 
 ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14,dense=false)
-plot(ref_sol, vars=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1))
+plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1))
 ```
 
 ## EK1 accross orders
@@ -46,16 +46,12 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 2:6
+  for order in 1:4
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-# works:
-# abstols = 1.0 ./ 10.0 .^ (4:10)
-# reltols = 1.0 ./ 10.0 .^ (1:7)
-# test:
 abstols = 1.0 ./ 10.0 .^ (4:9)
 reltols = 1.0 ./ 10.0 .^ (1:6)
 
@@ -72,8 +68,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5),
-     xlims = (2e-15, 3e-7), ylims = (1e-2, 6e-1))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
 
@@ -82,10 +77,22 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^
 - The `EK1` can solve mass-matrix DAEs! But it only really works well for low errors.
 - Order 3 seems to work well here. But the order-to-error-tolerance heuristic should in principle still hold: lower tolerance level ``\rightarrow`` higher order.
 
+
 ## Appendix
 
 Computer information:
-
 ```julia
+using InteractiveUtils
 InteractiveUtils.versioninfo()
+```
+
+Package Information:
+```julia
+using Pkg
+Pkg.status()
+```
+
+And the full manifest:
+```julia
+Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
