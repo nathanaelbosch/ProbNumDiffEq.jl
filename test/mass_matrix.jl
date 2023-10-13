@@ -12,8 +12,8 @@ using Test
         return nothing
     end
     M = [
-        1.0 0 0
-        0 1.0 0
+        1 0 0
+        0 1 0
         0 0 0
     ]
     f = ODEFunction(rober, mass_matrix=M)
