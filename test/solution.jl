@@ -105,8 +105,8 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
     @testset "Plotting" begin
         @test_nowarn plot(sol)
         @test_nowarn plot(sol, denseplot=false)
-        @test_nowarn plot(sol, vars=(1, 2))
-        @test_nowarn plot(sol, vars=(1, 1, 2))
+        @test_nowarn plot(sol, idxs=(1, 2))
+        @test_nowarn plot(sol, idxs=(1, 1, 2))
         @test_nowarn plot(sol, tspan=prob.tspan)
     end
 
