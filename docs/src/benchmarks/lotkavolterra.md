@@ -48,7 +48,7 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK0(order=$order)" => Dict(:alg => EK0(order=order, smooth=DENSE))
-  for order in 1:7
+  for order in 2:7
 ]
 
 labels = first.(_setups)
@@ -85,7 +85,7 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1(order=$order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 1:7
+  for order in 2:7
 ]
 
 labels = first.(_setups)
@@ -337,7 +337,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [00ebfdb7] CSTParser v3.3.6
   [49dc2e85] Calculus v0.5.1
   [324d7699] CategoricalArrays v0.10.8
-  [d360d2e6] ChainRulesCore v1.16.0
+  [d360d2e6] ChainRulesCore v1.17.0
   [fb6a15b2] CloseOpenIntervals v0.1.12
   [944b1d66] CodecZlib v0.7.2
   [35d6a980] ColorSchemes v3.24.0
@@ -355,6 +355,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8f4d0f93] Conda v1.9.1
   [187b0558] ConstructionBase v1.5.4
   [d38c429a] Contour v0.6.2
+  [587fd27a] CovarianceEstimation v0.2.9
   [adafc99b] CpuId v0.3.1
   [a8cc5b0e] Crayons v4.1.1
   [717857b8] DSP v0.7.9
@@ -377,7 +378,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [7c1d4256] DynamicPolynomials v0.5.3
   [b305315f] Elliptic v1.0.1
   [4e289a0a] EnumX v1.0.4
-  [f151be2c] EnzymeCore v0.6.1
+  [f151be2c] EnzymeCore v0.6.2
   [6912e4f1] Espresso v0.6.1
   [460bff9d] ExceptionUnwrapping v0.1.9
   [d4d017d3] ExponentialUtilities v1.25.0
@@ -425,6 +426,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [98e50ef6] JuliaFormatter v1.0.39
   [ccbc3e58] JumpProcesses v9.8.0
   [ef3ab10e] KLU v0.4.1
+  [2c470bb0] Kronecker v0.5.4
   [ba0b0d4f] Krylov v0.9.4
   [7f56f5a3] LSODA v0.7.5
   [b964fa9f] LaTeXStrings v1.3.0
@@ -455,6 +457,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [d41bc354] NLSolversBase v7.8.3
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
+⌅ [356022a1] NamedDims v0.2.50
   [8913a72c] NonlinearSolve v2.2.1
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
