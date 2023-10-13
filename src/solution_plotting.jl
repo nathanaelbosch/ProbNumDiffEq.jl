@@ -3,12 +3,24 @@
 ########################################################################################
 @recipe function f(
     sol::AbstractProbODESolution;
-    vars=nothing,
+    idxs=nothing,
     denseplot=sol.dense,
     plotdensity=1000,
     tspan=nothing,
     ribbon_width=1.96,
+    vars=nothing,
 )
+    if vars !== nothing
+        Base.depwarn(
+            "To maintain consistency with solution indexing, keyword argument vars will be removed in a future version. Please use keyword argument idxs instead.",
+            :f; force=true)
+        (idxs !== nothing) &&
+            error(
+                "Simultaneously using keywords vars and idxs is not supported. Please only use idxs.",
+            )
+        idxs = vars
+    end
+
     tstart, tend = isnothing(tspan) ? (sol.t[1], sol.t[end]) : tspan
     times = denseplot ? range(tstart, tend, length=plotdensity) : sol.t
     sol_rvs = denseplot ? sol(times).u : sol.pu
@@ -19,16 +31,16 @@
     values = stack(mean.(sol_rvs))
     stds = stack(std.(sol_rvs))
 
-    if isnothing(vars)
+    if isnothing(idxs)
         ribbon --> ribbon_width * stds
         xguide --> "t"
         yguide --> "u(t)"
         label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
         return times, values
     else
-        int_vars = interpret_vars(vars, sol, getsyms(sol))
+        int_vars = interpret_vars(idxs, sol, getsyms(sol))
         varsizes = unique(length.(int_vars))
-        @assert length(varsizes) == 1 "`vars` argument has an errors"
+        @assert length(varsizes) == 1 "`idxs` argument has an errors"
         ndims = varsizes[1] - 1  # First argument is not about dimensions
         if ndims == 2
             _x = []

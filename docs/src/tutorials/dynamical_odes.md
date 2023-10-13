@@ -58,7 +58,7 @@ u0, du0 = [0.0, 0.1], [0.5, 0.0]
 tspan = (0.0, 100.0)
 prob = ODEProblem(Hénon_Heiles, [du0; u0], tspan)
 sol = solve(prob, EK1());
-plot(sol, vars=(3, 4)) # where `vars=(3,4)` is used to plot x agains y
+plot(sol, idxs=(3, 4)) # where `idxs=(3,4)` is used to plot x agains y
 ```
 
 ### Solving the second-order ODE directly
@@ -77,7 +77,7 @@ function Hénon_Heiles2(ddu, du, u, p, t)
 end
 prob2 = SecondOrderODEProblem(Hénon_Heiles2, du0, u0, tspan)
 sol2 = solve(prob2, EK1());
-plot(sol2, vars=(3, 4))
+plot(sol2, idxs=(3, 4))
 ```
 
 ### Benchmark: Solving second order ODEs is _faster_
