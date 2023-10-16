@@ -168,7 +168,9 @@ function local_scalar_diffusion(cache)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     e .= z
     if HQHmat isa Kronecker.KroneckerProduct
-        @assert all(diag(HQHmat.A) .== 1)
+        @simd ivdep for i in 1:size(HQHmat.A, 1)
+            @assert HQHmat.A[i,i] == 1
+        end
         @assert length(HQHmat.B) == 1
         ldiv!(HQHmat.B[1], e)
     else
