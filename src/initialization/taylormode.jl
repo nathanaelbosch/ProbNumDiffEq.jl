@@ -23,6 +23,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
         else
         _MM = copy(f.mass_matrix)
         if any(iszero.(diag(_MM)))
+            _MM = typeof(promote(_MM[1], 1e-20)[1]).(_MM)
             _MM .+= 1e-20I(d)
         end
         _MM
