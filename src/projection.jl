@@ -4,7 +4,7 @@ function projection(d::Integer, q::Integer, ::Type{elType}=typeof(1.0)) where {e
         if deriv <= q
             e_i[deriv+1] = 1
         end
-        kronecker(_I(d), e_i')
+        IsoKroneckerProduct(true, d, e_i')
     end
     return Proj
 end

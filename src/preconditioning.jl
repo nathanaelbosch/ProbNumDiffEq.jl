@@ -1,6 +1,6 @@
 function init_preconditioner(d, q, ::Type{elType}=typeof(1.0)) where {elType}
-    P = kronecker(_I(d), Diagonal(ones(elType, q + 1)))
-    PI = kronecker(_I(d), Diagonal(ones(elType, q + 1)))
+    P = IsoKroneckerProduct(true, d, Diagonal(ones(elType, q + 1)))
+    PI = IsoKroneckerProduct(true, d, Diagonal(ones(elType, q + 1)))
     return P, PI
 end
 

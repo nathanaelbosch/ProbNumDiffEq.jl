@@ -43,10 +43,7 @@ function predict!(
 end
 
 function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix)
-    D = length(x_out.μ)
-    a = size(Ah, 1)
-    d = D ÷ a
-    _matmul!(reshape_no_alloc(x_out.μ, a, d), Ah, reshape_no_alloc(x_curr.μ, a, d))
+    _matmul!(x_out.μ, Ah, x_curr.μ)
     return x_out.μ
 end
 
@@ -82,10 +79,10 @@ end
 
 # Kronecker version
 function predict_cov!(
-    x_out::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    x_curr::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    Ah::Kronecker.KroneckerProduct,
-    Qh::PSDMatrix{S,<:Kronecker.KroneckerProduct},
+    x_out::SRGaussian{T,<:IKP},
+    x_curr::SRGaussian{T,<:IKP},
+    Ah::IKP,
+    Qh::PSDMatrix{S,<:IKP},
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     diffusion=1,
@@ -97,7 +94,7 @@ function predict_cov!(
     _D = size(_Qh, 1)
     _C_DxD = view(C_DxD, 1:_D, 1:_D)
     _C_2DxD = view(C_2DxD, 1:2*_D, 1:_D)
-    _diffusion = diffusion isa Kronecker.KroneckerProduct ? diffusion.B : diffusion
+    _diffusion = diffusion isa IKP ? diffusion.B : diffusion
 
     predict_cov!(
         _x_out,

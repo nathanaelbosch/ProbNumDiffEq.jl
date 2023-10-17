@@ -96,12 +96,12 @@ function DiffEqBase.build_solution(
     KRONECKER = iskronecker(alg, prob.f)
 
     pu_cov = if KRONECKER
-        PSDMatrix(kronecker(_I(d), zeros(uElType, D ÷ d + 1)))
+        PSDMatrix(IsoKroneckerProduct(true, d, zeros(uElType, D ÷ d + 1)))
     else
         PSDMatrix(zeros(uElType, D, d))
     end
     x_cov = if KRONECKER
-        PSDMatrix(kronecker(_I(d), zeros(uElType, D ÷ d + 1, D ÷ d + 1)))
+        PSDMatrix(IsoKroneckerProduct(true, d, zeros(uElType, D ÷ d + 1, D ÷ d + 1)))
     else
         PSDMatrix(zeros(uElType, D, D))
     end

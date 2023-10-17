@@ -138,10 +138,10 @@ end
 
 # Kronecker version
 function update!(
-    x_out::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    x_pred::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    measurement::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    H::Kronecker.KroneckerProduct,
+    x_out::SRGaussian{T,<:IKP},
+    x_pred::SRGaussian{T,<:IKP},
+    measurement::SRGaussian{T,<:IKP},
+    H::IKP,
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
@@ -152,7 +152,7 @@ function update!(
     _measurement = Gaussian(measurement.μ, PSDMatrix(measurement.Σ.R.B))
     _H = H.B
     o = size(_measurement.Σ, 1)
-    d = size(H.A, 1)
+    d = H.ldim
     _D = length(x_out.μ) ÷ d
     _K1_cache = view(K1_cache, 1:_D, 1:o)
     _K2_cache = view(K2_cache, 1:_D, 1:o)

@@ -100,12 +100,12 @@ function marginalize_cov!(
 end
 
 function marginalize_cov!(
-    x_out::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    x_curr::SRGaussian{T,<:Kronecker.KroneckerProduct},
+    x_out::SRGaussian{T,<:IKP},
+    x_curr::SRGaussian{T,<:IKP},
     K::AffineNormalKernel{
         <:AbstractMatrix,
         <:Any,
-        <:PSDMatrix{S,<:Kronecker.KroneckerProduct},
+        <:PSDMatrix{S,<:IKP},
     };
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
@@ -213,13 +213,13 @@ end
 
 function compute_backward_kernel!(
     Kout::KT1,
-    xpred::XT,
-    x::XT,
+    xpred::SRGaussian{T,<:IKP},
+    x::SRGaussian{T,<:IKP},
     K::KT2;
     C_DxD::AbstractMatrix,
     diffusion=1,
 ) where {
-    XT<:SRGaussian{<:Number,<:Kronecker.KroneckerProduct},
+    T,
     KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
     KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
 }
