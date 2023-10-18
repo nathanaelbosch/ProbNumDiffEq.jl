@@ -10,14 +10,47 @@ IsoKroneckerProduct(alpha::Number, ldim::Integer, B::AbstractVector) = IsoKronec
 const IKP = IsoKroneckerProduct
 
 Kronecker.getmatrices(K::IKP) = (K.alpha*I(K.ldim), K.B)
+Matrix(M::PSDMatrix) = Matrix(M.R' * M.R)
 
 function Base.:*(A::IKP, B::IKP)
     @assert A.ldim == B.ldim
-    return IsoKroneckerProduct(A.alpha * B.alpha, A.ldim, A.B * A.B)
+    return IsoKroneckerProduct(A.alpha * B.alpha, A.ldim, A.B * B.B)
 end
 Base.:*(K::IKP, a::Number) = IsoKroneckerProduct(K.alpha, K.ldim, K.B * a)
 Base.:*(a::Number, K::IKP) = IsoKroneckerProduct(K.alpha, K.ldim, a * K.B)
 LinearAlgebra.adjoint(A::IKP) = IsoKroneckerProduct(A.alpha, A.ldim, A.B')
+
+Base.:+(A::IKP, B::IKP) = begin
+    @assert A.ldim == B.ldim
+    if A.alpha == B.alpha
+        return IsoKroneckerProduct(A.alpha, A.ldim, A.B + B.B)
+    else
+        T = typeof(promote(A.alpha, B.alpha)[1])
+        return IsoKroneckerProduct(one(T), A.ldim, A.alpha * A.B + B.alpha * B.B)
+    end
+end
+Base.:+(U::UniformScaling, K::IKP) = IsoKroneckerProduct(K.alpha, K.ldim, U + K.B)
+Base.:+(K::IKP, U::UniformScaling) = IsoKroneckerProduct(K.alpha, K.ldim, U + K.B)
+Base.:-(U::UniformScaling, K::IKP) = IsoKroneckerProduct(K.alpha, K.ldim, U - K.B)
+LinearAlgebra.inv(K::IKP) = IsoKroneckerProduct(inv(K.alpha), K.ldim, inv(K.B))
+Base.:/(A::IKP, B::IKP) = begin
+    @assert A.ldim == B.ldim
+    if A.alpha == inv(B.alpha)
+        return IsoKroneckerProduct(A.alpha, A.ldim, A.B / B.B)
+    else
+        T = typeof(promote(A.alpha, B.alpha)[1])
+        return IsoKroneckerProduct(one(T), A.ldim, A.alpha * A.B / (B.alpha * B.B))
+    end
+end
+Base.:\(A::IKP, B::IKP) = begin
+    @assert A.ldim == B.ldim
+    if A.alpha == inv(B.alpha)
+        return IsoKroneckerProduct(A.alpha, A.ldim, A.B / B.B)
+    else
+        T = typeof(promote(A.alpha, B.alpha)[1])
+        return IsoKroneckerProduct(one(T), A.ldim, A.alpha * A.B \ (B.alpha * B.B))
+    end
+end
 
 _matmul!(A::IKP, B::IKP, C::IKP) = begin
     @assert A.ldim == B.ldim == C.ldim
@@ -100,6 +133,10 @@ function mul_vectrick!(
 end
 
 _matmul!(C::AbstractVecOrMat, A::IsoKroneckerProduct, B::AbstractVecOrMat) = mul_vectrick!(C, A, B)
+mul!(C::AbstractMatrix, A::IsoKroneckerProduct, B::AbstractMatrix) = mul_vectrick!(C, A, B)
+mul!(C::AbstractMatrix, A::IsoKroneckerProduct, B::Adjoint{T, <:AbstractMatrix{T}}) where {T} = mul_vectrick!(C, A, B)
+mul!(C::AbstractVector, A::IsoKroneckerProduct, B::AbstractVector) = mul_vectrick!(C, A, B)
+
 _matmul!(C::AbstractVecOrMat{T}, A::IsoKroneckerProduct{T}, B::AbstractVecOrMat{T}) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C, A, B)
 _matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, B::IsoKroneckerProduct) = _matmul!(C', B', A')
 _matmul!(C::AbstractVecOrMat{T}, A::AbstractVecOrMat{T}, B::IsoKroneckerProduct{T}) where {T<:LinearAlgebra.BlasFloat} = _matmul!(C', B', A')

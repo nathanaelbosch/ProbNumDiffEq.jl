@@ -88,7 +88,7 @@ Smooth the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updat
 values saved in `integ.sol.pu` and `integ.sol.u`.
 
 This function handles the iteration and preconditioning.
-The actual smoothing step happens in [`smooth!`](@ref).
+The actual smoothing step happens by [`marginalize!`](@ref)ing backward kernels.
 """
 function smooth_solution!(integ)
     @unpack cache, sol = integ

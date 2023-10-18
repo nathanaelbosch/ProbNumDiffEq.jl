@@ -5,7 +5,7 @@ Check the correctness of the filtering implementations vs. basic readable math c
 using Test
 using ProbNumDiffEq
 using LinearAlgebra
-using Kronecker
+import ProbNumDiffEq: IsoKroneckerProduct
 
 @testset "PREDICT" begin
     # Setup
@@ -30,11 +30,11 @@ using Kronecker
         if KRONECKER
             K = 2
             m = kron(ones(K), m)
-            P_R = kronecker(ProbNumDiffEq._I(K), P_R)
+            P_R = IsoKroneckerProduct(true, K, P_R)
             P = P_R'P_R
 
-            A = kronecker(ProbNumDiffEq._I(K), A)
-            Q_R = kronecker(ProbNumDiffEq._I(K), Q_R)
+            A = IsoKroneckerProduct(true, K, A)
+            Q_R = IsoKroneckerProduct(true, K, Q_R)
             Q = Q_R'Q_R
 
             m_p = A * m
@@ -73,7 +73,7 @@ using Kronecker
             x_out = copy(x_curr)
             # marginalize! needs tall square-roots:
             Q_SR = if KRONECKER
-                PSDMatrix(kronecker(Q_R.A, [Q_R.B; zero(Q_R.B)]))
+                PSDMatrix(IsoKroneckerProduct(Q_R.alpha, Q_R.ldim, [Q_R.B; zero(Q_R.B)]))
             else
                 PSDMatrix([Q_R; zero(Q_R)])
             end
@@ -94,8 +94,8 @@ end
 
     # Measure
     o = 1
-    _HB = rand(d)'
-    H = kron(ProbNumDiffEq._I(o), _HB)
+    _HB = rand(1, d)
+    H = kron(I(o), _HB)
     R = zeros(o, o)
 
     z_data = zeros(o)
@@ -116,13 +116,13 @@ end
     _fstr(F) = F ? "Kronecker" : "None"
     @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
         if KRONECKER
-            P_p_R = kronecker(ProbNumDiffEq._I(1), P_p_R)
+            P_p_R = IsoKroneckerProduct(true, 1, P_p_R)
             P_p = P_p_R'P_p_R
 
-            H = kronecker(ProbNumDiffEq._I(1), _HB)
+            H = IsoKroneckerProduct(true, 1, _HB)
             R = zeros(o, o)
 
-            SR = kronecker(ProbNumDiffEq._I(1), SR)
+            SR = IsoKroneckerProduct(true, 1, SR)
             S = SR'SR
 
             x_pred = Gaussian(m_p, P_p)
@@ -261,19 +261,19 @@ end
     @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
         K = 2
         if KRONECKER
-            P_R = kronecker(ProbNumDiffEq._I(K), P_R)
+            P_R = IsoKroneckerProduct(true, K, P_R)
             P = P_R'P_R
 
-            P_s_R = kronecker(ProbNumDiffEq._I(K), P_s_R)
+            P_s_R = IsoKroneckerProduct(true, K, P_s_R)
             P_s = P_s_R'P_s_R
 
-            P_p_R = kronecker(ProbNumDiffEq._I(K), P_p_R)
+            P_p_R = IsoKroneckerProduct(true, K, P_p_R)
             P_p = P_p_R'P_p_R
 
             m, m_s, m_p = kron(ones(K), m), kron(ones(K), m_s), kron(ones(K), m_p)
 
-            A = kronecker(ProbNumDiffEq._I(K), A)
-            Q_R = kronecker(ProbNumDiffEq._I(K), Q_R)
+            A = IsoKroneckerProduct(true, K, A)
+            Q_R = IsoKroneckerProduct(true, K, Q_R)
             Q = Q_R'Q_R
             Q_SR = PSDMatrix(Q_R)
 
@@ -323,7 +323,7 @@ end
             K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
             K_backward = ProbNumDiffEq.AffineNormalKernel(
                 copy(A), copy(m_p), if KRONECKER
-                    PSDMatrix(kronecker(ProbNumDiffEq._I(K), zeros(2d, d)))
+                    PSDMatrix(IsoKroneckerProduct(true, K, zeros(2d, d)))
                 else
                     PSDMatrix(zeros(2d, d))
                 end)

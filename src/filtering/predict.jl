@@ -12,8 +12,9 @@ predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
     Gaussian(predict_mean(x, A), predict_cov(x, A, Q))
 predict_mean(x::Gaussian, A::AbstractMatrix) = A * x.μ
 predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A * x.Σ * A' + Q
-predict_cov(x::SRGaussian, A::AbstractMatrix, Q::PSDMatrix) =
-    PSDMatrix(qr([x.Σ.R * A'; Q.R]).R)
+predict_cov(x::SRGaussian, A::AbstractMatrix, Q::PSDMatrix) = PSDMatrix(qr([x.Σ.R * A'; Q.R]).R)
+predict_cov(x::SRGaussian{T,<:IKP}, A::IKP, Q::PSDMatrix{T,<:IKP}) where {T} =
+    IsoKroneckerProduct(x.Σ.R.alpha, x.Σ.R.ldim, predict_cov(Gaussian(x.μ, PSDMatrix(x.Σ.R.B)), A.B, PSDMatrix(Q.R.B)))
 
 """
     predict!(x_out, x_curr, Ah, Qh, cachemat)
@@ -43,7 +44,10 @@ function predict!(
 end
 
 function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix)
-    _matmul!(x_out.μ, Ah, x_curr.μ)
+    D = length(x_out.μ)
+    a = size(Ah, 1)
+    d = D ÷ a
+    _matmul!(reshape_no_alloc(x_out.μ, a, d), Ah, reshape_no_alloc(x_curr.μ, a, d))
     return x_out.μ
 end
 

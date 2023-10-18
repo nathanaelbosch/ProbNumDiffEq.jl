@@ -50,7 +50,7 @@ function smooth(
 )
     x_pred = predict(x_curr, Ah, Qh)
 
-    G = Matrix(x_curr.Σ) * Ah' / x_pred.Σ
+    G = x_curr.Σ.R' * x_curr.Σ.R * Ah' / x_pred.Σ
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
 
@@ -122,12 +122,11 @@ function smooth!(
     return nothing
 end
 
-
 function smooth!(
-    x_curr::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    x_next::SRGaussian{T,<:Kronecker.KroneckerProduct},
-    Ah::Kronecker.KroneckerProduct,
-    Qh::PSDMatrix{S,<:Kronecker.KroneckerProduct},
+    x_curr::SRGaussian{T,<:IKP},
+    x_next::SRGaussian{T,<:IKP},
+    Ah::IKP,
+    Qh::PSDMatrix{S,<:IKP},
     cache,
     diffusion::Union{Number,Diagonal}=1,
 ) where {T,S}
