@@ -104,6 +104,10 @@ function OrdinaryDiffEq.alg_cache(
     @assert f isa SciMLBase.AbstractODEFunction
     SolProj = f isa DynamicalODEFunction ?
         IsoKroneckerProduct(true, d, [Proj(1).B; Proj(0).B]) : Proj(0)
+    if !KRONECKER
+        E0, E1, E2 = Matrix(E0), Matrix(E1), Matrix(E2)
+        SolProj = Matrix(SolProj)
+    end
 
     # Prior dynamics
     prior = if alg.prior isa IWP
@@ -119,6 +123,10 @@ function OrdinaryDiffEq.alg_cache(
         error("Invalid prior $(alg.prior)")
     end
     A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior, dt)
+    if !KRONECKER
+        P, PI = Diagonal(P), Diagonal(PI)
+        A, Q, Ah, Qh = Matrix(A), PSDMatrix(Matrix(Q.R)), Matrix(Ah), PSDMatrix(Matrix(Qh.R))
+    end
 
     # Measurement Model
     measurement_model = make_measurement_model(f)
