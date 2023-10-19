@@ -103,7 +103,7 @@ function OrdinaryDiffEq.alg_cache(
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
     SolProj = is_secondorder_ode ?
-        IsoKroneckerProduct(true, d, [Proj(1).B' Proj(0).B']'):Proj(0)
+        IsoKroneckerProduct(true, d, [Proj(1).B' Proj(0).B']') : Proj(0)
     if !KRONECKER
         E0, E1, E2 = Matrix(E0), Matrix(E1), Matrix(E2)
         SolProj = Matrix(SolProj)
