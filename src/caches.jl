@@ -102,8 +102,8 @@ function OrdinaryDiffEq.alg_cache(
     Proj = projection(d, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
-    SolProj = f isa DynamicalODEFunction ?
-        IsoKroneckerProduct(true, d, [Proj(1).B; Proj(0).B]) : Proj(0)
+    SolProj = is_secondorder_ode ?
+        IsoKroneckerProduct(true, d, [Proj(1).B' Proj(0).B']'):Proj(0)
     if !KRONECKER
         E0, E1, E2 = Matrix(E0), Matrix(E1), Matrix(E2)
         SolProj = Matrix(SolProj)
@@ -162,10 +162,10 @@ function OrdinaryDiffEq.alg_cache(
     measurement = Gaussian(v, S)
 
     # Caches
-    du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
+    du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
     ddu = zeros(uElType, length(u), length(u))
     pu_tmp =
-        f isa DynamicalODEFunction ?
+        is_secondorder_ode ?
         Gaussian(zeros(uElType, 2d), PSDMatrix(
             if KRONECKER
                 IsoKroneckerProduct(true, d, zeros(uElType, q+1, 2))

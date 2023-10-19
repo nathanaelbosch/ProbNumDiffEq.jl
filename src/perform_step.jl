@@ -35,6 +35,15 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     end
 end
 
+function write_into_solution!(u, μ; cache::EKCache, is_secondorder_ode=false)
+    if is_secondorder_ode
+        _matmul!(view(u.x[2], :), cache.E0, μ)
+        _matmul!(view(u.x[1], :), cache.E1, μ)
+    else
+        _matmul!(view(u, :), cache.E0, μ)
+    end
+end
+
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
@@ -72,7 +81,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Predict the mean
     predict_mean!(x_pred, xprev, Ah)
-    _matmul!(view(integ.u, :), SolProj, x_pred.μ)
+    write_into_solution!(integ.u, x_pred.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -107,7 +116,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Update state and save the ODE solution value
     x_filt = update!(cache, x_pred)
-    _matmul!(view(integ.u, :), SolProj, x_filt.μ)
+    write_into_solution!(integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
