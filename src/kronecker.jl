@@ -10,7 +10,6 @@ IsoKroneckerProduct(alpha::Number, ldim::Integer, B::AbstractVector) = IsoKronec
 const IKP = IsoKroneckerProduct
 
 Kronecker.getmatrices(K::IKP) = (K.alpha*I(K.ldim), K.B)
-Matrix(M::PSDMatrix) = Matrix(M.R' * M.R)
 
 function Base.:*(A::IKP, B::IKP)
     @assert A.ldim == B.ldim
