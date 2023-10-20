@@ -37,12 +37,10 @@ function initial_update!(integ, cache, init::TaylorModeInit)
 
         df = view(df, :)
 
-        H = Proj(o)
-        if o > 0
-            H = MM * H
-        end
-        if !(x.Σ.R isa IsoKroneckerProduct)
-            H = Matrix(H)
+        H = if o == 0
+            Proj(o)
+        else
+            MM * Proj(o)
         end
         init_condition_on!(x, H, df, cache)
     end

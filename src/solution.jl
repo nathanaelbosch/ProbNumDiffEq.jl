@@ -192,7 +192,7 @@ function mean(sol::ProbODESolution{T,N}) where {T,N}
 end
 (sol::MeanProbODESolution)(t::Real, args...) = mean(sol.probsol(t, args...))
 (sol::MeanProbODESolution)(t::AbstractVector, args...) =
-    DiffEqArray(mean.(sol.probsol(t, args...).u), t)
+    DiffEqArray(sol.probsol(t, args...).u.μ, t)
 DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) =
     DiffEqBase.calculate_solution_errors!(mean(sol), args...; kwargs...)
 
