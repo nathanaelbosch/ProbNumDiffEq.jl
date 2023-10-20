@@ -80,7 +80,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     end
 
     # Predict the mean
-    predict_mean!(x_pred, xprev, Ah)
+    predict_mean!(x_pred.μ, xprev.μ, Ah)
     write_into_solution!(integ.u, x_pred.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     # Measure
@@ -100,7 +100,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     # Predict the covariance, using either the local or global diffusion
     extrapolation_diff =
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
-    predict_cov!(x_pred, xprev, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
+    predict_cov!(x_pred.Σ, xprev.Σ, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
     if integ.alg.smooth
         @unpack C_DxD, backward_kernel = cache

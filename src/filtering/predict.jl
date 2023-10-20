@@ -9,13 +9,13 @@ Given a Gaussian ``x = \\mathcal{N}(μ, Σ)``, compute and return
 See also the non-allocating square-root version [`predict!`](@ref).
 """
 predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
-    Gaussian(predict_mean(x, A), predict_cov(x, A, Q))
-predict_mean(x::Gaussian, A::AbstractMatrix) = A * x.μ
-predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A * x.Σ * A' + Q
-predict_cov(x::SRGaussian, A::AbstractMatrix, Q::PSDMatrix) = PSDMatrix(qr([x.Σ.R * A'; Q.R]).R)
-predict_cov(x::SRGaussian{T,<:IKP}, A::IKP, Q::PSDMatrix{T,<:IKP}) where {T} = begin
-    P_pred_breve = predict_cov(Gaussian(x.μ, PSDMatrix(x.Σ.R.B)), A.B, PSDMatrix(Q.R.B))
-    return PSDMatrix(IsoKroneckerProduct(x.Σ.R.ldim, P_pred_breve.R))
+    Gaussian(predict_mean(x.μ, A), predict_cov(x.Σ, A, Q))
+predict_mean(μ::AbstractVector, A::AbstractMatrix) = A * μ
+predict_cov(Σ::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix) = A * Σ * A' + Q
+predict_cov(Σ::PSDMatrix, A::AbstractMatrix, Q::PSDMatrix) = PSDMatrix(qr([Σ.R * A'; Q.R]).R)
+predict_cov(Σ::PSDMatrix{T,<:IKP}, A::IKP, Q::PSDMatrix{T,<:IKP}) where {T} = begin
+    P_pred_breve = predict_cov(PSDMatrix(Σ.R.B), A.B, PSDMatrix(Q.R.B))
+    return PSDMatrix(IsoKroneckerProduct(Σ.R.ldim, P_pred_breve.R))
 end
 
 """
@@ -40,22 +40,22 @@ function predict!(
     C_2DxD::AbstractMatrix,
     diffusion=1,
 )
-    predict_mean!(x_out, x_curr, Ah)
+    predict_mean!(x_out.μ, x_curr.μ, Ah)
     predict_cov!(x_out, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
     return x_out
 end
 
-function predict_mean!(x_out::Gaussian, x_curr::Gaussian, Ah::AbstractMatrix)
-    D = length(x_out.μ)
+function predict_mean!(m_out::AbstractVector, m_curr::AbstractVector, Ah::AbstractMatrix)
+    D = length(m_out)
     a = size(Ah, 1)
     d = D ÷ a
-    _matmul!(reshape_no_alloc(x_out.μ, a, d), Ah, reshape_no_alloc(x_curr.μ, a, d))
-    return x_out.μ
+    _matmul!(reshape_no_alloc(m_out, a, d), Ah, reshape_no_alloc(m_curr, a, d))
+    return m_out
 end
 
 function predict_cov!(
-    x_out::SRGaussian,
-    x_curr::SRGaussian,
+    Σ_out::PSDMatrix,
+    Σ_curr::PSDMatrix,
     Ah::AbstractMatrix,
     Qh::PSDMatrix,
     C_DxD::AbstractMatrix,
@@ -63,13 +63,13 @@ function predict_cov!(
     diffusion=1,
 )
     if iszero(diffusion)
-        fast_X_A_Xt!(x_out.Σ, x_curr.Σ, Ah)
-        return x_out.Σ
+        fast_X_A_Xt!(Σ_out, Σ_curr, Ah)
+        return Σ_out
     end
     R, M = C_2DxD, C_DxD
     D, D = size(Qh)
 
-    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, Ah')
+    _matmul!(view(R, 1:D, 1:D), Σ_curr.R, Ah')
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
@@ -79,22 +79,22 @@ function predict_cov!(
     else
         triangularize!(R, cachemat=C_DxD)
     end
-    copy!(x_out.Σ.R, Q_R)
-    return x_out.Σ
+    copy!(Σ_out.R, Q_R)
+    return Σ_out
 end
 
 # Kronecker version
 function predict_cov!(
-    x_out::SRGaussian{T,<:IKP},
-    x_curr::SRGaussian{T,<:IKP},
+    Σ_out::PSDMatrix{T,<:IKP},
+    Σ_curr::PSDMatrix{T,<:IKP},
     Ah::IKP,
     Qh::PSDMatrix{S,<:IKP},
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     diffusion=1,
 ) where {T,S}
-    _x_out = Gaussian(x_out.μ, PSDMatrix(x_out.Σ.R.B))
-    _x_curr = Gaussian(x_curr.μ, PSDMatrix(x_curr.Σ.R.B))
+    _Σ_out = PSDMatrix(Σ_out.R.B)
+    _Σ_curr = PSDMatrix(Σ_curr.R.B)
     _Ah = Ah.B
     _Qh = PSDMatrix(Qh.R.B)
     _D = size(_Qh, 1)
@@ -103,8 +103,8 @@ function predict_cov!(
     _diffusion = diffusion isa IKP ? diffusion.B : diffusion
 
     predict_cov!(
-        _x_out,
-        _x_curr,
+        _Σ_out,
+        _Σ_curr,
         _Ah,
         _Qh,
         _C_DxD,

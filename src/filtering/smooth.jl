@@ -93,8 +93,7 @@ function smooth!(
     _D = size(C_DxD, 1)
 
     # Prediction: t -> t+1
-    predict_mean!(x_pred, x_curr, Ah)
-    predict_cov!(x_pred, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
+    predict!(x_pred, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
 
     # Smoothing
     # G = x_curr.Σ * Ah' * P_p_inv
