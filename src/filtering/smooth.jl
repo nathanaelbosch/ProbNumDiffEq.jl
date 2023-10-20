@@ -94,9 +94,7 @@ function smooth!(
 
     # Prediction: t -> t+1
     # The following things are there to handle the kronecker case; will be refactored
-    a = size(Ah, 1)
-    d = D ÷ a
-    predict_mean!(reshape_no_alloc(x_pred.μ, a, d), reshape_no_alloc(x_curr.μ, a, d), Ah)
+    predict_mean!(x_pred.μ, x_curr.μ, Ah)
     predict_cov!(x_pred.Σ, x_curr.Σ, Ah, Qh, C_DxD, C_2DxD, diffusion)
 
     # Smoothing
@@ -133,17 +131,20 @@ function smooth!(
     cache,
     diffusion::Union{Number,Diagonal}=1,
 ) where {T,S}
-    _x_curr = Gaussian(x_curr.μ, PSDMatrix(x_curr.Σ.R.B))
-    _x_next = Gaussian(x_next.μ, PSDMatrix(x_next.Σ.R.B))
+    D = length(x_curr.μ)
+    d = Ah.ldim
+    Q = D ÷ d
+    _x_curr = Gaussian(reshape_no_alloc(x_curr.μ, Q, d), PSDMatrix(x_curr.Σ.R.B))
+    _x_next = Gaussian(reshape_no_alloc(x_next.μ, Q, d), PSDMatrix(x_next.Σ.R.B))
     _Ah = Ah.B
     _Qh = PSDMatrix(Qh.R.B)
     _D = size(_Qh, 1)
     _cache = (
-        G1 = view(cache.G1, 1:_D, 1:_D),
-        C_DxD = view(cache.C_DxD, 1:_D, 1:_D),
-        C_2DxD = view(cache.C_2DxD, 1:2*_D, 1:_D),
-        C_3DxD = view(cache.C_3DxD, 1:3*_D, 1:_D),
-        x_pred = Gaussian(cache.x_pred.μ, PSDMatrix(cache.x_pred.Σ.R.B))
+        G1=view(cache.G1, 1:_D, 1:_D),
+        C_DxD=view(cache.C_DxD, 1:_D, 1:_D),
+        C_2DxD=view(cache.C_2DxD, 1:2*_D, 1:_D),
+        C_3DxD=view(cache.C_3DxD, 1:3*_D, 1:_D),
+        x_pred=Gaussian(reshape_no_alloc(cache.x_pred.μ, Q, d), PSDMatrix(cache.x_pred.Σ.R.B)),
     )
     smooth!(
         _x_curr,

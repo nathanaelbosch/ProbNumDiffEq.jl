@@ -100,13 +100,7 @@ function update!(
     rdiv!(K, length(_S) == 1 ? _S[1] : cholesky!(_S))
 
     # x_out.μ .= m_p .+ K * (0 .- z)
-    a, b = size(K)
-    D, d = length(m_p), length(z)
-    if a == D
-        _matmul!(x_out.μ, K, z)
-    else
-        _matmul!(reshape_no_alloc(x_out.μ, a, d), K, reshape_no_alloc(z, 1, d))
-    end
+    _matmul!(x_out.μ, K, z)
     x_out.μ .= m_p .- x_out.μ
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
@@ -120,7 +114,6 @@ function update!(
     return x_out
 end
 
-
 # Kronecker version
 function update!(
     x_out::SRGaussian{T,<:IKP},
@@ -132,12 +125,15 @@ function update!(
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
 ) where {T}
-    _x_out = Gaussian(x_out.μ, PSDMatrix(x_out.Σ.R.B))
-    _x_pred = Gaussian(x_pred.μ, PSDMatrix(x_pred.Σ.R.B))
-    _measurement = Gaussian(measurement.μ, PSDMatrix(measurement.Σ.R.B))
-    _H = H.B
-    o = size(_measurement.Σ, 1)
+    D = length(x_out.μ)
     d = H.ldim
+    Q = D ÷ d
+    _x_out = Gaussian(reshape_no_alloc(x_out.μ, Q, d), PSDMatrix(x_out.Σ.R.B))
+    _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
+    _measurement = Gaussian(
+        reshape_no_alloc(measurement.μ, 1, d), PSDMatrix(measurement.Σ.R.B))
+    o = size(_measurement.Σ, 1)
+    _H = H.B
     _D = length(x_out.μ) ÷ d
     _K1_cache = view(K1_cache, 1:_D, 1:o)
     _K2_cache = view(K2_cache, 1:_D, 1:o)

@@ -45,7 +45,7 @@ function predict!(
     return x_out
 end
 
-function predict_mean!(m_out, m_curr, Ah::AbstractMatrix)
+function predict_mean!(m_out::AbstractVecOrMat, m_curr::AbstractVecOrMat, Ah::AbstractMatrix)
     _matmul!(m_out, Ah, m_curr)
     return m_out
 end

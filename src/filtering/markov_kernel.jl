@@ -173,7 +173,7 @@ function compute_backward_kernel!(
     diffusion=1,
 ) where {
     XT<:SRGaussian,
-    KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
+    KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVecOrMat,<:PSDMatrix},
     KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
 }
     # @assert Matrix(UpperTriangular(xpred.Σ.R)) == Matrix(xpred.Σ.R)
@@ -223,10 +223,13 @@ function compute_backward_kernel!(
     KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
     KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
 }
-    _Kout = AffineNormalKernel(Kout.A.B, Kout.b, PSDMatrix(Kout.C.R.B))
-    _x_pred = Gaussian(xpred.μ, PSDMatrix(xpred.Σ.R.B))
-    _x = Gaussian(x.μ, PSDMatrix(x.Σ.R.B))
-    _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
+    D = length(x.μ)
+    d = K.A.ldim
+    Q = D ÷ d
+    _Kout = AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))
+    _x_pred = Gaussian(reshape_no_alloc(xpred.μ, Q, d), PSDMatrix(xpred.Σ.R.B))
+    _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))
+    _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, Q, d), PSDMatrix(K.C.R.B))
     _D = size(_Kout.A, 1)
     _C_DxD = view(C_DxD, 1:_D, 1:_D)
     return compute_backward_kernel!(_Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
