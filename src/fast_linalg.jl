@@ -86,10 +86,9 @@ end
 """
     fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
 
-Compute `out .= X * A * X'` in-place, more efficiently than with `PSDMatrices.X_A_Xt!`.
+Compute `out .= X * A * X'` in-place, efficiently.
 
-This function just reimplements the simple `PSDMatrices.X_A_Xt!` with `_matmul!`(@ref)
-instead of `LinearAlgebra.mul!`.
+This function relies on `_matmul!`(@ref) instead of `LinearAlgebra.mul!`.
 """
 function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
     _matmul!(out.R, A.R, X')

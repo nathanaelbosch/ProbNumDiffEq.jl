@@ -36,11 +36,6 @@ using GaussianDistributions: logpdf
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!
 X_A_Xt(A, X) = X * A * X'
-X_A_Xt!(out, A, X) = begin
-    @error "This version of X_A_Xt! is inefficient and should never be called!"
-    error()
-    (out .= X * A * X')
-end
 
 stack(x) = copy(reduce(hcat, x)')
 vecvec2mat(x) = reduce(hcat, x)'
