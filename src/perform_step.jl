@@ -81,7 +81,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Predict the mean
     predict_mean!(x_pred.μ, xprev.μ, Ah)
-    write_into_solution!(integ.u, x_pred.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
+    write_into_solution!(
+        integ.u, x_pred.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -116,7 +117,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Update state and save the ODE solution value
     x_filt = update!(cache, x_pred)
-    write_into_solution!(integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
+    write_into_solution!(
+        integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
@@ -234,7 +236,6 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         error_estimate .= sqrt.(error_estimate)
         return error_estimate
     elseif local_diffusion isa Number
-
         _matmul!(R, Qh.R, H')
 
         # error_estimate = diag(PSDMatrix(R))

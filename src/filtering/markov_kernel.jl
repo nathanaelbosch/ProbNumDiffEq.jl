@@ -72,7 +72,11 @@ function marginalize!(xout, x, K; C_DxD, C_3DxD)
     marginalize_mean!(xout.μ, x.μ, K)
     marginalize_cov!(xout.Σ, x.Σ, K; C_DxD, C_3DxD)
 end
-function marginalize_mean!(μout::AbstractVecOrMat, μ::AbstractVecOrMat, K::AffineNormalKernel)
+function marginalize_mean!(
+    μout::AbstractVecOrMat,
+    μ::AbstractVecOrMat,
+    K::AffineNormalKernel,
+)
     _matmul!(μout, K.A, μ)
     if !ismissing(K.b)
         μout .+= K.b
@@ -224,11 +228,19 @@ function compute_backward_kernel!(
     D = full_state_dim = length(x.μ)
     d = ode_dimension_dim = K.A.ldim
     Q = n_derivatives_dim = D ÷ d
-    _Kout = AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))
+    _Kout =
+        AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))
     _x_pred = Gaussian(reshape_no_alloc(xpred.μ, Q, d), PSDMatrix(xpred.Σ.R.B))
     _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))
     _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, Q, d), PSDMatrix(K.C.R.B))
     _D = size(_Kout.A, 1)
     _C_DxD = view(C_DxD, 1:_D, 1:_D)
-    return compute_backward_kernel!(_Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
+    return compute_backward_kernel!(
+        _Kout,
+        _x_pred,
+        _x,
+        _K;
+        C_DxD=_C_DxD,
+        diffusion=diffusion,
+    )
 end

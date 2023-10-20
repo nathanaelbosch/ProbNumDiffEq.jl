@@ -26,7 +26,7 @@ import ProbNumDiffEq: IsoKroneckerProduct
     x_out = copy(x_curr)
 
     _fstr(F) = F ? "Kronecker" : "None"
-    @testset "Factorization: $(_fstr(KRONECKER))"for KRONECKER in (false, true)
+    @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
         if KRONECKER
             K = 2
             m = kron(ones(K), m)
@@ -78,7 +78,13 @@ import ProbNumDiffEq: IsoKroneckerProduct
                 PSDMatrix([Q_R; zero(Q_R)])
             end
             K = ProbNumDiffEq.AffineNormalKernel(A, Q_SR)
-            ProbNumDiffEq.marginalize!(x_out, x_curr, K; C_DxD=zeros(d, d), C_3DxD=zeros(3d, d))
+            ProbNumDiffEq.marginalize!(
+                x_out,
+                x_curr,
+                K;
+                C_DxD=zeros(d, d),
+                C_3DxD=zeros(3d, d),
+            )
             @test m_p ≈ x_out.μ
             @test P_p ≈ Matrix(x_out.Σ)
         end
@@ -298,7 +304,7 @@ end
             @test P_smoothed ≈ Matrix(x_out.Σ)
         end
         @testset "smooth!" begin
-            _d = KRONECKER ? K*d : d
+            _d = KRONECKER ? K * d : d
             x_curr_psd = Gaussian(m, PSDMatrix(P_R)) |> copy
             x_next_psd = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
             cache = (
@@ -322,7 +328,8 @@ end
         @testset "smooth via backward kernels" begin
             K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
             K_backward = ProbNumDiffEq.AffineNormalKernel(
-                copy(A), copy(m_p), if KRONECKER
+                copy(A), copy(m_p),
+                if KRONECKER
                     PSDMatrix(IsoKroneckerProduct(K, zeros(2d, d)))
                 else
                     PSDMatrix(zeros(2d, d))
@@ -333,7 +340,7 @@ end
             x_next_smoothed = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
 
             C_DxD = if KRONECKER
-                zeros(K*d, K*d)
+                zeros(K * d, K * d)
             else
                 zeros(d, d)
             end
@@ -349,7 +356,13 @@ end
 
             C_3DxD = zeros(3d, d)
             ProbNumDiffEq.marginalize_mean!(x_curr.μ, x_next_smoothed.μ, K_backward)
-            ProbNumDiffEq.marginalize_cov!(x_curr.Σ, x_next_smoothed.Σ, K_backward; C_DxD, C_3DxD)
+            ProbNumDiffEq.marginalize_cov!(
+                x_curr.Σ,
+                x_next_smoothed.Σ,
+                K_backward;
+                C_DxD,
+                C_3DxD,
+            )
 
             @test m_smoothed ≈ x_curr.μ
             @test P_smoothed ≈ Matrix(x_curr.Σ)

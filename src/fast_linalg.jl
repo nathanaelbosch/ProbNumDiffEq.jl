@@ -46,7 +46,6 @@ _matmul!(
     B::AbstractVecOrMat{T},
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
-
 """
     getupperright!(A)
 

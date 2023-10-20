@@ -21,7 +21,7 @@ std(g::Gaussian) = sqrt.(diag(g.Σ))
 ############################################################################################
 # `SRGaussian`: Gaussians with PDFMatrix covariances
 ############################################################################################
-const SRGaussian{T,S} = Gaussian{VM,PSDMatrix{T,S}} where {VM <: AbstractVecOrMat{T}}
+const SRGaussian{T,S} = Gaussian{VM,PSDMatrix{T,S}} where {VM<:AbstractVecOrMat{T}}
 Base.:*(M::AbstractMatrix, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 # GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
 

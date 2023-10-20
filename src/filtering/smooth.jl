@@ -144,7 +144,10 @@ function smooth!(
         C_DxD=view(cache.C_DxD, 1:_D, 1:_D),
         C_2DxD=view(cache.C_2DxD, 1:2*_D, 1:_D),
         C_3DxD=view(cache.C_3DxD, 1:3*_D, 1:_D),
-        x_pred=Gaussian(reshape_no_alloc(cache.x_pred.μ, Q, d), PSDMatrix(cache.x_pred.Σ.R.B)),
+        x_pred=Gaussian(
+            reshape_no_alloc(cache.x_pred.μ, Q, d),
+            PSDMatrix(cache.x_pred.Σ.R.B),
+        ),
     )
     smooth!(
         _x_curr,

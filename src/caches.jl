@@ -3,8 +3,8 @@
 ########################################################################################
 mutable struct EKCache{
     RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
-    HType,matType,bkType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,
-    rateType,UF,JC,uNoUnitsType,
+    HType,matType,bkType,diffusionType,diffModelType,measModType,measType,puType,llType,
+    dtType,rateType,UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
     d::Int                  # Dimension of the problem
@@ -93,7 +93,9 @@ function OrdinaryDiffEq.alg_cache(
 
     FAC = get_covariance_factorization(alg)
     if FAC isa KroneckerCovariance && !(f.mass_matrix isa UniformScaling)
-        error("The selected algorithm uses an efficient Kronecker-factorized implementation which is incompatible with the provided mass matrix. Try using the `EK1` instead.")
+        error(
+            "The selected algorithm uses an efficient Kronecker-factorized implementation which is incompatible with the provided mass matrix. Try using the `EK1` instead.",
+        )
     end
 
     uType = typeof(u)
@@ -136,7 +138,9 @@ function OrdinaryDiffEq.alg_cache(
     # Initial State
     initial_variance = ones(uElType, q + 1)
     μ0 = zeros(uElType, D)
-    Σ0 = PSDMatrix(to_factorized_matrix(FAC, IsoKroneckerProduct(d, diagm(sqrt.(initial_variance)))))
+    Σ0 = PSDMatrix(
+        to_factorized_matrix(FAC, IsoKroneckerProduct(d, diagm(sqrt.(initial_variance)))),
+    )
     x0 = Gaussian(μ0, Σ0)
 
     # Diffusion Model
@@ -173,7 +177,7 @@ function OrdinaryDiffEq.alg_cache(
     backward_kernel = AffineNormalKernel(
         factorized_zeros(FAC, uElType, D, D; d, q),
         zeros(uElType, D),
-        PSDMatrix(factorized_zeros(FAC, uElType, 2D, D; d, q))
+        PSDMatrix(factorized_zeros(FAC, uElType, 2D, D; d, q)),
     )
 
     u_pred = copy(u)

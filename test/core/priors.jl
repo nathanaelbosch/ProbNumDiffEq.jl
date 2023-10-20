@@ -55,14 +55,15 @@ end
         0 0 0 0 0 1
     ]
 
-    QH_22_IBM = σ^2 .* [
-        h^5/20 h^4/8 h^3/6 0 0 0
-        h^4/8 h^3/3 h^2/2 0 0 0
-        h^3/6 h^2/2 h 0 0 0
-        0 0 0 h^5/20 h^4/8 h^3/6
-        0 0 0 h^4/8 h^3/3 h^2/2
-        0 0 0 h^3/6 h^2/2 h
-    ]
+    QH_22_IBM =
+        σ^2 .* [
+            h^5/20 h^4/8 h^3/6 0 0 0
+            h^4/8 h^3/3 h^2/2 0 0 0
+            h^3/6 h^2/2 h 0 0 0
+            0 0 0 h^5/20 h^4/8 h^3/6
+            0 0 0 h^4/8 h^3/3 h^2/2
+            0 0 0 h^3/6 h^2/2 h
+        ]
 
     # true preconditioned transition matrices
     AH_22_PRE = [
@@ -74,14 +75,15 @@ end
         0 0 0 0 0 1
     ]
 
-    QH_22_PRE = σ^2 * [
-        1/5 1/4 1/3 0 0 0
-        1/4 1/3 1/2 0 0 0
-        1/3 1/2 1/1 0 0 0
-        0 0 0 1/5 1/4 1/3
-        0 0 0 1/4 1/3 1/2
-        0 0 0 1/3 1/2 1/1
-    ]
+    QH_22_PRE =
+        σ^2 * [
+            1/5 1/4 1/3 0 0 0
+            1/4 1/3 1/2 0 0 0
+            1/3 1/2 1/1 0 0 0
+            0 0 0 1/5 1/4 1/3
+            0 0 0 1/4 1/3 1/2
+            0 0 0 1/3 1/2 1/1
+        ]
 
     @testset "Test SDE" begin
         sde = PNDE.to_sde(prior)
@@ -117,7 +119,8 @@ end
             Qh::Any
         end
 
-        A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(prior, h)
+        A, Q, Ah, Qh, P, PI =
+            PNDE.initialize_transition_matrices(PNDE.DenseCovariance(), prior, h)
         @test AH_22_PRE ≈ A
         @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, σ^2))
 

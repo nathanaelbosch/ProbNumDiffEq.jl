@@ -54,7 +54,8 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
 
     @testset "Low-order exact init via ClassiSolverInit: `initial_update!`" begin
         _q = 2
-        integ = init(prob, EK0(order=_q, initialization=ClassicSolverInit(init_on_ddu=true)))
+        integ =
+            init(prob, EK0(order=_q, initialization=ClassicSolverInit(init_on_ddu=true)))
         ProbNumDiffEq.initial_update!(integ, integ.cache, integ.alg.initialization)
         x = integ.cache.x
         @test reshape(x.μ, :, 2)'[:] ≈ true_init_states[1:(_q+1)*d]

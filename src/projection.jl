@@ -1,5 +1,4 @@
 function projection(
-    ::DenseCovariance,
     d::Integer,
     q::Integer,
     ::Type{elType}=typeof(1.0),
@@ -13,6 +12,14 @@ function projection(
         return P
     end
     return Proj
+end
+function projection(
+    ::DenseCovariance,
+    d::Integer,
+    q::Integer,
+    ::Type{elType}=typeof(1.0),
+) where {elType}
+    projection(d, q, elType)
 end
 
 function projection(

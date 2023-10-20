@@ -80,7 +80,6 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     end
     diffusion_t = dot(v, e) / d
 
-
     if integ.success_iter == 0
         # @assert length(sol_diffusions) == 0
         global_diffusion = diffusion_t
