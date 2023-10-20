@@ -1,6 +1,20 @@
 using ProbNumDiffEq
 using OrdinaryDiffEq
+using LinearAlgebra
 using Test
+
+@testset "Simple UniformScaling mass-matrix" begin
+    vf(du, u, p, t) = (du .= u)
+    M = -100I
+    f = ODEFunction(vf, mass_matrix=M)
+    prob = ODEProblem(f, [1.0], (0.0, 1.0))
+
+    ref = solve(prob, RadauIIA5())
+
+    sol = solve(prob, EK1(order=3))
+    # Broken because right now mass matrices are actually not handled well!
+    @test_broken sol[end] ≈ ref[end] rtol = 1e-10
+end
 
 @testset "Robertson in mass-matrix-ODE form" begin
     function rober(du, u, p, t)
