@@ -104,7 +104,7 @@ function OrdinaryDiffEq.alg_cache(
     @assert f isa SciMLBase.AbstractODEFunction
     SolProj = if is_secondorder_ode
         if KRONECKER
-            IsoKroneckerProduct(true, d, [Proj(1).B; Proj(0).B])
+            IsoKroneckerProduct(d, [Proj(1).B; Proj(0).B])
         else
             SolProj = [Proj(1); Proj(0)]
         end
@@ -142,7 +142,7 @@ function OrdinaryDiffEq.alg_cache(
     initial_variance = ones(uElType, q + 1)
     μ0 = zeros(uElType, D)
     Σ0 = PSDMatrix(if KRONECKER
-                       IsoKroneckerProduct(true, d, diagm(sqrt.(initial_variance)))
+                       IsoKroneckerProduct(d, diagm(sqrt.(initial_variance)))
                    else
                        kron(I(d), diagm(sqrt.(initial_variance)))
                    end)
@@ -156,13 +156,13 @@ function OrdinaryDiffEq.alg_cache(
     # Measurement model related things
     R = zeros(uElType, d, d)
     H = if KRONECKER
-        IsoKroneckerProduct(true, d, zeros(uElType, 1, q + 1))
+        IsoKroneckerProduct(d, zeros(uElType, 1, q + 1))
     else
         zeros(uElType, d, D)
     end
     v = zeros(uElType, d)
     S = if KRONECKER
-        PSDMatrix(IsoKroneckerProduct(true, d, zeros(uElType, q + 1)))
+        PSDMatrix(IsoKroneckerProduct(d, zeros(uElType, q + 1)))
     else
         PSDMatrix(zeros(uElType, D, d))
     end
@@ -178,7 +178,7 @@ function OrdinaryDiffEq.alg_cache(
             zeros(uElType, 2d),
             PSDMatrix(
             if KRONECKER
-                IsoKroneckerProduct(true, d, zeros(uElType, q+1, 2))
+                IsoKroneckerProduct(d, zeros(uElType, q+1, 2))
             else
                 zeros(uElType, D, 2d)
             end))
@@ -186,7 +186,7 @@ function OrdinaryDiffEq.alg_cache(
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     Smat = if KRONECKER
-        IsoKroneckerProduct(true, d, zeros(uElType, 1, 1))
+        IsoKroneckerProduct(d, zeros(uElType, 1, 1))
     else
         zeros(uElType, d, d)
     end
@@ -200,9 +200,9 @@ function OrdinaryDiffEq.alg_cache(
 
     backward_kernel = if KRONECKER
         AffineNormalKernel(
-            IsoKroneckerProduct(true, d, zeros(uElType, q+1, q+1)),
+            IsoKroneckerProduct(d, zeros(uElType, q+1, q+1)),
             zeros(uElType, D),
-            PSDMatrix(IsoKroneckerProduct(true, d, zeros(uElType, 2*(q+1), q+1)))
+            PSDMatrix(IsoKroneckerProduct(d, zeros(uElType, 2*(q+1), q+1)))
         )
     else
         AffineNormalKernel(

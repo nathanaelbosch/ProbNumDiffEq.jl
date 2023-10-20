@@ -1,96 +1,75 @@
-mutable struct IsoKroneckerProduct{T<:Number,TA<:Number,TB<:AbstractMatrix} <: Kronecker.AbstractKroneckerProduct{T}
-    alpha::TA
+mutable struct IsoKroneckerProduct{T<:Number,TB<:AbstractMatrix} <: Kronecker.AbstractKroneckerProduct{T}
     ldim::Int64
     B::TB
-    function IsoKroneckerProduct(alpha::T1, ldim::Int64, B::AbstractMatrix{T2}) where {T1,T2}
-        return new{promote_type(T1,T2),typeof(alpha),typeof(B)}(alpha, ldim, B)
+    function IsoKroneckerProduct(ldim::Int64, B::AbstractMatrix{T}) where {T}
+        return new{T,typeof(B)}(ldim, B)
     end
 end
-IsoKroneckerProduct(alpha::Number, ldim::Integer, B::AbstractVector) = IsoKroneckerProduct(alpha, ldim, reshape(B, :, 1))
+IsoKroneckerProduct(ldim::Integer, B::AbstractVector) = IsoKroneckerProduct(ldim, reshape(B, :, 1))
 const IKP = IsoKroneckerProduct
 
-Kronecker.getmatrices(K::IKP) = (K.alpha*I(K.ldim), K.B)
+Kronecker.getmatrices(K::IKP) = (I(K.ldim), K.B)
 
 function Base.:*(A::IKP, B::IKP)
     @assert A.ldim == B.ldim
-    return IsoKroneckerProduct(A.alpha * B.alpha, A.ldim, A.B * B.B)
+    return IsoKroneckerProduct(A.ldim, A.B * B.B)
 end
-Base.:*(K::IKP, a::Number) = IsoKroneckerProduct(K.alpha, K.ldim, K.B * a)
-Base.:*(a::Number, K::IKP) = IsoKroneckerProduct(K.alpha, K.ldim, a * K.B)
-LinearAlgebra.adjoint(A::IKP) = IsoKroneckerProduct(A.alpha, A.ldim, A.B')
+Base.:*(K::IKP, a::Number) = IsoKroneckerProduct(K.ldim, K.B * a)
+Base.:*(a::Number, K::IKP) = IsoKroneckerProduct(K.ldim, a * K.B)
+LinearAlgebra.adjoint(A::IKP) = IsoKroneckerProduct(A.ldim, A.B')
 
 Base.:+(A::IKP, B::IKP) = begin
     @assert A.ldim == B.ldim
-    if A.alpha == B.alpha
-        return IsoKroneckerProduct(A.alpha, A.ldim, A.B + B.B)
-    else
-        T = typeof(promote(A.alpha, B.alpha)[1])
-        return IsoKroneckerProduct(one(T), A.ldim, A.alpha * A.B + B.alpha * B.B)
-    end
+    return IsoKroneckerProduct(A.ldim, A.B + B.B)
 end
-Base.:+(U::UniformScaling, K::IKP) = IsoKroneckerProduct(K.alpha, K.ldim, U + K.B)
-Base.:+(K::IKP, U::UniformScaling) = IsoKroneckerProduct(K.alpha, K.ldim, U + K.B)
-Base.:-(U::UniformScaling, K::IKP) = IsoKroneckerProduct(K.alpha, K.ldim, U - K.B)
-LinearAlgebra.inv(K::IKP) = IsoKroneckerProduct(inv(K.alpha), K.ldim, inv(K.B))
+Base.:+(U::UniformScaling, K::IKP) = IsoKroneckerProduct(K.ldim, U + K.B)
+Base.:+(K::IKP, U::UniformScaling) = IsoKroneckerProduct(K.ldim, U + K.B)
+Base.:-(U::UniformScaling, K::IKP) = IsoKroneckerProduct(K.ldim, U - K.B)
+LinearAlgebra.inv(K::IKP) = IsoKroneckerProduct(K.ldim, inv(K.B))
 Base.:/(A::IKP, B::IKP) = begin
     @assert A.ldim == B.ldim
-    if A.alpha == inv(B.alpha)
-        return IsoKroneckerProduct(A.alpha, A.ldim, A.B / B.B)
-    else
-        T = typeof(promote(A.alpha, B.alpha)[1])
-        return IsoKroneckerProduct(one(T), A.ldim, A.alpha * A.B / (B.alpha * B.B))
-    end
+    return IsoKroneckerProduct(A.ldim, A.B / B.B)
 end
 Base.:\(A::IKP, B::IKP) = begin
     @assert A.ldim == B.ldim
-    if A.alpha == inv(B.alpha)
-        return IsoKroneckerProduct(A.alpha, A.ldim, A.B / B.B)
-    else
-        T = typeof(promote(A.alpha, B.alpha)[1])
-        return IsoKroneckerProduct(one(T), A.ldim, A.alpha * A.B \ (B.alpha * B.B))
-    end
+    return IsoKroneckerProduct(A.ldim, A.B / B.B)
 end
 
 _matmul!(A::IKP, B::IKP, C::IKP) = begin
     @assert A.ldim == B.ldim == C.ldim
-    A.alpha = B.alpha * C.alpha
     _matmul!(A.B, B.B, C.B)
     return A
 end
 _matmul!(A::IKP{T}, B::IKP{T}, C::IKP{T}) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert A.ldim == B.ldim == C.ldim
-    A.alpha = B.alpha * C.alpha
     _matmul!(A.B, B.B, C.B)
     return A
 end
 _matmul!(A::IKP, B::IKP, C::IKP, alpha::Number, beta::Number) = begin
     @assert A.ldim == B.ldim == C.ldim
-    A.alpha = B.alpha * C.alpha
     _matmul!(A.B, B.B, C.B)
     return A
 end
 _matmul!(A::IKP{T}, B::IKP{T}, C::IKP{T}, alpha::Number, beta::Number
          ) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert A.ldim == B.ldim == C.ldim
-    A.alpha = B.alpha * C.alpha
     _matmul!(A.B, B.B, C.B, alpha, beta)
     return A
 end
 copy!(A::IKP, B::IKP) = begin
     @assert A.ldim == B.ldim
-    A.alpha = B.alpha
     copy!(A.B, B.B)
     return A
 end
-copy(A::IKP) = IsoKroneckerProduct(A.alpha, A.ldim, copy(A.B))
-similar(A::IKP) = IsoKroneckerProduct(A.alpha, A.ldim, similar(A.B))
+copy(A::IKP) = IsoKroneckerProduct(A.ldim, copy(A.B))
+similar(A::IKP) = IsoKroneckerProduct(A.ldim, similar(A.B))
 Base.size(K::IKP) = (K.ldim * size(K.B, 1), K.ldim * size(K.B, 2))
 
 # conversion
 Base.convert(::Type{T}, K::IKP) where {T<:IKP} =
     K isa T ? K : T(K)
-function IKP{T,TA,TB}(K::IKP) where {T,TA,TB}
-    IKP(convert(TA, K.alpha), K.ldim, convert(TB, K.B))
+function IKP{T,TB}(K::IKP) where {T,TA,TB}
+    IKP(K.ldim, convert(TB, K.B))
 end
 
 """
@@ -104,7 +83,6 @@ reshape_no_alloc(a, dims...) = reshape_no_alloc(a, Tuple(dims))
 
 function mul_vectrick!(x::AbstractVecOrMat, A::IsoKroneckerProduct, v::AbstractVecOrMat)
     N = A.B
-    @assert A.alpha == 1
     c, d = size(N)
 
     V = reshape_no_alloc(v, (d, length(v) ÷ d))
@@ -122,7 +100,6 @@ function mul_vectrick!(
     beta::Number,
     )
     N = A.B
-    @assert A.alpha == 1
     c, d = size(N)
 
     V = reshape_no_alloc(v, (d, length(v) ÷ d))
