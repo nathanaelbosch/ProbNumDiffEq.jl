@@ -18,7 +18,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
     @assert length(0:q) == length(f_derivatives)
 
     # This is hacky and should definitely be removed. But it also works so 🤷
-    MM = if f.mass_matrix === I
+    MM = if f.mass_matrix isa UniformScaling
         f.mass_matrix
         else
         _MM = copy(f.mass_matrix)
@@ -37,7 +37,10 @@ function initial_update!(integ, cache, init::TaylorModeInit)
 
         df = view(df, :)
 
-        H = MM * Proj(o)
+        H = Proj(o)
+        if o > 0
+            H = MM * H
+        end
         if !(x.Σ.R isa IsoKroneckerProduct)
             H = Matrix(H)
         end
