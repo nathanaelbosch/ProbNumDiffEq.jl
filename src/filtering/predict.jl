@@ -14,8 +14,8 @@ predict_mean(x::Gaussian, A::AbstractMatrix) = A * x.μ
 predict_cov(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) = A * x.Σ * A' + Q
 predict_cov(x::SRGaussian, A::AbstractMatrix, Q::PSDMatrix) = PSDMatrix(qr([x.Σ.R * A'; Q.R]).R)
 predict_cov(x::SRGaussian{T,<:IKP}, A::IKP, Q::PSDMatrix{T,<:IKP}) where {T} = begin
-    P_pred_R = IsoKroneckerProduct(x.Σ.R.ldim, predict_cov(Gaussian(x.μ, PSDMatrix(x.Σ.R.B)), A.B, PSDMatrix(Q.R.B)).R)
-    PSDMatrix(P_pred_R)
+    P_pred_breve = predict_cov(Gaussian(x.μ, PSDMatrix(x.Σ.R.B)), A.B, PSDMatrix(Q.R.B))
+    return PSDMatrix(IsoKroneckerProduct(x.Σ.R.ldim, P_pred_breve.R))
 end
 
 """
