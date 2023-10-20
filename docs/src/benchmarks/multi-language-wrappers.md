@@ -299,7 +299,7 @@ staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{8}(u0),(0.0,
 
 sol = solve(prob,Rodas5(),abstol=1/10^14,reltol=1/10^14, dense=false)
 test_sol = sol
-plot(sol, title="ROBER Solution", legend=false)
+plot(sol, title="HIRES Solution", legend=false)
 ```
 
 ![](figures/multi-language-wrappers_12_1.svg)
