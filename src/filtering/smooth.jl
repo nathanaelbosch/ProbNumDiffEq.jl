@@ -50,7 +50,7 @@ function smooth(
 )
     x_pred = predict(x_curr, Ah, Qh)
 
-    G = x_curr.Σ.R' * x_curr.Σ.R * Ah' / x_pred.Σ
+    G = unfactorize(x_curr.Σ) * Ah' / x_pred.Σ
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
 
