@@ -41,15 +41,12 @@ function predict!(
     diffusion=1,
 )
     predict_mean!(x_out.μ, x_curr.μ, Ah)
-    predict_cov!(x_out, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
+    predict_cov!(x_out.Σ, x_curr.Σ, Ah, Qh, C_DxD, C_2DxD, diffusion)
     return x_out
 end
 
-function predict_mean!(m_out::AbstractVector, m_curr::AbstractVector, Ah::AbstractMatrix)
-    D = length(m_out)
-    a = size(Ah, 1)
-    d = D ÷ a
-    _matmul!(reshape_no_alloc(m_out, a, d), Ah, reshape_no_alloc(m_curr, a, d))
+function predict_mean!(m_out, m_curr, Ah::AbstractMatrix)
+    _matmul!(m_out, Ah, m_curr)
     return m_out
 end
 

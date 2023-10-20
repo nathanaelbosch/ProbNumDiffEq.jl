@@ -93,7 +93,11 @@ function smooth!(
     _D = size(C_DxD, 1)
 
     # Prediction: t -> t+1
-    predict!(x_pred, x_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
+    # The following things are there to handle the kronecker case; will be refactored
+    a = size(Ah, 1)
+    d = D ÷ a
+    predict_mean!(reshape_no_alloc(x_pred.μ, a, d), reshape_no_alloc(x_curr.μ, a, d), Ah)
+    predict_cov!(x_pred.Σ, x_curr.Σ, Ah, Qh, C_DxD, C_2DxD, diffusion)
 
     # Smoothing
     # G = x_curr.Σ * Ah' * P_p_inv

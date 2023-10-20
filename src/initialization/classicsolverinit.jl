@@ -109,8 +109,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     for (i, (t, u)) in enumerate(zip(ts, us))
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
         u = view(u, :) # just in case the problem is matrix-valued
-        predict_mean!(x_pred, x, A)
-        predict_cov!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
+        predict!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
         push!(preds, copy(x_pred))
 
         H = cache.E0 * PI
