@@ -91,7 +91,10 @@ function OrdinaryDiffEq.alg_cache(
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
-    KRONECKER = iskronecker(alg, f)
+    FAC = get_covariance_factorization(alg)
+    if FAC isa KroneckerCovariance && !(f.mass_matrix isa UniformScaling)
+        error("The selected algorithm uses an efficient Kronecker-factorized implementation which is incompatible with the provided mass matrix. Try using the `EK1` instead.")
+    end
 
     uType = typeof(u)
     # uElType = eltype(u_vec)
@@ -99,21 +102,17 @@ function OrdinaryDiffEq.alg_cache(
     matType = Matrix{uElType}
 
     # Projections
-    Proj = projection(d, q, uElType)
+    Proj = projection(FAC, d, q, uElType)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
     SolProj = if is_secondorder_ode
-        if KRONECKER
+        if E0 isa IKP
             IsoKroneckerProduct(d, [Proj(1).B; Proj(0).B])
         else
             SolProj = [Proj(1); Proj(0)]
         end
     else
         Proj(0)
-    end
-    if !KRONECKER
-        E0, E1, E2 = Matrix(E0), Matrix(E1), Matrix(E2)
-        SolProj = Matrix(SolProj)
     end
 
     # Prior dynamics
@@ -129,11 +128,7 @@ function OrdinaryDiffEq.alg_cache(
     else
         error("Invalid prior $(alg.prior)")
     end
-    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior, dt)
-    if !KRONECKER
-        P, PI = Diagonal(P), Diagonal(PI)
-        A, Q, Ah, Qh = Matrix(A), PSDMatrix(Matrix(Q.R)), Matrix(Ah), PSDMatrix(Matrix(Qh.R))
-    end
+    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(FAC, prior, dt)
 
     # Measurement Model
     measurement_model = make_measurement_model(f)
@@ -141,11 +136,7 @@ function OrdinaryDiffEq.alg_cache(
     # Initial State
     initial_variance = ones(uElType, q + 1)
     μ0 = zeros(uElType, D)
-    Σ0 = PSDMatrix(if KRONECKER
-                       IsoKroneckerProduct(d, diagm(sqrt.(initial_variance)))
-                   else
-                       kron(I(d), diagm(sqrt.(initial_variance)))
-                   end)
+    Σ0 = PSDMatrix(to_factorized_matrix(FAC, IsoKroneckerProduct(d, diagm(sqrt.(initial_variance)))))
     x0 = Gaussian(μ0, Σ0)
 
     # Diffusion Model
@@ -155,17 +146,9 @@ function OrdinaryDiffEq.alg_cache(
 
     # Measurement model related things
     R = zeros(uElType, d, d)
-    H = if KRONECKER
-        IsoKroneckerProduct(d, zeros(uElType, 1, q + 1))
-    else
-        zeros(uElType, d, D)
-    end
+    H = factorized_zeros(FAC, uElType, d, D; d, q)
     v = zeros(uElType, d)
-    S = if KRONECKER
-        PSDMatrix(IsoKroneckerProduct(d, zeros(uElType, q + 1)))
-    else
-        PSDMatrix(zeros(uElType, D, d))
-    end
+    S = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
     measurement = Gaussian(v, S)
 
     # Caches
@@ -174,22 +157,11 @@ function OrdinaryDiffEq.alg_cache(
     pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
         copy(measurement)
     else # then `u` has 2d dimensions
-        Gaussian(
-            zeros(uElType, 2d),
-            PSDMatrix(
-            if KRONECKER
-                IsoKroneckerProduct(d, zeros(uElType, q+1, 2))
-            else
-                zeros(uElType, D, 2d)
-            end))
+        Gaussian(zeros(uElType, 2d), PSDMatrix(factorized_zeros(FAC, uElType, D, 2d; d, q)))
     end
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
-    Smat = if KRONECKER
-        IsoKroneckerProduct(d, zeros(uElType, 1, 1))
-    else
-        zeros(uElType, d, d)
-    end
+    Smat = factorized_zeros(FAC, uElType, d, d; d, q)
 
     C_dxd = zeros(uElType, d, d)
     C_dxD = zeros(uElType, d, D)
@@ -198,16 +170,11 @@ function OrdinaryDiffEq.alg_cache(
     C_2DxD = zeros(uElType, 2D, D)
     C_3DxD = zeros(uElType, 3D, D)
 
-    backward_kernel = if KRONECKER
-        AffineNormalKernel(
-            IsoKroneckerProduct(d, zeros(uElType, q+1, q+1)),
-            zeros(uElType, D),
-            PSDMatrix(IsoKroneckerProduct(d, zeros(uElType, 2*(q+1), q+1)))
-        )
-    else
-        AffineNormalKernel(
-            zeros(uElType, D, D), zeros(uElType, D), PSDMatrix(zeros(uElType, 2D, D)))
-    end
+    backward_kernel = AffineNormalKernel(
+        factorized_zeros(FAC, uElType, D, D; d, q),
+        zeros(uElType, D),
+        PSDMatrix(factorized_zeros(FAC, uElType, 2D, D; d, q))
+    )
 
     u_pred = copy(u)
     u_filt = copy(u)

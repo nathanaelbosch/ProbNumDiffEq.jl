@@ -111,15 +111,6 @@ EK1(;
         initialization,
     )
 
-iskronecker(alg, f) = (
-    alg isa EK0
-    &&
-    !(alg.diffusionmodel isa DynamicMVDiffusion ||
-        alg.diffusionmodel isa FixedMVDiffusion)
-    && alg.prior isa IWP
-    && f.mass_matrix isa UniformScaling
-)
-
 """
     ExpEK(; L, order=3, kwargs...)
 

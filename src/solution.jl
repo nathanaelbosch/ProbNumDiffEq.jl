@@ -85,6 +85,7 @@ function DiffEqBase.build_solution(
         true,
         Val(isinplace(prob)),
     )
+    q = cache.q
 
     T = eltype(eltype(u))
     N = length((size(prob.u0)..., length(u)))
@@ -93,18 +94,10 @@ function DiffEqBase.build_solution(
     uElType = eltype(prob.u0)
     D = d
 
-    KRONECKER = iskronecker(alg, prob.f)
+    FAC = get_covariance_factorization(alg)
 
-    pu_cov = if KRONECKER
-        PSDMatrix(IsoKroneckerProduct(d, zeros(uElType, D ÷ d + 1)))
-    else
-        PSDMatrix(zeros(uElType, D, d))
-    end
-    x_cov = if KRONECKER
-        PSDMatrix(IsoKroneckerProduct(d, zeros(uElType, D ÷ d + 1, D ÷ d + 1)))
-    else
-        PSDMatrix(zeros(uElType, D, D))
-    end
+    pu_cov = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
+    x_cov = PSDMatrix(factorized_zeros(FAC, uElType, D, D; d, q))
     pu = StructArray{Gaussian{Vector{uElType},typeof(pu_cov)}}(undef, 0)
     x_filt = StructArray{Gaussian{Vector{uElType},typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)

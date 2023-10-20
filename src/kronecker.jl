@@ -18,8 +18,16 @@ Base.:*(K::IKP, a::Number) = IsoKroneckerProduct(K.ldim, K.B * a)
 Base.:*(a::Number, K::IKP) = IsoKroneckerProduct(K.ldim, a * K.B)
 LinearAlgebra.adjoint(A::IKP) = IsoKroneckerProduct(A.ldim, A.B')
 
+function check_same_size(A::IKP, B::IKP)
+    if A.ldim != B.ldim || size(A.B) != size(B.B)
+        Ad, An, Am, Bd, Bn, Bm = A.ldim, size(A)..., B.ldim, size(B)...
+        throw(
+            DimensionMismatch("A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm)"),
+        )
+    end
+end
 Base.:+(A::IKP, B::IKP) = begin
-    @assert A.ldim == B.ldim
+    check_same_size(A, B)
     return IsoKroneckerProduct(A.ldim, A.B + B.B)
 end
 Base.:+(U::UniformScaling, K::IKP) = IsoKroneckerProduct(K.ldim, U + K.B)
@@ -68,7 +76,7 @@ Base.size(K::IKP) = (K.ldim * size(K.B, 1), K.ldim * size(K.B, 2))
 # conversion
 Base.convert(::Type{T}, K::IKP) where {T<:IKP} =
     K isa T ? K : T(K)
-function IKP{T,TB}(K::IKP) where {T,TA,TB}
+function IKP{T,TB}(K::IKP) where {T,TB}
     IKP(K.ldim, convert(TB, K.B))
 end
 
@@ -80,6 +88,7 @@ reshape_no_alloc(a, dims::Tuple) =
     invoke(Base._reshape, Tuple{AbstractArray,typeof(dims)}, a, dims)
 # reshape_no_alloc(a::AbstractArray, dims::Tuple) = reshape(a, dims)
 reshape_no_alloc(a, dims...) = reshape_no_alloc(a, Tuple(dims))
+reshape_no_alloc(a::Missing, dims::Tuple) = missing
 
 function mul_vectrick!(x::AbstractVecOrMat, A::IsoKroneckerProduct, v::AbstractVecOrMat)
     N = A.B

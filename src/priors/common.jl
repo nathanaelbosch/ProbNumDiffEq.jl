@@ -31,7 +31,7 @@ See also: [`make_transition_matrices`](@ref).
 
 [1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
-function initialize_transition_matrices(p::AbstractODEFilterPrior{T}, dt) where {T}
+function initialize_transition_matrices(::DenseCovariance, p::AbstractODEFilterPrior{T}, dt) where {T}
     d, q = p.wiener_process_dimension, p.num_derivatives
     D = d * (q + 1)
     Ah, Qh = zeros(T, D, D), PSDMatrix(zeros(T, D, D))
@@ -39,6 +39,9 @@ function initialize_transition_matrices(p::AbstractODEFilterPrior{T}, dt) where 
     A = copy(Ah)
     Q = copy(Qh)
     return A, Q, Ah, Qh, P, PI
+end
+function initialize_transition_matrices(fac::CovarianceFactorization, p::AbstractODEFilterPrior, dt)
+    error("The chosen prior can not be implemented with a $fac factorization")
 end
 
 """
