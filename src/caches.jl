@@ -2,13 +2,14 @@
 # Caches
 ########################################################################################
 mutable struct EKCache{
-    RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
-    HType,matType,bkType,diffusionType,diffModelType,measModType,measType,puType,llType,
-    dtType,rateType,UF,JC,uNoUnitsType,
+    RType,CFacType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,
+    AType,QType,HType,matType,bkType,diffusionType,diffModelType,measModType,measType,
+    puType,llType,dtType,rateType,UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
+    covariance_factorization::CFacType
     prior::PriorType
     A::AType
     Q::QType
@@ -204,14 +205,14 @@ function OrdinaryDiffEq.alg_cache(
 
     ll = zero(uEltypeNoUnits)
     return EKCache{
-        typeof(R),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
+        typeof(R),typeof(FAC),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),typeof(H),matType,
         typeof(backward_kernel),typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
-        d, q, prior, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI,
-        E0, E1, E2,
+        d, q, FAC, prior, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj,
+        P, PI, E0, E1, E2,
         u, u_pred, u_filt, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
