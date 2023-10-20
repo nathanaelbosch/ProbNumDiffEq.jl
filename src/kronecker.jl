@@ -32,21 +32,25 @@ function check_matmul_sizes(A::IKP, B::IKP)
     # For A * B
     Ad, Bd = A.ldim, B.ldim
     An, Am, Bn, Bm = size(A)..., size(B)...
-        if !(A.ldim == B.ldim) || !(Am == Bnb)
-            throw(
-                DimensionMismatch("Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm)"),
-            )
-        end
+    if !(A.ldim == B.ldim) || !(Am == Bnb)
+        throw(
+            DimensionMismatch(
+                "Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm)",
+            ),
+        )
+    end
 end
 function check_matmul_sizes(C::IKP, A::IKP, B::IKP)
     # For C = A * B
     Ad, Bd, Cd = A.ldim, B.ldim, C.ldim
     An, Am, Bn, Bm, Cn, Cm = size(A)..., size(B)..., size(C)...
-        if !(A.ldim == B.ldim == C.ldim) || !(Am == Bn && An == Cn && Bm == Cm)
-            throw(
-                DimensionMismatch("Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm), C has size ($Cd⋅$Cn,$Cd⋅$Cm)"),
-            )
-        end
+    if !(A.ldim == B.ldim == C.ldim) || !(Am == Bn && An == Cn && Bm == Cm)
+        throw(
+            DimensionMismatch(
+                "Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm), C has size ($Cd⋅$Cn,$Cd⋅$Cm)",
+            ),
+        )
+    end
 end
 
 Base.:+(A::IKP, B::IKP) = begin

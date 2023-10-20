@@ -91,7 +91,7 @@ function DiffEqBase.build_solution(
 
     uElType = eltype(prob.u0)
     d, q = cache.d, cache.q
-    D = d * (q+1)
+    D = d * (q + 1)
 
     FAC = cache.covariance_factorization
     pu_cov = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
