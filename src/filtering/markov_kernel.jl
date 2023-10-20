@@ -181,9 +181,7 @@ function compute_backward_kernel!(
     A, _, Q = K
     G, b, Λ = Kout
 
-    D = length(x.μ)
-    _D = size(G, 1)
-    _a = D ÷ _D
+    D = output_dim = size(G, 1)
 
     # G = Matrix(x.Σ) * A' / Matrix(xpred.Σ)
     _matmul!(C_DxD, x.Σ.R, A')
@@ -191,21 +189,21 @@ function compute_backward_kernel!(
     rdiv!(G, Cholesky(xpred.Σ.R, 'U', 0))
 
     # b = μ - G * μ_pred
-    _matmul!(reshape_no_alloc(b, _D, _a), G, reshape_no_alloc(xpred.μ, _D, _a))
+    _matmul!(b, G, xpred.μ)
     b .= x.μ .- b
 
     # Λ.R[1:D, 1:D] = x.Σ.R * (I - G * A)'
     _matmul!(C_DxD, A', G', -1.0, 0.0)
-    @inbounds @simd ivdep for i in 1:_D
+    @inbounds @simd ivdep for i in 1:D
         C_DxD[i, i] += 1
     end
-    _matmul!(view(Λ.R, 1:_D, 1:_D), x.Σ.R, C_DxD)
+    _matmul!(view(Λ.R, 1:D, 1:D), x.Σ.R, C_DxD)
     # Λ.R[D+1:2D, 1:D] = (G * Q.R')'
     if !isone(diffusion)
         _matmul!(C_DxD, Q.R, sqrt.(diffusion))
-        _matmul!(view(Λ.R, _D+1:2_D, 1:_D), C_DxD, G')
+        _matmul!(view(Λ.R, D+1:2D, 1:D), C_DxD, G')
     else
-        _matmul!(view(Λ.R, _D+1:2_D, 1:_D), Q.R, G')
+        _matmul!(view(Λ.R, D+1:2D, 1:D), Q.R, G')
     end
 
     return Kout
@@ -223,9 +221,9 @@ function compute_backward_kernel!(
     KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
     KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
 }
-    D = length(x.μ)
-    d = K.A.ldim
-    Q = D ÷ d
+    D = full_state_dim = length(x.μ)
+    d = ode_dimension_dim = K.A.ldim
+    Q = n_derivatives_dim = D ÷ d
     _Kout = AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))
     _x_pred = Gaussian(reshape_no_alloc(xpred.μ, Q, d), PSDMatrix(xpred.Σ.R.B))
     _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))

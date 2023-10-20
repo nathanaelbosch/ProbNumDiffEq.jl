@@ -125,14 +125,14 @@ function update!(
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
 ) where {T}
-    D = length(x_out.μ)
-    d = H.ldim
-    Q = D ÷ d
+    D = full_state_dim = length(x_out.μ)
+    d = ode_dimension_dim = H.ldim
+    Q = n_derivatives_dim = D ÷ d
     _x_out = Gaussian(reshape_no_alloc(x_out.μ, Q, d), PSDMatrix(x_out.Σ.R.B))
     _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
     _measurement = Gaussian(
         reshape_no_alloc(measurement.μ, 1, d), PSDMatrix(measurement.Σ.R.B))
-    o = size(_measurement.Σ, 1)
+    o = measurement_dim = size(_measurement.Σ, 1)
     _H = H.B
     _D = length(x_out.μ) ÷ d
     _K1_cache = view(K1_cache, 1:_D, 1:o)

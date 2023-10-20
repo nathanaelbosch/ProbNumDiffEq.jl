@@ -64,7 +64,7 @@ function predict_cov!(
         return Σ_out
     end
     R, M = C_2DxD, C_DxD
-    D, D = size(Qh)
+    D = size(Qh, 1)
 
     _matmul!(view(R, 1:D, 1:D), Σ_curr.R, Ah')
     _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))

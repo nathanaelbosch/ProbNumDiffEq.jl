@@ -131,9 +131,9 @@ function smooth!(
     cache,
     diffusion::Union{Number,Diagonal}=1,
 ) where {T,S}
-    D = length(x_curr.μ)
-    d = Ah.ldim
-    Q = D ÷ d
+    D = full_state_dim = length(x_curr.μ)
+    d = ode_dimension_dim = Ah.ldim
+    Q = n_derivatives_dim = D ÷ d
     _x_curr = Gaussian(reshape_no_alloc(x_curr.μ, Q, d), PSDMatrix(x_curr.Σ.R.B))
     _x_next = Gaussian(reshape_no_alloc(x_next.μ, Q, d), PSDMatrix(x_next.Σ.R.B))
     _Ah = Ah.B
