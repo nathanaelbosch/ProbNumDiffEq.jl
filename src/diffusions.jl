@@ -72,7 +72,6 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     _S = _matmul!(Smat, S.R', S.R)
     e .= v
     if _S isa IKP
-        # @assert iszero(_S.A) || isone(_S.A)
         @assert length(_S.B) == 1
         ldiv!(_S.B[1], e)
     else
@@ -168,9 +167,6 @@ function local_scalar_diffusion(cache)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     e .= z
     if HQHmat isa IKP
-        # @simd ivdep for i in 1:size(HQHmat.A, 1)
-        #     @assert HQHmat.A[i,i] == 1
-        # end
         @assert length(HQHmat.B) == 1
         ldiv!(HQHmat.B[1], e)
     else
