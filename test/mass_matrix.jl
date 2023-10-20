@@ -30,7 +30,7 @@ end
     f = ODEFunction(rober, mass_matrix=M)
     prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e-2), (0.04, 3e7, 1e4))
 
-    sol1 = solve(prob, EK1(order=3))
-    sol2 = solve(prob, RadauIIA5())
-    @test sol1[end] ≈ sol2[end] rtol = 1e-5
+    ref = solve(prob, EK1(order=3))
+    sol = solve(prob, RadauIIA5())
+    @test sol[end] ≈ ref[end] rtol = 1e-8
 end
