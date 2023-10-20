@@ -348,8 +348,8 @@ end
             @test Matrix(K_backward.C) ≈ Λ
 
             C_3DxD = zeros(3d, d)
-            ProbNumDiffEq.marginalize_mean!(x_curr, x_next_smoothed, K_backward)
-            ProbNumDiffEq.marginalize_cov!(x_curr, x_next_smoothed, K_backward; C_DxD, C_3DxD)
+            ProbNumDiffEq.marginalize_mean!(x_curr.μ, x_next_smoothed.μ, K_backward)
+            ProbNumDiffEq.marginalize_cov!(x_curr.Σ, x_next_smoothed.Σ, K_backward; C_DxD, C_3DxD)
 
             @test m_smoothed ≈ x_curr.μ
             @test P_smoothed ≈ Matrix(x_curr.Σ)
