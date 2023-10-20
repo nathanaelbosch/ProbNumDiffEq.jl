@@ -171,14 +171,18 @@ function OrdinaryDiffEq.alg_cache(
     # Caches
     du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
     ddu = zeros(uElType, length(u), length(u))
-    pu_tmp =
-        is_secondorder_ode ?
-        Gaussian(zeros(uElType, 2d), PSDMatrix(
+    pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
+        copy(measurement)
+    else # then `u` has 2d dimensions
+        Gaussian(
+            zeros(uElType, 2d),
+            PSDMatrix(
             if KRONECKER
                 IsoKroneckerProduct(true, d, zeros(uElType, q+1, 2))
             else
                 zeros(uElType, D, 2d)
-            end)) : copy(measurement)
+            end))
+    end
     K = zeros(uElType, D, d)
     G = zeros(uElType, D, D)
     Smat = if KRONECKER
