@@ -117,7 +117,7 @@ iskronecker(alg, f) = (
     !(alg.diffusionmodel isa DynamicMVDiffusion ||
         alg.diffusionmodel isa FixedMVDiffusion)
     && alg.prior isa IWP
-    && f.mass_matrix === I
+    && f.mass_matrix isa UniformScaling
 )
 
 """
