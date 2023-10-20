@@ -85,17 +85,15 @@ function DiffEqBase.build_solution(
         true,
         Val(isinplace(prob)),
     )
-    q = cache.q
 
     T = eltype(eltype(u))
     N = length((size(prob.u0)..., length(u)))
 
-    d = length(prob.u0)
     uElType = eltype(prob.u0)
-    D = d
+    d, q = cache.d, cache.q
+    D = d * (q+1)
 
-    FAC = get_covariance_factorization(alg)
-
+    FAC = cache.covariance_factorization
     pu_cov = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
     x_cov = PSDMatrix(factorized_zeros(FAC, uElType, D, D; d, q))
     pu = StructArray{Gaussian{Vector{uElType},typeof(pu_cov)}}(undef, 0)

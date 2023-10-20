@@ -100,8 +100,7 @@ function update!(
     rdiv!(K, length(_S) == 1 ? _S[1] : cholesky!(_S))
 
     # x_out.μ .= m_p .+ K * (0 .- z)
-    _matmul!(x_out.μ, K, z)
-    x_out.μ .= m_p .- x_out.μ
+    x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
 
     # M_cache .= I(D) .- mul!(M_cache, K, H)
     _matmul!(M_cache, K, H, -1.0, 0.0)

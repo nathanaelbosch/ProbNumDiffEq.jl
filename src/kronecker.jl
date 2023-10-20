@@ -28,6 +28,27 @@ function check_same_size(A::IKP, B::IKP)
         )
     end
 end
+function check_matmul_sizes(A::IKP, B::IKP)
+    # For A * B
+    Ad, Bd = A.ldim, B.ldim
+    An, Am, Bn, Bm = size(A)..., size(B)...
+        if !(A.ldim == B.ldim) || !(Am == Bnb)
+            throw(
+                DimensionMismatch("Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm)"),
+            )
+        end
+end
+function check_matmul_sizes(C::IKP, A::IKP, B::IKP)
+    # For C = A * B
+    Ad, Bd, Cd = A.ldim, B.ldim, C.ldim
+    An, Am, Bn, Bm, Cn, Cm = size(A)..., size(B)..., size(C)...
+        if !(A.ldim == B.ldim == C.ldim) || !(Am == Bn && An == Cn && Bm == Cm)
+            throw(
+                DimensionMismatch("Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm), C has size ($Cd⋅$Cn,$Cd⋅$Cm)"),
+            )
+        end
+end
+
 Base.:+(A::IKP, B::IKP) = begin
     check_same_size(A, B)
     return IsoKroneckerProduct(A.ldim, A.B + B.B)
@@ -42,21 +63,21 @@ Base.:/(A::IKP, B::IKP) = begin
 end
 Base.:\(A::IKP, B::IKP) = begin
     @assert A.ldim == B.ldim
-    return IsoKroneckerProduct(A.ldim, A.B / B.B)
+    return IsoKroneckerProduct(A.ldim, A.B \ B.B)
 end
 
 _matmul!(A::IKP, B::IKP, C::IKP) = begin
-    @assert A.ldim == B.ldim == C.ldim
+    check_matmul_sizes(A, B, C)
     _matmul!(A.B, B.B, C.B)
     return A
 end
 _matmul!(A::IKP{T}, B::IKP{T}, C::IKP{T}) where {T<:LinearAlgebra.BlasFloat} = begin
-    @assert A.ldim == B.ldim == C.ldim
+    check_matmul_sizes(A, B, C)
     _matmul!(A.B, B.B, C.B)
     return A
 end
 _matmul!(A::IKP, B::IKP, C::IKP, alpha::Number, beta::Number) = begin
-    @assert A.ldim == B.ldim == C.ldim
+    check_matmul_sizes(A, B, C)
     _matmul!(A.B, B.B, C.B)
     return A
 end
@@ -67,12 +88,12 @@ _matmul!(
     alpha::Number,
     beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} = begin
-    @assert A.ldim == B.ldim == C.ldim
+    check_matmul_sizes(A, B, C)
     _matmul!(A.B, B.B, C.B, alpha, beta)
     return A
 end
 copy!(A::IKP, B::IKP) = begin
-    @assert A.ldim == B.ldim
+    check_same_size(A, B)
     copy!(A.B, B.B)
     return A
 end
@@ -93,7 +114,6 @@ Found here: https://discourse.julialang.org/t/convert-array-into-matrix-in-place
 """
 reshape_no_alloc(a, dims::Tuple) =
     invoke(Base._reshape, Tuple{AbstractArray,typeof(dims)}, a, dims)
-# reshape_no_alloc(a::AbstractArray, dims::Tuple) = reshape(a, dims)
 reshape_no_alloc(a, dims...) = reshape_no_alloc(a, Tuple(dims))
 reshape_no_alloc(a::Missing, dims::Tuple) = missing
 
@@ -103,8 +123,6 @@ function mul_vectrick!(x::AbstractVecOrMat, A::IsoKroneckerProduct, v::AbstractV
 
     V = reshape_no_alloc(v, (d, length(v) ÷ d))
     X = reshape_no_alloc(x, (c, length(x) ÷ c))
-    # @info "mul_vectrick!" typeof(x) typeof(A) typeof(v)
-    # @info "mul_vectrick!" typeof(X) typeof(N) typeof(V)
     _matmul!(X, N, V)
     return x
 end

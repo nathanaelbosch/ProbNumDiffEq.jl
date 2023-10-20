@@ -124,8 +124,7 @@ function make_transition_matrices!(cache, prior::IWP, dt)
     make_preconditioners!(cache, dt)
     # A, Q = preconditioned_discretize(p) # not necessary since it's dt-independent
     # Ah = PI * A * P
-    # @.. Ah.B = PI.B.diag * A.B * P.B.diag'
     _matmul!(Ah, PI, _matmul!(Ah, A, P))
+    # Qh = PI * Q * PI'
     fast_X_A_Xt!(Qh, Q, PI)
-    # @.. Qh.R.B = Q.R.B * PI.B.diag'
 end

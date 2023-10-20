@@ -13,12 +13,10 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    E0 = x.Σ.R isa IsoKroneckerProduct ? Proj(0) : Matrix(Proj(0))
-    init_condition_on!(x, E0, _u, cache)
+    init_condition_on!(x, Proj(0), _u, cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.stats.nf += 1
-    E1 = x.Σ.R isa IsoKroneckerProduct ? Proj(1) : Matrix(Proj(1))
-    init_condition_on!(x, E1, view(du, :), cache)
+    init_condition_on!(x, Proj(1), view(du, :), cache)
 
     if q < 2
         return
@@ -41,8 +39,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> _f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        E2 = x.Σ.R isa IsoKroneckerProduct ? Proj(2) : Matrix(Proj(2))
-        init_condition_on!(x, E2, ddfddu, cache)
+        init_condition_on!(x, Proj(2), ddfddu, cache)
         if q < 3
             return
         end

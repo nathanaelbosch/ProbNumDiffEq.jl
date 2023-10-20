@@ -93,7 +93,6 @@ function smooth!(
     _D = size(C_DxD, 1)
 
     # Prediction: t -> t+1
-    # The following things are there to handle the kronecker case; will be refactored
     predict_mean!(x_pred.μ, x_curr.μ, Ah)
     predict_cov!(x_pred.Σ, x_curr.Σ, Ah, Qh, C_DxD, C_2DxD, diffusion)
 
@@ -104,8 +103,7 @@ function smooth!(
 
     # x_curr.μ .+= G * (x_next.μ .- x_pred.μ) # less allocations:
     x_pred.μ .-= x_next.μ
-    a = D ÷ _D
-    _matmul!(reshape_no_alloc(x_curr.μ, _D, a), G, reshape_no_alloc(x_pred.μ, _D, a), -1, 1)
+    _matmul!(x_curr.μ, G, x_pred.μ, -1, 1)
 
     # Joseph-Form:
     R = C_3DxD
