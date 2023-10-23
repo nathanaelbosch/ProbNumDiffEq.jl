@@ -71,7 +71,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     e = m_tmp.μ
     _S = _matmul!(Smat, S.R', S.R)
     e .= v
-    if _S isa IKP
+    if _S isa IsometricKroneckerProduct
         @assert length(_S.B) == 1
         ldiv!(_S.B[1], e)
     else
@@ -165,7 +165,7 @@ function local_scalar_diffusion(cache)
     fast_X_A_Xt!(HQH, Qh, H)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     e .= z
-    if HQHmat isa IKP
+    if HQHmat isa IsometricKroneckerProduct
         @assert length(HQHmat.B) == 1
         ldiv!(HQHmat.B[1], e)
     else

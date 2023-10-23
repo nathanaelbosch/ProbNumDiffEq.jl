@@ -104,12 +104,12 @@ function marginalize_cov!(
 end
 
 function marginalize_cov!(
-    Σ_out::PSDMatrix{T,<:IKP},
-    Σ_curr::PSDMatrix{T,<:IKP},
+    Σ_out::PSDMatrix{T,<:IsometricKroneckerProduct},
+    Σ_curr::PSDMatrix{T,<:IsometricKroneckerProduct},
     K::AffineNormalKernel{
         <:AbstractMatrix,
         <:Any,
-        <:PSDMatrix{S,<:IKP},
+        <:PSDMatrix{S,<:IsometricKroneckerProduct},
     };
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
@@ -215,8 +215,8 @@ end
 
 function compute_backward_kernel!(
     Kout::KT1,
-    xpred::SRGaussian{T,<:IKP},
-    x::SRGaussian{T,<:IKP},
+    xpred::SRGaussian{T,<:IsometricKroneckerProduct},
+    x::SRGaussian{T,<:IsometricKroneckerProduct},
     K::KT2;
     C_DxD::AbstractMatrix,
     diffusion=1,

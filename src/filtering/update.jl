@@ -115,10 +115,10 @@ end
 
 # Kronecker version
 function update!(
-    x_out::SRGaussian{T,<:IKP},
-    x_pred::SRGaussian{T,<:IKP},
-    measurement::SRGaussian{T,<:IKP},
-    H::IKP,
+    x_out::SRGaussian{T,<:IsometricKroneckerProduct},
+    x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
+    measurement::SRGaussian{T,<:IsometricKroneckerProduct},
+    H::IsometricKroneckerProduct,
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,

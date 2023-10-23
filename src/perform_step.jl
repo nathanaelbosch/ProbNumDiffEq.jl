@@ -245,7 +245,7 @@ function estimate_errors!(cache::AbstractODEFilterCache)
 
         # faster:
         error_estimate = view(cache.tmp, 1:d)
-        if R isa IsoKroneckerProduct
+        if R isa IsometricKroneckerProduct
             error_estimate .= sum(abs2, R.B)
         else
             sum!(abs2, error_estimate', view(R, :, 1:d))

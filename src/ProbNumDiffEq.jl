@@ -41,7 +41,7 @@ vecvec2mat(x) = reduce(hcat, x)'
 
 include("fast_linalg.jl")
 include("kronecker.jl")
-include("covariance_factorizations.jl")
+include("covariance_structure.jl")
 
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 

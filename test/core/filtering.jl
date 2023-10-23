@@ -5,7 +5,7 @@ Check the correctness of the filtering implementations vs. basic readable math c
 using Test
 using ProbNumDiffEq
 using LinearAlgebra
-import ProbNumDiffEq: IsoKroneckerProduct
+import ProbNumDiffEq: IsometricKroneckerProduct
 
 @testset "PREDICT" begin
     # Setup
@@ -30,11 +30,11 @@ import ProbNumDiffEq: IsoKroneckerProduct
         if KRONECKER
             K = 2
             m = kron(ones(K), m)
-            P_R = IsoKroneckerProduct(K, P_R)
+            P_R = IsometricKroneckerProduct(K, P_R)
             P = P_R'P_R
 
-            A = IsoKroneckerProduct(K, A)
-            Q_R = IsoKroneckerProduct(K, Q_R)
+            A = IsometricKroneckerProduct(K, A)
+            Q_R = IsometricKroneckerProduct(K, Q_R)
             Q = Q_R'Q_R
 
             m_p = A * m
@@ -73,7 +73,7 @@ import ProbNumDiffEq: IsoKroneckerProduct
             x_out = copy(x_curr)
             # marginalize! needs tall square-roots:
             Q_SR = if KRONECKER
-                PSDMatrix(IsoKroneckerProduct(Q_R.ldim, [Q_R.B; zero(Q_R.B)]))
+                PSDMatrix(IsometricKroneckerProduct(Q_R.ldim, [Q_R.B; zero(Q_R.B)]))
             else
                 PSDMatrix([Q_R; zero(Q_R)])
             end
@@ -122,13 +122,13 @@ end
     _fstr(F) = F ? "Kronecker" : "None"
     @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
         if KRONECKER
-            P_p_R = IsoKroneckerProduct(1, P_p_R)
+            P_p_R = IsometricKroneckerProduct(1, P_p_R)
             P_p = P_p_R'P_p_R
 
-            H = IsoKroneckerProduct(1, _HB)
+            H = IsometricKroneckerProduct(1, _HB)
             R = zeros(o, o)
 
-            SR = IsoKroneckerProduct(1, SR)
+            SR = IsometricKroneckerProduct(1, SR)
             S = SR'SR
 
             x_pred = Gaussian(m_p, P_p)
@@ -267,19 +267,19 @@ end
     @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
         K = 2
         if KRONECKER
-            P_R = IsoKroneckerProduct(K, P_R)
+            P_R = IsometricKroneckerProduct(K, P_R)
             P = P_R'P_R
 
-            P_s_R = IsoKroneckerProduct(K, P_s_R)
+            P_s_R = IsometricKroneckerProduct(K, P_s_R)
             P_s = P_s_R'P_s_R
 
-            P_p_R = IsoKroneckerProduct(K, P_p_R)
+            P_p_R = IsometricKroneckerProduct(K, P_p_R)
             P_p = P_p_R'P_p_R
 
             m, m_s, m_p = kron(ones(K), m), kron(ones(K), m_s), kron(ones(K), m_p)
 
-            A = IsoKroneckerProduct(K, A)
-            Q_R = IsoKroneckerProduct(K, Q_R)
+            A = IsometricKroneckerProduct(K, A)
+            Q_R = IsometricKroneckerProduct(K, Q_R)
             Q = Q_R'Q_R
             Q_SR = PSDMatrix(Q_R)
 
@@ -330,7 +330,7 @@ end
             K_backward = ProbNumDiffEq.AffineNormalKernel(
                 copy(A), copy(m_p),
                 if KRONECKER
-                    PSDMatrix(IsoKroneckerProduct(K, zeros(2d, d)))
+                    PSDMatrix(IsometricKroneckerProduct(K, zeros(2d, d)))
                 else
                     PSDMatrix(zeros(2d, d))
                 end)

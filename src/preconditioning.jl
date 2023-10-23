@@ -1,6 +1,6 @@
 function init_preconditioner(d, q, ::Type{elType}=typeof(1.0)) where {elType}
-    P = IsoKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
-    PI = IsoKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
+    P = IsometricKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
+    PI = IsometricKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
     return P, PI
 end
 
@@ -27,7 +27,7 @@ end
     return P
 end
 
-@fastmath @inbounds function make_preconditioner!(P::IsoKroneckerProduct, h, d, q)
+@fastmath @inbounds function make_preconditioner!(P::IsometricKroneckerProduct, h, d, q)
     val = factorial(q) / h^(q + 1 / 2)
     for j in 0:q
         P.B.diag[j+1] = val
@@ -48,7 +48,7 @@ end
     return PI
 end
 
-@fastmath @inbounds function make_preconditioner_inv!(PI::IsoKroneckerProduct, h, d, q)
+@fastmath @inbounds function make_preconditioner_inv!(PI::IsometricKroneckerProduct, h, d, q)
     val = h^(q + 1 / 2) / factorial(q)
     for j in 0:q
         PI.B.diag[j+1] = val

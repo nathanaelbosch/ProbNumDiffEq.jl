@@ -41,7 +41,7 @@ using Test
         @test s0[end] ≈ ref[end] rtol = 1e-7
 
         @test s1.pu.Σ[1] isa PSDMatrix{<:Number,<:Matrix}
-        @test s0.pu.Σ[1] isa PSDMatrix{<:Number,<:ProbNumDiffEq.IsoKroneckerProduct}
+        @test s0.pu.Σ[1] isa PSDMatrix{<:Number,<:ProbNumDiffEq.IsometricKroneckerProduct}
         t1 = @elapsed ek1()
         t0 = @elapsed ek0()
         @test t0 * N < t1

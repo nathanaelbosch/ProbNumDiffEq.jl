@@ -33,7 +33,7 @@ function projection(
         if deriv <= q
             e_i[deriv+1] = 1
         end
-        return IsoKroneckerProduct(d, e_i')
+        return IsometricKroneckerProduct(d, e_i')
     end
     return Proj
 end

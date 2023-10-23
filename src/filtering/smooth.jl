@@ -122,10 +122,10 @@ function smooth!(
 end
 
 function smooth!(
-    x_curr::SRGaussian{T,<:IKP},
-    x_next::SRGaussian{T,<:IKP},
-    Ah::IKP,
-    Qh::PSDMatrix{S,<:IKP},
+    x_curr::SRGaussian{T,<:IsometricKroneckerProduct},
+    x_next::SRGaussian{T,<:IsometricKroneckerProduct},
+    Ah::IsometricKroneckerProduct,
+    Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
     cache,
     diffusion::Union{Number,Diagonal}=1,
 ) where {T,S}

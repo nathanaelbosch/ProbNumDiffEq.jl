@@ -14,9 +14,9 @@ predict_mean(μ::AbstractVector, A::AbstractMatrix) = A * μ
 predict_cov(Σ::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix) = A * Σ * A' + Q
 predict_cov(Σ::PSDMatrix, A::AbstractMatrix, Q::PSDMatrix) =
     PSDMatrix(qr([Σ.R * A'; Q.R]).R)
-predict_cov(Σ::PSDMatrix{T,<:IKP}, A::IKP, Q::PSDMatrix{T,<:IKP}) where {T} = begin
+predict_cov(Σ::PSDMatrix{T,<:IsometricKroneckerProduct}, A::IsometricKroneckerProduct, Q::PSDMatrix{T,<:IsometricKroneckerProduct}) where {T} = begin
     P_pred_breve = predict_cov(PSDMatrix(Σ.R.B), A.B, PSDMatrix(Q.R.B))
-    return PSDMatrix(IsoKroneckerProduct(Σ.R.ldim, P_pred_breve.R))
+    return PSDMatrix(IsometricKroneckerProduct(Σ.R.ldim, P_pred_breve.R))
 end
 
 """
@@ -87,10 +87,10 @@ end
 
 # Kronecker version
 function predict_cov!(
-    Σ_out::PSDMatrix{T,<:IKP},
-    Σ_curr::PSDMatrix{T,<:IKP},
-    Ah::IKP,
-    Qh::PSDMatrix{S,<:IKP},
+    Σ_out::PSDMatrix{T,<:IsometricKroneckerProduct},
+    Σ_curr::PSDMatrix{T,<:IsometricKroneckerProduct},
+    Ah::IsometricKroneckerProduct,
+    Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     diffusion=1,
@@ -102,7 +102,7 @@ function predict_cov!(
     _D = size(_Qh, 1)
     _C_DxD = view(C_DxD, 1:_D, 1:_D)
     _C_2DxD = view(C_2DxD, 1:2*_D, 1:_D)
-    _diffusion = diffusion isa IKP ? diffusion.B : diffusion
+    _diffusion = diffusion isa IsometricKroneckerProduct ? diffusion.B : diffusion
 
     predict_cov!(
         _Σ_out,
