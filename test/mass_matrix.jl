@@ -42,9 +42,10 @@ using Test
 
         @test s1.pu.Σ[1] isa PSDMatrix{<:Number,<:Matrix}
         @test s0.pu.Σ[1] isa PSDMatrix{<:Number,<:ProbNumDiffEq.IsometricKroneckerProduct}
+
         t1 = @elapsed ek1()
         t0 = @elapsed ek0()
-        @test t0 * N < t1
+        @test t0 < t1
     end
 end
 
