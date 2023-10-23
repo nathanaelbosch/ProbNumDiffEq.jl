@@ -12,10 +12,14 @@ K = I_d \otimes B
 - `left_factor_dim::Int64`: Dimension `d` of the left identity kronecker factor.
 - `right_factor::AbstractMatrix`: Right Kronecker factor.
 """
-struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <: Kronecker.AbstractKroneckerProduct{T}
+struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
+       Kronecker.AbstractKroneckerProduct{T}
     ldim::Int64
     B::TB
-    function IsometricKroneckerProduct(left_factor_dim::Int64, right_factor::AbstractMatrix{T}) where {T}
+    function IsometricKroneckerProduct(
+        left_factor_dim::Int64,
+        right_factor::AbstractMatrix{T},
+    ) where {T}
         return new{T,typeof(right_factor)}(left_factor_dim, right_factor)
     end
 end
@@ -137,7 +141,7 @@ reshape_no_alloc(a, dims::Tuple) =
 reshape_no_alloc(a, dims...) = reshape_no_alloc(a, Tuple(dims))
 reshape_no_alloc(a::Missing, dims::Tuple) = missing
 
-function mul_vectrick!(x::AbstractVecOrMat, A::IsometricKroneckerProduct, v::AbstractVecOrMat)
+function mul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
     N = A.B
     c, d = size(N)
 
@@ -148,7 +152,7 @@ function mul_vectrick!(x::AbstractVecOrMat, A::IsometricKroneckerProduct, v::Abs
 end
 function mul_vectrick!(
     x::AbstractVecOrMat,
-    A::IsometricKroneckerProduct,
+    A::IKP,
     v::AbstractVecOrMat,
     alpha::Number,
     beta::Number,
@@ -162,54 +166,39 @@ function mul_vectrick!(
     return x
 end
 
-_matmul!(C::AbstractVecOrMat, A::IsometricKroneckerProduct, B::AbstractVecOrMat) =
+_matmul!(C::AbstractVecOrMat, A::IKP, B::AbstractVecOrMat) = mul_vectrick!(C, A, B)
+mul!(C::AbstractMatrix, A::IKP, B::AbstractMatrix) = mul_vectrick!(C, A, B)
+mul!(C::AbstractMatrix, A::IKP, B::Adjoint{T,<:AbstractMatrix{T}}) where {T} =
     mul_vectrick!(C, A, B)
-mul!(C::AbstractMatrix, A::IsometricKroneckerProduct, B::AbstractMatrix) = mul_vectrick!(C, A, B)
-mul!(
-    C::AbstractMatrix,
-    A::IsometricKroneckerProduct,
-    B::Adjoint{T,<:AbstractMatrix{T}},
-) where {T} = mul_vectrick!(C, A, B)
-mul!(C::AbstractVector, A::IsometricKroneckerProduct, B::AbstractVector) = mul_vectrick!(C, A, B)
+mul!(C::AbstractVector, A::IKP, B::AbstractVector) = mul_vectrick!(C, A, B)
 
 _matmul!(
     C::AbstractVecOrMat{T},
-    A::IsometricKroneckerProduct{T},
+    A::IKP{T},
     B::AbstractVecOrMat{T},
 ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C, A, B)
-_matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, B::IsometricKroneckerProduct) =
-    _matmul!(C', B', A')
+_matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, B::IKP) = _matmul!(C', B', A')
 _matmul!(
     C::AbstractVecOrMat{T},
     A::AbstractVecOrMat{T},
-    B::IsometricKroneckerProduct{T},
+    B::IKP{T},
 ) where {T<:LinearAlgebra.BlasFloat} = _matmul!(C', B', A')
 
-_matmul!(
-    C::AbstractVecOrMat,
-    A::IsometricKroneckerProduct,
-    B::AbstractVecOrMat,
-    alpha::Number,
-    beta::Number,
-) = mul_vectrick!(C, A, B, alpha, beta)
+_matmul!(C::AbstractVecOrMat, A::IKP, B::AbstractVecOrMat, alpha::Number, beta::Number) =
+    mul_vectrick!(C, A, B, alpha, beta)
 _matmul!(
     C::AbstractVecOrMat{T},
-    A::IsometricKroneckerProduct{T},
+    A::IKP{T},
     B::AbstractVecOrMat{T},
     alpha::Number,
     beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C, A, B, alpha, beta)
-_matmul!(
-    C::AbstractVecOrMat,
-    A::AbstractVecOrMat,
-    B::IsometricKroneckerProduct,
-    alpha::Number,
-    beta::Number,
-) = mul_vectrick!(C', B', A', alpha, beta)
+_matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, B::IKP, alpha::Number, beta::Number) =
+    mul_vectrick!(C', B', A', alpha, beta)
 _matmul!(
     C::AbstractVecOrMat{T},
     A::AbstractVecOrMat{T},
-    B::IsometricKroneckerProduct{T},
+    B::IKP{T},
     alpha::Number,
     beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C', B', A', alpha, beta)

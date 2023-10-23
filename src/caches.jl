@@ -109,7 +109,8 @@ function OrdinaryDiffEq.alg_cache(
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
     SolProj = if is_secondorder_ode
-        E0 isa IsometricKroneckerProduct ? IsometricKroneckerProduct(d, [Proj(1).B; Proj(0).B]) : [Proj(1); Proj(0)]
+        E0 isa IsometricKroneckerProduct ?
+        IsometricKroneckerProduct(d, [Proj(1).B; Proj(0).B]) : [Proj(1); Proj(0)]
     else
         Proj(0)
     end
@@ -136,7 +137,10 @@ function OrdinaryDiffEq.alg_cache(
     initial_variance = ones(uElType, q + 1)
     μ0 = zeros(uElType, D)
     Σ0 = PSDMatrix(
-        to_factorized_matrix(FAC, IsometricKroneckerProduct(d, diagm(sqrt.(initial_variance)))),
+        to_factorized_matrix(
+            FAC,
+            IsometricKroneckerProduct(d, diagm(sqrt.(initial_variance))),
+        ),
     )
     x0 = Gaussian(μ0, Σ0)
 

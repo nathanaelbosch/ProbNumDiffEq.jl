@@ -14,7 +14,11 @@ predict_mean(μ::AbstractVector, A::AbstractMatrix) = A * μ
 predict_cov(Σ::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix) = A * Σ * A' + Q
 predict_cov(Σ::PSDMatrix, A::AbstractMatrix, Q::PSDMatrix) =
     PSDMatrix(qr([Σ.R * A'; Q.R]).R)
-predict_cov(Σ::PSDMatrix{T,<:IsometricKroneckerProduct}, A::IsometricKroneckerProduct, Q::PSDMatrix{T,<:IsometricKroneckerProduct}) where {T} = begin
+predict_cov(
+    Σ::PSDMatrix{T,<:IsometricKroneckerProduct},
+    A::IsometricKroneckerProduct,
+    Q::PSDMatrix{T,<:IsometricKroneckerProduct},
+) where {T} = begin
     P_pred_breve = predict_cov(PSDMatrix(Σ.R.B), A.B, PSDMatrix(Q.R.B))
     return PSDMatrix(IsometricKroneckerProduct(Σ.R.ldim, P_pred_breve.R))
 end

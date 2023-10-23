@@ -48,7 +48,12 @@ end
     return PI
 end
 
-@fastmath @inbounds function make_preconditioner_inv!(PI::IsometricKroneckerProduct, h, d, q)
+@fastmath @inbounds function make_preconditioner_inv!(
+    PI::IsometricKroneckerProduct,
+    h,
+    d,
+    q,
+)
     val = h^(q + 1 / 2) / factorial(q)
     for j in 0:q
         PI.B.diag[j+1] = val

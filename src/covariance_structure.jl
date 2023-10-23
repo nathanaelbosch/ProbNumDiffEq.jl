@@ -27,5 +27,6 @@ end
 factorized_zeros(::DenseCovariance, elType, sizes...; d, q) = zeros(elType, sizes...)
 
 to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
-to_factorized_matrix(::IsometricKroneckerCovariance, M::AbstractMatrix) = IsometricKroneckerProduct(M) # probably errors
+to_factorized_matrix(::IsometricKroneckerCovariance, M::AbstractMatrix) =
+    IsometricKroneckerProduct(M) # probably errors
 to_factorized_matrix(::IsometricKroneckerCovariance, M::IsometricKroneckerProduct) = M
