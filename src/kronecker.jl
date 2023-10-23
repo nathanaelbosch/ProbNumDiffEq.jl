@@ -1,13 +1,30 @@
+"""
+    IsometricKroneckerProduct(left_factor_dim::Int64, right_factor::AbstractMatrix)
+
+Kronecker product of an identity and a generic matrix:
+```math
+\begin{aligned}
+K = I_d \otimes B
+\end{aligned}
+```
+
+# Arguments
+- `left_factor_dim::Int64`: Dimension `d` of the left identity kronecker factor.
+- `right_factor::AbstractMatrix`: Right Kronecker factor.
+"""
 struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <: Kronecker.AbstractKroneckerProduct{T}
     ldim::Int64
     B::TB
-    function IsometricKroneckerProduct(ldim::Int64, B::AbstractMatrix{T}) where {T}
-        return new{T,typeof(B)}(ldim, B)
+    function IsometricKroneckerProduct(left_factor_dim::Int64, right_factor::AbstractMatrix{T}) where {T}
+        return new{T,typeof(right_factor)}(left_factor_dim, right_factor)
     end
 end
 IsometricKroneckerProduct(ldim::Integer, B::AbstractVector) =
     IsometricKroneckerProduct(ldim, reshape(B, :, 1))
+
 const IKP = IsometricKroneckerProduct
+get_right_factor(K::IKP) = K.B
+get_left_factor_dim(K::IKP) = K.B
 
 Kronecker.getmatrices(K::IKP) = (I(K.ldim), K.B)
 
