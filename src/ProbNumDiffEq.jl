@@ -10,7 +10,7 @@ import Statistics: mean, var, std
 
 using Reexport
 @reexport using DiffEqBase
-using SciMLBase
+import SciMLBase
 import SciMLBase: interpret_vars, getsyms
 using OrdinaryDiffEq
 using DiffEqDevTools

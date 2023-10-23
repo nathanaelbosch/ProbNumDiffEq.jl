@@ -116,9 +116,11 @@ const GROUP = get(ENV, "GROUP", "All")
 
     if GROUP == "All"
         @timedtestset "Aqua.jl" begin
-            Aqua.test_all(ProbNumDiffEq, ambiguities=false, undefined_exports=false)
-            # Aqua.test_ambiguities(ProbNumDiffEq)
-            # Aqua.test_undefined_exports(ProbNumDiffEq)
+            Aqua.test_all(
+                ProbNumDiffEq,
+                ambiguities=false,
+                piracy=false,
+            )
         end
     end
 end
