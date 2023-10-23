@@ -30,7 +30,7 @@ const SAVE_EVERYSTEP = false;
 ```
 
 ```julia
-_COLORS = Dict(
+COLORS = Dict(
     "Julia" => :LightGreen,
     "Julia (static)" => :DarkGreen,
     "Hairer" => :Red,
@@ -39,9 +39,14 @@ _COLORS = Dict(
     "deSolve" => :Blue,
     "Sundials" => :Purple,
     "liblsoda" => :Purple,
-    "ProbNumDiffEq" => :Darkgray,
+    "ProbNumDiffEq: EK0" => :Gray30,
+    "ProbNumDiffEq: EK1" => :Gray60,
 )
-tocolor(n) = _COLORS[split(n, ':')[1]];
+tocolor(n) = if split(n, '(')[1] in keys(COLORS)
+    COLORS[split(n, '(')[1]]
+else
+    COLORS[split(n, ':')[1]]
+end
 ```
 
 ```julia
@@ -81,10 +86,12 @@ _setups = [
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "deSolve: ode45" => Dict(:alg=>deSolveDiffEq.ode45())
   "Sundials: Adams" => Dict(:alg=>Sundials.CVODE_Adams())
-  "ProbNumDiffEq: EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
+  "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK0(8)" => Dict(:alg=>EK0(order=8, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -149,10 +156,12 @@ _setups = [
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "deSolve: ode45" => Dict(:alg=>deSolveDiffEq.ode45())
   "Sundials: Adams" => Dict(:alg=>CVODE_Adams())
-  "ProbNumDiffEq: EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
+  "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK0(8)" => Dict(:alg=>EK0(order=8, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)

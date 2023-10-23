@@ -12,6 +12,16 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 **Gaussian ODE filter with zeroth-order vector field linearization.**
 
+This is an _explicit_ ODE solver. It is fast and scales well to high-dimensional problems
+[krämer21highdim](@cite), but it is not L-stable [tronarp18probsol](@cite). So for stiff
+problems, use the [`EK1`](@ref).
+
+Whenever possible this solver will use a Kronecker-factored implementation to achieve its
+linear scaling and to get the best runtimes. This can currently be done only with an
+`IWP` prior (default), with a scalar diffusion model (either `DynamicDiffusion` or
+`FixedDiffusion`). _For other configurations the solver falls back to a dense implementation
+which scales cubically with the problem size._
+
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
@@ -54,6 +64,11 @@ _unwrap_val(B) = B
           kwargs...)
 
 **Gaussian ODE filter with first-order vector field linearization.**
+
+This is a _semi-implicit_, L-stable ODE solver so it can handle stiffness quite well [tronarp18probsol](@cite),
+and it generally produces more expressive posterior covariances than the [`EK0`](@ref).
+However, as typical implicit ODE solvers it scales cubically with the ODE dimension [krämer21highdim](@cite),
+so if you're solving a high-dimensional non-stiff problem you might want to give the [`EK0`](@ref) a try.
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
@@ -114,7 +129,7 @@ EK1(;
 """
     ExpEK(; L, order=3, kwargs...)
 
-Probabilistic exponential integrator
+**Probabilistic exponential integrator**
 
 Probabilistic exponential integrators are a class of integrators for semi-linear stiff ODEs
 that provide improved stability by essentially solving the linear part of the ODE exactly.
@@ -154,7 +169,7 @@ linearity does not need to be specified manually, and the more accurate local li
 can sometimes also improve stability; but since the "prior" is adjusted at each step the
 probabilistic interpretation becomes more complicated.
 
-`RosenbrockExpEK` is just a short-hand for [`EK1`](@ref) with appropriete [`IOUP`](@ref)
+`RosenbrockExpEK` is just a short-hand for [`EK1`](@ref) with locally-updated [`IOUP`](@ref)
 prior:
 ```julia
 RosenbrockExpEK(; order=3, kwargs...) = EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)

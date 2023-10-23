@@ -33,7 +33,7 @@ const SAVE_EVERYSTEP = false;
 
 
 ```julia
-_COLORS = Dict(
+COLORS = Dict(
     "Julia" => :LightGreen,
     "Julia (static)" => :DarkGreen,
     "Hairer" => :Red,
@@ -42,10 +42,20 @@ _COLORS = Dict(
     "deSolve" => :Blue,
     "Sundials" => :Purple,
     "liblsoda" => :Purple,
-    "ProbNumDiffEq" => :Darkgray,
+    "ProbNumDiffEq: EK0" => :Gray30,
+    "ProbNumDiffEq: EK1" => :Gray60,
 )
-tocolor(n) = _COLORS[split(n, ':')[1]];
+tocolor(n) = if split(n, '(')[1] in keys(COLORS)
+    COLORS[split(n, '(')[1]]
+else
+    COLORS[split(n, ':')[1]]
+end
 ```
+
+```
+tocolor (generic function with 1 method)
+```
+
 
 
 ```julia
@@ -90,10 +100,12 @@ _setups = [
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "deSolve: ode45" => Dict(:alg=>deSolveDiffEq.ode45())
   "Sundials: Adams" => Dict(:alg=>Sundials.CVODE_Adams())
-  "ProbNumDiffEq: EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
+  "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK0(8)" => Dict(:alg=>EK0(order=8, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -164,10 +176,12 @@ _setups = [
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "deSolve: ode45" => Dict(:alg=>deSolveDiffEq.ode45())
   "Sundials: Adams" => Dict(:alg=>CVODE_Adams())
-  "ProbNumDiffEq: EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
+  "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK0(8)" => Dict(:alg=>EK0(order=8, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -407,7 +421,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.12.1 `~/.julia/dev/ProbNumDiffEq`
-  [0bca4576] SciMLBase v2.4.2
+  [0bca4576] SciMLBase v2.4.3
   [505e40e9] SciPyDiffEq v0.2.1
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.0
@@ -435,7 +449,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [4fba245c] ArrayInterface v7.4.11
   [30b0a656] ArrayInterfaceCore v0.1.29
   [6e4b80f9] BenchmarkTools v1.3.2
-  [e2ed5e7c] Bijections v0.1.5
+  [e2ed5e7c] Bijections v0.1.6
   [d1d4a3ce] BitFlags v0.1.7
   [62783981] BitTwiddlingConvenienceFunctions v0.1.5
 ⌅ [fa961155] CEnum v0.4.2
@@ -521,7 +535,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [d25df0c9] Inflate v0.1.4
   [842dd82b] InlineStrings v1.4.0
   [18e54dd8] IntegerMathUtils v0.1.2
-  [8197267c] IntervalSets v0.7.7
+  [8197267c] IntervalSets v0.7.8
   [41ab1584] InvertedIndices v1.3.0
   [92d709cd] IrrationalConstants v0.2.2
   [c8e1da08] IterTools v1.8.0
@@ -543,7 +557,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.11.0
+  [7ed4a6bd] LinearSolve v2.11.1
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.165
@@ -564,7 +578,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
-  [8913a72c] NonlinearSolve v2.3.0
+  [8913a72c] NonlinearSolve v2.4.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -617,7 +631,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.5
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.39
-  [0bca4576] SciMLBase v2.4.2
+  [0bca4576] SciMLBase v2.4.3
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.6
   [505e40e9] SciPyDiffEq v0.2.1

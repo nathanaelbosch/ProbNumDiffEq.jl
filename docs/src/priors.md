@@ -1,5 +1,9 @@
 # Priors
 
+**TL;DR: If you're unsure which prior to use, just stick to the default integrated Wiener process prior [`IWP`](@ref)!**
+
+# Background
+
 We model the ODE solution ``y(t)`` with a Gauss--Markov prior.
 More precisely, let
 ```math

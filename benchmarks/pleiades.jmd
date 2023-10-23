@@ -119,6 +119,7 @@ plot(wp, color=[1 1 2 2 3 3 4 4],
 ## Conclusion
 
 - If the problem is a second-order ODE, _implement it as a second-order ODE_!
+- For best runtimes runtimes, use the `EK0`!
 
 
 ## Appendix
