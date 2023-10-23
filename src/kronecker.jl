@@ -1,4 +1,4 @@
-"""
+@doc raw"""
     IsometricKroneckerProduct(left_factor_dim::Int64, right_factor::AbstractMatrix)
 
 Kronecker product of an identity and a generic matrix:

@@ -45,7 +45,7 @@ function initialize_transition_matrices(
     return A, Q, Ah, Qh, P, PI
 end
 function initialize_transition_matrices(
-    fac::CovarianceFactorization,
+    fac::CovarianceStructure,
     p::AbstractODEFilterPrior,
     dt,
 )

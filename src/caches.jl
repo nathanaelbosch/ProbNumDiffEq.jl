@@ -92,8 +92,8 @@ function OrdinaryDiffEq.alg_cache(
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
-    FAC = get_covariance_factorization(alg)
-    if FAC isa KroneckerCovariance && !(f.mass_matrix isa UniformScaling)
+    FAC = get_covariance_structure(alg)
+    if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
         error(
             "The selected algorithm uses an efficient Kronecker-factorized implementation which is incompatible with the provided mass matrix. Try using the `EK1` instead.",
         )

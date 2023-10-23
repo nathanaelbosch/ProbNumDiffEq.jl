@@ -11,7 +11,7 @@ function get_covariance_structure(alg)
         ) &&
         alg.prior isa IWP
     )
-        return IsometrciKroneckerCovariance()
+        return IsometricKroneckerCovariance()
     else
         return DenseCovariance()
     end

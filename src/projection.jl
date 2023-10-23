@@ -23,7 +23,7 @@ function projection(
 end
 
 function projection(
-    ::KroneckerCovariance,
+    ::IsometricKroneckerCovariance,
     d::Integer,
     q::Integer,
     ::Type{elType}=typeof(1.0),
