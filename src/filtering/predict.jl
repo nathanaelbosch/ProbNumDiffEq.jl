@@ -76,12 +76,16 @@ function predict_cov!(
     D = size(Qh, 1)
 
     _matmul!(view(R, 1:D, 1:D), Σ_curr.R, Ah')
-    _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
+    if !isone(diffusion)
+        _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
+    else
+        @.. R[D+1:2D, 1:D] = Qh.R
+    end
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
 
     Q_R = if issuccess(chol)
-        alloc_free_get_U!(chol)
+        chol.U
     else
         triangularize!(R, cachemat=C_DxD)
     end

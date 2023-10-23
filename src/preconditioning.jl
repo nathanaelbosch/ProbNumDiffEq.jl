@@ -1,6 +1,21 @@
-function init_preconditioner(d, q, ::Type{elType}=typeof(1.0)) where {elType}
+function init_preconditioner(
+    FAC::IsometricKroneckerCovariance,
+    d,
+    q,
+    ::Type{elType}=typeof(1.0),
+) where {elType}
     P = IsometricKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
     PI = IsometricKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
+    return P, PI
+end
+function init_preconditioner(
+    FAC::DenseCovariance,
+    d,
+    q,
+    ::Type{elType}=typeof(1.0),
+) where {elType}
+    P = kron(I(d), Diagonal(ones(elType, q + 1)))
+    PI = kron(I(d), Diagonal(ones(elType, q + 1)))
     return P, PI
 end
 
@@ -29,7 +44,7 @@ end
 
 @fastmath @inbounds function make_preconditioner!(P::IsometricKroneckerProduct, h, d, q)
     val = factorial(q) / h^(q + 1 / 2)
-    for j in 0:q
+    @simd ivdep for j in 0:q
         P.B.diag[j+1] = val
         val /= (q - j) / h
     end
@@ -49,13 +64,9 @@ end
 end
 
 @fastmath @inbounds function make_preconditioner_inv!(
-    PI::IsometricKroneckerProduct,
-    h,
-    d,
-    q,
-)
+    PI::IsometricKroneckerProduct, h, d, q)
     val = h^(q + 1 / 2) / factorial(q)
-    for j in 0:q
+    @simd ivdep for j in 0:q
         PI.B.diag[j+1] = val
         val *= (q - j) / h
     end

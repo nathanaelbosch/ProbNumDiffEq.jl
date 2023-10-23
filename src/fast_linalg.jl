@@ -12,9 +12,24 @@ _matmul!(C, A, B)
 # By default use mul!
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
+# Use Octavian.jl's matrix-matrix products whenever applicable
+_matmul!(
+    C::AbstractMatrix{T},
+    A::AbstractMatrix{T},
+    B::AbstractMatrix{T},
+    alpha::Number,
+    beta::Number,
+) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
+_matmul!(
+    C::AbstractMatrix{T},
+    A::AbstractMatrix{T},
+    B::AbstractMatrix{T},
+) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
+# Some exceptions where we'd rather broadcast with FastBroadcast.jl:
+# Matrix-scalar products
 _matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, b::Number) = @.. C = A * b
 _matmul!(C::AbstractVecOrMat, a::Number, B::AbstractVecOrMat) = @.. C = a * B
-# Some special cases
+# Matrix matrix products with diagonal matrices
 _matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (@.. C = A * B.diag')
 _matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (@.. C = A.diag * B)
 _matmul!(C::AbstractMatrix, A::Diagonal, B::Diagonal) = @.. C = A * B
@@ -33,18 +48,6 @@ _matmul!(
     A::Diagonal{T},
     B::Diagonal{T},
 ) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
-_matmul!(
-    C::AbstractVecOrMat{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-    alpha::Number,
-    beta::Number,
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
-_matmul!(
-    C::AbstractVecOrMat{T},
-    A::AbstractVecOrMat{T},
-    B::AbstractVecOrMat{T},
-) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 
 """
     getupperright!(A)

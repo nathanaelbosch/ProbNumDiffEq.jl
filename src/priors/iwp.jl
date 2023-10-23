@@ -67,11 +67,11 @@ with the preconditioners; see `./src/preconditioning.jl`.
 """
 function preconditioned_discretize(iwp::IWP)
     A_breve, Q_breve = preconditioned_discretize_1d(iwp)
-    QR_breve = Q_breve.R |> Matrix
+    QR_breve = Q_breve.R
 
     d = iwp.wiener_process_dimension
-    A = IsometricKroneckerProduct(d, A_breve)
-    QR = IsometricKroneckerProduct(d, QR_breve)
+    A = IsometricKroneckerProduct(d, Matrix(A_breve))
+    QR = IsometricKroneckerProduct(d, Matrix(QR_breve))
     Q = PSDMatrix(QR)
 
     return A, Q
@@ -83,7 +83,7 @@ function discretize_1d(iwp::IWP{elType}, dt::Real) where {elType}
     v = 0:q
 
     f = factorial.(v)
-    A_breve = TriangularToeplitz(dt .^ v ./ f, :U) |> Matrix
+    A_breve = TriangularToeplitz(dt .^ v ./ f, :U)
 
     e = (2 * q + 1 .- v .- v')
     fr = reverse(f)
@@ -106,21 +106,21 @@ function discretize(p::IWP, dt::Real)
 end
 
 function initialize_transition_matrices(
-    ::IsometricKroneckerCovariance,
+    FAC::IsometricKroneckerCovariance,
     p::IWP{T},
     dt,
 ) where {T}
     A, Q = preconditioned_discretize(p)
-    P, PI = initialize_preconditioner(p, dt)
+    P, PI = initialize_preconditioner(FAC, p, dt)
     Ah = PI * A * P
     Qh = PSDMatrix(Q.R * PI)
     return A, Q, Ah, Qh, P, PI
 end
-function initialize_transition_matrices(::DenseCovariance, p::IWP{T}, dt) where {T}
-    A, Q, Ah, Qh, P, PI =
-        initialize_transition_matrices(IsometricKroneckerCovariance(), p, dt)
-    P, PI = Diagonal(P), Diagonal(PI)
-    A, Q, Ah, Qh = Matrix(A), PSDMatrix(Matrix(Q.R)), Matrix(Ah), PSDMatrix(Matrix(Qh.R))
+function initialize_transition_matrices(FAC::DenseCovariance, p::IWP{T}, dt) where {T}
+    A, Q = preconditioned_discretize(p)
+    P, PI = initialize_preconditioner(FAC, p, dt)
+    A, Q = Matrix(A), PSDMatrix(Matrix(Q.R))
+    Ah, Qh = copy(A), copy(Q)
     return A, Q, Ah, Qh, P, PI
 end
 
