@@ -81,7 +81,7 @@ function update!(
         return x_out
     end
 
-    D = length(m_p)
+    D = size(m_p, 1)
 
     # K = P_p * H' / S
     _S = if S isa PSDMatrix
