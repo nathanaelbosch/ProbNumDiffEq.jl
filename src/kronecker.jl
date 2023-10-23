@@ -1,4 +1,4 @@
-mutable struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <: Kronecker.AbstractKroneckerProduct{T}
+struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <: Kronecker.AbstractKroneckerProduct{T}
     ldim::Int64
     B::TB
     function IsometricKroneckerProduct(ldim::Int64, B::AbstractMatrix{T}) where {T}
