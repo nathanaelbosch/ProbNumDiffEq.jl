@@ -35,7 +35,6 @@ Kronecker.getmatrices(K::IKP) = (I(K.ldim), K.B)
 Base.zero(A::IKP) = IsometricKroneckerProduct(A.ldim, zero(A.B))
 Base.one(A::IKP) = IsometricKroneckerProduct(A.ldim, one(A.B))
 
-
 function Base.:*(A::IKP, B::IKP)
     @assert A.ldim == B.ldim
     return IsometricKroneckerProduct(A.ldim, A.B * B.B)
