@@ -163,7 +163,7 @@ function OrdinaryDiffEq.alg_cache(
         copy(measurement)
     else # then `u` has 2d dimensions
         Gaussian(
-            similar(Matrix{uElType}, 2d),
+            similar(Array{uElType}, 2d),
             PSDMatrix(factorized_similar(FAC, uElType, D, 2d; d, q)),
         )
     end
