@@ -1,4 +1,5 @@
 using Weave
+ENV["GKSwstype"]="nul"
 
 FILES = [
     "lotkavolterra.jmd",

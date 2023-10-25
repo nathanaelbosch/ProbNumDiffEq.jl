@@ -205,8 +205,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
 ⌅ [c3fe647b] AbstractAlgebra v0.32.5
   [621f4979] AbstractFFTs v1.5.0
   [1520ce14] AbstractTrees v0.4.4
-  [79e6a3ab] Adapt v3.6.2
+  [79e6a3ab] Adapt v3.7.0
   [ec485272] ArnoldiMethod v0.2.0
+  [c9d4266f] ArrayAllocators v0.3.0
   [4fba245c] ArrayInterface v7.4.11
   [30b0a656] ArrayInterfaceCore v0.1.29
   [6e4b80f9] BenchmarkTools v1.3.2
@@ -318,7 +319,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.11.1
+  [7ed4a6bd] LinearSolve v2.12.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.165
