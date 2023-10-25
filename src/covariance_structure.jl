@@ -21,10 +21,17 @@ factorized_zeros(::IsometricKroneckerCovariance, elType, sizes...; d, q) = begin
     for s in sizes
         @assert s % d == 0
     end
-    return IsometricKroneckerProduct(d, zeros(elType, (s ÷ d for s in sizes)...))
+    return IsometricKroneckerProduct(d, Array{elType}(calloc, (s ÷ d for s in sizes)...))
+end
+factorized_similar(::IsometricKroneckerCovariance, elType, size1, size2; d, q) = begin
+    for s in (size1, size2)
+        @assert s % d == 0
+    end
+    return IsometricKroneckerProduct(d, similar(Matrix{elType}, size1 ÷ d, size2 ÷ d))
 end
 
-factorized_zeros(::DenseCovariance, elType, sizes...; d, q) = zeros(elType, sizes...)
+factorized_zeros(::DenseCovariance, elType, sizes...; d, q) = Array{elType}(calloc, sizes...)
+factorized_similar(::DenseCovariance, elType, size1, size2; d, q) = similar(Matrix{elType}, size1, size2)
 
 to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
 to_factorized_matrix(::IsometricKroneckerCovariance, M::AbstractMatrix) =

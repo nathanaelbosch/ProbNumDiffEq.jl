@@ -119,7 +119,7 @@ function OrdinaryDiffEq.alg_cache(
     prior = if alg.prior isa IWP
         IWP{uElType}(d, alg.prior.num_derivatives)
     elseif alg.prior isa IOUP && ismissing(alg.prior.rate_parameter)
-        r = zeros(uElType, d, d)
+        r = Array{uElType}(calloc, d, d)
         IOUP{uElType}(d, q, r, alg.prior.update_rate_parameter)
     elseif alg.prior isa IOUP
         IOUP{uElType}(d, q, alg.prior.rate_parameter, alg.prior.update_rate_parameter)
@@ -135,7 +135,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Initial State
     initial_variance = ones(uElType, q + 1)
-    μ0 = zeros(uElType, D)
+    μ0 = Array{uElType}(calloc, D)
     Σ0 = PSDMatrix(
         to_factorized_matrix(
             FAC,
@@ -150,35 +150,35 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     # Measurement model related things
-    R = zeros(uElType, d, d)
-    H = factorized_zeros(FAC, uElType, d, D; d, q)
-    v = zeros(uElType, d)
+    R = similar(Array{uElType}, d, d)
+    H = factorized_similar(FAC, uElType, d, D; d, q)
+    v = similar(Array{uElType}, d)
     S = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
     measurement = Gaussian(v, S)
 
     # Caches
     du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
-    ddu = zeros(uElType, length(u), length(u))
+    ddu = similar(Matrix{uElType}, length(u), length(u))
     pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
         copy(measurement)
     else # then `u` has 2d dimensions
-        Gaussian(zeros(uElType, 2d), PSDMatrix(factorized_zeros(FAC, uElType, D, 2d; d, q)))
+        Gaussian(similar(Matrix{uElType}, 2d), PSDMatrix(factorized_similar(FAC, uElType, D, 2d; d, q)))
     end
-    K = zeros(uElType, D, d)
-    G = zeros(uElType, D, D)
-    Smat = factorized_zeros(FAC, uElType, d, d; d, q)
+    K = similar(Matrix{uElType}, D, d)
+    G = similar(Matrix{uElType}, D, D)
+    Smat = factorized_similar(FAC, uElType, d, d; d, q)
 
-    C_dxd = zeros(uElType, d, d)
-    C_dxD = zeros(uElType, d, D)
-    C_Dxd = zeros(uElType, D, d)
-    C_DxD = zeros(uElType, D, D)
-    C_2DxD = zeros(uElType, 2D, D)
-    C_3DxD = zeros(uElType, 3D, D)
+    C_dxd = similar(Matrix{uElType}, d, d)
+    C_dxD = similar(Matrix{uElType}, d, D)
+    C_Dxd = similar(Matrix{uElType}, D, d)
+    C_DxD = similar(Matrix{uElType}, D, D)
+    C_2DxD = similar(Matrix{uElType}, 2D, D)
+    C_3DxD = similar(Matrix{uElType}, 3D, D)
 
     backward_kernel = AffineNormalKernel(
-        factorized_zeros(FAC, uElType, D, D; d, q),
-        zeros(uElType, D),
-        PSDMatrix(factorized_zeros(FAC, uElType, 2D, D; d, q)),
+        factorized_similar(FAC, uElType, D, D; d, q),
+        similar(Vector{uElType}, D),
+        PSDMatrix(factorized_similar(FAC, uElType, 2D, D; d, q)),
     )
 
     u_pred = copy(u)

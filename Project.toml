@@ -4,6 +4,7 @@ authors = ["Nathanael Bosch"]
 version = "0.12.1"
 
 [deps]
+ArrayAllocators = "c9d4266f-a5cb-439d-837c-c97b191379f5"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
 ExponentialUtilities = "d4d017d3-3776-5f7e-afef-a10c40355c18"
