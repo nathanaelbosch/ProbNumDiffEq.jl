@@ -71,14 +71,14 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     e = m_tmp.μ
     _S = _matmul!(Smat, S.R', S.R)
     e .= v
-    if _S isa IsometricKroneckerProduct
+    diffusion_t = if _S isa IsometricKroneckerProduct
         @assert length(_S.B) == 1
-        ldiv!(_S.B[1], e)
+        dot(v, e) / d / _S.B[1]
     else
         S_chol = cholesky!(_S)
         ldiv!(S_chol, e)
+        dot(v, e) / d
     end
-    diffusion_t = dot(v, e) / d
 
     if integ.success_iter == 0
         # @assert length(sol_diffusions) == 0
@@ -165,14 +165,15 @@ function local_scalar_diffusion(cache)
     fast_X_A_Xt!(HQH, Qh, H)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     e .= z
+    σ² =
     if HQHmat isa IsometricKroneckerProduct
         @assert length(HQHmat.B) == 1
-        ldiv!(HQHmat.B[1], e)
+        dot(z, e) / d / HQHmat.B[1]
     else
         C = cholesky!(HQHmat)
         ldiv!(C, e)
+        dot(z, e) / d
     end
-    σ² = dot(z, e) / d
     return σ²
 end
 
