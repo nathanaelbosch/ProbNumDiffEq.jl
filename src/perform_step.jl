@@ -145,7 +145,7 @@ as in OrdinaryDiffEq.jl.
 function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ
     @unpack du, ddu, measurement, R, H = integ.cache
-    @assert iszero(R)
+    # @assert iszero(R)
 
     z = integ.cache.measurement
     z_tmp = integ.cache.m_tmp
