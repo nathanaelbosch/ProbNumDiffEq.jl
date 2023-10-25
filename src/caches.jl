@@ -135,7 +135,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Initial State
     initial_variance = ones(uElType, q + 1)
-    μ0 = Array{uElType}(calloc, D)
+    μ0 = uElType <: LinearAlgebra.BlasFloat ? Array{uElType}(calloc, D) : zeros(uElType, D)
     Σ0 = PSDMatrix(
         to_factorized_matrix(
             FAC,
