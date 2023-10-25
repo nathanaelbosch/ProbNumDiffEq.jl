@@ -165,8 +165,7 @@ function local_scalar_diffusion(cache)
     fast_X_A_Xt!(HQH, Qh, H)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
     e .= z
-    σ² =
-    if HQHmat isa IsometricKroneckerProduct
+    σ² = if HQHmat isa IsometricKroneckerProduct
         @assert length(HQHmat.B) == 1
         dot(z, e) / d / HQHmat.B[1]
     else

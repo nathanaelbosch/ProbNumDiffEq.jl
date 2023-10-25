@@ -30,8 +30,10 @@ factorized_similar(::IsometricKroneckerCovariance, elType, size1, size2; d, q) =
     return IsometricKroneckerProduct(d, similar(Matrix{elType}, size1 ÷ d, size2 ÷ d))
 end
 
-factorized_zeros(::DenseCovariance, elType, sizes...; d, q) = Array{elType}(calloc, sizes...)
-factorized_similar(::DenseCovariance, elType, size1, size2; d, q) = similar(Matrix{elType}, size1, size2)
+factorized_zeros(::DenseCovariance, elType, sizes...; d, q) =
+    Array{elType}(calloc, sizes...)
+factorized_similar(::DenseCovariance, elType, size1, size2; d, q) =
+    similar(Matrix{elType}, size1, size2)
 
 to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
 to_factorized_matrix(::IsometricKroneckerCovariance, M::AbstractMatrix) =

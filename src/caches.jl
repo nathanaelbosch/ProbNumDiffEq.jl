@@ -162,7 +162,10 @@ function OrdinaryDiffEq.alg_cache(
     pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
         copy(measurement)
     else # then `u` has 2d dimensions
-        Gaussian(similar(Matrix{uElType}, 2d), PSDMatrix(factorized_similar(FAC, uElType, D, 2d; d, q)))
+        Gaussian(
+            similar(Matrix{uElType}, 2d),
+            PSDMatrix(factorized_similar(FAC, uElType, D, 2d; d, q)),
+        )
     end
     K = similar(Matrix{uElType}, D, d)
     G = similar(Matrix{uElType}, D, D)
