@@ -53,12 +53,18 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
     end
 
     @testset "Low-order exact init via ClassiSolverInit: `initial_update!`" begin
-        _q = 2
+        @test_nowarn init(prob, EK0(order=1, initialization=ClassicSolverInit(init_on_ddu=true)))
+        @test_nowarn init(prob, EK0(order=2, initialization=ClassicSolverInit(init_on_ddu=false)))
+        @test_broken init(prob, EK0(order=2, initialization=ClassicSolverInit(init_on_ddu=true)))
+
+        @test_nowarn init(prob, EK1(order=1, initialization=ClassicSolverInit(init_on_ddu=true)))
+        @test_nowarn init(prob, EK1(order=2, initialization=ClassicSolverInit(init_on_ddu=true)))
         integ =
-            init(prob, EK0(order=_q, initialization=ClassicSolverInit(init_on_ddu=true)))
+            init(prob, EK1(order=2, initialization=ClassicSolverInit(init_on_ddu=true)))
         ProbNumDiffEq.initial_update!(integ, integ.cache, integ.alg.initialization)
         x = integ.cache.x
-        @test reshape(x.μ, :, 2)'[:] ≈ true_init_states[1:(_q+1)*d]
+        @test reshape(x.μ, :, 2)'[:] ≈ true_init_states[1:(2+1)*d]
+
     end
 end
 
@@ -71,8 +77,7 @@ end
     Proj1 = integ1.cache.Proj
 
     @testset "Order $o" for o in (1, 2, 3, 4, 5)
-        integ2 =
-            init(prob, EK0(order=o, initialization=ClassicSolverInit(init_on_ddu=true)))
+        integ2 = init(prob, EK1(order=o, initialization=ClassicSolverInit(init_on_ddu=true)))
         rk_init = integ2.cache.x.μ
         Proj2 = integ2.cache.Proj
 
