@@ -52,8 +52,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:9)
-reltols = 1.0 ./ 10.0 .^ (1:6)
+abstols = 1.0 ./ 10.0 .^ (4:8)
+reltols = 1.0 ./ 10.0 .^ (1:5)
 
 wp = WorkPrecisionSet(
     mmprob, abstols, reltols, setups;

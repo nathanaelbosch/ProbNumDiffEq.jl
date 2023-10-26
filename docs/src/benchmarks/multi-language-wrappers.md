@@ -252,7 +252,6 @@ _setups = [
   "Sundials: CVODE" => Dict(:alg=>CVODE_BDF())
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -284,12 +283,7 @@ plot(
 )
 ```
 
-```
-Error: PosDefException: matrix is not positive definite; Cholesky factoriza
-tion failed.
-```
-
-
+![](figures/multi-language-wrappers_11_1.svg)
 
 
 
@@ -338,7 +332,6 @@ _setups = [
   "ProbNumDiffEq: EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
