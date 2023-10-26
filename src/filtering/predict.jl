@@ -108,8 +108,8 @@ function predict_cov!(
     _Ah = Ah.B
     _Qh = PSDMatrix(Qh.R.B)
     _D = size(_Qh, 1)
-    _C_DxD = view(C_DxD, 1:_D, 1:_D)
-    _C_2DxD = view(C_2DxD, 1:2*_D, 1:_D)
+    _C_DxD = C_DxD.B
+    _C_2DxD = C_2DxD.B
     _diffusion = diffusion isa IsometricKroneckerProduct ? diffusion.B : diffusion
 
     predict_cov!(

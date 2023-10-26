@@ -134,10 +134,10 @@ function update!(
     o = measurement_dim = size(_measurement.Σ, 1)
     _H = H.B
     _D = length(x_out.μ) ÷ d
-    _K1_cache = view(K1_cache, 1:_D, 1:o)
-    _K2_cache = view(K2_cache, 1:_D, 1:o)
-    _M_cache = view(M_cache, 1:_D, 1:_D)
-    _C_dxd = view(C_dxd, 1:o, 1:o)
+    _K1_cache = K1_cache.B
+    _K2_cache = K2_cache.B
+    _M_cache = M_cache.B
+    _C_dxd = C_dxd.B
     return update!(
         _x_out,
         _x_pred,

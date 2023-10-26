@@ -118,8 +118,8 @@ function marginalize_cov!(
     _Σ_curr = PSDMatrix(Σ_curr.R.B)
     _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
     _D = size(_Σ_out, 1)
-    _C_DxD = view(C_DxD, 1:_D, 1:_D)
-    _C_3DxD = view(C_3DxD, 1:3*_D, 1:_D)
+    _C_DxD = C_DxD.B
+    _C_3DxD = C_3DxD.B
     return marginalize_cov!(_Σ_out, _Σ_curr, _K; C_DxD=_C_DxD, C_3DxD=_C_3DxD)
 end
 
@@ -234,7 +234,7 @@ function compute_backward_kernel!(
     _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))
     _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, Q, d), PSDMatrix(K.C.R.B))
     _D = size(_Kout.A, 1)
-    _C_DxD = view(C_DxD, 1:_D, 1:_D)
+    _C_DxD = C_DxD.B
     return compute_backward_kernel!(
         _Kout,
         _x_pred,

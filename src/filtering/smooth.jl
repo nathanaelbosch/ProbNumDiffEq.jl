@@ -138,10 +138,10 @@ function smooth!(
     _Qh = PSDMatrix(Qh.R.B)
     _D = size(_Qh, 1)
     _cache = (
-        G1=view(cache.G1, 1:_D, 1:_D),
-        C_DxD=view(cache.C_DxD, 1:_D, 1:_D),
-        C_2DxD=view(cache.C_2DxD, 1:2*_D, 1:_D),
-        C_3DxD=view(cache.C_3DxD, 1:3*_D, 1:_D),
+        G1=cache.G1.B,
+        C_DxD=cache.C_DxD.B,
+        C_2DxD=cache.C_2DxD.B,
+        C_3DxD=cache.C_3DxD.B,
         x_pred=Gaussian(
             reshape_no_alloc(cache.x_pred.μ, Q, d),
             PSDMatrix(cache.x_pred.Σ.R.B),

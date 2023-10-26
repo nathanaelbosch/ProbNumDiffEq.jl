@@ -102,7 +102,7 @@ function OrdinaryDiffEq.alg_cache(
     uType = typeof(u)
     # uElType = eltype(u_vec)
     uElType = uBottomEltypeNoUnits
-    matType = Matrix{uElType}
+    matType = typeof(factorized_similar(FAC, uElType, d, d; d, q))
 
     # Projections
     Proj = projection(FAC, d, q, uElType)
@@ -150,7 +150,7 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     # Measurement model related things
-    R = similar(Array{uElType}, d, d)
+    R = factorized_similar(FAC, uElType, d, d; d, q)
     H = factorized_similar(FAC, uElType, d, D; d, q)
     v = similar(Array{uElType}, d)
     S = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
@@ -158,7 +158,7 @@ function OrdinaryDiffEq.alg_cache(
 
     # Caches
     du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
-    ddu = similar(Matrix{uElType}, length(u), length(u))
+    ddu = factorized_similar(FAC, uElType, length(u), length(u); d, q)
     pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
         copy(measurement)
     else # then `u` has 2d dimensions
@@ -167,16 +167,16 @@ function OrdinaryDiffEq.alg_cache(
             PSDMatrix(factorized_similar(FAC, uElType, D, 2d; d, q)),
         )
     end
-    K = similar(Matrix{uElType}, D, d)
-    G = similar(Matrix{uElType}, D, D)
+    K = factorized_similar(FAC, uElType, D, d; d, q)
+    G = factorized_similar(FAC, uElType, D, D; d, q)
     Smat = factorized_similar(FAC, uElType, d, d; d, q)
 
-    C_dxd = similar(Matrix{uElType}, d, d)
-    C_dxD = similar(Matrix{uElType}, d, D)
-    C_Dxd = similar(Matrix{uElType}, D, d)
-    C_DxD = similar(Matrix{uElType}, D, D)
-    C_2DxD = similar(Matrix{uElType}, 2D, D)
-    C_3DxD = similar(Matrix{uElType}, 3D, D)
+    C_dxd = factorized_similar(FAC, uElType, d, d; d, q)
+    C_dxD = factorized_similar(FAC, uElType, d, D; d, q)
+    C_Dxd = factorized_similar(FAC, uElType, D, d; d, q)
+    C_DxD = factorized_similar(FAC, uElType, D, D; d, q)
+    C_2DxD = factorized_similar(FAC, uElType, 2D, D; d, q)
+    C_3DxD = factorized_similar(FAC, uElType, 3D, D; d, q)
 
     backward_kernel = AffineNormalKernel(
         factorized_similar(FAC, uElType, D, D; d, q),
