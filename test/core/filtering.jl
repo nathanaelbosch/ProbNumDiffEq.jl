@@ -326,16 +326,16 @@ end
             x_next_psd = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
             cache = if !KRONECKER
                 (x_pred=copy(x_curr_psd),
-                 G1=zeros(_d, _d),
-                 C_DxD=zeros(_d, _d),
-                 C_2DxD=zeros(2_d, _d),
-                 C_3DxD=zeros(3_d, _d))
+                    G1=zeros(_d, _d),
+                    C_DxD=zeros(_d, _d),
+                    C_2DxD=zeros(2_d, _d),
+                    C_3DxD=zeros(3_d, _d))
             else
                 (x_pred=copy(x_curr_psd),
-                 G1=IsometricKroneckerProduct(K, zeros(_d, _d)),
-                 C_DxD=IsometricKroneckerProduct(K, zeros(_d, _d)),
-                 C_2DxD=IsometricKroneckerProduct(K, zeros(2_d, _d)),
-                 C_3DxD=IsometricKroneckerProduct(K, zeros(3_d, _d)))
+                    G1=IsometricKroneckerProduct(K, zeros(_d, _d)),
+                    C_DxD=IsometricKroneckerProduct(K, zeros(_d, _d)),
+                    C_2DxD=IsometricKroneckerProduct(K, zeros(2_d, _d)),
+                    C_3DxD=IsometricKroneckerProduct(K, zeros(3_d, _d)))
             end
             ProbNumDiffEq.smooth!(
                 x_curr_psd,
