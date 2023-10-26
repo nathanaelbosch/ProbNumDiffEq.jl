@@ -246,7 +246,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.133.1
+  [2b5f629d] DiffEqBase v6.134.0
   [459566f4] DiffEqCallbacks v2.33.1
   [f3b72e0c] DiffEqDevTools v2.39.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
@@ -319,7 +319,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.12.0
+  [7ed4a6bd] LinearSolve v2.12.1
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.165
@@ -458,7 +458,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [1b915085] WinReg v1.0.0
   [ddb6d928] YAML v0.4.9
   [c2297ded] ZMQ v1.2.2
-  [700de1a5] ZygoteRules v0.2.3
+  [700de1a5] ZygoteRules v0.2.4
   [0518478a] deSolveDiffEq v0.1.1
   [6e34b625] Bzip2_jll v1.0.8+0
   [83423d85] Cairo_jll v1.16.1+1
