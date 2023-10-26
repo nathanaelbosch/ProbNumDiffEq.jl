@@ -102,7 +102,6 @@ _setups = [
   "Sundials: Adams" => Dict(:alg=>Sundials.CVODE_Adams())
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK0(8)" => Dict(:alg=>EK0(order=8, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
   "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
@@ -178,7 +177,6 @@ _setups = [
   "Sundials: Adams" => Dict(:alg=>CVODE_Adams())
   "ProbNumDiffEq: EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
-  "ProbNumDiffEq: EK0(8)" => Dict(:alg=>EK0(order=8, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
   "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
@@ -252,9 +250,9 @@ _setups = [
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
   "deSolve: lsoda" => Dict(:alg=>deSolveDiffEq.lsoda())
   "Sundials: CVODE" => Dict(:alg=>CVODE_BDF())
-  "ProbNumDiffEq: EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -286,7 +284,12 @@ plot(
 )
 ```
 
-![](figures/multi-language-wrappers_11_1.svg)
+```
+Error: PosDefException: matrix is not positive definite; Cholesky factoriza
+tion failed.
+```
+
+
 
 
 
@@ -335,6 +338,7 @@ _setups = [
   "ProbNumDiffEq: EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "ProbNumDiffEq: EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "ProbNumDiffEq: EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "ProbNumDiffEq: EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)

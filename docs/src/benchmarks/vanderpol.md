@@ -111,8 +111,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (6:13)
-reltols = 1.0 ./ 10.0 .^ (3:10)
+abstols = 1.0 ./ 10.0 .^ (6:12)
+reltols = 1.0 ./ 10.0 .^ (3:9)
 
 wp = WorkPrecisionSet(
     [prob, prob2], abstols, reltols, setups;

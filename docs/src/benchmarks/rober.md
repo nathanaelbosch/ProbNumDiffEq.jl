@@ -53,7 +53,7 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 2:5
+  for order in 2:4
 ]
 
 labels = first.(_setups)
