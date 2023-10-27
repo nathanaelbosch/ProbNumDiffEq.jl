@@ -49,6 +49,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Convergence" begin
                 include("convergence.jl")
             end
+            @timedsafetestset "Complexity" begin
+                include("complexity.jl")
+            end
             @timedsafetestset "Stiff Problem" begin
                 include("stiff_problem.jl")
             end
