@@ -1,8 +1,14 @@
-abstract type CovarianceStructure end
-struct IsometricKroneckerCovariance <: CovarianceStructure end
-struct DenseCovariance <: CovarianceStructure end
+abstract type CovarianceStructure{T} end
+struct IsometricKroneckerCovariance{T} <: CovarianceStructure{T}
+    d::Int64
+    q::Int64
+end
+struct DenseCovariance{T} <: CovarianceStructure{T}
+    d::Int64
+    q::Int64
+end
 
-function get_covariance_structure(alg)
+function get_covariance_structure(alg; elType, d, q)
     if (
         alg isa EK0 &&
         !(
@@ -11,29 +17,29 @@ function get_covariance_structure(alg)
         ) &&
         alg.prior isa IWP
     )
-        return IsometricKroneckerCovariance()
+        return IsometricKroneckerCovariance{elType}(d, q)
     else
-        return DenseCovariance()
+        return DenseCovariance{elType}(d, q)
     end
 end
 
-factorized_zeros(::IsometricKroneckerCovariance, elType, sizes...; d, q) = begin
+factorized_zeros(C::IsometricKroneckerCovariance{T}, sizes...) where {T} = begin
     for s in sizes
-        @assert s % d == 0
+        @assert s % C.d == 0
     end
-    return IsometricKroneckerProduct(d, Array{elType}(calloc, (s ÷ d for s in sizes)...))
+    return IsometricKroneckerProduct(C.d, Array{T}(calloc, (s ÷ C.d for s in sizes)...))
 end
-factorized_similar(::IsometricKroneckerCovariance, elType, size1, size2; d, q) = begin
+factorized_similar(C::IsometricKroneckerCovariance{T}, size1, size2) where {T} = begin
     for s in (size1, size2)
-        @assert s % d == 0
+        @assert s % C.d == 0
     end
-    return IsometricKroneckerProduct(d, similar(Matrix{elType}, size1 ÷ d, size2 ÷ d))
+    return IsometricKroneckerProduct(C.d, similar(Matrix{T}, size1 ÷ C.d, size2 ÷ C.d))
 end
 
-factorized_zeros(::DenseCovariance, elType, sizes...; d, q) =
-    Array{elType}(calloc, sizes...)
-factorized_similar(::DenseCovariance, elType, size1, size2; d, q) =
-    similar(Matrix{elType}, size1, size2)
+factorized_zeros(::DenseCovariance{T}, sizes...) where {T} =
+    Array{T}(calloc, sizes...)
+factorized_similar(::DenseCovariance{T}, size1, size2) where {T} =
+    similar(Matrix{T}, size1, size2)
 
 to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
 to_factorized_matrix(::IsometricKroneckerCovariance, M::AbstractMatrix) =

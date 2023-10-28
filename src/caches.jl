@@ -92,17 +92,18 @@ function OrdinaryDiffEq.alg_cache(
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
-    FAC = get_covariance_structure(alg)
+    uType = typeof(u)
+    # uElType = eltype(u_vec)
+    uElType = uBottomEltypeNoUnits
+
+    FAC = get_covariance_structure(alg; elType=uElType, d, q)
     if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
         error(
             "The selected algorithm uses an efficient Kronecker-factorized implementation which is incompatible with the provided mass matrix. Try using the `EK1` instead.",
         )
     end
 
-    uType = typeof(u)
-    # uElType = eltype(u_vec)
-    uElType = uBottomEltypeNoUnits
-    matType = typeof(factorized_similar(FAC, uElType, d, d; d, q))
+    matType = typeof(factorized_similar(FAC, d, d))
 
     # Projections
     Proj = projection(FAC, d, q, uElType)
@@ -150,38 +151,38 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     # Measurement model related things
-    R = factorized_similar(FAC, uElType, d, d; d, q)
-    H = factorized_similar(FAC, uElType, d, D; d, q)
+    R = factorized_similar(FAC, d, d)
+    H = factorized_similar(FAC, d, D)
     v = similar(Array{uElType}, d)
-    S = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
+    S = PSDMatrix(factorized_zeros(FAC, D, d))
     measurement = Gaussian(v, S)
 
     # Caches
     du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
-    ddu = factorized_similar(FAC, uElType, length(u), length(u); d, q)
+    ddu = factorized_similar(FAC, length(u), length(u))
     pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
         copy(measurement)
     else # then `u` has 2d dimensions
         Gaussian(
             similar(Array{uElType}, 2d),
-            PSDMatrix(factorized_similar(FAC, uElType, D, 2d; d, q)),
+            PSDMatrix(factorized_similar(FAC, D, 2d)),
         )
     end
-    K = factorized_similar(FAC, uElType, D, d; d, q)
-    G = factorized_similar(FAC, uElType, D, D; d, q)
-    Smat = factorized_similar(FAC, uElType, d, d; d, q)
+    K = factorized_similar(FAC, D, d)
+    G = factorized_similar(FAC, D, D)
+    Smat = factorized_similar(FAC, d, d)
 
-    C_dxd = factorized_similar(FAC, uElType, d, d; d, q)
-    C_dxD = factorized_similar(FAC, uElType, d, D; d, q)
-    C_Dxd = factorized_similar(FAC, uElType, D, d; d, q)
-    C_DxD = factorized_similar(FAC, uElType, D, D; d, q)
-    C_2DxD = factorized_similar(FAC, uElType, 2D, D; d, q)
-    C_3DxD = factorized_similar(FAC, uElType, 3D, D; d, q)
+    C_dxd = factorized_similar(FAC, d, d)
+    C_dxD = factorized_similar(FAC, d, D)
+    C_Dxd = factorized_similar(FAC, D, d)
+    C_DxD = factorized_similar(FAC, D, D)
+    C_2DxD = factorized_similar(FAC, 2D, D)
+    C_3DxD = factorized_similar(FAC, 3D, D)
 
     backward_kernel = AffineNormalKernel(
-        factorized_similar(FAC, uElType, D, D; d, q),
+        factorized_similar(FAC, D, D),
         similar(Vector{uElType}, D),
-        PSDMatrix(factorized_similar(FAC, uElType, 2D, D; d, q)),
+        PSDMatrix(factorized_similar(FAC, 2D, D)),
     )
 
     u_pred = copy(u)

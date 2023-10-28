@@ -32,7 +32,6 @@ import ProbNumDiffEq as PNDE
 
     _fstr(F) = F ? "Kronecker" : "None"
     @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
-        FAC = KRONECKER ? PNDE.IsometricKroneckerCovariance() : PNDE.DenseCovariance()
         if KRONECKER
             K = 2
             m = kron(ones(K), m)

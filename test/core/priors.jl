@@ -119,8 +119,8 @@ end
             Qh::Any
         end
 
-        A, Q, Ah, Qh, P, PI =
-            PNDE.initialize_transition_matrices(PNDE.DenseCovariance(), prior, h)
+        A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
+            PNDE.DenseCovariance{Float64}(d, q), prior, h)
         @test AH_22_PRE ≈ A
         @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, σ^2))
 

@@ -94,8 +94,8 @@ function DiffEqBase.build_solution(
     D = d * (q + 1)
 
     FAC = cache.covariance_factorization
-    pu_cov = PSDMatrix(factorized_zeros(FAC, uElType, D, d; d, q))
-    x_cov = PSDMatrix(factorized_zeros(FAC, uElType, D, D; d, q))
+    pu_cov = PSDMatrix(factorized_zeros(FAC, D, d))
+    x_cov = PSDMatrix(factorized_zeros(FAC, D, D))
     pu = StructArray{Gaussian{Vector{uElType},typeof(pu_cov)}}(undef, 0)
     x_filt = StructArray{Gaussian{Vector{uElType},typeof(x_cov)}}(undef, 0)
     x_smooth = copy(x_filt)

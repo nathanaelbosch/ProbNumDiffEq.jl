@@ -23,7 +23,7 @@ prob = remake(prob, tspan=(0.0, 10.0))
 
     # First test that they're both equivalent
     D = d * (q + 1)
-    P, PI = PNDE.init_preconditioner(PNDE.DenseCovariance(), d, q)
+    P, PI = PNDE.init_preconditioner(PNDE.DenseCovariance{Float64}(d, q), d, q)
     PNDE.make_preconditioner!(P, h, d, q)
     PNDE.make_preconditioner_inv!(PI, h, d, q)
     @test Ah_p ≈ P * Ah * PI
