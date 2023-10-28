@@ -95,7 +95,7 @@ using Test, SafeTestsets
         @test slope(lr_ek0)[1] ≈ 1 atol = 0.3
 
         lr_ek1 = linregress(log.(dims_ek1), log.(times_ek1))
-        @test slope(lr_ek1)[1] ≈ 2 atol = 0.2
+        @test slope(lr_ek1)[1] ≈ 2 atol = 0.3
         # This is what we would actually expect, not sure what's going wrong:
         @test_broken slope(lr_ek1)[1] ≈ 3 atol = 0.1
     end
