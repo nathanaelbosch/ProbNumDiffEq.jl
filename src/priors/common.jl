@@ -1,12 +1,13 @@
 abstract type AbstractODEFilterPrior{elType} end
 
 function initialize_preconditioner(
-    FAC::CovarianceStructure,
+    FAC::CovarianceStructure{T1},
     p::AbstractODEFilterPrior{T},
     dt,
-) where {T}
+) where {T,T1}
+    @assert T == T1
     d, q = p.wiener_process_dimension, p.num_derivatives
-    P, PI = init_preconditioner(FAC, d, q, T)
+    P, PI = init_preconditioner(FAC)
     make_preconditioner!(P, dt, d, q)
     make_preconditioner_inv!(PI, dt, d, q)
     return P, PI

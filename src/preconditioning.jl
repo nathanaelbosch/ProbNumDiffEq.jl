@@ -1,21 +1,11 @@
-function init_preconditioner(
-    FAC::IsometricKroneckerCovariance,
-    d,
-    q,
-    ::Type{elType}=typeof(1.0),
-) where {elType}
-    P = IsometricKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
-    PI = IsometricKroneckerProduct(d, Diagonal(ones(elType, q + 1)))
+function init_preconditioner(C::IsometricKroneckerCovariance{elType}) where {elType}
+    P = IsometricKroneckerProduct(C.d, Diagonal(ones(elType, C.q + 1)))
+    PI = IsometricKroneckerProduct(C.d, Diagonal(ones(elType, C.q + 1)))
     return P, PI
 end
-function init_preconditioner(
-    FAC::DenseCovariance,
-    d,
-    q,
-    ::Type{elType}=typeof(1.0),
-) where {elType}
-    P = kron(I(d), Diagonal(ones(elType, q + 1)))
-    PI = kron(I(d), Diagonal(ones(elType, q + 1)))
+function init_preconditioner(C::DenseCovariance{elType}) where {elType}
+    P = kron(I(C.d), Diagonal(ones(elType, C.q + 1)))
+    PI = kron(I(C.d), Diagonal(ones(elType, C.q + 1)))
     return P, PI
 end
 

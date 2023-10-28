@@ -13,27 +13,17 @@ function projection(
     end
     return Proj
 end
-function projection(
-    ::DenseCovariance,
-    d::Integer,
-    q::Integer,
-    ::Type{elType}=typeof(1.0),
-) where {elType}
-    projection(d, q, elType)
+function projection(C::DenseCovariance{elType}) where {elType}
+    projection(C.d, C.q, elType)
 end
 
-function projection(
-    ::IsometricKroneckerCovariance,
-    d::Integer,
-    q::Integer,
-    ::Type{elType}=typeof(1.0),
-) where {elType}
+function projection(C::IsometricKroneckerCovariance{elType}) where {elType}
     Proj(deriv) = begin
-        e_i = zeros(elType, q + 1, 1)
-        if deriv <= q
+        e_i = zeros(elType, C.q + 1, 1)
+        if deriv <= C.q
             e_i[deriv+1] = 1
         end
-        return IsometricKroneckerProduct(d, e_i')
+        return IsometricKroneckerProduct(C.d, e_i')
     end
     return Proj
 end
