@@ -86,6 +86,12 @@ q = 2
     @test PNDE._matmul!(K3, K1, K2) ≈ PNDE._matmul!(M3, M1, M2)
     @test PNDE._matmul!(K3, K1, K2, α, β) ≈ PNDE._matmul!(M3, M1, M2, α, β)
 
+    # DimensionMismatch
+    @test_throws DimensionMismatch mul!(X, K1, K2)
+    @test_throws DimensionMismatch mul!(X, K1, K2, α, β)
+    @test_throws DimensionMismatch PNDE._matmul!(X, K1, K2)
+    @test_throws DimensionMismatch PNDE._matmul!(X, K1, K2, α, β)
+
     # Kronecker-trick
     v = rand(T, d * (q + 1))
     A = rand(T, d * (q + 1), d * (q + 1))
@@ -96,8 +102,27 @@ q = 2
     @test mul!(copy(v), K1, v, α, β) ≈ mul!(copy(v), M1, v, α, β)
     @test mul!(copy(A), K1, A, α, β) ≈ mul!(copy(A), M1, A, α, β)
 
+    @test mul!(copy(A'), copy(A'), K1') ≈ mul!(copy(A'), A', M1')
+    @test mul!(copy(A'), copy(A'), K1', α, β) ≈ mul!(copy(A'), A', M1', α, β)
+
     @test PNDE._matmul!(copy(v), K1, v) ≈ PNDE._matmul!(copy(v), M1, v)
     @test PNDE._matmul!(copy(A), K1, A) ≈ PNDE._matmul!(copy(A), M1, A)
     @test PNDE._matmul!(copy(v), K1, v, α, β) ≈ PNDE._matmul!(copy(v), M1, v, α, β)
     @test PNDE._matmul!(copy(A), K1, A, α, β) ≈ PNDE._matmul!(copy(A), M1, A, α, β)
+
+    if T == Float64
+        # Octavian has issues
+        @test_broken PNDE._matmul!(copy(A'), copy(A'), K1') ≈
+                     PNDE._matmul!(copy(A'), A', M1')
+        @test_broken PNDE._matmul!(copy(A'), copy(A'), K1', α, β) ≈
+                     PNDE._matmul!(copy(A'), A', M1', α, β)
+    else
+        # Uses LinearAlgebra
+        @test PNDE._matmul!(copy(A'), copy(A'), K1') ≈ PNDE._matmul!(copy(A'), A', M1')
+        @test PNDE._matmul!(copy(A'), copy(A'), K1', α, β) ≈
+              PNDE._matmul!(copy(A'), A', M1', α, β)
+    end
+    # But it always works if all matrices are actual adjoints
+    @test PNDE._matmul!(copy(A)', A', K1') ≈ PNDE._matmul!(copy(A'), A', M1')
+    @test PNDE._matmul!(copy(A)', A', K1', α, β) ≈ PNDE._matmul!(copy(A'), A', M1', α, β)
 end
