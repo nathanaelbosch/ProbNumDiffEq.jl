@@ -97,19 +97,19 @@ function fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
     return out
 end
 
-"""
-    alloc_free_get_U!(C::Cholesky)
+# """
+#     alloc_free_get_U!(C::Cholesky)
 
-Allocation-free version of `C.U`.
+# Allocation-free version of `C.U`.
 
-THIS MODIFIES `C.factors` SO AFTERWARDS `C` SHOULD NOT BE USED ANYMORE!
-"""
-function alloc_free_get_U!(C::Cholesky)
-    Cuplo = getfield(C, :uplo)
-    Cfactors = getfield(C, :factors)
-    if Cuplo === LinearAlgebra.char_uplo(:U)
-        return getupperright!(Cfactors)
-    else
-        return getupperright!(Cfactors')
-    end
-end
+# THIS MODIFIES `C.factors` SO AFTERWARDS `C` SHOULD NOT BE USED ANYMORE!
+# """
+# function alloc_free_get_U!(C::Cholesky)
+#     Cuplo = getfield(C, :uplo)
+#     Cfactors = getfield(C, :factors)
+#     if Cuplo === LinearAlgebra.char_uplo(:U)
+#         return getupperright!(Cfactors)
+#     else
+#         return getupperright!(Cfactors')
+#     end
+# end

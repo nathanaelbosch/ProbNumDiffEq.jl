@@ -38,6 +38,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Smoothing" begin
                 include("smoothing.jl")
             end
+            @timedsafetestset "IsometricKroneckerProduct" begin
+                include("core/kronecker.jl")
+            end
         end
     end
 
