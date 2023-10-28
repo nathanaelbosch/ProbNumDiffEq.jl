@@ -99,26 +99,17 @@ function predict_cov!(
     Σ_curr::PSDMatrix{T,<:IsometricKroneckerProduct},
     Ah::IsometricKroneckerProduct,
     Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
-    C_DxD::AbstractMatrix,
-    C_2DxD::AbstractMatrix,
+    C_DxD::IsometricKroneckerProduct,
+    C_2DxD::IsometricKroneckerProduct,
     diffusion=1,
 ) where {T,S}
     _Σ_out = PSDMatrix(Σ_out.R.B)
     _Σ_curr = PSDMatrix(Σ_curr.R.B)
     _Ah = Ah.B
     _Qh = PSDMatrix(Qh.R.B)
-    _D = size(_Qh, 1)
     _C_DxD = C_DxD.B
     _C_2DxD = C_2DxD.B
     _diffusion = diffusion isa IsometricKroneckerProduct ? diffusion.B : diffusion
 
-    predict_cov!(
-        _Σ_out,
-        _Σ_curr,
-        _Ah,
-        _Qh,
-        _C_DxD,
-        _C_2DxD,
-        _diffusion,
-    )
+    return predict_cov!(_Σ_out, _Σ_curr, _Ah, _Qh, _C_DxD, _C_2DxD, _diffusion)
 end

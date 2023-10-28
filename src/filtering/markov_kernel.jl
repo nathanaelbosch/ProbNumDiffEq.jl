@@ -222,25 +222,27 @@ function compute_backward_kernel!(
     diffusion=1,
 ) where {
     T,
-    KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
-    KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
+    KT1<:AffineNormalKernel{
+        <:IsometricKroneckerProduct,
+        <:AbstractVector,
+        <:PSDMatrix{T,<:IsometricKroneckerProduct},
+    },
+    KT2<:AffineNormalKernel{
+        <:IsometricKroneckerProduct,
+        <:Any,
+        <:PSDMatrix{T,<:IsometricKroneckerProduct},
+    },
 }
-    D = full_state_dim = length(x.μ)
-    d = ode_dimension_dim = K.A.ldim
-    Q = n_derivatives_dim = D ÷ d
+    D = length(x.μ)  # full_state_dim
+    d = K.A.ldim     # ode_dimension_dim
+    Q = D ÷ d        # n_derivatives_dim
     _Kout =
         AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))
     _x_pred = Gaussian(reshape_no_alloc(xpred.μ, Q, d), PSDMatrix(xpred.Σ.R.B))
     _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))
     _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, Q, d), PSDMatrix(K.C.R.B))
-    _D = size(_Kout.A, 1)
     _C_DxD = C_DxD.B
+
     return compute_backward_kernel!(
-        _Kout,
-        _x_pred,
-        _x,
-        _K;
-        C_DxD=_C_DxD,
-        diffusion=diffusion,
-    )
+        _Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
 end

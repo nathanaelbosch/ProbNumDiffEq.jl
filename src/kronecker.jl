@@ -174,17 +174,16 @@ function mul_vectrick!(
     return x
 end
 
-mul!(C::AbstractMatrix, A::IKP, B::AbstractMatrix) = mul_vectrick!(C, A, B)
-mul!(C::AbstractMatrix, A::IKP, B::Adjoint{T,<:AbstractMatrix{T}}) where {T} =
-    mul_vectrick!(C, A, B)
-mul!(C::AbstractVector, A::IKP, B::AbstractVector) = mul_vectrick!(C, A, B)
-
+# mul! as mul_vectrick!
 for TC in [:AbstractVector, :AbstractMatrix]
     @eval mul!(C::$TC, A::IKP, B::$TC) = mul_vectrick!(C, A, B)
     @eval mul!(C::$TC, A::IKP, B::Adjoint{T,<:$TC{T}}) where {T} = mul_vectrick!(C, A, B)
     @eval mul!(C::$TC, A::IKP, B::$TC, alpha::Number, beta::Number) =
         mul_vectrick!(C, A, B, alpha, beta)
+end
 
+# fast_linalg.jl
+for TC in [:AbstractVector, :AbstractMatrix]
     @eval _matmul!(C::$TC, A::IKP, B::$TC) = mul_vectrick!(C, A, B)
     @eval _matmul!(
         C::$TC{T},

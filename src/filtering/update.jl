@@ -75,7 +75,8 @@ function update!(
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
     @assert P_p isa PSDMatrix || P_p isa Matrix
-    # The following could be useful; but this never really happens and `iszero` allocates
+    # The following is not ideal as `iszero` allocates
+    # But, it is necessary to make the classic solver init stable
     if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
         copy!(x_out, x_pred)
         return x_out
@@ -119,33 +120,24 @@ function update!(
     x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
     measurement::SRGaussian{T,<:IsometricKroneckerProduct},
     H::IsometricKroneckerProduct,
-    K1_cache::AbstractMatrix,
-    K2_cache::AbstractMatrix,
-    M_cache::AbstractMatrix,
-    C_dxd::AbstractMatrix,
+    K1_cache::IsometricKroneckerProduct,
+    K2_cache::IsometricKroneckerProduct,
+    M_cache::IsometricKroneckerProduct,
+    C_dxd::IsometricKroneckerProduct,
 ) where {T}
-    D = full_state_dim = length(x_out.μ)
-    d = ode_dimension_dim = H.ldim
-    Q = n_derivatives_dim = D ÷ d
+    D = length(x_out.μ)  # full_state_dim
+    d = H.ldim           # ode_dimension_dim
+    Q = D ÷ d            # n_derivatives_dim
     _x_out = Gaussian(reshape_no_alloc(x_out.μ, Q, d), PSDMatrix(x_out.Σ.R.B))
     _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
     _measurement = Gaussian(
         reshape_no_alloc(measurement.μ, 1, d), PSDMatrix(measurement.Σ.R.B))
-    o = measurement_dim = size(_measurement.Σ, 1)
     _H = H.B
-    _D = length(x_out.μ) ÷ d
     _K1_cache = K1_cache.B
     _K2_cache = K2_cache.B
     _M_cache = M_cache.B
     _C_dxd = C_dxd.B
+
     return update!(
-        _x_out,
-        _x_pred,
-        _measurement,
-        _H,
-        _K1_cache,
-        _K2_cache,
-        _M_cache,
-        _C_dxd,
-    )
+        _x_out, _x_pred, _measurement, _H, _K1_cache, _K2_cache, _M_cache, _C_dxd)
 end

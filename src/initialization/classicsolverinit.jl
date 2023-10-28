@@ -7,8 +7,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         @warn "ClassicSolverInit might be unstable for high orders"
     end
 
-    @unpack ddu, du, x_tmp, m_tmp, K1 = cache
-    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, measurement = cache
+    @unpack ddu, du = cache
 
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction

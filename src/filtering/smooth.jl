@@ -50,7 +50,7 @@ function smooth(
 )
     x_pred = predict(x_curr, Ah, Qh)
 
-    G = unfactorize(x_curr.Σ) * Ah' / x_pred.Σ
+    G = x_curr.Σ.R' * x_curr.Σ.R * Ah' / x_pred.Σ
 
     smoothed_mean = x_curr.μ + G * (x_next_smoothed.μ - x_pred.μ)
 
@@ -129,14 +129,13 @@ function smooth!(
     cache,
     diffusion::Union{Number,Diagonal}=1,
 ) where {T,S}
-    D = full_state_dim = length(x_curr.μ)
-    d = ode_dimension_dim = Ah.ldim
-    Q = n_derivatives_dim = D ÷ d
+    D = length(x_curr.μ)  # full_state_dim
+    d = Ah.ldim           # ode_dimension_dim
+    Q = D ÷ d             # n_derivatives_dim
     _x_curr = Gaussian(reshape_no_alloc(x_curr.μ, Q, d), PSDMatrix(x_curr.Σ.R.B))
     _x_next = Gaussian(reshape_no_alloc(x_next.μ, Q, d), PSDMatrix(x_next.Σ.R.B))
     _Ah = Ah.B
     _Qh = PSDMatrix(Qh.R.B)
-    _D = size(_Qh, 1)
     _cache = (
         G1=cache.G1.B,
         C_DxD=cache.C_DxD.B,
@@ -147,12 +146,6 @@ function smooth!(
             PSDMatrix(cache.x_pred.Σ.R.B),
         ),
     )
-    smooth!(
-        _x_curr,
-        _x_next,
-        _Ah,
-        _Qh,
-        _cache,
-        diffusion,
-    )
+
+    return smooth!(_x_curr, _x_next, _Ah, _Qh, _cache, diffusion)
 end
