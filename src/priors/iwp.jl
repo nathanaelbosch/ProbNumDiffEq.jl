@@ -55,13 +55,25 @@ function make_preconditioned_transition_cov_cholf_1d(q::Integer, ::Type{elType})
         Array{elType}(calloc, q + 1, q + 1)
     end
 
-    @simd ivdep for n in 0:q
-        @simd ivdep for m in 0:q
-            if m <= n
-                @inbounds L[q+1-m, q+1-n] =
-                    sqrt(2 * m + 1) * factorial(n)^2 / factorial(n - m) /
-                    factorial(n + m + 1)
-            end
+    # Original
+    # @simd ivdep for n in 0:q
+    #     @simd ivdep for m in 0:q
+    #         if m <= n
+    #             @inbounds L[q+1-m, q+1-n] =
+    #                 sqrt(2 * m + 1) * factorial(n)^2 / factorial(n - m) /
+    #                 factorial(n + m + 1)
+    #         end
+    #     end
+    # end
+
+    # My try at tuning this
+    @simd ivdep for x in 0:q
+        @simd ivdep for y in 0:x
+            # if x >= y
+            @inbounds L[x+1, y+1] =
+                sqrt(2q - 2x + 1) * factorial(q-y)^2 / factorial(2q - y - x) /
+                factorial(2q - y - x + 1)
+            # end
         end
     end
     return L
