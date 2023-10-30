@@ -275,6 +275,7 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
+  JULIA_IMAGE_THREADS = 1
 ```
 
 
@@ -301,10 +302,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.12.1 `~/.julia/dev/ProbNumDiffEq`
-  [0bca4576] SciMLBase v2.4.3
+  [0bca4576] SciMLBase v2.5.0
   [505e40e9] SciPyDiffEq v0.2.1
   [90137ffa] StaticArrays v1.6.5
-  [c3572dad] Sundials v4.20.0
+  [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
 ```
@@ -324,16 +325,16 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
 ⌅ [c3fe647b] AbstractAlgebra v0.32.5
   [621f4979] AbstractFFTs v1.5.0
   [1520ce14] AbstractTrees v0.4.4
-  [79e6a3ab] Adapt v3.7.0
+  [79e6a3ab] Adapt v3.7.1
   [ec485272] ArnoldiMethod v0.2.0
   [c9d4266f] ArrayAllocators v0.3.0
-  [4fba245c] ArrayInterface v7.4.11
+  [4fba245c] ArrayInterface v7.5.0
   [30b0a656] ArrayInterfaceCore v0.1.29
   [6e4b80f9] BenchmarkTools v1.3.2
   [e2ed5e7c] Bijections v0.1.6
   [d1d4a3ce] BitFlags v0.1.7
   [62783981] BitTwiddlingConvenienceFunctions v0.1.5
-⌅ [fa961155] CEnum v0.4.2
+  [fa961155] CEnum v0.5.0
   [2a0fbf3d] CPUSummary v0.2.4
   [00ebfdb7] CSTParser v3.3.6
   [49dc2e85] Calculus v0.5.1
@@ -365,7 +366,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.134.0
+  [2b5f629d] DiffEqBase v6.135.0
   [459566f4] DiffEqCallbacks v2.33.1
   [f3b72e0c] DiffEqDevTools v2.39.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
@@ -379,7 +380,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [7c1d4256] DynamicPolynomials v0.5.3
   [b305315f] Elliptic v1.0.1
   [4e289a0a] EnumX v1.0.4
-  [f151be2c] EnzymeCore v0.6.2
+  [f151be2c] EnzymeCore v0.6.3
   [6912e4f1] Espresso v0.6.1
   [460bff9d] ExceptionUnwrapping v0.1.9
   [d4d017d3] ExponentialUtilities v1.25.0
@@ -405,7 +406,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [c27321d9] Glob v1.3.1
   [86223c79] Graphs v1.9.0
   [42e2da0e] Grisu v1.0.2
-  [0b43b601] Groebner v0.4.4
+⌅ [0b43b601] Groebner v0.4.4
   [d5909c97] GroupsCore v0.4.0
   [cd3eb016] HTTP v1.10.0
   [eafb193a] Highlights v0.5.2
@@ -424,7 +425,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [1019f520] JLFzf v0.1.6
   [692b3bcd] JLLWrappers v1.5.0
   [682c06a0] JSON v0.21.4
-  [98e50ef6] JuliaFormatter v1.0.40
+  [98e50ef6] JuliaFormatter v1.0.41
   [ccbc3e58] JumpProcesses v9.8.0
   [ef3ab10e] KLU v0.4.1
   [2c470bb0] Kronecker v0.5.4
@@ -438,7 +439,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.12.1
+  [7ed4a6bd] LinearSolve v2.14.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.165
@@ -459,7 +460,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
-  [8913a72c] NonlinearSolve v2.4.0
+  [8913a72c] NonlinearSolve v2.5.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -511,8 +512,8 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [7e49a35a] RuntimeGeneratedFunctions v0.5.12
   [fdea26ae] SIMD v3.4.5
   [94e857df] SIMDTypes v0.1.0
-  [476501e8] SLEEFPirates v0.6.39
-  [0bca4576] SciMLBase v2.4.3
+  [476501e8] SLEEFPirates v0.6.40
+  [0bca4576] SciMLBase v2.5.0
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.6
   [505e40e9] SciPyDiffEq v0.2.1
@@ -528,7 +529,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [66db9d55] SnoopPrecompile v1.0.3
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-  [47a9eef4] SparseDiffTools v2.8.0
+  [47a9eef4] SparseDiffTools v2.9.1
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -544,7 +545,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [69024149] StringEncodings v0.3.7
   [892a3eda] StringManipulation v0.3.4
   [09ab397b] StructArrays v0.6.16
-  [c3572dad] Sundials v4.20.0
+  [c3572dad] Sundials v4.20.1
   [2efcf032] SymbolicIndexingInterface v0.2.2
   [d1185830] SymbolicUtils v1.4.0
   [0c5d862f] Symbolics v5.10.0
