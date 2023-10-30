@@ -7,10 +7,10 @@ d = 2
 q = 2
 
 @testset "$T" for T in (Float64, BigFloat)
-    R1 = randn(T, q + 1, q + 1)
+    R1 = rand(T, q + 1, q + 1)
     K1 = PNDE.IsometricKroneckerProduct(d, R1)
     M1 = Matrix(K1)
-    R2 = randn(T, q + 1, q + 1)
+    R2 = rand(T, q + 1, q + 1)
     K2 = PNDE.IsometricKroneckerProduct(d, R2)
     M2 = Matrix(K2)
 
@@ -21,14 +21,14 @@ q = 2
     @test K1 + K2 isa PNDE.IsometricKroneckerProduct
 
     # DimensionMismatch
-    X = PNDE.IsometricKroneckerProduct(d, randn(T, 1, 1))
+    X = PNDE.IsometricKroneckerProduct(d, rand(T, 1, 1))
     @test_throws DimensionMismatch X + K1
     @test_throws DimensionMismatch K1 + X
     @test_throws DimensionMismatch X * K1
     @test_throws DimensionMismatch K1 * X
 
     # IsometricKroneckerProduct from Vector
-    R4 = randn(T, q + 1)
+    R4 = rand(T, q + 1)
     K4 = PNDE.IsometricKroneckerProduct(d, R4)
     M4 = Matrix(K4)
     @test K1 * K4 ≈ M1 * M4
