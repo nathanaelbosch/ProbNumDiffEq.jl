@@ -20,8 +20,6 @@ G &= Σ_n^S A^T (Σ_{n+1}^P)^{-1}, \\\\
 and return a smoothed state `\\mathcal{N}(μ_n^S, Σ_n^S)`.
 When called with `ProbNumDiffEq.SquarerootMatrix` type arguments it performs the update in
 Joseph / square-root form.
-
-For better performance, we recommend to use the non-allocating [`smooth!`](@ref).
 """
 function smooth(
     x_curr::Gaussian,
@@ -64,88 +62,4 @@ function smooth(
 
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, G
-end
-
-"""
-    smooth!(x_curr, x_next, Ah, Qh, cache, diffusion=1)
-
-In-place and square-root implementation of [`smooth`](@ref) which overwrites `x_curr`.
-
-Implemented in Joseph form to preserve square-root structure.
-It requires access to the solvers `cache`
-to prevent allocations.
-
-See also: [`smooth`](@ref).
-"""
-function smooth!(
-    x_curr::SRGaussian,
-    x_next::SRGaussian,
-    Ah::AbstractMatrix,
-    Qh::PSDMatrix,
-    cache,
-    diffusion::Union{Number,Diagonal}=1,
-)
-    # x_curr is the state at time t_n (filter estimate) that we want to smooth
-    # x_next is the state at time t_{n+1}, already smoothed, which we use for smoothing
-    @unpack x_pred = cache
-    @unpack G1, C_DxD, C_2DxD, C_3DxD = cache
-    D = length(x_curr.μ)
-    _D = size(C_DxD, 1)
-
-    # Prediction: t -> t+1
-    predict_mean!(x_pred.μ, x_curr.μ, Ah)
-    predict_cov!(x_pred.Σ, x_curr.Σ, Ah, Qh, C_DxD, C_2DxD, diffusion)
-
-    # Smoothing
-    # G = x_curr.Σ * Ah' * P_p_inv
-    P_p_chol = Cholesky(x_pred.Σ.R, :U, 0)
-    G = rdiv!(_matmul!(G1, x_curr.Σ.R', _matmul!(C_DxD, x_curr.Σ.R, Ah')), P_p_chol)
-
-    # x_curr.μ .+= G * (x_next.μ .- x_pred.μ) # less allocations:
-    x_pred.μ .-= x_next.μ
-    _matmul!(x_curr.μ, G, x_pred.μ, -1, 1)
-
-    # Joseph-Form:
-    R = C_3DxD
-
-    G2 = _matmul!(C_DxD, G, Ah)
-    copy!(view(R, 1:_D, 1:_D), x_curr.Σ.R)
-    _matmul!(view(R, 1:_D, 1:_D), x_curr.Σ.R, G2', -1.0, 1.0)
-
-    _matmul!(view(R, _D+1:2_D, 1:_D), Qh.R, _matmul!(G2, G, sqrt.(diffusion))')
-    _matmul!(view(R, 2_D+1:3_D, 1:_D), x_next.Σ.R, G')
-
-    Q_R = triangularize!(R, cachemat=C_DxD)
-    copy!(x_curr.Σ.R, Q_R)
-
-    return nothing
-end
-
-function smooth!(
-    x_curr::SRGaussian{T,<:IsometricKroneckerProduct},
-    x_next::SRGaussian{T,<:IsometricKroneckerProduct},
-    Ah::IsometricKroneckerProduct,
-    Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
-    cache,
-    diffusion::Union{Number,Diagonal}=1,
-) where {T,S}
-    D = length(x_curr.μ)  # full_state_dim
-    d = Ah.ldim           # ode_dimension_dim
-    Q = D ÷ d             # n_derivatives_dim
-    _x_curr = Gaussian(reshape_no_alloc(x_curr.μ, Q, d), PSDMatrix(x_curr.Σ.R.B))
-    _x_next = Gaussian(reshape_no_alloc(x_next.μ, Q, d), PSDMatrix(x_next.Σ.R.B))
-    _Ah = Ah.B
-    _Qh = PSDMatrix(Qh.R.B)
-    _cache = (
-        G1=cache.G1.B,
-        C_DxD=cache.C_DxD.B,
-        C_2DxD=cache.C_2DxD.B,
-        C_3DxD=cache.C_3DxD.B,
-        x_pred=Gaussian(
-            reshape_no_alloc(cache.x_pred.μ, Q, d),
-            PSDMatrix(cache.x_pred.Σ.R.B),
-        ),
-    )
-
-    return smooth!(_x_curr, _x_next, _Ah, _Qh, _cache, diffusion)
 end
