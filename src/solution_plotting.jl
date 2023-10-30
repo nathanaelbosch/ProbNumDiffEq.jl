@@ -12,11 +12,11 @@
 )
     if vars !== nothing
         Base.depwarn(
-            "To maintain consistency with solution indexing, keyword argument vars will be removed in a future version. Please use keyword argument idxs instead.",
+            "To maintain consistency with solution indexing, keyword argument `vars` will be removed in a future version. Please use keyword argument `idxs` instead.",
             :f; force=true)
         (idxs !== nothing) &&
             error(
-                "Simultaneously using keywords vars and idxs is not supported. Please only use idxs.",
+                "Simultaneously using keywords `vars` and `idxs` is not supported. Please only use idxs.",
             )
         idxs = vars
     end
@@ -62,7 +62,7 @@
             end
             return _x, _y, _z
         else
-            error("Error with `vars` argument")
+            error("Error with `idxs` argument")
         end
     end
 end
