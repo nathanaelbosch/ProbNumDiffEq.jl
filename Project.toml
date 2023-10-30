@@ -1,7 +1,7 @@
 name = "ProbNumDiffEq"
 uuid = "bf3e78b0-7d74-48a5-b855-9609533b56a5"
 authors = ["Nathanael Bosch"]
-version = "0.12.1"
+version = "0.13.0"
 
 [deps]
 ArrayAllocators = "c9d4266f-a5cb-439d-837c-c97b191379f5"
