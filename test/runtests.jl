@@ -1,4 +1,4 @@
-using Test, SafeTestsets, Aqua, TimerOutputs
+using Test, SafeTestsets, Aqua, JET, TimerOutputs
 using ProbNumDiffEq
 using ODEProblemLibrary
 
@@ -121,11 +121,17 @@ const GROUP = get(ENV, "GROUP", "All")
     end
 
     if GROUP == "All"
-        @timedtestset "Aqua.jl" begin
+        @timedtestset "Code quality (Aqua.jl)" begin
             Aqua.test_all(
                 ProbNumDiffEq,
                 ambiguities=false,
                 piracies=false,
+            )
+        end
+        @timedtestset "Code linting (JET.jl)" begin
+            @test JET.test_package(
+                ProbNumDiffEq;
+                target_defined_modules=true,
             )
         end
     end
