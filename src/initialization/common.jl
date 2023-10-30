@@ -62,43 +62,28 @@ function initial_update!(integ, cache)
 end
 
 """
-    condition_on!(x, H, data, cache)
+    init_condition_on!(x, H, data, cache)
 
-Condition `x` on `data`, with linearized measurement function `H`.
+Condition `x` on `data` with linear measurement function `H`. Used only for initialization.
 
-This is basically a Kalman update. We recommend using [`update`](@ref) or [`update!`](@ref).
+Don't use this as a Kalman update! The function has quite a few assumptions, that only
+really work out in the specific context of initialization. If you actually want to update,
+use [`update`](@ref) or [`update!`](@ref).
 """
-function condition_on!(
+function init_condition_on!(
     x::SRGaussian,
     H::AbstractMatrix,
     data::AbstractVector,
     cache,
 )
-    @unpack m_tmp, K1, x_tmp, C_DxD = cache
-    S = m_tmp.Σ
-    covcache = x_tmp.Σ
-    Mcache = cache.C_DxD
+    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, m_tmp = cache
 
-    fast_X_A_Xt!(S, x.Σ, H)
-    # @assert isdiag(Matrix(S))
-    S_diag = diag(S)
-    if any(iszero.(S_diag)) # could happen with a singular mass-matrix
-        S_diag .+= 1e-20
-    end
+    # measurement mean
+    _matmul!(m_tmp.μ, H, x.μ)
+    m_tmp.μ .-= data
 
-    _matmul!(K1, x.Σ.R', _matmul!(cache.C_Dxd, x.Σ.R, H'))
-    K = K1 ./= S_diag'
-
-    # x.μ .+= K*(data - z)
-    datadiff = _matmul!(data, H, x.μ, -1, 1)
-    _matmul!(x.μ, K, datadiff, 1, 1)
-
-    D = length(x.μ)
-    _matmul!(Mcache, K, H, -1, 0)
-    @inbounds @simd ivdep for i in 1:D
-        Mcache[i, i] += 1
-    end
-    fast_X_A_Xt!(x_tmp.Σ, x.Σ, Mcache)
-    copy!(x.Σ, covcache)
-    return nothing
+    # measurement cov
+    fast_X_A_Xt!(m_tmp.Σ, x.Σ, H)
+    copy!(x_tmp, x)
+    update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd)
 end

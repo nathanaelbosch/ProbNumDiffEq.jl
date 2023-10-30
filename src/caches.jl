@@ -2,13 +2,14 @@
 # Caches
 ########################################################################################
 mutable struct EKCache{
-    RType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,AType,QType,
-    matType,bkType,diffusionType,diffModelType,measModType,measType,puType,llType,dtType,
-    rateType,UF,JC,uNoUnitsType,
+    RType,CFacType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,
+    AType,QType,HType,matType,bkType,diffusionType,diffModelType,measModType,measType,
+    puType,llType,dtType,rateType,UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
     d::Int                  # Dimension of the problem
     q::Int                  # Order of the prior
+    covariance_factorization::CFacType
     prior::PriorType
     A::AType
     Q::QType
@@ -40,12 +41,12 @@ mutable struct EKCache{
     measurement::measType
     m_tmp::measType
     pu_tmp::puType
-    H::matType
+    H::HType
     du::duType
     ddu::matType
     K1::matType
     G1::matType
-    Smat::matType
+    Smat::HType
     C_dxd::matType
     C_dxD::matType
     C_Dxd::matType
@@ -94,19 +95,32 @@ function OrdinaryDiffEq.alg_cache(
     uType = typeof(u)
     # uElType = eltype(u_vec)
     uElType = uBottomEltypeNoUnits
-    matType = Matrix{uElType}
+
+    FAC = get_covariance_structure(alg; elType=uElType, d, q)
+    if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
+        error(
+            "The selected algorithm uses an efficient Kronecker-factorized implementation which is incompatible with the provided mass matrix. Try using the `EK1` instead.",
+        )
+    end
+
+    matType = typeof(factorized_similar(FAC, d, d))
 
     # Projections
-    Proj = projection(d, q, uElType)
+    Proj = projection(FAC)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
-    SolProj = f isa DynamicalODEFunction ? [Proj(1); Proj(0)] : Proj(0)
+    SolProj = if is_secondorder_ode
+        E0 isa IsometricKroneckerProduct ?
+        IsometricKroneckerProduct(d, [Proj(1).B; Proj(0).B]) : [Proj(1); Proj(0)]
+    else
+        Proj(0)
+    end
 
     # Prior dynamics
     prior = if alg.prior isa IWP
         IWP{uElType}(d, alg.prior.num_derivatives)
     elseif alg.prior isa IOUP && ismissing(alg.prior.rate_parameter)
-        r = zeros(uElType, d, d)
+        r = Array{uElType}(calloc, d, d)
         IOUP{uElType}(d, q, r, alg.prior.update_rate_parameter)
     elseif alg.prior isa IOUP
         IOUP{uElType}(d, q, alg.prior.rate_parameter, alg.prior.update_rate_parameter)
@@ -115,14 +129,21 @@ function OrdinaryDiffEq.alg_cache(
     else
         error("Invalid prior $(alg.prior)")
     end
-    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(prior, dt)
+    A, Q, Ah, Qh, P, PI = initialize_transition_matrices(FAC, prior, dt)
 
     # Measurement Model
     measurement_model = make_measurement_model(f)
 
     # Initial State
-    initial_variance = ones(uElType, D)
-    x0 = Gaussian(zeros(uElType, D), PSDMatrix(diagm(sqrt.(initial_variance))))
+    initial_variance = ones(uElType, q + 1)
+    μ0 = uElType <: LinearAlgebra.BlasFloat ? Array{uElType}(calloc, D) : zeros(uElType, D)
+    Σ0 = PSDMatrix(
+        to_factorized_matrix(
+            FAC,
+            IsometricKroneckerProduct(d, diagm(sqrt.(initial_variance))),
+        ),
+    )
+    x0 = Gaussian(μ0, Σ0)
 
     # Diffusion Model
     diffmodel = alg.diffusionmodel
@@ -130,31 +151,39 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     # Measurement model related things
-    R = zeros(uElType, d, d)
-    H = zeros(uElType, d, D)
-    v = zeros(uElType, d)
-    S = PSDMatrix(zeros(uElType, D, d))
+    R = factorized_similar(FAC, d, d)
+    H = factorized_similar(FAC, d, D)
+    v = similar(Array{uElType}, d)
+    S = PSDMatrix(factorized_zeros(FAC, D, d))
     measurement = Gaussian(v, S)
 
     # Caches
-    du = f isa DynamicalODEFunction ? similar(u[2, :]) : similar(u)
-    ddu = zeros(uElType, length(u), length(u))
-    pu_tmp =
-        f isa DynamicalODEFunction ?
-        Gaussian(zeros(uElType, 2d), PSDMatrix(zeros(uElType, D, 2d))) : copy(measurement)
-    K = zeros(uElType, D, d)
-    G = zeros(uElType, D, D)
-    Smat = zeros(uElType, d, d)
+    du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
+    ddu = factorized_similar(FAC, length(u), length(u))
+    pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
+        copy(measurement)
+    else # then `u` has 2d dimensions
+        Gaussian(
+            similar(Array{uElType}, 2d),
+            PSDMatrix(factorized_similar(FAC, D, 2d)),
+        )
+    end
+    K = factorized_similar(FAC, D, d)
+    G = factorized_similar(FAC, D, D)
+    Smat = factorized_similar(FAC, d, d)
 
-    C_dxd = zeros(uElType, d, d)
-    C_dxD = zeros(uElType, d, D)
-    C_Dxd = zeros(uElType, D, d)
-    C_DxD = zeros(uElType, D, D)
-    C_2DxD = zeros(uElType, 2D, D)
-    C_3DxD = zeros(uElType, 3D, D)
+    C_dxd = factorized_similar(FAC, d, d)
+    C_dxD = factorized_similar(FAC, d, D)
+    C_Dxd = factorized_similar(FAC, D, d)
+    C_DxD = factorized_similar(FAC, D, D)
+    C_2DxD = factorized_similar(FAC, 2D, D)
+    C_3DxD = factorized_similar(FAC, 3D, D)
 
     backward_kernel = AffineNormalKernel(
-        zeros(uElType, D, D), zeros(uElType, D), PSDMatrix(zeros(uElType, 2D, D)))
+        factorized_similar(FAC, D, D),
+        similar(Vector{uElType}, D),
+        PSDMatrix(factorized_similar(FAC, 2D, D)),
+    )
 
     u_pred = copy(u)
     u_filt = copy(u)
@@ -180,14 +209,14 @@ function OrdinaryDiffEq.alg_cache(
 
     ll = zero(uEltypeNoUnits)
     return EKCache{
-        typeof(R),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
-        uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),matType,
+        typeof(R),typeof(FAC),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
+        uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),typeof(H),matType,
         typeof(backward_kernel),typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
-        d, q, prior, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj, P, PI,
-        E0, E1, E2,
+        d, q, FAC, prior, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj,
+        P, PI, E0, E1, E2,
         u, u_pred, u_filt, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,

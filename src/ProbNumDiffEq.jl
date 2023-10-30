@@ -5,11 +5,12 @@ module ProbNumDiffEq
 import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==
 
 using LinearAlgebra
+import LinearAlgebra: mul!
 import Statistics: mean, var, std
 
 using Reexport
 @reexport using DiffEqBase
-using SciMLBase
+import SciMLBase
 import SciMLBase: interpret_vars, getsyms
 using OrdinaryDiffEq
 using DiffEqDevTools
@@ -26,19 +27,22 @@ using ForwardDiff
 using ExponentialUtilities
 using Octavian
 using FastGaussQuadrature
+import Kronecker
+using ArrayAllocators
 
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
 
 @reexport using PSDMatrices
-import PSDMatrices: X_A_Xt, X_A_Xt!
+import PSDMatrices: X_A_Xt, X_A_Xt!, unfactorize
 X_A_Xt(A, X) = X * A * X'
-X_A_Xt!(out, A, X) = (out .= X * A * X')
 
 stack(x) = copy(reduce(hcat, x)')
 vecvec2mat(x) = reduce(hcat, x)'
 
 include("fast_linalg.jl")
+include("kronecker.jl")
+include("covariance_structure.jl")
 
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 

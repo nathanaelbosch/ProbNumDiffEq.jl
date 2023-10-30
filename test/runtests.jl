@@ -38,6 +38,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Smoothing" begin
                 include("smoothing.jl")
             end
+            @timedsafetestset "IsometricKroneckerProduct" begin
+                include("core/kronecker.jl")
+            end
         end
     end
 
@@ -48,6 +51,9 @@ const GROUP = get(ENV, "GROUP", "All")
             end
             @timedsafetestset "Convergence" begin
                 include("convergence.jl")
+            end
+            @timedsafetestset "Complexity" begin
+                include("complexity.jl")
             end
             @timedsafetestset "Stiff Problem" begin
                 include("stiff_problem.jl")
@@ -116,8 +122,11 @@ const GROUP = get(ENV, "GROUP", "All")
 
     if GROUP == "All"
         @timedtestset "Aqua.jl" begin
-            Aqua.test_all(ProbNumDiffEq, ambiguities=false)
-            # Aqua.test_ambiguities(ProbNumDiffEq)
+            Aqua.test_all(
+                ProbNumDiffEq,
+                ambiguities=false,
+                piracy=false,
+            )
         end
     end
 end

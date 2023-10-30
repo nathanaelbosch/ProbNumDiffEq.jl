@@ -69,34 +69,58 @@ Note that this function assumes certain shapes:
 `xout` is assumes to have the same shapes as `x`.
 """
 function marginalize!(xout, x, K; C_DxD, C_3DxD)
-    marginalize_mean!(xout, x, K)
-    marginalize_cov!(xout, x, K; C_DxD, C_3DxD)
+    marginalize_mean!(xout.μ, x.μ, K)
+    marginalize_cov!(xout.Σ, x.Σ, K; C_DxD, C_3DxD)
 end
-function marginalize_mean!(xout::Gaussian, x::Gaussian, K::AffineNormalKernel)
-    _matmul!(xout.μ, K.A, x.μ)
+function marginalize_mean!(
+    μout::AbstractVecOrMat,
+    μ::AbstractVecOrMat,
+    K::AffineNormalKernel,
+)
+    _matmul!(μout, K.A, μ)
     if !ismissing(K.b)
-        xout.μ .+= K.b
+        μout .+= K.b
     end
-    return xout.μ
+    return μout
 end
 
 function marginalize_cov!(
-    x_out::SRGaussian,
-    x_curr::SRGaussian,
+    Σ_out::PSDMatrix,
+    Σ_curr::PSDMatrix,
     K::AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix};
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
 )
-    D = length(x_curr.μ)
-    A, b, C = K
-    R, M = C_3DxD, C_DxD
+    _D = size(Σ_curr, 1)
+    A, _, C = K
+    R = C_3DxD
 
-    _matmul!(view(R, 1:D, 1:D), x_curr.Σ.R, A')
-    @.. R[D+1:3D, 1:D] = C.R
+    _matmul!(view(R, 1:_D, 1:_D), Σ_curr.R, A')
+    @.. R[_D+1:3_D, 1:_D] = C.R
 
     Q_R = triangularize!(R, cachemat=C_DxD)
-    copy!(x_out.Σ.R, Q_R)
-    return x_out.Σ
+    copy!(Σ_out.R, Q_R)
+    return Σ_out
+end
+
+function marginalize_cov!(
+    Σ_out::PSDMatrix{T,<:IsometricKroneckerProduct},
+    Σ_curr::PSDMatrix{T,<:IsometricKroneckerProduct},
+    K::AffineNormalKernel{
+        <:AbstractMatrix,
+        <:Any,
+        <:PSDMatrix{S,<:IsometricKroneckerProduct},
+    };
+    C_DxD::AbstractMatrix,
+    C_3DxD::AbstractMatrix,
+) where {T,S}
+    _Σ_out = PSDMatrix(Σ_out.R.B)
+    _Σ_curr = PSDMatrix(Σ_curr.R.B)
+    _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
+    _D = size(_Σ_out, 1)
+    _C_DxD = C_DxD.B
+    _C_3DxD = C_3DxD.B
+    return marginalize_cov!(_Σ_out, _Σ_curr, _K; C_DxD=_C_DxD, C_3DxD=_C_3DxD)
 end
 
 """
@@ -153,14 +177,15 @@ function compute_backward_kernel!(
     diffusion=1,
 ) where {
     XT<:SRGaussian,
-    KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVector,<:PSDMatrix},
+    KT1<:AffineNormalKernel{<:AbstractMatrix,<:AbstractVecOrMat,<:PSDMatrix},
     KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
 }
     # @assert Matrix(UpperTriangular(xpred.Σ.R)) == Matrix(xpred.Σ.R)
 
-    D = length(x.μ)
     A, _, Q = K
     G, b, Λ = Kout
+
+    D = output_dim = size(G, 1)
 
     # G = Matrix(x.Σ) * A' / Matrix(xpred.Σ)
     _matmul!(C_DxD, x.Σ.R, A')
@@ -168,7 +193,8 @@ function compute_backward_kernel!(
     rdiv!(G, Cholesky(xpred.Σ.R, 'U', 0))
 
     # b = μ - G * μ_pred
-    b .= x.μ .- _matmul!(b, G, xpred.μ)
+    _matmul!(b, G, xpred.μ)
+    b .= x.μ .- b
 
     # Λ.R[1:D, 1:D] = x.Σ.R * (I - G * A)'
     _matmul!(C_DxD, A', G', -1.0, 0.0)
@@ -185,4 +211,38 @@ function compute_backward_kernel!(
     end
 
     return Kout
+end
+
+function compute_backward_kernel!(
+    Kout::KT1,
+    xpred::SRGaussian{T,<:IsometricKroneckerProduct},
+    x::SRGaussian{T,<:IsometricKroneckerProduct},
+    K::KT2;
+    C_DxD::AbstractMatrix,
+    diffusion=1,
+) where {
+    T,
+    KT1<:AffineNormalKernel{
+        <:IsometricKroneckerProduct,
+        <:AbstractVector,
+        <:PSDMatrix{T,<:IsometricKroneckerProduct},
+    },
+    KT2<:AffineNormalKernel{
+        <:IsometricKroneckerProduct,
+        <:Any,
+        <:PSDMatrix{T,<:IsometricKroneckerProduct},
+    },
+}
+    D = length(x.μ)  # full_state_dim
+    d = K.A.ldim     # ode_dimension_dim
+    Q = D ÷ d        # n_derivatives_dim
+    _Kout =
+        AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))
+    _x_pred = Gaussian(reshape_no_alloc(xpred.μ, Q, d), PSDMatrix(xpred.Σ.R.B))
+    _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))
+    _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, Q, d), PSDMatrix(K.C.R.B))
+    _C_DxD = C_DxD.B
+
+    return compute_backward_kernel!(
+        _Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
 end

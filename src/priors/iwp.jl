@@ -50,7 +50,7 @@ function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
     A_breve = binomial.(q:-1:0, (q:-1:0)')
     Q_breve = Cauchy(collect(q:-1.0:0.0), collect((q+1):-1.0:1.0)) |> Matrix  # for Julia1.6
 
-    QR_breve = cholesky(Q_breve).L'
+    QR_breve = cholesky(Q_breve).L' |> collect
     A_breve, QR_breve = elType.(A_breve), elType.(QR_breve)
     Q_breve = PSDMatrix(QR_breve)
 
@@ -70,8 +70,8 @@ function preconditioned_discretize(iwp::IWP)
     QR_breve = Q_breve.R
 
     d = iwp.wiener_process_dimension
-    A = kron(I(d), A_breve)
-    QR = kron(I(d), QR_breve)
+    A = IsometricKroneckerProduct(d, Matrix(A_breve))
+    QR = IsometricKroneckerProduct(d, Matrix(QR_breve))
     Q = PSDMatrix(QR)
 
     return A, Q
@@ -83,7 +83,7 @@ function discretize_1d(iwp::IWP{elType}, dt::Real) where {elType}
     v = 0:q
 
     f = factorial.(v)
-    A_breve = TriangularToeplitz(dt .^ v ./ f, :U) |> Matrix
+    A_breve = TriangularToeplitz(dt .^ v ./ f, :U)
 
     e = (2 * q + 1 .- v .- v')
     fr = reverse(f)
@@ -99,17 +99,24 @@ end
 function discretize(p::IWP, dt::Real)
     A_breve, Q_breve = discretize_1d(p, dt)
     d = p.wiener_process_dimension
-    A = kron(I(d), A_breve)
-    QR = kron(I(d), Q_breve.R)
+    A = IsometricKroneckerProduct(d, A_breve)
+    QR = IsometricKroneckerProduct(d, Q_breve.R)
     Q = PSDMatrix(QR)
     return A, Q
 end
 
-function initialize_transition_matrices(p::IWP{T}, dt) where {T}
+function initialize_transition_matrices(FAC::IsometricKroneckerCovariance, p::IWP, dt)
     A, Q = preconditioned_discretize(p)
-    P, PI = initialize_preconditioner(p, dt)
+    P, PI = initialize_preconditioner(FAC, p, dt)
     Ah = PI * A * P
-    Qh = X_A_Xt(Q, PI)
+    Qh = PSDMatrix(Q.R * PI)
+    return A, Q, Ah, Qh, P, PI
+end
+function initialize_transition_matrices(FAC::DenseCovariance, p::IWP, dt)
+    A, Q = preconditioned_discretize(p)
+    P, PI = initialize_preconditioner(FAC, p, dt)
+    A, Q = Matrix(A), PSDMatrix(Matrix(Q.R))
+    Ah, Qh = copy(A), copy(Q)
     return A, Q, Ah, Qh, P, PI
 end
 
@@ -118,7 +125,7 @@ function make_transition_matrices!(cache, prior::IWP, dt)
     make_preconditioners!(cache, dt)
     # A, Q = preconditioned_discretize(p) # not necessary since it's dt-independent
     # Ah = PI * A * P
-    @.. Ah = PI.diag * A * P.diag'
-    # X_A_Xt!(Qh, Q, PI)
-    @.. Qh.R = Q.R * PI.diag'
+    _matmul!(Ah, PI, _matmul!(Ah, A, P))
+    # Qh = PI * Q * PI'
+    fast_X_A_Xt!(Qh, Q, PI)
 end

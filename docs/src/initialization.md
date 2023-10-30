@@ -2,6 +2,7 @@
 
 The notion of "initialization" relates to the _prior_ part of the model.
 
+**TL;DR: In the vast majority of cases, just stick to the exact Taylor-mode initialization [`TaylorModeInit`](@ref)!**
 
 ## Background: The prior
 

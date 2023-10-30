@@ -75,12 +75,14 @@ function update!(
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
     @assert P_p isa PSDMatrix || P_p isa Matrix
+    # The following is not ideal as `iszero` allocates
+    # But, it is necessary to make the classic solver init stable
     if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
         copy!(x_out, x_pred)
         return x_out
     end
 
-    D = length(m_p)
+    D = size(m_p, 1)
 
     # K = P_p * H' / S
     _S = if S isa PSDMatrix
@@ -96,17 +98,7 @@ function update!(
         _matmul!(K2_cache, P_p, H')
     end
 
-    S_chol = try
-        cholesky!(_S)
-    catch e
-        if !(e isa PosDefException)
-            throw(e)
-        end
-        @warn "Can't compute the update step with cholesky; using qr instead"
-        @assert S isa PSDMatrix
-        Cholesky(qr(S.R).R, :U, 0)
-    end
-    rdiv!(K, S_chol)
+    rdiv!(K, length(_S) == 1 ? _S[1] : cholesky!(_S))
 
     # x_out.μ .= m_p .+ K * (0 .- z)
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
@@ -120,4 +112,32 @@ function update!(
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     return x_out
+end
+
+# Kronecker version
+function update!(
+    x_out::SRGaussian{T,<:IsometricKroneckerProduct},
+    x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
+    measurement::SRGaussian{T,<:IsometricKroneckerProduct},
+    H::IsometricKroneckerProduct,
+    K1_cache::IsometricKroneckerProduct,
+    K2_cache::IsometricKroneckerProduct,
+    M_cache::IsometricKroneckerProduct,
+    C_dxd::IsometricKroneckerProduct,
+) where {T}
+    D = length(x_out.μ)  # full_state_dim
+    d = H.ldim           # ode_dimension_dim
+    Q = D ÷ d            # n_derivatives_dim
+    _x_out = Gaussian(reshape_no_alloc(x_out.μ, Q, d), PSDMatrix(x_out.Σ.R.B))
+    _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
+    _measurement = Gaussian(
+        reshape_no_alloc(measurement.μ, 1, d), PSDMatrix(measurement.Σ.R.B))
+    _H = H.B
+    _K1_cache = K1_cache.B
+    _K2_cache = K2_cache.B
+    _M_cache = M_cache.B
+    _C_dxd = C_dxd.B
+
+    return update!(
+        _x_out, _x_pred, _measurement, _H, _K1_cache, _K2_cache, _M_cache, _C_dxd)
 end

@@ -19,12 +19,13 @@ function calc_H_EK0!(H, integ, cache)
 
     if f isa DynamicalODEFunction
         @assert f.mass_matrix === I
-        H .= E2
+        copy!(H, E2)
     else
         if f.mass_matrix === I
-            H .= E1
+            copy!(H, E1)
         elseif f.mass_matrix isa UniformScaling
-            H .= f.mass_matrix.λ .* E1
+            copy!(H, E1)
+            rmul!(H, f.mass_matrix.λ)
         else
             _matmul!(H, f.mass_matrix, E1)
         end

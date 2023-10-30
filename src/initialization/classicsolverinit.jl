@@ -7,16 +7,15 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         @warn "ClassicSolverInit might be unstable for high orders"
     end
 
-    @unpack ddu, du, x_tmp, m_tmp, K1 = cache
+    @unpack ddu, du = cache
 
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    Mcache = cache.C_DxD
-    condition_on!(x, Proj(0), _u, cache)
+    init_condition_on!(x, Proj(0), _u, cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.stats.nf += 1
-    condition_on!(x, Proj(1), view(du, :), cache)
+    init_condition_on!(x, Proj(1), view(du, :), cache)
 
     if q < 2
         return
@@ -39,7 +38,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> _f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        condition_on!(x, Proj(2), ddfddu, cache)
+        init_condition_on!(x, Proj(2), ddfddu, cache)
         if q < 3
             return
         end
@@ -106,13 +105,12 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     for (i, (t, u)) in enumerate(zip(ts, us))
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
         u = view(u, :) # just in case the problem is matrix-valued
-        predict_mean!(x_pred, x, A)
-        predict_cov!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
+        predict!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
         push!(preds, copy(x_pred))
 
         H = cache.E0 * PI
         measurement.μ .= H * x_pred.μ .- u
-        X_A_Xt!(measurement.Σ, x_pred.Σ, H)
+        fast_X_A_Xt!(measurement.Σ, x_pred.Σ, H)
 
         update!(x_filt, x_pred, measurement, H, K1, C_Dxd, C_DxD, C_dxd)
         push!(filts, copy(x_filt))

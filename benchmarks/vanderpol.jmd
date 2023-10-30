@@ -39,7 +39,7 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 2:6
+  for order in 3:7
 ]
 
 labels = first.(_setups)
@@ -85,21 +85,21 @@ DENSE = false;
 SAVE_EVERYSTEP = false;
 
 _setups = [
-  "EK1(2) 1st order" => Dict(:alg => EK1(order=2, smooth=DENSE))
   "EK1(3) 1st order" => Dict(:alg => EK1(order=3, smooth=DENSE))
   "EK1(4) 1st order" => Dict(:alg => EK1(order=4, smooth=DENSE))
   "EK1(5) 1st order" => Dict(:alg => EK1(order=5, smooth=DENSE))
-  "EK1(3) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=3, smooth=DENSE))
+  "EK1(6) 1st order" => Dict(:alg => EK1(order=6, smooth=DENSE))
   "EK1(4) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=4, smooth=DENSE))
   "EK1(5) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=5, smooth=DENSE))
-  "EK1(5) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=6, smooth=DENSE))
+  "EK1(6) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=6, smooth=DENSE))
+  "EK1(7) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=7, smooth=DENSE))
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (6:13)
-reltols = 1.0 ./ 10.0 .^ (3:10)
+abstols = 1.0 ./ 10.0 .^ (6:12)
+reltols = 1.0 ./ 10.0 .^ (3:9)
 
 wp = WorkPrecisionSet(
     [prob, prob2], abstols, reltols, setups;

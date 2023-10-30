@@ -35,6 +35,15 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     end
 end
 
+function write_into_solution!(u, μ; cache::EKCache, is_secondorder_ode=false)
+    if is_secondorder_ode
+        _matmul!(view(u.x[2], :), cache.E0, μ)
+        _matmul!(view(u.x[1], :), cache.E1, μ)
+    else
+        _matmul!(view(u, :), cache.E0, μ)
+    end
+end
+
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
@@ -71,8 +80,9 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     end
 
     # Predict the mean
-    predict_mean!(x_pred, xprev, Ah)
-    _matmul!(view(integ.u, :), SolProj, x_pred.μ)
+    predict_mean!(x_pred.μ, xprev.μ, Ah)
+    write_into_solution!(
+        integ.u, x_pred.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -91,7 +101,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     # Predict the covariance, using either the local or global diffusion
     extrapolation_diff =
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
-    predict_cov!(x_pred, xprev, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
+    predict_cov!(x_pred.Σ, xprev.Σ, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
     if integ.alg.smooth
         @unpack C_DxD, backward_kernel = cache
@@ -107,7 +117,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Update state and save the ODE solution value
     x_filt = update!(cache, x_pred)
-    _matmul!(view(integ.u, :), SolProj, x_filt.μ)
+    write_into_solution!(
+        integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
@@ -134,7 +145,7 @@ as in OrdinaryDiffEq.jl.
 function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ
     @unpack du, ddu, measurement, R, H = integ.cache
-    @assert iszero(R)
+    # @assert iszero(R)
 
     z = integ.cache.measurement
     z_tmp = integ.cache.m_tmp
@@ -215,7 +226,7 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         return Inf
     end
 
-    R = cache.C_Dxd
+    R = cache.measurement.Σ.R
 
     if local_diffusion isa Diagonal
         _QR = cache.C_DxD .= Qh.R .* sqrt.(local_diffusion.diag)'
@@ -234,7 +245,11 @@ function estimate_errors!(cache::AbstractODEFilterCache)
 
         # faster:
         error_estimate = view(cache.tmp, 1:d)
-        sum!(abs2, error_estimate', view(R, :, 1:d))
+        if R isa IsometricKroneckerProduct
+            error_estimate .= sum(abs2, R.B)
+        else
+            sum!(abs2, error_estimate', view(R, :, 1:d))
+        end
         error_estimate .*= local_diffusion
         error_estimate .= sqrt.(error_estimate)
 

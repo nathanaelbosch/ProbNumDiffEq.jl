@@ -48,12 +48,12 @@ function calibrate_solution!(integ, mle_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
     @assert mle_diffusion isa Number || mle_diffusion isa Diagonal
-    sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion.diag)'
+    sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion)
     @simd ivdep for C in integ.sol.x_filt.Σ
-        @.. C.R *= sqrt_diff
+        rmul!(C.R, sqrt_diff)
     end
     @simd ivdep for C in integ.sol.backward_kernels.C
-        @.. C.R *= sqrt_diff
+        rmul!(C.R, sqrt_diff)
     end
 
     # Re-write into the solution estimates
@@ -88,7 +88,7 @@ Smooth the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updat
 values saved in `integ.sol.pu` and `integ.sol.u`.
 
 This function handles the iteration and preconditioning.
-The actual smoothing step happens in [`smooth!`](@ref).
+The actual smoothing step happens by [`marginalize!`](@ref)ing backward kernels.
 """
 function smooth_solution!(integ)
     @unpack cache, sol = integ

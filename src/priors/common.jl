@@ -1,8 +1,13 @@
 abstract type AbstractODEFilterPrior{elType} end
 
-function initialize_preconditioner(p::AbstractODEFilterPrior{T}, dt) where {T}
+function initialize_preconditioner(
+    FAC::CovarianceStructure{T1},
+    p::AbstractODEFilterPrior{T},
+    dt,
+) where {T,T1}
+    @assert T == T1
     d, q = p.wiener_process_dimension, p.num_derivatives
-    P, PI = init_preconditioner(d, q, T)
+    P, PI = init_preconditioner(FAC)
     make_preconditioner!(P, dt, d, q)
     make_preconditioner_inv!(PI, dt, d, q)
     return P, PI
@@ -31,14 +36,25 @@ See also: [`make_transition_matrices`](@ref).
 
 [1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
-function initialize_transition_matrices(p::AbstractODEFilterPrior{T}, dt) where {T}
+function initialize_transition_matrices(
+    FAC::DenseCovariance,
+    p::AbstractODEFilterPrior{T},
+    dt,
+) where {T}
     d, q = p.wiener_process_dimension, p.num_derivatives
     D = d * (q + 1)
     Ah, Qh = zeros(T, D, D), PSDMatrix(zeros(T, D, D))
-    P, PI = initialize_preconditioner(p, dt)
+    P, PI = initialize_preconditioner(FAC, p, dt)
     A = copy(Ah)
     Q = copy(Qh)
     return A, Q, Ah, Qh, P, PI
+end
+function initialize_transition_matrices(
+    FAC::CovarianceStructure,
+    p::AbstractODEFilterPrior,
+    dt,
+)
+    error("The chosen prior can not be implemented with a $fac factorization")
 end
 
 """
@@ -73,7 +89,8 @@ function make_transition_matrices!(cache, prior::AbstractODEFilterPrior, dt)
     _Ah, _Qh = discretize(cache.prior, dt)
     copy!(Ah, _Ah)
     copy!(Qh, _Qh)
-    @.. A = P.diag * Ah * PI.diag'
+    # A = P * Ah * PI
+    _matmul!(A, P, _matmul!(A, Ah, PI))
     fast_X_A_Xt!(Q, Qh, P)
 end
 

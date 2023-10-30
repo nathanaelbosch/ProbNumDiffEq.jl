@@ -6,8 +6,8 @@ isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
-apply_diffusion(Q, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(sqrt.(diffusion) * Q.R)
+apply_diffusion(Q::PSDMatrix, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
+apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(Q.R * sqrt.(diffusion))
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
 
@@ -70,10 +70,15 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     v, S = measurement.μ, measurement.Σ
     e = m_tmp.μ
     _S = _matmul!(Smat, S.R', S.R)
-    S_chol = cholesky!(_S)
     e .= v
-    ldiv!(S_chol, e)
-    diffusion_t = dot(v, e) / d
+    diffusion_t = if _S isa IsometricKroneckerProduct
+        @assert length(_S.B) == 1
+        dot(v, e) / d / _S.B[1]
+    else
+        S_chol = cholesky!(_S)
+        ldiv!(S_chol, e)
+        dot(v, e) / d
+    end
 
     if integ.success_iter == 0
         # @assert length(sol_diffusions) == 0
@@ -159,10 +164,15 @@ function local_scalar_diffusion(cache)
     e, HQH = m_tmp.μ, m_tmp.Σ
     fast_X_A_Xt!(HQH, Qh, H)
     HQHmat = _matmul!(Smat, HQH.R', HQH.R)
-    C = cholesky!(HQHmat)
     e .= z
-    ldiv!(C, e)
-    σ² = dot(z, e) / d
+    σ² = if HQHmat isa IsometricKroneckerProduct
+        @assert length(HQHmat.B) == 1
+        dot(z, e) / d / HQHmat.B[1]
+    else
+        C = cholesky!(HQHmat)
+        ldiv!(C, e)
+        dot(z, e) / d
+    end
     return σ²
 end
 
