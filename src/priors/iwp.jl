@@ -44,40 +44,38 @@ function to_1d_sde(p::IWP)
     return LTISDE(F_breve, L_breve)
 end
 
-function make_preconditioned_transition_cov_cholf_1d(q::Integer, ::Type{elType}) where {elType}
+
+"""
+  make_preconditioned_transition_cov_cholf_1d(q::Integer, elType::Type)
+
+Compute the left square root of the preconditioned IWP transition covariance.
+
+This is based on a similar implementation in IntegratedWienerProcesses.jl
+https://github.com/filtron/IntegratedWienerProcesses.jl/tree/main
+adjusted such that we obtain the left square root, with different ordering of the derivatives.
+"""
+@fastmath function make_preconditioned_iwp_transition_cov_lsqrt_1d(
+    q::Integer,
+    ::Type{elType},
+) where {elType}
     if q >= 10 && !(q isa BigInt)
-        return make_preconditioned_transition_cov_cholf_1d(big(q), elType)
+        return make_preconditioned_iwp_transition_cov_lsqrt_1d(big(q), elType)
     end
 
-    L = if q isa BigInt
-        zeros(elType, q + 1, q + 1)
-    else
-        Array{elType}(calloc, q + 1, q + 1)
-    end
+    L = zeros(elType, q + 1, q + 1)
 
-    # Original
-    # @simd ivdep for n in 0:q
-    #     @simd ivdep for m in 0:q
-    #         if m <= n
-    #             @inbounds L[q+1-m, q+1-n] =
-    #                 sqrt(2 * m + 1) * factorial(n)^2 / factorial(n - m) /
-    #                 factorial(n + m + 1)
-    #         end
-    #     end
-    # end
-
-    # My try at tuning this
-    @simd ivdep for x in 0:q
-        @simd ivdep for y in 0:x
-            # if x >= y
-            @inbounds L[x+1, y+1] =
-                sqrt(2q - 2x + 1) * factorial(q-y)^2 / factorial(2q - y - x) /
-                factorial(2q - y - x + 1)
+    @simd ivdep for m in 0:q
+        @simd ivdep for n in 0:m
+            # if m >= n
+            @inbounds L[m+1, n+1] =
+                sqrt(2q - 2m + 1) * factorial(q - n)^2 / factorial(m - n) /
+                factorial(2q - n - m + 1)
             # end
         end
     end
     return L
 end
+
 
 function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
     q = iwp.num_derivatives
@@ -86,7 +84,7 @@ function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
     # Q_breve = Cauchy(collect(q:-1.0:0.0), collect((q+1):-1.0:1.0)) |> Matrix  # for Julia1.6
 
     # QR_breve = cholesky(Q_breve).L' |> collect
-    QR_breve = make_preconditioned_transition_cov_cholf_1d(q, elType)
+    QR_breve = make_preconditioned_iwp_transition_cov_lsqrt_1d(q, elType)
     A_breve, QR_breve = elType.(A_breve), elType.(QR_breve)
     Q_breve = PSDMatrix(QR_breve)
 
