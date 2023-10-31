@@ -44,7 +44,6 @@ function to_1d_sde(p::IWP)
     return LTISDE(F_breve, L_breve)
 end
 
-
 """
   make_preconditioned_transition_cov_cholf_1d(q::Integer, elType::Type)
 
@@ -75,7 +74,6 @@ adjusted such that we obtain the left square root, with different ordering of th
     end
     return L
 end
-
 
 function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
     q = iwp.num_derivatives
