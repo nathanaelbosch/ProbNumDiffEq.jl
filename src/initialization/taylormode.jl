@@ -59,5 +59,30 @@ function taylormode_get_derivatives(u, f::SciMLBase.AbstractODEFunction{true}, p
     duT = zero(uT)
     uauxT = similar(uT)
     TaylorIntegration.jetcoeffs!(f, tT, uT, duT, uauxT, p)
+    # return hcat([evaluate.(differentiate.(uT, i)) for i in 0:q]...)'
     return [evaluate.(differentiate.(uT, i)) for i in 0:q]
+end
+
+
+
+function forwarddiff_get_derivatives!(out, u, f::SciMLBase.AbstractODEFunction{true}, p, t, q)
+    _f(du, u) = f(du, u, p, t)
+    d = length(u0)
+    f_n = _f
+    out[1:d] .= u0
+    @views _f(out[d+1:2d], u0)
+    for o in 2:ndiffs
+        f_n = forwarddiff_vectorfield_derivative_iteration(f_n, _f)
+        @views f_n(out[o*d+1:(o+1)*d], u0)
+    end
+    return out
+end
+
+function forwarddiff_vectorfield_derivative_iteration(f_n, f_0)
+    function df(du, u)
+        J = ForwardDiff.jacobian(f_n, du, u)
+        f_0(du, u)
+        _matmul!(du, J, du)
+    end
+    return df
 end
