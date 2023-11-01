@@ -319,34 +319,6 @@ end
             @test m_smoothed ≈ x_out.μ
             @test P_smoothed ≈ Matrix(x_out.Σ)
         end
-        @testset "smooth!" begin
-            _d = d
-            x_curr_psd = Gaussian(m, PSDMatrix(P_R)) |> copy
-            x_next_psd = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
-            cache = if !KRONECKER
-                (x_pred=copy(x_curr_psd),
-                    G1=zeros(_d, _d),
-                    C_DxD=zeros(_d, _d),
-                    C_2DxD=zeros(2_d, _d),
-                    C_3DxD=zeros(3_d, _d))
-            else
-                (x_pred=copy(x_curr_psd),
-                    G1=IsometricKroneckerProduct(K, zeros(_d, _d)),
-                    C_DxD=IsometricKroneckerProduct(K, zeros(_d, _d)),
-                    C_2DxD=IsometricKroneckerProduct(K, zeros(2_d, _d)),
-                    C_3DxD=IsometricKroneckerProduct(K, zeros(3_d, _d)))
-            end
-            ProbNumDiffEq.smooth!(
-                x_curr_psd,
-                x_next_psd,
-                A,
-                Q_SR,
-                cache,
-            )
-            @test m_smoothed ≈ x_curr_psd.μ
-            @test P_smoothed ≈ Matrix(x_curr_psd.Σ)
-        end
-
         @testset "smooth via backward kernels" begin
             K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
             K_backward = ProbNumDiffEq.AffineNormalKernel(

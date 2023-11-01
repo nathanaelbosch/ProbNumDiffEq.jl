@@ -18,5 +18,11 @@ ProbNumDiffEq.update!
 
 ```@docs
 ProbNumDiffEq.smooth
-ProbNumDiffEq.smooth!
+```
+
+## Markov Kernels
+```@docs
+ProbNumDiffEq.AffineNormalKernel
+ProbNumDiffEq.marginalize!
+ProbNumDiffEq.compute_backward_kernel!
 ```

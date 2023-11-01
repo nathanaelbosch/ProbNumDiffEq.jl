@@ -89,8 +89,10 @@ end
 
 function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
+    # @unpack Ah, Qh = cache
     @unpack x, x_pred, x_filt, measurement = cache
-    @unpack K1, C_Dxd, C_DxD, C_dxd = cache
+    @unpack K1, C_Dxd, C_DxD, C_dxd, C_3DxD = cache
+    @unpack backward_kernel = cache
 
     # Predict forward:
     make_preconditioners!(cache, dt)
@@ -100,13 +102,20 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
 
     preds = []
     filts = [copy(x)]
+    backward_kernels = []
 
     # Filter through the data forwards
     for (i, (t, u)) in enumerate(zip(ts, us))
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
         u = view(u, :) # just in case the problem is matrix-valued
+
         predict!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
         push!(preds, copy(x_pred))
+
+        K = AffineNormalKernel(A, Q)
+        compute_backward_kernel!(
+            backward_kernel, x_pred, x, K; C_DxD, diffusion=cache.default_diffusion)
+        push!(backward_kernels, copy(backward_kernel))
 
         H = cache.E0 * PI
         measurement.μ .= H * x_pred.μ .- u
@@ -119,11 +128,9 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     end
 
     # Smooth backwards
-    for i in length(filts):-1:2
-        xf = filts[i-1]
-        xs = filts[i]
-        xp = preds[i-1] # Since `preds` is one shorter
-        smooth!(xf, xs, A, Q, cache, 1)
+    x_smooth = filts
+    for i in length(x_smooth)-1:-1:1
+        marginalize!(x_smooth[i], x_smooth[i+1], backward_kernels[i]; C_DxD, C_3DxD)
     end
 
     _gaussian_mul!(cache.x, PI, filts[1])
