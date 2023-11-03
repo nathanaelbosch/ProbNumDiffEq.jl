@@ -68,7 +68,9 @@ plot(test_sol,
      layout=(4,1),
      title=["Hodgkin-Huxley Solution" "" "" ""],
      ylabel=["V(t)" "m(t)" "n(t)" "h(t)"],
+     xlabel=["" "" "" "t"],
      size = (1000, 600),
+     color=[1 2 3 4],
 )
 ```
 
@@ -76,7 +78,7 @@ plot(test_sol,
 
 
 
-## Adaptive steps
+## Adaptive steps - no smoothing
 
 ```julia
 DENSE = SAVE_EVERYSTEP = false
@@ -127,31 +129,80 @@ plot(
 
 
 
+## Adaptive steps - with smoothing
 
-## Fixed steps
+```julia
+DENSE = SAVE_EVERYSTEP = true
+
+_setups = [
+  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
+  "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
+  "EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
+  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
+  "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
+  "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
+  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, smooth=DENSE))
+  "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
+  "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+colors = [1 1 1 2 2 2 2 3 3 3]
+
+abstols = 1.0 ./ 10.0 .^ (6:10)
+reltols = 1.0 ./ 10.0 .^ (3:7)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(
+    wp,
+    title = "Hodgkin-Huxley with adaptive steps",
+    color = colors,
+    xticks = 10.0 .^ (-16:1:5),
+    yticks = 10.0 .^ (-6:1:5),
+)
+```
+
+![](figures/hodgkinhuxley_4_1.svg)
+
+
+
+
+## Fixed steps - no smoothing
 
 ```julia
 DENSE = SAVE_EVERYSTEP = false
 
-dts = 10.0 .^ range(-1, -3, length=length(abstols))
+dts = 10.0 .^ range(-2, -3, length=10)
+abstols = reltols = repeat([missing], length(dts))
 
+DM = FixedDiffusion()
 _setups = [
-  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE), :dts=>dts)
-  #"EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE), :dts=>dts)
-  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE), :dts=>dts)
-  #"EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE), :dts=>dts)
-  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, smooth=DENSE), :dts=>dts)
-  #"RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE), :dts=>dts)
-  #"RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE), :dts=>dts)
+  "EK0(2)" => Dict(:alg=>EK0(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK1(2)" => Dict(:alg=>EK1(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 colors = [1 2 3]
 
-
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
+    adaptive = false,
     names = labels,
     #print_names = true,
     appxsol = test_sol,
@@ -172,8 +223,53 @@ plot(
 )
 ```
 
-![](figures/hodgkinhuxley_4_1.svg)
+![](figures/hodgkinhuxley_5_1.svg)
 
+
+
+
+## Fixed steps - with smoothing
+
+```julia
+DENSE = SAVE_EVERYSTEP = true
+
+dts = 10.0 .^ range(-2, -3, length=length(abstols))
+
+DM = FixedDiffusion()
+_setups = [
+  "EK0(2)" => Dict(:alg=>EK0(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK1(2)" => Dict(:alg=>EK1(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+colors = [1 2 3]
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    adaptive = false,
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(
+    wp,
+    title = "Hodgkin-Huxley with fixed steps",
+    color = colors,
+    xticks = 10.0 .^ (-16:1:5),
+    yticks = 10.0 .^ (-6:1:5),
+)
+```
+
+![](figures/hodgkinhuxley_6_1.svg)
 
 
 
