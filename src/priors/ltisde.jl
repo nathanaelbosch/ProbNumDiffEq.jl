@@ -37,7 +37,7 @@ function matrix_fraction_decomposition(
     return A, Q
 end
 
-function discretize_sqrt(sde::LTISDE, dt::Real)
+function discretize_sqrt_with_quadraturetrick(sde::LTISDE, dt::Real)
     F, L = drift(sde), dispersion(sde)
 
     D = size(F, 1)
@@ -68,6 +68,16 @@ function discretize_sqrt(sde::LTISDE, dt::Real)
     else
         qr!(R).R |> Matrix
     end
+
+    return Ah, Qh_R
+end
+
+
+function discretize_sqrt(sde::LTISDE, dt::Real)
+    Fdt, Ldt = dt*drift(sde), sqrt(dt)*dispersion(sde)
+
+    method = FiniteHorizonGramians.ExpAndGram{eltype(Fdt),13}()
+    Ah, Qh_R = FiniteHorizonGramians.exp_and_gram_chol(Fdt, Ldt, method)
 
     return Ah, Qh_R
 end

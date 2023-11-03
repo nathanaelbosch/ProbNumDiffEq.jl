@@ -28,6 +28,7 @@ using Octavian
 using FastGaussQuadrature
 import Kronecker
 using ArrayAllocators
+using FiniteHorizonGramians
 
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
