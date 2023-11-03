@@ -84,21 +84,19 @@ plot(test_sol,
 DENSE = SAVE_EVERYSTEP = false
 
 _setups = [
-  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
   "EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
-  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
   "EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
-  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, smooth=DENSE))
   "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
   "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
+  "RosenbrockExpEK1(8)" => Dict(:alg=>RosenbrockExpEK(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
-colors = [1 1 1 2 2 2 2 3 3 3]
+colors = [1 1 2 2 2 3 3 3]
 
 abstols = 1.0 ./ 10.0 .^ (6:10)
 reltols = 1.0 ./ 10.0 .^ (3:7)
@@ -118,7 +116,7 @@ wp = WorkPrecisionSet(
 
 plot(
     wp,
-    title = "Hodgkin-Huxley with adaptive steps",
+    title = "Adaptive steps - no smoothing",
     color = colors,
     xticks = 10.0 .^ (-16:1:5),
     yticks = 10.0 .^ (-6:1:5),
@@ -135,21 +133,19 @@ plot(
 DENSE = SAVE_EVERYSTEP = true
 
 _setups = [
-  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
   "EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
-  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
   "EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
-  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, smooth=DENSE))
   "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
   "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
+  "RosenbrockExpEK1(8)" => Dict(:alg=>RosenbrockExpEK(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
-colors = [1 1 1 2 2 2 2 3 3 3]
+colors = [1 1 2 2 2 3 3 3]
 
 abstols = 1.0 ./ 10.0 .^ (6:10)
 reltols = 1.0 ./ 10.0 .^ (3:7)
@@ -169,7 +165,7 @@ wp = WorkPrecisionSet(
 
 plot(
     wp,
-    title = "Hodgkin-Huxley with adaptive steps",
+    title = "Adaptive steps - with smoothing",
     color = colors,
     xticks = 10.0 .^ (-16:1:5),
     yticks = 10.0 .^ (-6:1:5),
@@ -191,9 +187,9 @@ abstols = reltols = repeat([missing], length(dts))
 
 DM = FixedDiffusion()
 _setups = [
-  "EK0(2)" => Dict(:alg=>EK0(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
-  "EK1(2)" => Dict(:alg=>EK1(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
-  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK0(3)" => Dict(:alg=>EK0(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK1(3)" => Dict(:alg=>EK1(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
 ]
 
 labels = first.(_setups)
@@ -216,7 +212,7 @@ wp = WorkPrecisionSet(
 
 plot(
     wp,
-    title = "Hodgkin-Huxley with fixed steps",
+    title = "Fixed steps - no smoothing",
     color = colors,
     xticks = 10.0 .^ (-16:1:5),
     yticks = 10.0 .^ (-6:1:5),
@@ -237,9 +233,9 @@ dts = 10.0 .^ range(-2, -3, length=length(abstols))
 
 DM = FixedDiffusion()
 _setups = [
-  "EK0(2)" => Dict(:alg=>EK0(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
-  "EK1(2)" => Dict(:alg=>EK1(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
-  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK0(3)" => Dict(:alg=>EK0(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK1(3)" => Dict(:alg=>EK1(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
 ]
 
 labels = first.(_setups)
@@ -262,7 +258,7 @@ wp = WorkPrecisionSet(
 
 plot(
     wp,
-    title = "Hodgkin-Huxley with fixed steps",
+    title = "Fixed steps - with smoothing",
     color = colors,
     xticks = 10.0 .^ (-16:1:5),
     yticks = 10.0 .^ (-6:1:5),
