@@ -209,10 +209,10 @@ _setups = [
   "EK1(3) TaylorInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=TaylorModeInit(3)))
   "EK1(5) TaylorInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=TaylorModeInit(5)))
   "EK1(8) TaylorInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(8)))
-  "EK1(2) TaylorInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=ForwardDiffInit(2)))
-  "EK1(3) TaylorInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=ForwardDiffInit(3)))
-  "EK1(5) TaylorInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=ForwardDiffInit(5)))
-  "EK1(8) TaylorInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=ForwardDiffInit(8)))
+  "EK1(2) ForwardDiffInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=ForwardDiffInit(2)))
+  "EK1(3) ForwardDiffInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=ForwardDiffInit(3)))
+  "EK1(5) ForwardDiffInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=ForwardDiffInit(5)))
+  "EK1(8) ForwardDiffInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=ForwardDiffInit(8)))
   "EK1(2) SimpleInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=SimpleInit()))
   "EK1(3) SimpleInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=SimpleInit()))
   "EK1(5) SimpleInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=SimpleInit()))
@@ -242,7 +242,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, color=[2 2 2 4 4 4 5 5 5], xticks = 10.0 .^ (-16:1:5))
+plot(wp, color=[2 2 2 2 4 4 4 4 5 5 5 5 6 6 6 6], xticks = 10.0 .^ (-16:1:5))
 ```
 
 ![](figures/lotkavolterra_7_1.svg)
