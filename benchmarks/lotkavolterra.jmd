@@ -234,7 +234,8 @@ abstols = 1.0 ./ 10.0 .^ (4:14)
 reltols = 1.0 ./ 10.0 .^ (1:11)
 
 orders = (2, 3, 5, 8)
-ps = for o in orders
+ps = []
+for o in orders
     _setups = [
       "EK1($o) TaylorInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=TaylorModeInit(o)))
       "EK1($o) ForwardDiffInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ForwardDiffInit(o)))
@@ -255,13 +256,13 @@ ps = for o in orders
         verbose = false,
     )
 
-    plot(wp, color=[2 4 5 6])
+    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5))
+    push!(ps, p)
 end
 plot(
     ps...,
     layout=(length(orders), 1),
     size = (1000, 800),
-    xticks = [false false false 10.0 .^ (-16:1:5)],
 )
 ```
 
