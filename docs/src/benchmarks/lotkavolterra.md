@@ -198,257 +198,11 @@ plot(wp, color=[2 2 2 3 3 3], xticks = 10.0 .^ (-16:1:5))
 
 
 
-## TaylorModeInit vs ClassicSolverInit
+## Comparison of the different initialization schemes
 
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
-
-labels = first.(_setups)
-setups = last.(_setups)
-
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
-
-_setups = [
-  "EK1(2) TaylorInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=TaylorModeInit(2)))
-  "EK1(3) TaylorInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=TaylorModeInit(3)))
-  "EK1(5) TaylorInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=TaylorModeInit(5)))
-  "EK1(8) TaylorInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(8)))
-  "EK1(2) ForwardDiffInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=ForwardDiffInit(2)))
-  "EK1(3) ForwardDiffInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=ForwardDiffInit(3)))
-  "EK1(5) ForwardDiffInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=ForwardDiffInit(5)))
-  "EK1(8) ForwardDiffInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=ForwardDiffInit(8)))
-  "EK1(2) SimpleInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=SimpleInit()))
-  "EK1(3) SimpleInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=SimpleInit()))
-  "EK1(5) SimpleInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=SimpleInit()))
-  "EK1(8) SimpleInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=SimpleInit()))
-  "EK1(2) ClassicSolverInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=ClassicSolverInit()))
-  "EK1(3) ClassicSolverInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=ClassicSolverInit()))
-  "EK1(5) ClassicSolverInit" => Dict(:alg => EK1(order=5, smooth=DENSE, initialization=ClassicSolverInit()))
-  "EK1(8) ClassicSolverInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=ClassicSolverInit()))
-]
-
-# wp = WorkPrecisionSet(
-#     prob, abstols, reltols, setups;
-#     names = labels,
-#     #print_names = true,
-#     appxsol = test_sol,
-#     dense = DENSE,
-#     save_everystep = SAVE_EVERYSTEP,
-#     numruns = 10,
-#     maxiters = Int(1e7),
-#     timeseries_errors = false,
-#     verbose = false,
-# )
-
-# plot(wp, color=[2 2 2 2 4 4 4 4 5 5 5 5 6 6 6 6], xticks = 10.0 .^ (-16:1:5))
-```
-
-```
-16-element Vector{Pair{String, Dict{Symbol}}}:
-        "EK1(2) TaylorInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.TaylorModeInit}}(:alg => EK1(; prior = Pr
-obNumDiffEq.IWP{Float64, Missing}(missing, 2), diffusionmodel = ProbNumDiff
-Eq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Taylo
-rModeInit(2),))
-        "EK1(3) TaylorInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.TaylorModeInit}}(:alg => EK1(; prior = Pr
-obNumDiffEq.IWP{Float64, Missing}(missing, 3), diffusionmodel = ProbNumDiff
-Eq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Taylo
-rModeInit(3),))
-        "EK1(5) TaylorInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.TaylorModeInit}}(:alg => EK1(; prior = Pr
-obNumDiffEq.IWP{Float64, Missing}(missing, 5), diffusionmodel = ProbNumDiff
-Eq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Taylo
-rModeInit(5),))
-        "EK1(8) TaylorInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.TaylorModeInit}}(:alg => EK1(; prior = Pr
-obNumDiffEq.IWP{Float64, Missing}(missing, 8), diffusionmodel = ProbNumDiff
-Eq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Taylo
-rModeInit(8),))
-   "EK1(2) ForwardDiffInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ForwardDiffInit}}(:alg => EK1(; prior = P
-robNumDiffEq.IWP{Float64, Missing}(missing, 2), diffusionmodel = ProbNumDif
-fEq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Forw
-ardDiffInit(2),))
-   "EK1(3) ForwardDiffInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ForwardDiffInit}}(:alg => EK1(; prior = P
-robNumDiffEq.IWP{Float64, Missing}(missing, 3), diffusionmodel = ProbNumDif
-fEq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Forw
-ardDiffInit(3),))
-   "EK1(5) ForwardDiffInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ForwardDiffInit}}(:alg => EK1(; prior = P
-robNumDiffEq.IWP{Float64, Missing}(missing, 5), diffusionmodel = ProbNumDif
-fEq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Forw
-ardDiffInit(5),))
-   "EK1(8) ForwardDiffInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ForwardDiffInit}}(:alg => EK1(; prior = P
-robNumDiffEq.IWP{Float64, Missing}(missing, 8), diffusionmodel = ProbNumDif
-fEq.DynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.Forw
-ardDiffInit(8),))
-        "EK1(2) SimpleInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.SimpleInit}}(:alg => EK1(; prior = ProbNu
-mDiffEq.IWP{Float64, Missing}(missing, 2), diffusionmodel = ProbNumDiffEq.D
-ynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.SimpleIni
-t(),))
-        "EK1(3) SimpleInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.SimpleInit}}(:alg => EK1(; prior = ProbNu
-mDiffEq.IWP{Float64, Missing}(missing, 3), diffusionmodel = ProbNumDiffEq.D
-ynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.SimpleIni
-t(),))
-        "EK1(5) SimpleInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.SimpleInit}}(:alg => EK1(; prior = ProbNu
-mDiffEq.IWP{Float64, Missing}(missing, 5), diffusionmodel = ProbNumDiffEq.D
-ynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.SimpleIni
-t(),))
-        "EK1(8) SimpleInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.SimpleInit}}(:alg => EK1(; prior = ProbNu
-mDiffEq.IWP{Float64, Missing}(missing, 8), diffusionmodel = ProbNumDiffEq.D
-ynamicDiffusion(), smooth = false, initialization = ProbNumDiffEq.SimpleIni
-t(),))
- "EK1(2) ClassicSolverInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.Composit
-eAlgorithm{Tuple{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter
-!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.
-Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward
-}, true, nothing}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(O
-rdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), S
-tatic.False}, OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq
-.DEFAULT_PRECS), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}}}
-(:alg => EK1(; prior = ProbNumDiffEq.IWP{Float64, Missing}(missing, 2), dif
-fusionmodel = ProbNumDiffEq.DynamicDiffusion(), smooth = false, initializat
-ion = ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.CompositeAlgorithm{Tup
-le{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Ord
-inaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, true
-, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, nothi
-ng}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.
-trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, 
-OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS
-), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}(CompositeAlgori
-thm(; algs = (Vern7(; stage_limiter! = trivial_limiter!, step_limiter! = tr
-ivial_limiter!, thread = static(false), lazy = true,), Rodas4(; linsolve = 
-nothing, precs = DEFAULT_PRECS,)), choice_function = OrdinaryDiffEq.AutoSwi
-tch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Or
-dinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, tru
-e, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, noth
-ing}, Rational{Int64}, Int64}(Vern7(; stage_limiter! = trivial_limiter!, st
-ep_limiter! = trivial_limiter!, thread = static(false), lazy = true,), Roda
-s4(; linsolve = nothing, precs = DEFAULT_PRECS,), 10, 3, 9//10, 9//10, 2, f
-alse, 5),), false),))
- "EK1(3) ClassicSolverInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.Composit
-eAlgorithm{Tuple{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter
-!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.
-Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward
-}, true, nothing}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(O
-rdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), S
-tatic.False}, OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq
-.DEFAULT_PRECS), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}}}
-(:alg => EK1(; prior = ProbNumDiffEq.IWP{Float64, Missing}(missing, 3), dif
-fusionmodel = ProbNumDiffEq.DynamicDiffusion(), smooth = false, initializat
-ion = ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.CompositeAlgorithm{Tup
-le{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Ord
-inaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, true
-, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, nothi
-ng}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.
-trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, 
-OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS
-), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}(CompositeAlgori
-thm(; algs = (Vern7(; stage_limiter! = trivial_limiter!, step_limiter! = tr
-ivial_limiter!, thread = static(false), lazy = true,), Rodas4(; linsolve = 
-nothing, precs = DEFAULT_PRECS,)), choice_function = OrdinaryDiffEq.AutoSwi
-tch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Or
-dinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, tru
-e, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, noth
-ing}, Rational{Int64}, Int64}(Vern7(; stage_limiter! = trivial_limiter!, st
-ep_limiter! = trivial_limiter!, thread = static(false), lazy = true,), Roda
-s4(; linsolve = nothing, precs = DEFAULT_PRECS,), 10, 3, 9//10, 9//10, 2, f
-alse, 5),), false),))
- "EK1(5) ClassicSolverInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.Composit
-eAlgorithm{Tuple{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter
-!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.
-Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward
-}, true, nothing}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(O
-rdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), S
-tatic.False}, OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq
-.DEFAULT_PRECS), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}}}
-(:alg => EK1(; prior = ProbNumDiffEq.IWP{Float64, Missing}(missing, 5), dif
-fusionmodel = ProbNumDiffEq.DynamicDiffusion(), smooth = false, initializat
-ion = ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.CompositeAlgorithm{Tup
-le{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Ord
-inaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, true
-, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, nothi
-ng}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.
-trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, 
-OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS
-), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}(CompositeAlgori
-thm(; algs = (Vern7(; stage_limiter! = trivial_limiter!, step_limiter! = tr
-ivial_limiter!, thread = static(false), lazy = true,), Rodas4(; linsolve = 
-nothing, precs = DEFAULT_PRECS,)), choice_function = OrdinaryDiffEq.AutoSwi
-tch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Or
-dinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, tru
-e, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, noth
-ing}, Rational{Int64}, Int64}(Vern7(; stage_limiter! = trivial_limiter!, st
-ep_limiter! = trivial_limiter!, thread = static(false), lazy = true,), Roda
-s4(; linsolve = nothing, precs = DEFAULT_PRECS,), 10, 3, 9//10, 9//10, 2, f
-alse, 5),), false),))
- "EK1(8) ClassicSolverInit" => Dict{Symbol, ProbNumDiffEq.EK1{0, true, Val{
-:forward}, true, nothing, ProbNumDiffEq.IWP{Float64, Missing}, ProbNumDiffE
-q.DynamicDiffusion, ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.Composit
-eAlgorithm{Tuple{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter
-!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.
-Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward
-}, true, nothing}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(O
-rdinaryDiffEq.trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), S
-tatic.False}, OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq
-.DEFAULT_PRECS), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}}}
-(:alg => EK1(; prior = ProbNumDiffEq.IWP{Float64, Missing}(missing, 8), dif
-fusionmodel = ProbNumDiffEq.DynamicDiffusion(), smooth = false, initializat
-ion = ProbNumDiffEq.ClassicSolverInit{OrdinaryDiffEq.CompositeAlgorithm{Tup
-le{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Ord
-inaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, true
-, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, nothi
-ng}}, OrdinaryDiffEq.AutoSwitch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.
-trivial_limiter!), typeof(OrdinaryDiffEq.trivial_limiter!), Static.False}, 
-OrdinaryDiffEq.Rodas4{0, true, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS
-), Val{:forward}, true, nothing}, Rational{Int64}, Int64}}}(CompositeAlgori
-thm(; algs = (Vern7(; stage_limiter! = trivial_limiter!, step_limiter! = tr
-ivial_limiter!, thread = static(false), lazy = true,), Rodas4(; linsolve = 
-nothing, precs = DEFAULT_PRECS,)), choice_function = OrdinaryDiffEq.AutoSwi
-tch{OrdinaryDiffEq.Vern7{typeof(OrdinaryDiffEq.trivial_limiter!), typeof(Or
-dinaryDiffEq.trivial_limiter!), Static.False}, OrdinaryDiffEq.Rodas4{0, tru
-e, Nothing, typeof(OrdinaryDiffEq.DEFAULT_PRECS), Val{:forward}, true, noth
-ing}, Rational{Int64}, Int64}(Vern7(; stage_limiter! = trivial_limiter!, st
-ep_limiter! = trivial_limiter!, thread = static(false), lazy = true,), Roda
-s4(; linsolve = nothing, precs = DEFAULT_PRECS,), 10, 3, 9//10, 9//10, 2, f
-alse, 5),), false),))
-```
-
-
-
-```julia
-DENSE = false;
-SAVE_EVERYSTEP = false;
-
-labels = first.(_setups)
-setups = last.(_setups)
 
 abstols = 1.0 ./ 10.0 .^ (4:14)
 reltols = 1.0 ./ 10.0 .^ (1:11)
@@ -462,6 +216,9 @@ for o in orders
       "EK1($o) SimpleInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=SimpleInit()))
       "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit()))
     ]
+
+    labels = first.(_setups)
+    setups = last.(_setups)
 
     wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
@@ -482,11 +239,12 @@ end
 plot(
     ps...,
     layout=(length(orders), 1),
-    size = (1000, 800),
+    size = (1000, length(orders)*300),
+    xlabel=["" "" "" "Error"],
 )
 ```
 
-![](figures/lotkavolterra_8_1.svg)
+![](figures/lotkavolterra_7_1.svg)
 
 
 
