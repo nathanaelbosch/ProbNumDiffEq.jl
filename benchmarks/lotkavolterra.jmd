@@ -262,7 +262,7 @@ end
 plot(
     ps...,
     layout=(length(orders), 1),
-    size = (1000, 800),
+    size = (1000, length(orders)*300),
     xlabel=["" "" "" "Error"],
 )
 ```
