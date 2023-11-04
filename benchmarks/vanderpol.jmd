@@ -64,6 +64,52 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
+## Comparison of the different initialization schemes
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+abstols = 1.0 ./ 10.0 .^ (6:13)
+reltols = 1.0 ./ 10.0 .^ (3:10)
+
+orders = (2, 3, 5, 8)
+ps = []
+for o in orders
+    _setups = [
+      "EK1($o) TaylorInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=TaylorModeInit(o)))
+      "EK1($o) ForwardDiffInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ForwardDiffInit(o)))
+      "EK1($o) SimpleInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=SimpleInit()))
+      "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit()))
+    ]
+
+    labels = first.(_setups)
+    setups = last.(_setups)
+
+    wp = WorkPrecisionSet(
+        prob, abstols, reltols, setups;
+        names = labels,
+        #print_names = true,
+        appxsol = test_sol,
+        dense = DENSE,
+        save_everystep = SAVE_EVERYSTEP,
+        numruns = 10,
+        maxiters = Int(1e7),
+        timeseries_errors = false,
+        verbose = false,
+    )
+
+    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5))
+    push!(ps, p)
+end
+plot(
+    ps...,
+    layout=(length(orders), 1),
+    size = (1000, length(orders)*300),
+    xlabel=["" "" "" "Error"],
+)
+```
+
 ## Solving the first- vs second-order ODE
 
 ```julia
