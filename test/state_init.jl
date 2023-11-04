@@ -34,12 +34,12 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
     prob = ODEProblem{true,true}(f!, u0, tspan)
 
     @testset "`taylormode_get_derivatives`" begin
-        dfs = ProbNumDiffEq.taylormode_get_derivatives(
+        dfs = ProbNumDiffEq.get_derivatives(
+            TaylorModeInit(q),
             prob.u0,
             prob.f,
             prob.p,
             prob.tspan[1],
-            q,
         )
         @test length(dfs) == q + 1
         @test true_init_states ≈ vcat(dfs...)
@@ -47,7 +47,7 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
 
     @testset "Taylormode: `initial_update!`" begin
         integ = init(prob, EK0(order=q))
-        ProbNumDiffEq.initial_update!(integ, integ.cache, TaylorModeInit())
+        ProbNumDiffEq.initial_update!(integ, integ.cache, TaylorModeInit(q))
         x = integ.cache.x
         @test reshape(x.μ, :, 2)'[:] ≈ true_init_states
     end
