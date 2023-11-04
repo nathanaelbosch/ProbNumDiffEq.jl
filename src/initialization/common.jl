@@ -1,4 +1,6 @@
 abstract type InitializationScheme end
+abstract type AutodiffInitializationScheme <: InitializationScheme end
+
 
 """
     TaylorModeInit()
@@ -18,7 +20,7 @@ given problem (typically because the problem definition does not allow for eleme
 # References
 * [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
 """
-struct TaylorModeInit <: InitializationScheme end
+struct TaylorModeInit <: AutodiffInitializationScheme end
 
 """
     ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_ddu=false)

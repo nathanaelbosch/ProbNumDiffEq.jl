@@ -1,4 +1,4 @@
-function initial_update!(integ, cache, init::TaylorModeInit)
+function initial_update!(integ, cache, init::AutodiffInitializationScheme)
     @unpack u, f, p, t = integ
     @unpack d, q, q, x, Proj = cache
     D = d * (q + 1)
@@ -13,7 +13,7 @@ function initial_update!(integ, cache, init::TaylorModeInit)
         f = ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
     end
 
-    f_derivatives = taylormode_get_derivatives(u, f, p, t, q)
+    f_derivatives = get_derivatives(init, u, f, p, t, q)
     integ.stats.nf += q
     @assert length(0:q) == length(f_derivatives)
 
@@ -49,7 +49,7 @@ end
 """
     Compute initial derivatives of an IIP ODEProblem with TaylorIntegration.jl
 """
-function taylormode_get_derivatives(u, f::SciMLBase.AbstractODEFunction{true}, p, t, q)
+function get_derivatives(::TaylorModeInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t, q)
     tT = Taylor1(typeof(t), q)
     tT[0] = t
     uT = similar(u, Taylor1{eltype(u)})
