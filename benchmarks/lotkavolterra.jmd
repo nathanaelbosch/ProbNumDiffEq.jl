@@ -227,9 +227,6 @@ _setups = [
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
-labels = first.(_setups)
-setups = last.(_setups)
-
 abstols = 1.0 ./ 10.0 .^ (4:14)
 reltols = 1.0 ./ 10.0 .^ (1:11)
 
@@ -242,6 +239,9 @@ for o in orders
       "EK1($o) SimpleInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=SimpleInit()))
       "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit()))
     ]
+
+    labels = first.(_setups)
+    setups = last.(_setups)
 
     wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
