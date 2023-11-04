@@ -1,12 +1,20 @@
 abstract type InitializationScheme end
 abstract type AutodiffInitializationScheme <: InitializationScheme end
 
+"""
+    SimpleInit()
+
+Simple initialization, only with the given initial value and derivative.
+
+The remaining derivatives are set to zero with unit covariance (unless specified otherwise
+by setting a custom [`FixedDiffusion`](@ref)).
+"""
 struct SimpleInit <: InitializationScheme end
 
 """
-    TaylorModeInit()
+    TaylorModeInit(order)
 
-Exact initialization via Taylor-mode automatic differentiation.
+Exact initialization via Taylor-mode automatic differentiation up to order `order`.
 
 **This is the recommended initialization method!**
 
@@ -16,7 +24,8 @@ via Taylor-mode automatic differentiation.
 
 In some special cases it can happen that TaylorIntegration.jl is incompatible with the
 given problem (typically because the problem definition does not allow for elements of type
- `Taylor`). If this happens, try [`ClassicSolverInit`](@ref).
+ `Taylor`). If this happens, try one of [`SimpleInit`](@ref), [`ForwardDiffInit`](@ref)
+(for low enough orders), [`ClassicSolverInit`](@ref).
 
 # References
 * [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
@@ -31,6 +40,14 @@ struct TaylorModeInit <: AutodiffInitializationScheme
     end
 end
 
+"""
+    ForwardDiffInit(order)
+
+Exact initialization via ForwardDiff.jl up to order `order`.
+
+**Warning:** This does not scale well to high orders!
+For orders > 3, [`TaylorModeInit`](@ref) most likely performs better.
+"""
 struct ForwardDiffInit <: AutodiffInitializationScheme
     order::Int64
     ForwardDiffInit(order::Int64) = begin
