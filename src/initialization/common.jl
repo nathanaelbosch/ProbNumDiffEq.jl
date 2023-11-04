@@ -66,7 +66,7 @@ optionally the second derivative can also be set via automatic differentiation b
 * [schober16probivp](@cite) Schober et al, "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing (2019)
 """
 Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
-    alg::ALG = Tsit5()
+    alg::ALG = AutoVern7(Rodas4())
     init_on_ddu::Bool = false
 end
 
