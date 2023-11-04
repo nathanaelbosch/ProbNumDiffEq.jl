@@ -181,6 +181,12 @@ plot(wp, color=[2 2 2 3 3 3], xticks = 10.0 .^ (-16:1:5))
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:14)
+reltols = 1.0 ./ 10.0 .^ (1:11)
+
 _setups = [
   "EK1(2) TaylorInit" => Dict(:alg => EK1(order=2, smooth=DENSE, initialization=TaylorModeInit(2)))
   "EK1(3) TaylorInit" => Dict(:alg => EK1(order=3, smooth=DENSE, initialization=TaylorModeInit(3)))
@@ -200,26 +206,63 @@ _setups = [
   "EK1(8) ClassicSolverInit" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=ClassicSolverInit()))
 ]
 
+# wp = WorkPrecisionSet(
+#     prob, abstols, reltols, setups;
+#     names = labels,
+#     #print_names = true,
+#     appxsol = test_sol,
+#     dense = DENSE,
+#     save_everystep = SAVE_EVERYSTEP,
+#     numruns = 10,
+#     maxiters = Int(1e7),
+#     timeseries_errors = false,
+#     verbose = false,
+# )
+
+# plot(wp, color=[2 2 2 2 4 4 4 4 5 5 5 5 6 6 6 6], xticks = 10.0 .^ (-16:1:5))
+```
+
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
 labels = first.(_setups)
 setups = last.(_setups)
 
 abstols = 1.0 ./ 10.0 .^ (4:14)
 reltols = 1.0 ./ 10.0 .^ (1:11)
 
-wp = WorkPrecisionSet(
-    prob, abstols, reltols, setups;
-    names = labels,
-    #print_names = true,
-    appxsol = test_sol,
-    dense = DENSE,
-    save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
-    maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
-)
+orders = (2, 3, 5, 8)
+ps = for o in orders
+    _setups = [
+      "EK1($o) TaylorInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=TaylorModeInit(o)))
+      "EK1($o) ForwardDiffInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ForwardDiffInit(o)))
+      "EK1($o) SimpleInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=SimpleInit()))
+      "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit()))
+    ]
 
-plot(wp, color=[2 2 2 2 4 4 4 4 5 5 5 5 6 6 6 6], xticks = 10.0 .^ (-16:1:5))
+    wp = WorkPrecisionSet(
+        prob, abstols, reltols, setups;
+        names = labels,
+        #print_names = true,
+        appxsol = test_sol,
+        dense = DENSE,
+        save_everystep = SAVE_EVERYSTEP,
+        numruns = 10,
+        maxiters = Int(1e7),
+        timeseries_errors = false,
+        verbose = false,
+    )
+
+    plot(wp, color=[2 4 5 6])
+end
+plot(
+    ps...,
+    layout=(length(orders), 1),
+    size = (1000, 800),
+    xticks = [false false false 10.0 .^ (-16:1:5)],
+)
 ```
 
 
