@@ -69,6 +69,7 @@ include("caches.jl")
 
 include("checks.jl")
 
+include("initialization/simpleinit.jl")
 include("initialization/autodiffinit.jl")
 include("initialization/classicsolverinit.jl")
 

@@ -1,6 +1,7 @@
 abstract type InitializationScheme end
 abstract type AutodiffInitializationScheme <: InitializationScheme end
 
+struct SimpleInit <: InitializationScheme end
 
 """
     TaylorModeInit()
