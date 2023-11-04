@@ -13,9 +13,9 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
         f = ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
     end
 
-    f_derivatives = get_derivatives(init, u, f, p, t, q)
-    integ.stats.nf += q
-    @assert length(0:q) == length(f_derivatives)
+    f_derivatives = get_derivatives(init, u, f, p, t)
+    integ.stats.nf += init.order
+    @assert length(f_derivatives) == init.order+1
 
     # This is hacky and should definitely be removed. But it also works so 🤷
     MM = if f.mass_matrix isa UniformScaling
@@ -49,7 +49,8 @@ end
 """
     Compute initial derivatives of an IIP ODEProblem with TaylorIntegration.jl
 """
-function get_derivatives(::TaylorModeInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t, q)
+function get_derivatives(init::TaylorModeInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
+    q = init.order
     tT = Taylor1(typeof(t), q)
     tT[0] = t
     uT = similar(u, Taylor1{eltype(u)})
@@ -63,6 +64,26 @@ function get_derivatives(::TaylorModeInit, u, f::SciMLBase.AbstractODEFunction{t
     return [evaluate.(differentiate.(uT, i)) for i in 0:q]
 end
 
+function get_derivatives(init::ForwardDiffInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
+    q = init.order
+    _f(u) = (du = copy(u); f(du, u, p, t); du)
+    f_n = _f
+    out = [u]
+    push!(out, _f(u))
+    for _ in 2:q
+        f_n = forwarddiff_oop_vectorfield_derivative_iteration(f_n, _f)
+        push!(out, f_n(u))
+    end
+    return out
+end
+
+function forwarddiff_oop_vectorfield_derivative_iteration(f_n, f_0)
+    function df(u)
+        J = ForwardDiff.jacobian(f_n, u)
+        return J * f_0(u)
+    end
+    return df
+end
 
 
 function forwarddiff_get_derivatives!(out, u, f::SciMLBase.AbstractODEFunction{true}, p, t, q)
@@ -72,13 +93,13 @@ function forwarddiff_get_derivatives!(out, u, f::SciMLBase.AbstractODEFunction{t
     out[1:d] .= u0
     @views _f(out[d+1:2d], u0)
     for o in 2:ndiffs
-        f_n = forwarddiff_vectorfield_derivative_iteration(f_n, _f)
+        f_n = forwarddiff_iip_vectorfield_derivative_iteration(f_n, _f)
         @views f_n(out[o*d+1:(o+1)*d], u0)
     end
     return out
 end
 
-function forwarddiff_vectorfield_derivative_iteration(f_n, f_0)
+function forwarddiff_iip_vectorfield_derivative_iteration(f_n, f_0)
     function df(du, u)
         J = ForwardDiff.jacobian(f_n, du, u)
         f_0(du, u)

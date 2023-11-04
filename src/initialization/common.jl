@@ -20,7 +20,25 @@ given problem (typically because the problem definition does not allow for eleme
 # References
 * [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
 """
-struct TaylorModeInit <: AutodiffInitializationScheme end
+struct TaylorModeInit <: AutodiffInitializationScheme
+    order::Int64
+    TaylorModeInit(order::Int64) = begin
+        if order < 1
+            throw(ArgumentError("order must be >= 1"))
+        end
+        new(order)
+    end
+end
+
+struct ForwardDiffInit <: AutodiffInitializationScheme
+    order::Int64
+    ForwardDiffInit(order::Int64) = begin
+        if order < 1
+            throw(ArgumentError("order must be >= 1"))
+        end
+        new(order)
+    end
+end
 
 """
     ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_ddu=false)

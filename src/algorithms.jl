@@ -49,7 +49,7 @@ EK0(;
     prior=IWP(order),
     diffusionmodel=DynamicDiffusion(),
     smooth=true,
-    initialization=TaylorModeInit(),
+    initialization=TaylorModeInit(order),
 ) = EK0(prior, diffusionmodel, smooth, initialization)
 
 _unwrap_val(::Val{B}) where {B} = B
@@ -103,7 +103,7 @@ EK1(;
     prior::PT=IWP(order),
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
-    initialization::IT=TaylorModeInit(),
+    initialization::IT=TaylorModeInit(order),
     chunk_size=Val{0}(),
     autodiff=Val{true}(),
     diff_type=Val{:forward},
