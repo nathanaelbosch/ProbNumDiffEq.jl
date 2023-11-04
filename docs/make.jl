@@ -51,6 +51,7 @@ makedocs(
             "Non-stiff ODE: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
             "Stiff ODE: Van der Pol" => "benchmarks/vanderpol.md",
             "Second order ODE: Pleiades" => "benchmarks/pleiades.md",
+            "Hodgkin-Huxley" => "benchmarks/hodgkinhuxley.md",
             "DAE: ROBER" => "benchmarks/rober.md",
         ],
         "Internals" => [
