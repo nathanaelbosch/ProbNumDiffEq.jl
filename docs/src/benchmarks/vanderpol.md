@@ -75,6 +75,61 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^
 
 
 
+## Comparison of the different initialization schemes
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+abstols = 1.0 ./ 10.0 .^ (6:13)
+reltols = 1.0 ./ 10.0 .^ (3:10)
+
+orders = (2, 3, 5, 8)
+ps = []
+for o in orders
+    _setups = [
+      "EK1($o) TaylorInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=TaylorModeInit(o)))
+      "EK1($o) ForwardDiffInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ForwardDiffInit(o)))
+      "EK1($o) SimpleInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=SimpleInit()))
+      "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit()))
+    ]
+
+    labels = first.(_setups)
+    setups = last.(_setups)
+
+    wp = WorkPrecisionSet(
+        prob, abstols, reltols, setups;
+        names = labels,
+        #print_names = true,
+        appxsol = test_sol,
+        dense = DENSE,
+        save_everystep = SAVE_EVERYSTEP,
+        numruns = 10,
+        maxiters = Int(1e7),
+        timeseries_errors = false,
+        verbose = false,
+    )
+
+    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5))
+    push!(ps, p)
+end
+plot(
+    ps...,
+    layout=(length(orders), 1),
+    size = (1000, length(orders)*300),
+    xlabel=["" "" "" "Error"],
+)
+```
+
+```
+Error: PosDefException: matrix is not Hermitian; Cholesky factorization fai
+led.
+```
+
+
+
+
+
 ## Solving the first- vs second-order ODE
 
 ```julia
@@ -91,7 +146,7 @@ test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=fals
 plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-2.5, 2.5))
 ```
 
-![](figures/vanderpol_4_1.svg)
+![](figures/vanderpol_5_1.svg)
 
 ```julia
 DENSE = false;
@@ -130,7 +185,7 @@ wp = WorkPrecisionSet(
 plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
 ```
 
-![](figures/vanderpol_5_1.svg)
+![](figures/vanderpol_6_1.svg)
 
 
 
@@ -191,7 +246,11 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
+<<<<<<< HEAD
   [0bca4576] SciMLBase v2.6.0
+=======
+  [0bca4576] SciMLBase v2.7.3
+>>>>>>> af24e8e9 (vdp benchmark)
   [505e40e9] SciPyDiffEq v0.2.1
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.1
@@ -218,7 +277,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [ec485272] ArnoldiMethod v0.2.0
   [c9d4266f] ArrayAllocators v0.3.0
   [4fba245c] ArrayInterface v7.5.1
+<<<<<<< HEAD
   [30b0a656] ArrayInterfaceCore v0.1.29
+=======
+>>>>>>> af24e8e9 (vdp benchmark)
   [6e4b80f9] BenchmarkTools v1.3.2
   [e2ed5e7c] Bijections v0.1.6
   [d1d4a3ce] BitFlags v0.1.7
@@ -255,14 +317,18 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
+<<<<<<< HEAD
   [2b5f629d] DiffEqBase v6.136.0
+=======
+  [2b5f629d] DiffEqBase v6.138.0
+>>>>>>> af24e8e9 (vdp benchmark)
   [459566f4] DiffEqCallbacks v2.33.1
   [f3b72e0c] DiffEqDevTools v2.39.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
   [b4f34e82] Distances v0.10.10
-  [31c24e10] Distributions v0.25.102
+  [31c24e10] Distributions v0.25.103
   [ffbed154] DocStringExtensions v0.9.3
 ⌅ [5b8099bc] DomainSets v0.6.7
   [fa6b7ba4] DualNumbers v0.6.8
@@ -331,7 +397,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [7ed4a6bd] LinearSolve v2.15.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
-  [bdcacae8] LoopVectorization v0.12.165
+  [bdcacae8] LoopVectorization v0.12.166
   [10e44e05] MATLAB v0.8.4
   [e2752cbe] MATLABDiffEq v1.2.0
   [33e6dc65] MKL v0.6.1
@@ -350,7 +416,11 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
+<<<<<<< HEAD
   [8913a72c] NonlinearSolve v2.6.0
+=======
+  [8913a72c] NonlinearSolve v2.6.1
+>>>>>>> af24e8e9 (vdp benchmark)
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -403,11 +473,15 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.5
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
+<<<<<<< HEAD
   [0bca4576] SciMLBase v2.6.0
+=======
+  [0bca4576] SciMLBase v2.7.3
+>>>>>>> af24e8e9 (vdp benchmark)
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.6
   [505e40e9] SciPyDiffEq v0.2.1
-  [6c6a2e73] Scratch v1.2.0
+  [6c6a2e73] Scratch v1.2.1
   [91c51154] SentinelArrays v1.4.0
   [efcf1570] Setfield v1.1.1
   [1277b4bf] ShiftedArrays v2.0.0
@@ -449,7 +523,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [a759f4b9] TimerOutputs v0.5.23
   [c751599d] ToeplitzMatrices v0.8.2
   [0796e94c] Tokenize v0.5.25
-  [3bb67fe8] TranscodingStreams v0.10.1
+  [3bb67fe8] TranscodingStreams v0.10.2
   [a2a6695c] TreeViews v0.3.0
   [d5829a12] TriangularSolve v0.1.20
   [410a4b4d] Tricks v0.1.8
@@ -468,7 +542,6 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [1b915085] WinReg v1.0.0
   [ddb6d928] YAML v0.4.9
   [c2297ded] ZMQ v1.2.2
-  [700de1a5] ZygoteRules v0.2.4
   [0518478a] deSolveDiffEq v0.1.1
   [6e34b625] Bzip2_jll v1.0.8+0
   [83423d85] Cairo_jll v1.16.1+1
