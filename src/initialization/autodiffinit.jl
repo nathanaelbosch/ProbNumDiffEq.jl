@@ -50,12 +50,7 @@ end
     Compute initial derivatives of an IIP ODEProblem with TaylorIntegration.jl
 """
 function get_derivatives(
-    init::TaylorModeInit,
-    u,
-    f::SciMLBase.AbstractODEFunction{true},
-    p,
-    t,
-)
+    init::TaylorModeInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
     q = init.order
     tT = Taylor1(typeof(t), q)
     tT[0] = t
@@ -71,21 +66,19 @@ function get_derivatives(
 end
 
 function get_derivatives(
-    init::ForwardDiffInit,
-    u,
-    f::SciMLBase.AbstractODEFunction{true},
-    p,
-    t,
-)
+    init::ForwardDiffInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
     q = init.order
     _f(u) = (du = copy(u); f(du, u, p, t); du)
-    f_n = _f
+
     out = [u]
     push!(out, _f(u))
+
+    f_n = _f
     for _ in 2:q
         f_n = forwarddiff_oop_vectorfield_derivative_iteration(f_n, _f)
         push!(out, f_n(u))
     end
+
     return out
 end
 
@@ -97,23 +90,22 @@ function forwarddiff_oop_vectorfield_derivative_iteration(f_n, f_0)
     return df
 end
 
-function forwarddiff_get_derivatives!(
-    out,
-    u,
-    f::SciMLBase.AbstractODEFunction{true},
-    p,
-    t,
-    q,
-)
+# Curently unused but potentially a future upgrade to the version above:
+function iip_forwarddiff_get_derivatives!(
+    out, init::ForwardDiffInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
+    q = init.order
+    d = length(u)
     _f(du, u) = f(du, u, p, t)
-    d = length(u0)
+
+    out[1:d] .= u
+    @views _f(out[d+1:2d], u)
+
     f_n = _f
-    out[1:d] .= u0
-    @views _f(out[d+1:2d], u0)
-    for o in 2:ndiffs
+    for o in 2:q
         f_n = forwarddiff_iip_vectorfield_derivative_iteration(f_n, _f)
-        @views f_n(out[o*d+1:(o+1)*d], u0)
+        @views f_n(out[o*d+1:(o+1)*d], u)
     end
+
     return out
 end
 
