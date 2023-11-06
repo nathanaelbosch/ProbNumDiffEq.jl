@@ -33,7 +33,8 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
     f!(du, u, p, t) = (du .= f(u, p, t))
     prob = ODEProblem{true,true}(f!, u0, tspan)
 
-    @testset "Exact `get_dervatives`: $INIT" for INIT in (TaylorModeInit(q), ForwardDiffInit(q))
+    @testset "Exact `get_dervatives`: $INIT" for INIT in (
+        TaylorModeInit(q), ForwardDiffInit(q))
         dfs = ProbNumDiffEq.get_derivatives(
             INIT,
             prob.u0,
