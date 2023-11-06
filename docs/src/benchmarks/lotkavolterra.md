@@ -281,7 +281,6 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
 

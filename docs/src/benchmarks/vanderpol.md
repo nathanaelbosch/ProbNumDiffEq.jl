@@ -84,14 +84,14 @@ SAVE_EVERYSTEP = false;
 abstols = 1.0 ./ 10.0 .^ (6:13)
 reltols = 1.0 ./ 10.0 .^ (3:10)
 
-orders = (2, 3, 5, 8)
+orders = (3, 5, 8)
 ps = []
 for o in orders
     _setups = [
       "EK1($o) TaylorInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=TaylorModeInit(o)))
       "EK1($o) ForwardDiffInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ForwardDiffInit(o)))
       "EK1($o) SimpleInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=SimpleInit()))
-      "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit()))
+      # "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit())) # unstable
     ]
 
     labels = first.(_setups)
@@ -121,12 +121,7 @@ plot(
 )
 ```
 
-```
-Error: PosDefException: matrix is not Hermitian; Cholesky factorization fai
-led.
-```
-
-
+![](figures/vanderpol_4_1.svg)
 
 
 
@@ -219,7 +214,6 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
 
