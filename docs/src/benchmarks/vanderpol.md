@@ -127,8 +127,8 @@ plot(
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
-abstols = 1.0 ./ 10.0 .^ (6:13)
-reltols = 1.0 ./ 10.0 .^ (3:10)
+abstols = 1.0 ./ 10.0 .^ (5:8)
+reltols = 1.0 ./ 10.0 .^ (2:5)
 
 _setups = [
     "EK1(8) TaylorInit(8)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(8)))
