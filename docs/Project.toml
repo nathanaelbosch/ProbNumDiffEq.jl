@@ -1,6 +1,5 @@
 [deps]
 Bibliography = "f1be7e48-bf82-45af-a471-ae754a193061"
-DiffEqUncertainty = "ef61062a-5684-51dc-bb67-a0fcdec5c97d"
 DifferentialEquations = "0c46a032-eb83-5123-abaf-570d42b7fbaa"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterCitations = "daee34ce-89f3-4625-b898-19384cb65244"
@@ -13,3 +12,4 @@ OptimizationOptimJL = "36348300-93cb-4f02-beb5-3c3902f8871e"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 ProbNumDiffEq = "bf3e78b0-7d74-48a5-b855-9609533b56a5"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
