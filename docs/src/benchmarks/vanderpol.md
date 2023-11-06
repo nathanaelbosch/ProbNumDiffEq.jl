@@ -81,8 +81,8 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
-abstols = 1.0 ./ 10.0 .^ (6:13)
-reltols = 1.0 ./ 10.0 .^ (3:10)
+abstols = 1.0 ./ 10.0 .^ (6:11)
+reltols = 1.0 ./ 10.0 .^ (3:8)
 
 orders = (3, 5, 8)
 ps = []
