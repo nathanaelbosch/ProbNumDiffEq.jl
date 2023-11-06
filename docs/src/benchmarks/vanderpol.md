@@ -246,11 +246,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
-<<<<<<< HEAD
-  [0bca4576] SciMLBase v2.6.0
-=======
   [0bca4576] SciMLBase v2.7.3
->>>>>>> af24e8e9 (vdp benchmark)
   [505e40e9] SciPyDiffEq v0.2.1
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.1
@@ -277,10 +273,6 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [ec485272] ArnoldiMethod v0.2.0
   [c9d4266f] ArrayAllocators v0.3.0
   [4fba245c] ArrayInterface v7.5.1
-<<<<<<< HEAD
-  [30b0a656] ArrayInterfaceCore v0.1.29
-=======
->>>>>>> af24e8e9 (vdp benchmark)
   [6e4b80f9] BenchmarkTools v1.3.2
   [e2ed5e7c] Bijections v0.1.6
   [d1d4a3ce] BitFlags v0.1.7
@@ -317,11 +309,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-<<<<<<< HEAD
-  [2b5f629d] DiffEqBase v6.136.0
-=======
   [2b5f629d] DiffEqBase v6.138.0
->>>>>>> af24e8e9 (vdp benchmark)
   [459566f4] DiffEqCallbacks v2.33.1
   [f3b72e0c] DiffEqDevTools v2.39.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
@@ -416,11 +404,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
-<<<<<<< HEAD
-  [8913a72c] NonlinearSolve v2.6.0
-=======
   [8913a72c] NonlinearSolve v2.6.1
->>>>>>> af24e8e9 (vdp benchmark)
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -473,11 +457,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.5
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
-<<<<<<< HEAD
-  [0bca4576] SciMLBase v2.6.0
-=======
   [0bca4576] SciMLBase v2.7.3
->>>>>>> af24e8e9 (vdp benchmark)
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.6
   [505e40e9] SciPyDiffEq v0.2.1
