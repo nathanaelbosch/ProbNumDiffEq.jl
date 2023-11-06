@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, init::SimpleInit)
     @unpack u, f, p, t = integ
-    @unpack x, Proj = cache
+    @unpack x, d, Proj = cache
     du = integ.uprev
 
     if f isa ODEFunction &&

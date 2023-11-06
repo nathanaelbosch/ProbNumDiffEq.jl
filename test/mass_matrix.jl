@@ -66,7 +66,16 @@ end
     f = ODEFunction(rober, mass_matrix=M)
     prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e-2), (0.04, 3e7, 1e4))
 
-    ref = solve(prob, EK1(order=3))
-    sol = solve(prob, RadauIIA5())
+    ref = solve(prob, RadauIIA5())
+    sol = solve(prob, EK1(order=3))
+    @test sol[end] ≈ ref[end] rtol = 1e-8
+
+    sol = solve(prob, EK1(order=3, initialization=ForwardDiffInit(3)))
+    @test sol[end] ≈ ref[end] rtol = 1e-8
+
+    sol = solve(prob, EK1(order=3, initialization=ClassicSolverInit(RadauIIA5())))
+    @test sol[end] ≈ ref[end] rtol = 1e-8
+
+    sol = solve(prob, EK1(order=3, initialization=SimpleInit()))
     @test sol[end] ≈ ref[end] rtol = 1e-8
 end
