@@ -33,9 +33,9 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
     f!(du, u, p, t) = (du .= f(u, p, t))
     prob = ODEProblem{true,true}(f!, u0, tspan)
 
-    @testset "`taylormode_get_derivatives`" begin
+    @testset "Exact `get_dervatives`: $INIT" for INIT in (TaylorModeInit(q), ForwardDiffInit(q))
         dfs = ProbNumDiffEq.get_derivatives(
-            TaylorModeInit(q),
+            INIT,
             prob.u0,
             prob.f,
             prob.p,
@@ -45,11 +45,13 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
         @test true_init_states ≈ vcat(dfs...)
     end
 
-    @testset "Taylormode: `initial_update!`" begin
-        integ = init(prob, EK0(order=q))
-        ProbNumDiffEq.initial_update!(integ, integ.cache, TaylorModeInit(q))
-        x = integ.cache.x
-        @test reshape(x.μ, :, 2)'[:] ≈ true_init_states
+    _name(structinstance) = typeof(structinstance).name.wrapper
+    @testset "`init` and `initial_update!` with $(_name(INIT))" for INIT in (
+        TaylorModeInit(q), ForwardDiffInit(q), SimpleInit())
+        _q = INIT isa SimpleInit ? 1 : INIT.order
+        integ = init(prob, EK0(order=q, initialization=INIT))
+        dus = integ.cache.x.μ
+        @test reshape(dus, :, 2)'[1:d*(_q+1)] ≈ true_init_states[1:d*(_q+1)]
     end
 
     @testset "Low-order exact init via ClassiSolverInit: `initial_update!`" begin

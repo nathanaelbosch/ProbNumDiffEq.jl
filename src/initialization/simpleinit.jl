@@ -1,6 +1,7 @@
 function initial_update!(integ, cache, init::SimpleInit)
     @unpack u, f, p, t = integ
-    @unpack du, x, Proj = cache
+    @unpack x, Proj = cache
+    du = integ.uprev
 
     if f isa ODEFunction &&
        f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
