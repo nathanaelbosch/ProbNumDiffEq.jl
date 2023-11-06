@@ -39,6 +39,10 @@ struct TaylorModeInit <: AutodiffInitializationScheme
         new(order)
     end
 end
+TaylorModeInit() = begin
+    throw(ArgumentError("order must be specified"))
+end
+
 
 """
     ForwardDiffInit(order)
@@ -57,6 +61,10 @@ struct ForwardDiffInit <: AutodiffInitializationScheme
         new(order)
     end
 end
+ForwardDiffInit() = begin
+    throw(ArgumentError("order must be specified"))
+end
+
 
 """
     ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_ddu=false)
@@ -82,10 +90,14 @@ optionally the second derivative can also be set via automatic differentiation b
 * [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
 * [schober16probivp](@cite) Schober et al, "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing (2019)
 """
-Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
-    alg::ALG = AutoVern7(Rodas4())
-    init_on_ddu::Bool = false
+struct ClassicSolverInit{ALG} <: InitializationScheme
+    alg::ALG
+    init_on_ddu::Bool
 end
+ClassicSolverInit(alg::DiffEqBase.AbstractODEAlgorithm=AutoVern7(Rodas4()))=
+    ClassicSolverInit(; alg, init_on_ddu=false)
+ClassicSolverInit(; alg=AutoVern7(Rodas4()), init_on_ddu=false) =
+    ClassicSolverInit(alg, init_on_ddu)
 
 """
     initial_update!(integ, cache[, init::InitializationScheme])

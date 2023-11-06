@@ -124,3 +124,18 @@ end
         end
     end
 end
+
+@testset "Errors" begin
+    @test_throws ArgumentError ForwardDiffInit()
+    @test_nowarn ForwardDiffInit(1)
+    @test_throws ArgumentError ForwardDiffInit(0)
+    @test_throws ArgumentError ForwardDiffInit(-1)
+    @test_throws ArgumentError TaylorModeInit()
+    @test_nowarn TaylorModeInit(1)
+    @test_throws ArgumentError TaylorModeInit(0)
+    @test_throws ArgumentError TaylorModeInit(-1)
+    @test_nowarn SimpleInit()
+    @test_nowarn ClassicSolverInit()
+    @test_nowarn ClassicSolverInit(Tsit5())
+    @test_throws MethodError ClassicSolverInit(3)
+end
