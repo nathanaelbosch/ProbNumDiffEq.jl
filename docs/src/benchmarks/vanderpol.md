@@ -123,6 +123,46 @@ plot(
 
 ![](figures/vanderpol_4_1.svg)
 
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+abstols = 1.0 ./ 10.0 .^ (6:13)
+reltols = 1.0 ./ 10.0 .^ (3:10)
+
+_setups = [
+    "EK1(8) TaylorInit(8)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(8)))
+    "EK1(8) TaylorInit(7)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(7)))
+    "EK1(8) TaylorInit(6)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(6)))
+    "EK1(8) TaylorInit(5)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(5)))
+    "EK1(8) TaylorInit(4)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(4)))
+    "EK1(8) TaylorInit(3)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(3)))
+    "EK1(8) TaylorInit(2)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(2)))
+    # "EK1(8) TaylorInit(1)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(1))) # fails, see above
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
+```
+
+![](figures/vanderpol_5_1.svg)
+
+
 
 
 ## Solving the first- vs second-order ODE
@@ -141,7 +181,7 @@ test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=fals
 plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-2.5, 2.5))
 ```
 
-![](figures/vanderpol_5_1.svg)
+![](figures/vanderpol_6_1.svg)
 
 ```julia
 DENSE = false;
@@ -180,7 +220,7 @@ wp = WorkPrecisionSet(
 plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
 ```
 
-![](figures/vanderpol_6_1.svg)
+![](figures/vanderpol_7_1.svg)
 
 
 
@@ -303,7 +343,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.138.0
+⌃ [2b5f629d] DiffEqBase v6.138.0
   [459566f4] DiffEqCallbacks v2.33.1
   [f3b72e0c] DiffEqDevTools v2.39.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
@@ -376,7 +416,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.15.0
+⌃ [7ed4a6bd] LinearSolve v2.15.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.166
@@ -398,7 +438,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
-  [8913a72c] NonlinearSolve v2.6.1
+⌃ [8913a72c] NonlinearSolve v2.6.1
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -419,7 +459,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [995b91a9] PlotUtils v1.3.5
   [91a5bcdd] Plots v1.39.0
   [e409e4f3] PoissonRandom v0.4.4
-  [f517fe37] Polyester v0.7.8
+⌃ [f517fe37] Polyester v0.7.8
   [1d0040c9] PolyesterWeave v0.2.1
 ⌅ [f27b6e38] Polynomials v3.2.13
   [2dfb63ee] PooledArrays v1.4.3
@@ -453,21 +493,21 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [476501e8] SLEEFPirates v0.6.42
   [0bca4576] SciMLBase v2.7.3
   [e9a6253c] SciMLNLSolve v0.1.9
-  [c0aeaf25] SciMLOperators v0.3.6
+⌃ [c0aeaf25] SciMLOperators v0.3.6
   [505e40e9] SciPyDiffEq v0.2.1
   [6c6a2e73] Scratch v1.2.1
-  [91c51154] SentinelArrays v1.4.0
+⌃ [91c51154] SentinelArrays v1.4.0
   [efcf1570] Setfield v1.1.1
   [1277b4bf] ShiftedArrays v2.0.0
   [992d4aef] Showoff v1.0.3
   [777ac1f9] SimpleBufferStream v1.1.0
-  [727e6d20] SimpleNonlinearSolve v0.1.23
+⌃ [727e6d20] SimpleNonlinearSolve v0.1.23
   [699a6c99] SimpleTraits v0.9.4
   [ce78b400] SimpleUnPack v1.1.0
   [66db9d55] SnoopPrecompile v1.0.3
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-  [47a9eef4] SparseDiffTools v2.9.2
+⌃ [47a9eef4] SparseDiffTools v2.9.2
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -554,7 +594,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [efe28fd5] OpenSpecFun_jll v0.5.5+0
   [91d4177d] Opus_jll v1.3.2+0
   [30392449] Pixman_jll v0.42.2+0
-  [c0090381] Qt6Base_jll v6.5.2+2
+⌃ [c0090381] Qt6Base_jll v6.5.2+2
   [f50d1b31] Rmath_jll v0.4.0+0
 ⌅ [fb77eaff] Sundials_jll v5.2.1+0
   [a44049a8] Vulkan_Loader_jll v1.3.243+0
