@@ -62,6 +62,12 @@ TaylorSeries = "0.10, 0.11, 0.12, 0.13, 0.14, 0.15"
 ToeplitzMatrices = "0.7, 0.8"
 julia = "1.6"
 
+[weakdeps]
+DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
+
+[extensions]
+DiffEqDevToolsExt = "DiffEqDevTools"
+
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
