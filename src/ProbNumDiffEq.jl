@@ -58,7 +58,7 @@ include("diffusions.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 
 include("initialization/common.jl")
-export TaylorModeInit, ClassicSolverInit
+export TaylorModeInit, ClassicSolverInit, SimpleInit, ForwardDiffInit
 
 include("algorithms.jl")
 export EK0, EK1
@@ -69,7 +69,8 @@ include("caches.jl")
 
 include("checks.jl")
 
-include("initialization/taylormode.jl")
+include("initialization/simpleinit.jl")
+include("initialization/autodiffinit.jl")
 include("initialization/classicsolverinit.jl")
 
 include("solution.jl")

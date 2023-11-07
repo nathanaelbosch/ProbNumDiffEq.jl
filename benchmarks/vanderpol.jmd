@@ -64,6 +64,90 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
+## Comparison of the different initialization schemes
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+abstols = 1.0 ./ 10.0 .^ (6:11)
+reltols = 1.0 ./ 10.0 .^ (3:8)
+
+orders = (3, 5, 8)
+ps = []
+for o in orders
+    _setups = [
+      "EK1($o) TaylorInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=TaylorModeInit(o)))
+      "EK1($o) ForwardDiffInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ForwardDiffInit(o)))
+      "EK1($o) SimpleInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=SimpleInit()))
+      # "EK1($o) ClassicSolverInit" => Dict(:alg => EK1(order=o, smooth=DENSE, initialization=ClassicSolverInit())) # unstable
+    ]
+
+    labels = first.(_setups)
+    setups = last.(_setups)
+
+    wp = WorkPrecisionSet(
+        prob, abstols, reltols, setups;
+        names = labels,
+        #print_names = true,
+        appxsol = test_sol,
+        dense = DENSE,
+        save_everystep = SAVE_EVERYSTEP,
+        numruns = 10,
+        maxiters = Int(1e7),
+        timeseries_errors = false,
+        verbose = false,
+    )
+
+    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5))
+    push!(ps, p)
+end
+plot(
+    ps...,
+    layout=(length(orders), 1),
+    size = (1000, length(orders)*300),
+    xlabel=["" "" "" "Error"],
+)
+```
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+abstols = 1.0 ./ 10.0 .^ (5:8)
+reltols = 1.0 ./ 10.0 .^ (2:5)
+
+_setups = [
+    "EK1(8) TaylorInit(8)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(8)))
+    "EK1(8) TaylorInit(7)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(7)))
+    "EK1(8) TaylorInit(6)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(6)))
+    "EK1(8) TaylorInit(5)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(5)))
+    "EK1(8) TaylorInit(4)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(4)))
+    "EK1(8) TaylorInit(3)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(3)))
+    "EK1(8) TaylorInit(2)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(2)))
+    # "EK1(8) TaylorInit(1)" => Dict(:alg => EK1(order=8, smooth=DENSE, initialization=TaylorModeInit(1))) # fails, see above
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
+```
+
+
 ## Solving the first- vs second-order ODE
 
 ```julia

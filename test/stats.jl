@@ -1,4 +1,5 @@
 using ProbNumDiffEq
+using OrdinaryDiffEq
 using Test
 using LinearAlgebra
 
@@ -6,7 +7,7 @@ const q = 3
 
 @testset "stats.nf testing $alg" for alg in (
     EK0(prior=IWP(q), smooth=false),
-    EK0(prior=IWP(q), smooth=false, initialization=ClassicSolverInit()),
+    EK0(prior=IWP(q), smooth=false, initialization=ClassicSolverInit(alg=Tsit5())),
     EK1(prior=IWP(q), smooth=false),
     EK1(prior=IWP(q), smooth=false, autodiff=false),
     EK1(prior=IOUP(q, -1), smooth=false),

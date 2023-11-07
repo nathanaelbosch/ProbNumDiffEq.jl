@@ -47,19 +47,22 @@ end
     end
 end
 
-@testset "ClassicSolverInit for SecondOrderODEProblems" begin
+_name(structinstance) = typeof(structinstance).name.wrapper
+@testset "Diffusion: $(_name(DIFFUSION))" for DIFFUSION in (
+    FixedDiffusion(), DynamicDiffusion(), FixedMVDiffusion(), DynamicMVDiffusion())
     @test_nowarn solve(
         prob_iip,
-        EK1(initialization=ClassicSolverInit(), smooth=false),
+        EK0(diffusionmodel=FixedDiffusion(), smooth=false),
         save_everystep=false,
         dense=false,
     )
 end
 
-@testset "Fixed Diffusion" begin
+@testset "Initialization: $(_name(INIT))" for INIT in (
+    TaylorModeInit(3), ForwardDiffInit(3), SimpleInit(), ClassicSolverInit())
     @test_nowarn solve(
         prob_iip,
-        EK0(diffusionmodel=FixedDiffusion(), smooth=false),
+        EK1(initialization=INIT, smooth=false),
         save_everystep=false,
         dense=false,
     )

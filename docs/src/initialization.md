@@ -63,6 +63,8 @@ See also [[1]](@ref initrefs).
 
 ```@docs
 TaylorModeInit
+ForwardDiffInit
+SimpleInit
 ClassicSolverInit
 ```
 

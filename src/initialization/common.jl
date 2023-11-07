@@ -1,9 +1,20 @@
 abstract type InitializationScheme end
+abstract type AutodiffInitializationScheme <: InitializationScheme end
 
 """
-    TaylorModeInit()
+    SimpleInit()
 
-Exact initialization via Taylor-mode automatic differentiation.
+Simple initialization, only with the given initial value and derivative.
+
+The remaining derivatives are set to zero with unit covariance (unless specified otherwise
+by setting a custom [`FixedDiffusion`](@ref)).
+"""
+struct SimpleInit <: InitializationScheme end
+
+"""
+    TaylorModeInit(order)
+
+Exact initialization via Taylor-mode automatic differentiation up to order `order`.
 
 **This is the recommended initialization method!**
 
@@ -13,12 +24,45 @@ via Taylor-mode automatic differentiation.
 
 In some special cases it can happen that TaylorIntegration.jl is incompatible with the
 given problem (typically because the problem definition does not allow for elements of type
- `Taylor`). If this happens, try [`ClassicSolverInit`](@ref).
+ `Taylor`). If this happens, try one of [`SimpleInit`](@ref), [`ForwardDiffInit`](@ref)
+(for low enough orders), [`ClassicSolverInit`](@ref).
 
 # References
 * [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
 """
-struct TaylorModeInit <: InitializationScheme end
+struct TaylorModeInit <: AutodiffInitializationScheme
+    order::Int64
+    TaylorModeInit(order::Int64) = begin
+        if order < 1
+            throw(ArgumentError("order must be >= 1"))
+        end
+        new(order)
+    end
+end
+TaylorModeInit() = begin
+    throw(ArgumentError("order must be specified"))
+end
+
+"""
+    ForwardDiffInit(order)
+
+Exact initialization via ForwardDiff.jl up to order `order`.
+
+**Warning:** This does not scale well to high orders!
+For orders > 3, [`TaylorModeInit`](@ref) most likely performs better.
+"""
+struct ForwardDiffInit <: AutodiffInitializationScheme
+    order::Int64
+    ForwardDiffInit(order::Int64) = begin
+        if order < 1
+            throw(ArgumentError("order must be >= 1"))
+        end
+        new(order)
+    end
+end
+ForwardDiffInit() = begin
+    throw(ArgumentError("order must be specified"))
+end
 
 """
     ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_ddu=false)
@@ -44,10 +88,14 @@ optionally the second derivative can also be set via automatic differentiation b
 * [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
 * [schober16probivp](@cite) Schober et al, "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing (2019)
 """
-Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
-    alg::ALG = Tsit5()
-    init_on_ddu::Bool = false
+struct ClassicSolverInit{ALG} <: InitializationScheme
+    alg::ALG
+    init_on_ddu::Bool
 end
+ClassicSolverInit(alg::DiffEqBase.AbstractODEAlgorithm=AutoVern7(Rodas4())) =
+    ClassicSolverInit(; alg, init_on_ddu=false)
+ClassicSolverInit(; alg=AutoVern7(Rodas4()), init_on_ddu=false) =
+    ClassicSolverInit(alg, init_on_ddu)
 
 """
     initial_update!(integ, cache[, init::InitializationScheme])

@@ -8,7 +8,7 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
           smooth=true,
           prior=IWP(order),
           diffusionmodel=DynamicDiffusion(),
-          initialization=TaylorModeInit())
+          initialization=TaylorModeInit(prior.num_derivatives))
 
 **Gaussian ODE filter with zeroth-order vector field linearization.**
 
@@ -49,7 +49,7 @@ EK0(;
     prior=IWP(order),
     diffusionmodel=DynamicDiffusion(),
     smooth=true,
-    initialization=TaylorModeInit(),
+    initialization=TaylorModeInit(prior.num_derivatives),
 ) = EK0(prior, diffusionmodel, smooth, initialization)
 
 _unwrap_val(::Val{B}) where {B} = B
@@ -60,7 +60,7 @@ _unwrap_val(B) = B
           smooth=true,
           prior=IWP(order),
           diffusionmodel=DynamicDiffusion(),
-          initialization=TaylorModeInit(),
+          initialization=TaylorModeInit(prior.num_derivatives),
           kwargs...)
 
 **Gaussian ODE filter with first-order vector field linearization.**
@@ -103,7 +103,7 @@ EK1(;
     prior::PT=IWP(order),
     diffusionmodel::DT=DynamicDiffusion(),
     smooth=true,
-    initialization::IT=TaylorModeInit(),
+    initialization::IT=TaylorModeInit(prior.num_derivatives),
     chunk_size=Val{0}(),
     autodiff=Val{true}(),
     diff_type=Val{:forward},
