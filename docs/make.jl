@@ -48,10 +48,19 @@ makedocs(
         ],
         "Benchmarks" => [
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
-            "Non-stiff ODE: Lotka-Volterra" => "benchmarks/lotkavolterra.md",
-            "Stiff ODE: Van der Pol" => "benchmarks/vanderpol.md",
-            "Second order ODE: Pleiades" => "benchmarks/pleiades.md",
-            "DAE: ROBER" => "benchmarks/rober.md",
+            "Non-stiff ODEs" => [
+                "Lotka-Volterra" => "benchmarks/lotkavolterra.md",
+                "Hodgkin-Huxley" => "benchmarks/hodgkinhuxley.md",
+            ],
+            "Stiff ODEs" => [
+                "Van der Pol" => "benchmarks/vanderpol.md",
+            ],
+            "Second-order ODEs" => [
+                "Pleiades" => "benchmarks/pleiades.md",
+            ],
+            "Differential-Algebraic Equations (DAEs)" => [
+                "ROBER" => "benchmarks/rober.md",
+            ],
         ],
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md"

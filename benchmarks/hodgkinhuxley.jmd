@@ -1,0 +1,262 @@
+# Hodgkin-Huxley benchmark
+
+```julia
+using LinearAlgebra, Statistics
+using DiffEqDevTools, SciMLBase, OrdinaryDiffEq, Plots, SimpleUnPack
+using ProbNumDiffEq
+
+# Plotting theme
+theme(:dao;
+    markerstrokewidth=0.5,
+    legend=:outertopright,
+    bottom_margin=5Plots.mm,
+    size = (1000, 400),
+)
+```
+
+### Hodgkin-Huxley problem definition
+
+```julia
+αm(V, VT) = -0.32 * (V - VT - 13) / (exp(-(V - VT - 13) / 4) - 1)
+βm(V, VT) = 0.28 * (V - VT - 40) / (exp((V - VT - 40) / 5) - 1)
+
+αn(V, VT) = -0.032 * (V - VT - 15) / (exp(-(V - VT - 15) / 5) - 1)
+βn(V, VT) = 0.5 * exp(-(V - VT - 10) / 40)
+
+αh(V, VT) = 0.128 * exp(-(V - VT - 17) / 18)
+βh(V, VT) = 4 / (1 + exp(-(V - VT - 40) / 5))
+
+Inj(t) = (10 <= t <= 90) ? 500one(t) : zero(t)
+
+function f(du, u, p, t)
+    @unpack gNa, gK, ENa, EK, area, C, Eleak, VT, gleak = p
+
+    V, m, n, h = u
+
+    I_inj = Inj(t) * 1e-6 # uA
+
+    du[2] = dmdt = (αm(V, VT) * (1 - m) - βm(V, VT) * m)
+    du[3] = dndt = (αn(V, VT) * (1 - n) - βn(V, VT) * n)
+    du[4] = dhdt = (αh(V, VT) * (1 - h) - βh(V, VT) * h)
+
+    INa = gNa * m^3 * h * (V - ENa) * area
+    IK = gK * n^4 * (V - EK) * area
+    Ileak = gleak * (V - Eleak) * area
+    Cm = C * area
+    du[1] = dVdt = -(Ileak + INa + IK - I_inj) / Cm
+end
+
+p = (gNa=20.0, gK=15.0, ENa = 53, EK = -107, area = 15e-5, C = 1, Eleak = -70, VT = -60, gleak = 0.1, V0 = -70)
+
+m_inf(V, VT) = 1 / (1 + βm(V, VT) / αm(V, VT))
+n_inf(V, VT) = 1 / (1 + βn(V, VT) / αn(V, VT))
+h_inf(V, VT) = 1 / (1 + βh(V, VT) / αh(V, VT))
+u0 = [p.V0, m_inf(p.V0, p.VT), n_inf(p.V0, p.VT), h_inf(p.V0, p.VT)]
+
+prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f, u0, (0.0, 100.0), p)
+
+test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14, dense=false)
+plot(test_sol,
+     legend=false,
+     layout=(4,1),
+     title=["Hodgkin-Huxley Solution" "" "" ""],
+     ylabel=["V(t)" "m(t)" "n(t)" "h(t)"],
+     xlabel=["" "" "" "t"],
+     size = (1000, 600),
+     color=[1 2 3 4],
+)
+```
+
+## Adaptive steps - no smoothing
+
+```julia
+DENSE = SAVE_EVERYSTEP = false
+
+_setups = [
+  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
+  "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
+  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
+  "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
+  "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
+  "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+colors = [1 1 2 2 2 3 3]
+
+abstols = 1.0 ./ 10.0 .^ (6:10)
+reltols = 1.0 ./ 10.0 .^ (3:7)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(
+    wp,
+    title = "Adaptive steps - no smoothing",
+    color = colors,
+    xticks = 10.0 .^ (-16:1:5),
+    yticks = 10.0 .^ (-6:1:5),
+)
+```
+
+## Adaptive steps - with smoothing
+
+```julia
+DENSE = SAVE_EVERYSTEP = true
+
+_setups = [
+  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
+  "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
+  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
+  "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
+  "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
+  "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+colors = [1 1 2 2 2 3 3]
+
+abstols = 1.0 ./ 10.0 .^ (6:10)
+reltols = 1.0 ./ 10.0 .^ (3:7)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(
+    wp,
+    title = "Adaptive steps - with smoothing",
+    color = colors,
+    xticks = 10.0 .^ (-16:1:5),
+    yticks = 10.0 .^ (-6:1:5),
+)
+```
+
+
+## Fixed steps - no smoothing
+
+```julia
+DENSE = SAVE_EVERYSTEP = false
+
+dts = 10.0 .^ range(-2, -3, length=10)[begin:end-1]
+abstols = reltols = repeat([missing], length(dts))
+
+DM = FixedDiffusion()
+_setups = [
+  "EK0(3)" => Dict(:alg=>EK0(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK1(3)" => Dict(:alg=>EK1(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+colors = [1 2 3]
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    adaptive = false,
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(
+    wp,
+    title = "Fixed steps - no smoothing",
+    color = colors,
+    xticks = 10.0 .^ (-16:1:5),
+    yticks = 10.0 .^ (-6:1:5),
+)
+```
+
+
+## Fixed steps - with smoothing
+
+```julia
+DENSE = SAVE_EVERYSTEP = true
+
+dts = 10.0 .^ range(-2, -3, length=10)[begin:end-1]
+abstols = reltols = repeat([missing], length(dts))
+
+DM = FixedDiffusion()
+_setups = [
+  "EK0(3)" => Dict(:alg=>EK0(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "EK1(3)" => Dict(:alg=>EK1(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+  "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, diffusionmodel=DM, smooth=DENSE), :dts=>dts)
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+colors = [1 2 3]
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    adaptive = false,
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(
+    wp,
+    title = "Fixed steps - with smoothing",
+    color = colors,
+    xticks = 10.0 .^ (-16:1:5),
+    yticks = 10.0 .^ (-6:1:5),
+)
+```
+
+
+## Appendix
+
+Computer information:
+```julia
+using InteractiveUtils
+InteractiveUtils.versioninfo()
+```
+
+Package Information:
+```julia
+using Pkg
+Pkg.status()
+```
+
+And the full manifest:
+```julia
+Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
+```
