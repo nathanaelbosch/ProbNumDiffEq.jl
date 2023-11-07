@@ -12,6 +12,7 @@ theme(:dao;
     legend=:outertopright,
     bottom_margin=5Plots.mm,
     size = (1000, 400),
+     xticks = 10.0 .^ (-16:1:16)
 )
 ```
 
@@ -100,7 +101,6 @@ reltols = 1.0 ./ 10.0 .^ (3:8)
 wp = WorkPrecisionSet(
     probs, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = ref_sols,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -110,9 +110,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, color=[1 1 2 2 3 3 4 4],
-     # xticks = 10.0 .^ (-16:1:5)
-)
+plot(wp, color=[1 1 2 2 3 3 4 4])
 ```
 
 

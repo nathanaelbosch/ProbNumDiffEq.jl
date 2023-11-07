@@ -14,6 +14,7 @@ theme(:dao;
     legend=:outertopright,
     bottom_margin=5Plots.mm,
     size = (1000, 400),
+    xticks = 10.0 .^ (-16:1:16),
 )
 ```
 
@@ -53,7 +54,6 @@ reltols = 1.0 ./ 10.0 .^ (1:10)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -63,7 +63,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ## EK1 across orders
@@ -86,7 +86,6 @@ reltols = 1.0 ./ 10.0 .^ (1:10)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -96,7 +95,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ## EK0 vs. EK1
@@ -125,7 +124,6 @@ reltols = 1.0 ./ 10.0 .^ (1:11)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -135,7 +133,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
+plot(wp, color=[1 1 1 1 2 2 2 2])
 ```
 
 ## DynamicDiffusion vs FixedDiffusion
@@ -162,7 +160,6 @@ reltols = 1.0 ./ 10.0 .^ (1:11)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -172,7 +169,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, color=[2 2 2 3 3 3], xticks = 10.0 .^ (-16:1:5))
+plot(wp, color=[2 2 2 3 3 3])
 ```
 
 ## Comparison of the different initialization schemes
@@ -200,7 +197,6 @@ for o in orders
     wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
         names = labels,
-        #print_names = true,
         appxsol = test_sol,
         dense = DENSE,
         save_everystep = SAVE_EVERYSTEP,
@@ -219,6 +215,11 @@ plot(
     size = (1000, length(orders)*300),
     xlabel=["" "" "" "Error"],
 )
+<<<<<<< Updated upstream
+=======
+
+plot(wp, color=[2 2 2 4 4 4 5 5 5])
+>>>>>>> Stashed changes
 ```
 
 

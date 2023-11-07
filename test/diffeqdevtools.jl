@@ -83,8 +83,6 @@ end
     ]
     @test_broken wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
-        # names=labels,
-        #print_names = true,
         appxsol=test_sol,
         dense=false,
         save_everystep=false,
@@ -95,8 +93,6 @@ end
     )
     @test_nowarn WorkPrecisionSet(
         prob, abstols, reltols, setups;
-        # names=labels,
-        #print_names = true,
         appxsol=appxsol_nondense,
         dense=false,
         save_everystep=false,

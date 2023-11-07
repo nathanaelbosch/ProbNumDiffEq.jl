@@ -11,6 +11,8 @@ theme(:dao;
     legend=:outertopright,
     bottom_margin=5Plots.mm,
     size = (1000, 400),
+    xticks = 10.0 .^ (-16:1:16),
+    yticks = 10.0 .^ (-6:1:5),
 )
 ```
 
@@ -92,7 +94,6 @@ reltols = 1.0 ./ 10.0 .^ (3:7)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -102,13 +103,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Adaptive steps - no smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Adaptive steps - no smoothing", color = colors)
 ```
 
 ## Adaptive steps - with smoothing
@@ -136,7 +131,6 @@ reltols = 1.0 ./ 10.0 .^ (3:7)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -146,13 +140,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Adaptive steps - with smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Adaptive steps - with smoothing", color = colors)
 ```
 
 
@@ -179,7 +167,6 @@ wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     adaptive = false,
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -189,13 +176,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Fixed steps - no smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Fixed steps - no smoothing", color = colors)
 ```
 
 
@@ -222,7 +203,6 @@ wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     adaptive = false,
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -232,13 +212,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Fixed steps - with smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Fixed steps - with smoothing", color = colors)
 ```
 
 

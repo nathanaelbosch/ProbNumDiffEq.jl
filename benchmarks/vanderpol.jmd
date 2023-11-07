@@ -12,6 +12,7 @@ theme(:dao;
     legend=:outertopright,
     bottom_margin=5Plots.mm,
     size = (1000, 400),
+    xticks = 10.0 .^ (-16:1:16)
 )
 ```
 
@@ -51,7 +52,6 @@ reltols = 1.0 ./ 10.0 .^ (3:10)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -61,7 +61,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ## Comparison of the different initialization schemes
@@ -89,7 +89,6 @@ for o in orders
     wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
         names = labels,
-        #print_names = true,
         appxsol = test_sol,
         dense = DENSE,
         save_everystep = SAVE_EVERYSTEP,
@@ -134,7 +133,6 @@ setups = last.(_setups)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -188,7 +186,6 @@ reltols = 1.0 ./ 10.0 .^ (3:9)
 wp = WorkPrecisionSet(
     [prob, prob2], abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = [test_sol, test_sol2],
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -198,7 +195,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
+plot(wp, color=[1 1 1 1 2 2 2 2])
 ```
 
 
