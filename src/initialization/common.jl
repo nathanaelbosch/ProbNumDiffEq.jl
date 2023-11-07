@@ -43,7 +43,6 @@ TaylorModeInit() = begin
     throw(ArgumentError("order must be specified"))
 end
 
-
 """
     ForwardDiffInit(order)
 
@@ -64,7 +63,6 @@ end
 ForwardDiffInit() = begin
     throw(ArgumentError("order must be specified"))
 end
-
 
 """
     ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_ddu=false)
@@ -94,7 +92,7 @@ struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG
     init_on_ddu::Bool
 end
-ClassicSolverInit(alg::DiffEqBase.AbstractODEAlgorithm=AutoVern7(Rodas4()))=
+ClassicSolverInit(alg::DiffEqBase.AbstractODEAlgorithm=AutoVern7(Rodas4())) =
     ClassicSolverInit(; alg, init_on_ddu=false)
 ClassicSolverInit(; alg=AutoVern7(Rodas4()), init_on_ddu=false) =
     ClassicSolverInit(alg, init_on_ddu)
