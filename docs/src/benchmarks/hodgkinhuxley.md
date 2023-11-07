@@ -1,11 +1,8 @@
 # Hodgkin-Huxley benchmark
 
-Adapted from
-[SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/NonStiffODE/LotkaVolterra_wpd/).
-
 ```julia
 using LinearAlgebra, Statistics
-using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
+using DiffEqDevTools, SciMLBase, OrdinaryDiffEq, Plots, SimpleUnPack
 using ProbNumDiffEq
 
 # Plotting theme
@@ -32,15 +29,14 @@ theme(:dao;
 αh(V, VT) = 0.128 * exp(-(V - VT - 17) / 18)
 βh(V, VT) = 4 / (1 + exp(-(V - VT - 40) / 5))
 
-
-I(t) = 500
+Inj(t) = (10 <= t <= 90) ? 500one(t) : zero(t)
 
 function f(du, u, p, t)
     @unpack gNa, gK, ENa, EK, area, C, Eleak, VT, gleak = p
 
     V, m, n, h = u
 
-    I_inj = I(t) * 1e-6 # uA
+    I_inj = Inj(t) * 1e-6 # uA
 
     du[2] = dmdt = (αm(V, VT) * (1 - m) - βm(V, VT) * m)
     du[3] = dndt = (αn(V, VT) * (1 - n) - βn(V, VT) * n)
@@ -84,19 +80,18 @@ plot(test_sol,
 DENSE = SAVE_EVERYSTEP = false
 
 _setups = [
+  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
-  "EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
+  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
-  "EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
   "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
   "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
-  "RosenbrockExpEK1(8)" => Dict(:alg=>RosenbrockExpEK(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
-colors = [1 1 2 2 2 3 3 3]
+colors = [1 1 2 2 2 3 3]
 
 abstols = 1.0 ./ 10.0 .^ (6:10)
 reltols = 1.0 ./ 10.0 .^ (3:7)
@@ -133,19 +128,18 @@ plot(
 DENSE = SAVE_EVERYSTEP = true
 
 _setups = [
+  "EK0(2)" => Dict(:alg=>EK0(order=2, smooth=DENSE))
   "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
-  "EK0(5)" => Dict(:alg=>EK0(order=5, smooth=DENSE))
+  "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
   "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
-  "EK1(8)" => Dict(:alg=>EK1(order=8, smooth=DENSE))
   "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
   "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
-  "RosenbrockExpEK1(8)" => Dict(:alg=>RosenbrockExpEK(order=8, smooth=DENSE))
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
-colors = [1 1 2 2 2 3 3 3]
+colors = [1 1 2 2 2 3 3]
 
 abstols = 1.0 ./ 10.0 .^ (6:10)
 reltols = 1.0 ./ 10.0 .^ (3:7)
@@ -182,7 +176,7 @@ plot(
 ```julia
 DENSE = SAVE_EVERYSTEP = false
 
-dts = 10.0 .^ range(-2, -3, length=10)
+dts = 10.0 .^ range(-2, -3, length=10)[begin:end-1]
 abstols = reltols = repeat([missing], length(dts))
 
 DM = FixedDiffusion()
@@ -229,7 +223,8 @@ plot(
 ```julia
 DENSE = SAVE_EVERYSTEP = true
 
-dts = 10.0 .^ range(-2, -3, length=length(abstols))
+dts = 10.0 .^ range(-2, -3, length=10)[begin:end-1]
+abstols = reltols = repeat([missing], length(dts))
 
 DM = FixedDiffusion()
 _setups = [
@@ -319,13 +314,16 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
-  [0bca4576] SciMLBase v2.6.0
+  [0bca4576] SciMLBase v2.7.3
   [505e40e9] SciPyDiffEq v0.2.1
   [ce78b400] SimpleUnPack v1.1.0
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
+Warning The project dependencies or compat requirements have changed since 
+the manifest was last resolved. It is recommended to `Pkg.resolve()` or con
+sider `Pkg.update()` if necessary.
 ```
 
 
@@ -347,7 +345,6 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [ec485272] ArnoldiMethod v0.2.0
   [c9d4266f] ArrayAllocators v0.3.0
   [4fba245c] ArrayInterface v7.5.1
-  [30b0a656] ArrayInterfaceCore v0.1.29
   [6e4b80f9] BenchmarkTools v1.3.2
   [e2ed5e7c] Bijections v0.1.6
   [d1d4a3ce] BitFlags v0.1.7
@@ -384,14 +381,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.136.0
+⌃ [2b5f629d] DiffEqBase v6.138.0
   [459566f4] DiffEqCallbacks v2.33.1
   [f3b72e0c] DiffEqDevTools v2.39.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
   [b4f34e82] Distances v0.10.10
-  [31c24e10] Distributions v0.25.102
+  [31c24e10] Distributions v0.25.103
   [ffbed154] DocStringExtensions v0.9.3
 ⌅ [5b8099bc] DomainSets v0.6.7
   [fa6b7ba4] DualNumbers v0.6.8
@@ -457,10 +454,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.15.0
+⌃ [7ed4a6bd] LinearSolve v2.15.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
-⌃ [bdcacae8] LoopVectorization v0.12.165
+  [bdcacae8] LoopVectorization v0.12.166
   [10e44e05] MATLAB v0.8.4
   [e2752cbe] MATLABDiffEq v1.2.0
   [33e6dc65] MKL v0.6.1
@@ -479,7 +476,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
-  [8913a72c] NonlinearSolve v2.6.0
+⌃ [8913a72c] NonlinearSolve v2.6.1
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -500,7 +497,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [995b91a9] PlotUtils v1.3.5
   [91a5bcdd] Plots v1.39.0
   [e409e4f3] PoissonRandom v0.4.4
-  [f517fe37] Polyester v0.7.8
+⌃ [f517fe37] Polyester v0.7.8
   [1d0040c9] PolyesterWeave v0.2.1
 ⌅ [f27b6e38] Polynomials v3.2.13
   [2dfb63ee] PooledArrays v1.4.3
@@ -532,12 +529,12 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.5
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
-  [0bca4576] SciMLBase v2.6.0
+  [0bca4576] SciMLBase v2.7.3
   [e9a6253c] SciMLNLSolve v0.1.9
-  [c0aeaf25] SciMLOperators v0.3.6
+⌃ [c0aeaf25] SciMLOperators v0.3.6
   [505e40e9] SciPyDiffEq v0.2.1
-⌃ [6c6a2e73] Scratch v1.2.0
-  [91c51154] SentinelArrays v1.4.0
+  [6c6a2e73] Scratch v1.2.1
+⌃ [91c51154] SentinelArrays v1.4.0
   [efcf1570] Setfield v1.1.1
   [1277b4bf] ShiftedArrays v2.0.0
   [992d4aef] Showoff v1.0.3
@@ -548,7 +545,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [66db9d55] SnoopPrecompile v1.0.3
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-  [47a9eef4] SparseDiffTools v2.9.2
+⌃ [47a9eef4] SparseDiffTools v2.9.2
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -578,7 +575,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [a759f4b9] TimerOutputs v0.5.23
   [c751599d] ToeplitzMatrices v0.8.2
   [0796e94c] Tokenize v0.5.25
-  [3bb67fe8] TranscodingStreams v0.10.1
+  [3bb67fe8] TranscodingStreams v0.10.2
   [a2a6695c] TreeViews v0.3.0
   [d5829a12] TriangularSolve v0.1.20
   [410a4b4d] Tricks v0.1.8
@@ -597,7 +594,6 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [1b915085] WinReg v1.0.0
   [ddb6d928] YAML v0.4.9
   [c2297ded] ZMQ v1.2.2
-  [700de1a5] ZygoteRules v0.2.4
   [0518478a] deSolveDiffEq v0.1.1
   [6e34b625] Bzip2_jll v1.0.8+0
   [83423d85] Cairo_jll v1.16.1+1
@@ -636,7 +632,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [efe28fd5] OpenSpecFun_jll v0.5.5+0
   [91d4177d] Opus_jll v1.3.2+0
   [30392449] Pixman_jll v0.42.2+0
-  [c0090381] Qt6Base_jll v6.5.2+2
+⌃ [c0090381] Qt6Base_jll v6.5.2+2
   [f50d1b31] Rmath_jll v0.4.0+0
 ⌅ [fb77eaff] Sundials_jll v5.2.1+0
   [a44049a8] Vulkan_Loader_jll v1.3.243+0
@@ -737,6 +733,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
 Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
 th ⌅ are restricted by compatibility constraints from upgrading. To see why
  use `status --outdated -m`
+Warning The project dependencies or compat requirements have changed since 
+the manifest was last resolved. It is recommended to `Pkg.resolve()` or con
+sider `Pkg.update()` if necessary.
 ```
 
 
