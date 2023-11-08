@@ -21,6 +21,8 @@ theme(:dao;
     legend=:outertopright,
     bottom_margin=5Plots.mm,
     size = (1000, 400),
+    xticks = 10.0 .^ (-16:1:16),
+    yticks = 10.0 .^ (-6:1:5),
 )
 ```
 
@@ -81,7 +83,7 @@ staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{2}(u0),tspan
 
 sol = solve(prob,Vern7(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
-plot(sol, title="Lotka-Volterra Solution", legend=false)
+plot(sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
 
 ![](figures/multi-language-wrappers_6_1.svg)
@@ -118,7 +120,6 @@ wp = with_logger(filtered_logger) do
     WorkPrecisionSet(
         [prob, staticprob], abstols, reltols, setups;
         names = labels,
-        #print_names = true,
         appxsol = [test_sol, test_sol],
         dense = DENSE,
         save_everystep = SAVE_EVERYSTEP,
@@ -129,13 +130,7 @@ wp = with_logger(filtered_logger) do
     )
 end
 
-plot(
-    wp,
-    title = "Non-stiff 1: Lotka-Volterra",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Non-stiff 1: Lotka-Volterra", color = colors)
 ```
 
 ![](figures/multi-language-wrappers_7_1.svg)
@@ -156,7 +151,7 @@ prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f,u0,tspan)
 staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{3}(u0),tspan)
 sol = solve(prob,Vern7(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
-plot(sol, title="Rigid Body Solution", legend=false)
+plot(sol, title="Rigid Body Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
 
 ![](figures/multi-language-wrappers_8_1.svg)
@@ -193,7 +188,6 @@ wp = with_logger(filtered_logger) do
     WorkPrecisionSet(
         [prob,staticprob], abstols, reltols, setups;
         names = labels,
-        #print_names = true,
         appxsol = [test_sol, test_sol],
         dense = DENSE,
         save_everystep = SAVE_EVERYSTEP,
@@ -204,13 +198,7 @@ wp = with_logger(filtered_logger) do
     )
 end
 
-plot(
-    wp,
-    title = "Non-stiff 2: Rigid-Body",
-    color = colors,
-    xticks = 10.0 .^ (-12:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Non-stiff 2: Rigid-Body", color = colors)
 ```
 
 ![](figures/multi-language-wrappers_9_1.svg)
@@ -231,7 +219,7 @@ prob = ODEProblem{true,SciMLBase.FullSpecialize()}(rober,u0,(0.0,1e5),p)
 staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(rober,SVector{3}(u0),(0.0,1e5),SVector{3}(p))
 sol = solve(prob,CVODE_BDF(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
-plot(sol, title="ROBER Solution", legend=false, xlims=(1e0, 1e5))
+plot(sol, title="ROBER Solution", legend=false, xlims=(1e0, 1e5), xticks=:auto, yticks=:auto)
 ```
 
 ![](figures/multi-language-wrappers_10_1.svg)
@@ -265,7 +253,6 @@ wp = with_logger(filtered_logger) do
     WorkPrecisionSet(
         [prob, staticprob], abstols, reltols, setups;
         names = labels,
-        #print_names = true,
         dense = DENSE,
         verbose = false,
         save_everystep = SAVE_EVERYSTEP,
@@ -274,13 +261,7 @@ wp = with_logger(filtered_logger) do
     )
 end
 
-plot(
-    wp,
-    title = "Stiff 1: ROBER",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:4),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Stiff 1: ROBER", color = colors)
 ```
 
 ![](figures/multi-language-wrappers_11_1.svg)
@@ -310,7 +291,7 @@ staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{8}(u0),(0.0,
 
 sol = solve(prob,Rodas5(),abstol=1/10^14,reltol=1/10^14, dense=false)
 test_sol = sol
-plot(sol, title="HIRES Solution", legend=false)
+plot(sol, title="HIRES Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
 
 ![](figures/multi-language-wrappers_12_1.svg)
@@ -345,7 +326,6 @@ wp = with_logger(filtered_logger) do
     WorkPrecisionSet(
         [prob, staticprob], abstols, reltols, setups;
         names = labels,
-        #print_names = true,
         dense = false,
         verbose = false,
         save_everystep = false,
@@ -355,13 +335,7 @@ wp = with_logger(filtered_logger) do
     )
 end
 
-plot(
-    wp,
-    title = "Stiff 2: Hires",
-    color=colors,
-    xticks = 10.0 .^ (-16:1:4),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Stiff 2: Hires", color=colors)
 ```
 
 ![](figures/multi-language-wrappers_13_1.svg)
@@ -392,7 +366,6 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
 
@@ -407,7 +380,7 @@ Pkg.status()
 
 ```
 Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
-  [f3b72e0c] DiffEqDevTools v2.39.0
+  [f3b72e0c] DiffEqDevTools v2.39.1
   [7073ff75] IJulia v1.24.2
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.0.3
@@ -415,12 +388,13 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [961ee093] ModelingToolkit v8.72.2
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
-  [1dea7af3] OrdinaryDiffEq v6.58.1
+  [1dea7af3] OrdinaryDiffEq v6.59.0
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
-  [0bca4576] SciMLBase v2.6.0
+  [0bca4576] SciMLBase v2.7.3
   [505e40e9] SciPyDiffEq v0.2.1
+  [ce78b400] SimpleUnPack v1.1.0
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
@@ -446,7 +420,6 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [ec485272] ArnoldiMethod v0.2.0
   [c9d4266f] ArrayAllocators v0.3.0
   [4fba245c] ArrayInterface v7.5.1
-  [30b0a656] ArrayInterfaceCore v0.1.29
   [6e4b80f9] BenchmarkTools v1.3.2
   [e2ed5e7c] Bijections v0.1.6
   [d1d4a3ce] BitFlags v0.1.7
@@ -483,14 +456,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.136.0
+  [2b5f629d] DiffEqBase v6.138.1
   [459566f4] DiffEqCallbacks v2.33.1
-  [f3b72e0c] DiffEqDevTools v2.39.0
+  [f3b72e0c] DiffEqDevTools v2.39.1
   [77a26b50] DiffEqNoiseProcess v5.19.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
   [b4f34e82] Distances v0.10.10
-  [31c24e10] Distributions v0.25.102
+  [31c24e10] Distributions v0.25.103
   [ffbed154] DocStringExtensions v0.9.3
 ⌅ [5b8099bc] DomainSets v0.6.7
   [fa6b7ba4] DualNumbers v0.6.8
@@ -556,10 +529,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.15.0
+  [7ed4a6bd] LinearSolve v2.17.1
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
-  [bdcacae8] LoopVectorization v0.12.165
+  [bdcacae8] LoopVectorization v0.12.166
   [10e44e05] MATLAB v0.8.4
   [e2752cbe] MATLABDiffEq v1.2.0
   [33e6dc65] MKL v0.6.1
@@ -572,13 +545,13 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [961ee093] ModelingToolkit v8.72.2
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.5.2
-  [ffc61752] Mustache v1.0.18
+  [ffc61752] Mustache v1.0.19
   [d8a4904e] MutableArithmetics v1.3.3
   [d41bc354] NLSolversBase v7.8.3
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
-  [8913a72c] NonlinearSolve v2.6.0
+  [8913a72c] NonlinearSolve v2.8.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -586,7 +559,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [4d8831e6] OpenSSL v1.4.1
   [429524aa] Optim v1.7.8
   [bac558e1] OrderedCollections v1.6.2
-  [1dea7af3] OrdinaryDiffEq v6.58.1
+  [1dea7af3] OrdinaryDiffEq v6.59.0
   [90014a1f] PDMats v0.11.28
   [fe68d972] PSDMatrices v0.4.6
   [65ce6f38] PackageExtensionCompat v1.0.2
@@ -599,7 +572,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [995b91a9] PlotUtils v1.3.5
   [91a5bcdd] Plots v1.39.0
   [e409e4f3] PoissonRandom v0.4.4
-  [f517fe37] Polyester v0.7.8
+  [f517fe37] Polyester v0.7.9
   [1d0040c9] PolyesterWeave v0.2.1
 ⌅ [f27b6e38] Polynomials v3.2.13
   [2dfb63ee] PooledArrays v1.4.3
@@ -628,26 +601,26 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [79098fc4] Rmath v0.7.1
   [47965b36] RootedTrees v2.19.2
   [7e49a35a] RuntimeGeneratedFunctions v0.5.12
-  [fdea26ae] SIMD v3.4.5
+  [fdea26ae] SIMD v3.4.6
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
-  [0bca4576] SciMLBase v2.6.0
+  [0bca4576] SciMLBase v2.7.3
   [e9a6253c] SciMLNLSolve v0.1.9
-  [c0aeaf25] SciMLOperators v0.3.6
+  [c0aeaf25] SciMLOperators v0.3.7
   [505e40e9] SciPyDiffEq v0.2.1
-  [6c6a2e73] Scratch v1.2.0
-  [91c51154] SentinelArrays v1.4.0
+  [6c6a2e73] Scratch v1.2.1
+  [91c51154] SentinelArrays v1.4.1
   [efcf1570] Setfield v1.1.1
   [1277b4bf] ShiftedArrays v2.0.0
   [992d4aef] Showoff v1.0.3
   [777ac1f9] SimpleBufferStream v1.1.0
-  [727e6d20] SimpleNonlinearSolve v0.1.23
+  [727e6d20] SimpleNonlinearSolve v0.1.25
   [699a6c99] SimpleTraits v0.9.4
   [ce78b400] SimpleUnPack v1.1.0
   [66db9d55] SnoopPrecompile v1.0.3
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-  [47a9eef4] SparseDiffTools v2.9.2
+  [47a9eef4] SparseDiffTools v2.11.0
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -676,8 +649,8 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8290d209] ThreadingUtilities v0.5.2
   [a759f4b9] TimerOutputs v0.5.23
   [c751599d] ToeplitzMatrices v0.8.2
-  [0796e94c] Tokenize v0.5.25
-  [3bb67fe8] TranscodingStreams v0.10.1
+  [0796e94c] Tokenize v0.5.26
+  [3bb67fe8] TranscodingStreams v0.10.2
   [a2a6695c] TreeViews v0.3.0
   [d5829a12] TriangularSolve v0.1.20
   [410a4b4d] Tricks v0.1.8
@@ -696,13 +669,12 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [1b915085] WinReg v1.0.0
   [ddb6d928] YAML v0.4.9
   [c2297ded] ZMQ v1.2.2
-  [700de1a5] ZygoteRules v0.2.4
   [0518478a] deSolveDiffEq v0.1.1
   [6e34b625] Bzip2_jll v1.0.8+0
   [83423d85] Cairo_jll v1.16.1+1
   [2702e6a9] EpollShim_jll v0.0.20230411+0
   [2e619515] Expat_jll v2.5.0+0
-⌃ [b22a6f82] FFMPEG_jll v4.4.2+2
+  [b22a6f82] FFMPEG_jll v4.4.4+1
   [f5851436] FFTW_jll v3.3.10+0
   [a3f928ae] Fontconfig_jll v2.13.93+0
   [d7e528f0] FreeType2_jll v2.13.1+0
@@ -731,11 +703,11 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [856f044c] MKL_jll v2023.2.0+0
   [c771fb93] ODEInterface_jll v0.0.1+0
   [e7412a2a] Ogg_jll v1.3.5+1
-⌅ [458c3c95] OpenSSL_jll v1.1.23+0
+  [458c3c95] OpenSSL_jll v3.0.12+0
   [efe28fd5] OpenSpecFun_jll v0.5.5+0
   [91d4177d] Opus_jll v1.3.2+0
   [30392449] Pixman_jll v0.42.2+0
-  [c0090381] Qt6Base_jll v6.5.2+2
+  [c0090381] Qt6Base_jll v6.5.3+1
   [f50d1b31] Rmath_jll v0.4.0+0
 ⌅ [fb77eaff] Sundials_jll v5.2.1+0
   [a44049a8] Vulkan_Loader_jll v1.3.243+0
@@ -743,7 +715,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2381bf8a] Wayland_protocols_jll v1.25.0+0
   [02c8fc9c] XML2_jll v2.11.5+0
   [aed1982a] XSLT_jll v1.1.34+0
-  [ffd25f8a] XZ_jll v5.4.4+0
+  [ffd25f8a] XZ_jll v5.4.5+0
   [f67eecfb] Xorg_libICE_jll v1.0.10+1
   [c834827a] Xorg_libSM_jll v1.2.3+0
   [4f6342f7] Xorg_libX11_jll v1.8.6+0
@@ -771,7 +743,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8f1865be] ZeroMQ_jll v4.3.4+0
   [3161d3a3] Zstd_jll v1.5.5+0
   [35ca27e7] eudev_jll v3.2.9+0
-  [214eeab7] fzf_jll v0.35.1+0
+⌅ [214eeab7] fzf_jll v0.35.1+0
   [1a1c6b14] gperf_jll v3.1.1+0
   [a4ae2306] libaom_jll v3.4.0+0
   [0ac62f75] libass_jll v0.15.1+0
@@ -833,9 +805,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
-th ⌅ are restricted by compatibility constraints from upgrading. To see why
- use `status --outdated -m`
+Info Packages marked with ⌅ have new versions available but compatibility c
+onstraints restrict them from upgrading. To see why use `status --outdated 
+-m`
 ```
 
 

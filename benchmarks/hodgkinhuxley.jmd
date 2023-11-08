@@ -1,5 +1,13 @@
 # Hodgkin-Huxley benchmark
 
+
+!!! note "Summary"
+    Hodgkin-Huxley is a four-dimensional ODE, which can be stiff or non-stiff depending on the parameters;
+    here we consider a non-stiff version. We see that:
+    - The EKO seems faster than the EK1.
+    - The probabilistic exponential Rosenbrock-type integrator `RosenbrockExpEK` performs worse than the EK1.
+
+
 ```julia
 using LinearAlgebra, Statistics
 using DiffEqDevTools, SciMLBase, OrdinaryDiffEq, Plots, SimpleUnPack
@@ -66,6 +74,7 @@ plot(test_sol,
      xlabel=["" "" "" "t"],
      size = (1000, 600),
      color=[1 2 3 4],
+     xticks=:auto, yticks=:auto
 )
 ```
 

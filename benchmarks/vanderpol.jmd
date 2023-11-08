@@ -1,6 +1,12 @@
 # Van der Pol benchmark
 
 
+!!! note "Summary"
+    Van der Pol is a low-dimensional, stiff, second-order ODE. We see that:
+    - The `EK1` is very well able to solve stiff problems.
+    - Since Van der Pol is actually a second-order ODE, _do solve it as a second-order ODE_.
+
+
 ```julia
 using LinearAlgebra, Statistics
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
@@ -29,7 +35,7 @@ u0 = [2.0, 0.0]
 prob = ODEProblem(vanderpol!, u0, tspan, p)
 
 test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
-plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-2.5, 2.5))
+plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-2.5, 2.5), xticks=:auto)
 ```
 
 ## EK1 across orders
@@ -159,7 +165,7 @@ du0 = [0.0]
 prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
 
 test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
-plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-2.5, 2.5))
+plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-2.5, 2.5), xticks=:auto)
 ```
 
 ```julia
@@ -197,12 +203,6 @@ wp = WorkPrecisionSet(
 
 plot(wp, color=[1 1 1 1 2 2 2 2])
 ```
-
-
-## Conclusion
-
-- Use the `EK1` to solve stiff problems, with orders $\leq 6$ depending on the error tolerance.
-- When the problem is actually a second-order ODE, as is the case for the Van der Pol system here, _solve it as a second-order ODE_.
 
 
 ## Appendix

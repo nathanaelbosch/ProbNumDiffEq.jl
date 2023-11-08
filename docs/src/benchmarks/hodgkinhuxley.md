@@ -1,5 +1,13 @@
 # Hodgkin-Huxley benchmark
 
+
+!!! note "Summary"
+    Hodgkin-Huxley is a four-dimensional ODE, which can be stiff or non-stiff depending on the parameters;
+    here we consider a non-stiff version. We see that:
+    - The EKO seems faster than the EK1.
+    - The probabilistic exponential Rosenbrock-type integrator `RosenbrockExpEK` performs worse than the EK1.
+
+
 ```julia
 using LinearAlgebra, Statistics
 using DiffEqDevTools, SciMLBase, OrdinaryDiffEq, Plots, SimpleUnPack
@@ -11,6 +19,8 @@ theme(:dao;
     legend=:outertopright,
     bottom_margin=5Plots.mm,
     size = (1000, 400),
+    xticks = 10.0 .^ (-16:1:16),
+    yticks = 10.0 .^ (-6:1:5),
 )
 ```
 
@@ -67,6 +77,7 @@ plot(test_sol,
      xlabel=["" "" "" "t"],
      size = (1000, 600),
      color=[1 2 3 4],
+     xticks=:auto, yticks=:auto
 )
 ```
 
@@ -99,7 +110,6 @@ reltols = 1.0 ./ 10.0 .^ (3:7)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -109,13 +119,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Adaptive steps - no smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Adaptive steps - no smoothing", color = colors)
 ```
 
 ![](figures/hodgkinhuxley_3_1.svg)
@@ -147,7 +151,6 @@ reltols = 1.0 ./ 10.0 .^ (3:7)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -157,13 +160,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Adaptive steps - with smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Adaptive steps - with smoothing", color = colors)
 ```
 
 ![](figures/hodgkinhuxley_4_1.svg)
@@ -194,7 +191,6 @@ wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     adaptive = false,
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -204,13 +200,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Fixed steps - no smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Fixed steps - no smoothing", color = colors)
 ```
 
 ![](figures/hodgkinhuxley_5_1.svg)
@@ -241,7 +231,6 @@ wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     adaptive = false,
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
@@ -251,13 +240,7 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(
-    wp,
-    title = "Fixed steps - with smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title = "Fixed steps - with smoothing", color = colors)
 ```
 
 ![](figures/hodgkinhuxley_6_1.svg)
@@ -302,7 +285,7 @@ Pkg.status()
 
 ```
 Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
-  [f3b72e0c] DiffEqDevTools v2.39.0
+  [f3b72e0c] DiffEqDevTools v2.39.1
   [7073ff75] IJulia v1.24.2
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.0.3
@@ -310,7 +293,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [961ee093] ModelingToolkit v8.72.2
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
-  [1dea7af3] OrdinaryDiffEq v6.58.1
+  [1dea7af3] OrdinaryDiffEq v6.59.0
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
@@ -321,9 +304,6 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
-Warning The project dependencies or compat requirements have changed since 
-the manifest was last resolved. It is recommended to `Pkg.resolve()` or con
-sider `Pkg.update()` if necessary.
 ```
 
 
@@ -381,9 +361,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-⌃ [2b5f629d] DiffEqBase v6.138.0
+  [2b5f629d] DiffEqBase v6.138.1
   [459566f4] DiffEqCallbacks v2.33.1
-  [f3b72e0c] DiffEqDevTools v2.39.0
+  [f3b72e0c] DiffEqDevTools v2.39.1
   [77a26b50] DiffEqNoiseProcess v5.19.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
@@ -454,7 +434,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-⌃ [7ed4a6bd] LinearSolve v2.15.0
+  [7ed4a6bd] LinearSolve v2.17.1
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.166
@@ -470,13 +450,13 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [961ee093] ModelingToolkit v8.72.2
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.5.2
-  [ffc61752] Mustache v1.0.18
+  [ffc61752] Mustache v1.0.19
   [d8a4904e] MutableArithmetics v1.3.3
   [d41bc354] NLSolversBase v7.8.3
   [2774e3e8] NLsolve v4.5.1
   [77ba4419] NaNMath v1.0.2
 ⌅ [356022a1] NamedDims v0.2.50
-⌃ [8913a72c] NonlinearSolve v2.6.1
+  [8913a72c] NonlinearSolve v2.8.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [6fd5a793] Octavian v0.3.27
@@ -484,7 +464,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [4d8831e6] OpenSSL v1.4.1
   [429524aa] Optim v1.7.8
   [bac558e1] OrderedCollections v1.6.2
-  [1dea7af3] OrdinaryDiffEq v6.58.1
+  [1dea7af3] OrdinaryDiffEq v6.59.0
   [90014a1f] PDMats v0.11.28
   [fe68d972] PSDMatrices v0.4.6
   [65ce6f38] PackageExtensionCompat v1.0.2
@@ -497,7 +477,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [995b91a9] PlotUtils v1.3.5
   [91a5bcdd] Plots v1.39.0
   [e409e4f3] PoissonRandom v0.4.4
-⌃ [f517fe37] Polyester v0.7.8
+  [f517fe37] Polyester v0.7.9
   [1d0040c9] PolyesterWeave v0.2.1
 ⌅ [f27b6e38] Polynomials v3.2.13
   [2dfb63ee] PooledArrays v1.4.3
@@ -526,26 +506,26 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [79098fc4] Rmath v0.7.1
   [47965b36] RootedTrees v2.19.2
   [7e49a35a] RuntimeGeneratedFunctions v0.5.12
-  [fdea26ae] SIMD v3.4.5
+  [fdea26ae] SIMD v3.4.6
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
   [0bca4576] SciMLBase v2.7.3
   [e9a6253c] SciMLNLSolve v0.1.9
-⌃ [c0aeaf25] SciMLOperators v0.3.6
+  [c0aeaf25] SciMLOperators v0.3.7
   [505e40e9] SciPyDiffEq v0.2.1
   [6c6a2e73] Scratch v1.2.1
-⌃ [91c51154] SentinelArrays v1.4.0
+  [91c51154] SentinelArrays v1.4.1
   [efcf1570] Setfield v1.1.1
   [1277b4bf] ShiftedArrays v2.0.0
   [992d4aef] Showoff v1.0.3
   [777ac1f9] SimpleBufferStream v1.1.0
-  [727e6d20] SimpleNonlinearSolve v0.1.23
+  [727e6d20] SimpleNonlinearSolve v0.1.25
   [699a6c99] SimpleTraits v0.9.4
   [ce78b400] SimpleUnPack v1.1.0
   [66db9d55] SnoopPrecompile v1.0.3
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-⌃ [47a9eef4] SparseDiffTools v2.9.2
+  [47a9eef4] SparseDiffTools v2.11.0
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -574,7 +554,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8290d209] ThreadingUtilities v0.5.2
   [a759f4b9] TimerOutputs v0.5.23
   [c751599d] ToeplitzMatrices v0.8.2
-  [0796e94c] Tokenize v0.5.25
+  [0796e94c] Tokenize v0.5.26
   [3bb67fe8] TranscodingStreams v0.10.2
   [a2a6695c] TreeViews v0.3.0
   [d5829a12] TriangularSolve v0.1.20
@@ -599,7 +579,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [83423d85] Cairo_jll v1.16.1+1
   [2702e6a9] EpollShim_jll v0.0.20230411+0
   [2e619515] Expat_jll v2.5.0+0
-⌃ [b22a6f82] FFMPEG_jll v4.4.2+2
+  [b22a6f82] FFMPEG_jll v4.4.4+1
   [f5851436] FFTW_jll v3.3.10+0
   [a3f928ae] Fontconfig_jll v2.13.93+0
   [d7e528f0] FreeType2_jll v2.13.1+0
@@ -628,11 +608,11 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [856f044c] MKL_jll v2023.2.0+0
   [c771fb93] ODEInterface_jll v0.0.1+0
   [e7412a2a] Ogg_jll v1.3.5+1
-⌅ [458c3c95] OpenSSL_jll v1.1.23+0
+  [458c3c95] OpenSSL_jll v3.0.12+0
   [efe28fd5] OpenSpecFun_jll v0.5.5+0
   [91d4177d] Opus_jll v1.3.2+0
   [30392449] Pixman_jll v0.42.2+0
-⌃ [c0090381] Qt6Base_jll v6.5.2+2
+  [c0090381] Qt6Base_jll v6.5.3+1
   [f50d1b31] Rmath_jll v0.4.0+0
 ⌅ [fb77eaff] Sundials_jll v5.2.1+0
   [a44049a8] Vulkan_Loader_jll v1.3.243+0
@@ -640,7 +620,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2381bf8a] Wayland_protocols_jll v1.25.0+0
   [02c8fc9c] XML2_jll v2.11.5+0
   [aed1982a] XSLT_jll v1.1.34+0
-  [ffd25f8a] XZ_jll v5.4.4+0
+  [ffd25f8a] XZ_jll v5.4.5+0
   [f67eecfb] Xorg_libICE_jll v1.0.10+1
   [c834827a] Xorg_libSM_jll v1.2.3+0
   [4f6342f7] Xorg_libX11_jll v1.8.6+0
@@ -668,7 +648,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8f1865be] ZeroMQ_jll v4.3.4+0
   [3161d3a3] Zstd_jll v1.5.5+0
   [35ca27e7] eudev_jll v3.2.9+0
-  [214eeab7] fzf_jll v0.35.1+0
+⌅ [214eeab7] fzf_jll v0.35.1+0
   [1a1c6b14] gperf_jll v3.1.1+0
   [a4ae2306] libaom_jll v3.4.0+0
   [0ac62f75] libass_jll v0.15.1+0
@@ -730,12 +710,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
-th ⌅ are restricted by compatibility constraints from upgrading. To see why
- use `status --outdated -m`
-Warning The project dependencies or compat requirements have changed since 
-the manifest was last resolved. It is recommended to `Pkg.resolve()` or con
-sider `Pkg.update()` if necessary.
+Info Packages marked with ⌅ have new versions available but compatibility c
+onstraints restrict them from upgrading. To see why use `status --outdated 
+-m`
 ```
 
 

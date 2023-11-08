@@ -1,8 +1,15 @@
 # Pleiades benchmark
 
+
+!!! note "Summary"
+    Pleiades is a medium-dimensional, non-stiff, second-order ODE. We see that:
+    - The `EK0` is _much_ faster than the `EK1` as it scales linearly with the ODE dimension.
+    - If the problem is a second-order ODE, _implement it as a second-order ODE_!
+
+
 ```julia
 using LinearAlgebra, Statistics
-using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
+using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots, ODEInterfaceDiffEq
 using ModelingToolkit
 using ProbNumDiffEq
 
@@ -12,7 +19,7 @@ theme(:dao;
     legend=:outertopright,
     bottom_margin=5Plots.mm,
     size = (1000, 400),
-     xticks = 10.0 .^ (-16:1:16)
+    xticks = 10.0 .^ (-16:1:16)
 )
 ```
 
@@ -68,15 +75,16 @@ du0 = [dx0; dy0]
 prob2 = SecondOrderODEProblem(pleiades2, du0, u0, tspan)
 probs = [prob1, prob2]
 
-ref_sol1 = solve(prob1, Vern9(), abstol=1/10^14, reltol=1/10^14, dense=false)
-ref_sol2 = solve(prob2, Vern9(), abstol=1/10^14, reltol=1/10^14, dense=false)
+ref_sol1 = solve(prob1, Vern9(), abstol=1/10^14, reltol=1/10^14)
+ref_sol2 = solve(prob2, Vern9(), abstol=1/10^14, reltol=1/10^14)
 ref_sols = [ref_sol1, ref_sol2]
 
-plot(ref_sol1, idxs=[(14+i,21+i) for i in 1:7], title="Pleiades Solution", legend=false)
+plot(ref_sol1, idxs=[(14+i,21+i) for i in 1:7], title="Pleiades Solution", legend=false,
+     xticks=:auto, yticks=:auto)
 scatter!(ref_sol1.u[end][15:21], ref_sol1.u[end][22:end], color=1:7)
 ```
 
-## First-order ODE vs. second-order ODE
+## EK0 vs EK1 & first-order vs. second-order
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -84,12 +92,15 @@ SAVE_EVERYSTEP = false;
 _setups = [
   "EK0(3) (1st order ODE)" => Dict(:alg => EK0(order=3, smooth=DENSE), :prob_choice => 1)
   "EK0(5) (1st order ODE)" => Dict(:alg => EK0(order=5, smooth=DENSE), :prob_choice => 1)
-  "EK1(3) (1st order ODE)" => Dict(:alg => EK1(order=3, smooth=DENSE), :prob_choice => 1)
-  "EK1(5) (1st order ODE)" => Dict(:alg => EK1(order=5, smooth=DENSE), :prob_choice => 1)
   "EK0(4) (2nd order ODE)" => Dict(:alg => EK0(order=4, smooth=DENSE), :prob_choice => 2)
   "EK0(6) (2nd order ODE)" => Dict(:alg => EK0(order=6, smooth=DENSE), :prob_choice => 2)
+  "EK1(3) (1st order ODE)" => Dict(:alg => EK1(order=3, smooth=DENSE), :prob_choice => 1)
+  "EK1(5) (1st order ODE)" => Dict(:alg => EK1(order=5, smooth=DENSE), :prob_choice => 1)
   "EK1(4) (2nd order ODE)" => Dict(:alg => EK1(order=4, smooth=DENSE), :prob_choice => 2)
   "EK1(6) (2nd order ODE)" => Dict(:alg => EK1(order=6, smooth=DENSE), :prob_choice => 2)
+  "Classic: Tsit5" => Dict(:alg => Tsit5(), :prob_choice => 1)
+  "Classic: RadauIIA5" => Dict(:alg => RadauIIA5(), :prob_choice => 1)
+  "Classic: DPRKN6" => Dict(:alg => DPRKN6(), :prob_choice => 2)
 ]
 
 labels = first.(_setups)
@@ -107,17 +118,17 @@ wp = WorkPrecisionSet(
     numruns = 10,
     maxiters = Int(1e7),
     timeseries_errors = false,
+    dense_errors = false,
     verbose = false,
 )
 
-plot(wp, color=[1 1 2 2 3 3 4 4])
+plot(wp,
+     color=[1 1 1 1 2 2 2 2 3 3 3],
+     linestyle=[:solid :solid :dash :dash :solid :solid :dash :dash :solid :solid :dash],
+     alpha=[1 1 1 1 1 1 1 1 0.5 0.5 0.5],
+)
 ```
 
-
-## Conclusion
-
-- If the problem is a second-order ODE, _implement it as a second-order ODE_!
-- For best runtimes runtimes, use the `EK0`!
 
 
 ## Appendix

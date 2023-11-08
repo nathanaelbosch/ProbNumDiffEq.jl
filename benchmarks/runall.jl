@@ -2,12 +2,12 @@ using Weave
 ENV["GKSwstype"] = "nul"
 
 FILES = [
-    # "lotkavolterra.jmd",
-    # "vanderpol.jmd",
+    "lotkavolterra.jmd",
+    "vanderpol.jmd",
     "hodgkinhuxley.jmd",
-    # "rober.jmd",
-    # "pleiades.jmd",
-    # "multi-language-wrappers.jmd",
+    "rober.jmd",
+    "pleiades.jmd",
+    "multi-language-wrappers.jmd",
 ]
 
 filedir = @__DIR__

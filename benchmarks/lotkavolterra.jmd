@@ -1,6 +1,18 @@
 # Lotka-Volterra benchmark
 
-Adapted from
+
+!!! note "Summary"
+    Lotka-Volterra is a simple, low-dimensional, non-stiff ODE. We see that:
+    - For such a low-dimensional problem the EK0 and EK1 have a very similar runtime
+      (but note that by using ParameterizedFunctions.jl, the Jacobian of the vector field is available analytically).
+    - Orders behave as in classic solvers:
+      Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy.
+    - _Do not use EK0 with order > 5!_ The adaptive step size selection apparently does not work well for high orders.
+    - The default choice of `diffusionmodel=DynamicDiffusion` and `initialization=TaylorModeInit` are probably fine.
+    - If you only need to solve for the last time point, do set `smooth=false`, `dense=false`, and `save_everystep=false`.
+
+
+Benchmark adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/NonStiffODE/LotkaVolterra_wpd/).
 
 ```julia
@@ -13,7 +25,7 @@ theme(:dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
     bottom_margin=5Plots.mm,
-    size = (1000, 400),
+    size = (1000, 600),
     xticks = 10.0 .^ (-16:1:16),
 )
 ```
@@ -30,12 +42,13 @@ tspan = (0.0, 10.0)
 u0 = [1.0, 1.0]
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)
 
-test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14, dense=false)
-plot(test_sol, title="Lotka-Volterra Solution", legend=false)
+test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14)
+plot(test_sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto)
 ```
 
 ## EK0 across orders
 
+Final timepoint only:
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -66,8 +79,61 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
+Discrete time-series errors (l2):
+```julia
+DENSE = true;
+SAVE_EVERYSTEP = true;
+
+_setups = [
+  "EK0(order=$order)" => Dict(:alg => EK0(order=order, smooth=DENSE))
+  for order in 2:7
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:13)
+reltols = 1.0 ./ 10.0 .^ (1:10)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = true,
+    dense_errors = true,
+    verbose = false,
+    error_estimate = :l2,
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+
+Interpolation errors (L2):
+```julia
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = true,
+    dense_errors = true,
+    verbose = false,
+    error_estimate = :L2,
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+
 ## EK1 across orders
 
+Last timepoint only:
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -98,8 +164,61 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
+Discrete time-series errors (l2):
+```julia
+DENSE = true;
+SAVE_EVERYSTEP = true;
+
+_setups = [
+  "EK1(order=$order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
+  for order in 2:7
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:13)
+reltols = 1.0 ./ 10.0 .^ (1:10)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = true,
+    dense_errors = true,
+    verbose = false,
+    error_estimate = :l2,
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+
+Interpolation errors (L2):
+```julia
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = true,
+    dense_errors = true,
+    verbose = false,
+    error_estimate = :L2,
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+
 ## EK0 vs. EK1
 
+Final timepoint only:
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -130,25 +249,107 @@ wp = WorkPrecisionSet(
     numruns = 10,
     maxiters = Int(1e7),
     timeseries_errors = false,
+    dense_errors = false,
     verbose = false,
 )
 
 plot(wp, color=[1 1 1 1 2 2 2 2])
 ```
 
-## DynamicDiffusion vs FixedDiffusion
+Interpolation errors (L2):
+```julia
+DENSE = true;
+SAVE_EVERYSTEP = true;
+
+_setups = [
+  "EK0(order=2)" => Dict(:alg => EK0(order=2, smooth=DENSE))
+  "EK0(order=3)" => Dict(:alg => EK0(order=3, smooth=DENSE))
+  "EK0(order=4)" => Dict(:alg => EK0(order=4, smooth=DENSE))
+  "EK0(order=5)" => Dict(:alg => EK0(order=5, smooth=DENSE))
+  "EK1(order=2)" => Dict(:alg => EK1(order=2, smooth=DENSE))
+  "EK1(order=3)" => Dict(:alg => EK1(order=3, smooth=DENSE))
+  "EK1(order=4)" => Dict(:alg => EK1(order=4, smooth=DENSE))
+  "EK1(order=5)" => Dict(:alg => EK1(order=5, smooth=DENSE))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:14)
+reltols = 1.0 ./ 10.0 .^ (1:11)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    dense_errors = true,
+    verbose = true,
+    error_estimate = :L2,
+)
+
+plot(wp, color=[1 1 1 1 2 2 2 2])
+```
+
+## EK0: Diffusion Comparison
 
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
 _setups = [
-  "EK1(2) dynamic" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK1(3) dynamic" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK1(5) dynamic" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK1(2) fixed" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=FixedDiffusion()))
-  "EK1(3) fixed" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
-  "EK1(5) fixed" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(2) Dynamic" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK0(3) Dynamic" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK0(0) Dynamic" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK0(2) Fixed" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(3) Fixed" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(5) Fixed" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(2) DynamicMV" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
+  "EK0(3) DynamicMV" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
+  "EK0(0) DynamicMV" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
+  "EK0(2) FixedMV" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
+  "EK0(3) FixedMV" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
+  "EK0(5) FixedMV" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:14)
+reltols = 1.0 ./ 10.0 .^ (1:11)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(wp, color=[2 2 2 3 3 3 4 4 4 5 5 5])
+```
+
+## EK1: DynamicDiffusion vs FixedDiffusion
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+_setups = [
+  "EK1(2) Dynamic" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK1(3) Dynamic" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK1(5) Dynamic" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK1(2) Fixed" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK1(3) Fixed" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK1(5) Fixed" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
 ]
 
 labels = first.(_setups)
@@ -206,30 +407,16 @@ for o in orders
         verbose = false,
     )
 
-    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5))
+    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5), title = "Order $o")
     push!(ps, p)
 end
 plot(
     ps...,
     layout=(length(orders), 1),
-    size = (1000, length(orders)*300),
-    xlabel=["" "" "" "Error"],
+    size = (800, length(orders)*300),
+    xlabel=["" "" "" "Error (final)"],
 )
-<<<<<<< Updated upstream
-=======
-
-plot(wp, color=[2 2 2 4 4 4 5 5 5])
->>>>>>> Stashed changes
 ```
-
-
-## Conclusion
-
-- For such a low-dimensional problem the EK0 and EK1 have a very similar runtime.
-  Though note that by using ParameterizedFunctions.jl, the Jacobian of the vector field is available analytically.
-- Orders behave as in classic solvers:
-  Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy.
-- Most likely, the default choice of `diffusionmodel=DynamicDiffusion` and `initialization=TaylorModeInit` are fine.
 
 
 ## Appendix

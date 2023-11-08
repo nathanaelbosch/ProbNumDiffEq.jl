@@ -71,7 +71,7 @@ staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{2}(u0),tspan
 
 sol = solve(prob,Vern7(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
-plot(sol, title="Lotka-Volterra Solution", legend=false)
+plot(sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
 
 ```julia
@@ -133,7 +133,7 @@ prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f,u0,tspan)
 staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{3}(u0),tspan)
 sol = solve(prob,Vern7(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
-plot(sol, title="Rigid Body Solution", legend=false)
+plot(sol, title="Rigid Body Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
 
 ```julia
@@ -195,7 +195,7 @@ prob = ODEProblem{true,SciMLBase.FullSpecialize()}(rober,u0,(0.0,1e5),p)
 staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(rober,SVector{3}(u0),(0.0,1e5),SVector{3}(p))
 sol = solve(prob,CVODE_BDF(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
-plot(sol, title="ROBER Solution", legend=false, xlims=(1e0, 1e5))
+plot(sol, title="ROBER Solution", legend=false, xlims=(1e0, 1e5), xticks=:auto, yticks=:auto)
 ```
 
 ```julia
@@ -261,7 +261,7 @@ staticprob = ODEProblem{false,SciMLBase.FullSpecialize()}(f,SVector{8}(u0),(0.0,
 
 sol = solve(prob,Rodas5(),abstol=1/10^14,reltol=1/10^14, dense=false)
 test_sol = sol
-plot(sol, title="HIRES Solution", legend=false)
+plot(sol, title="HIRES Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
 
 ```julia

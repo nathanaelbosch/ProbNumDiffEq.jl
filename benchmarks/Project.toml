@@ -18,3 +18,6 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 Weave = "44d3d7a6-8a23-5bf8-98c5-b353f8df5ec9"
 deSolveDiffEq = "0518478a-701b-4815-806c-24ad5cb92f09"
+
+[compat]
+DiffEqDevTools = "2.39.1"

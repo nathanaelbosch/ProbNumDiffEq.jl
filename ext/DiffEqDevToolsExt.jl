@@ -4,20 +4,43 @@ using ProbNumDiffEq
 using DiffEqDevTools
 using SciMLBase
 using Statistics
+using LinearAlgebra
 
-# Copied from DiffEqDevTools.jl and modified
-# See also: https://devdocs.sciml.ai/dev/alg_dev/test_problems/
+function chi2(gaussian_estimate, actual_value)
+    μ, Σ = gaussian_estimate
+    diff = μ - actual_value
+    if iszero(Σ)
+        if iszero(diff)
+	          return 1
+        else
+            throw(SingularException())
+        end
+    end
+    chi2_pinv = diff' * (Σ \ diff)
+    return chi2_pinv
+end
 
-DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, sol2::TestSolution; kwargs...) =
-    __appxtrue(sol, sol2; kwargs...)
+DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, ref::TestSolution; kwargs...) =
+    __appxtrue(sol, ref; kwargs...)
 DiffEqDevTools.appxtrue(
     sol::ProbNumDiffEq.ProbODESolution,
-    sol2::SciMLBase.AbstractODESolution;
+    ref::SciMLBase.AbstractODESolution;
     kwargs...,
-) = __appxtrue(sol, sol2; kwargs...)
+) = __appxtrue(sol, ref; kwargs...)
 
-function __appxtrue(sol, sol2; kwargs...)
-    return DiffEqDevTools.appxtrue(mean(sol), sol2; dense_errors=sol.dense, kwargs...)
+function __appxtrue(sol, ref; kwargs...)
+    out = DiffEqDevTools.appxtrue(mean(sol), ref; dense_errors=sol.dense, kwargs...)
+    out.errors[:chi2_final] = chi2(sol.pu[end], ref.u[end])[1]
+    if :l2 in keys(out.errors)
+        out.errors[:chi2_steps] = mean(chi2.(sol.pu, ref.(sol.t)))
+    end
+    if :L2 in keys(out.errors)
+        densetimes = collect(range(sol.t[1], stop=sol.t[end], length=100))
+        interp_pu = sol(densetimes).u
+        interp_ref = ref(densetimes).u
+        out.errors[:chi2_interp] = mean(chi2.(interp_pu, interp_ref))
+    end
+    return out
 end
 
 end

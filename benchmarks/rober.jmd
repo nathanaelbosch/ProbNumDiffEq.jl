@@ -1,5 +1,11 @@
 # ROBER benchmark
 
+
+!!! note "Summary"
+    - The `EK1` can solve mass-matrix DAEs! But it only really works well for low tolerances.
+    - Order 3 seems to work well here. But the order-to-error-tolerance heuristic should in principle still hold: lower tolerance level ``\rightarrow`` higher order.
+
+
 Adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/DAE/ROBERDAE/).
 
@@ -36,7 +42,7 @@ daeprob = DAEProblem(sys,[D(y₁)=>-0.04, D(y₂)=>0.04, D(y₃)=>0.0],[],(0.0,1
 odaeprob = ODAEProblem(structural_simplify(sys),[],(0.0,1e5)) # can't handle this yet
 
 ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14,dense=false)
-plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1))
+plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1), xticks=:auto)
 ```
 
 ## EK1 across orders
@@ -70,12 +76,6 @@ wp = WorkPrecisionSet(
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
-
-
-## Conclusion
-
-- The `EK1` can solve mass-matrix DAEs! But it only really works well for low errors.
-- Order 3 seems to work well here. But the order-to-error-tolerance heuristic should in principle still hold: lower tolerance level ``\rightarrow`` higher order.
 
 
 ## Appendix
