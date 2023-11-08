@@ -14,7 +14,12 @@ function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
-    initial_pu = _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x)
+    initial_pu = write_into_pu!(
+        cache.pu_tmp,
+        cache.x;
+        cache=integ.cache,
+        is_secondorder_ode=integ.f isa DynamicalODEFunction,
+    )
     OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
 
     return nothing
@@ -43,6 +48,26 @@ function write_into_solution!(u, μ; cache::EKCache, is_secondorder_ode=false)
         _matmul!(view(u, :), cache.E0, μ)
     end
 end
+function write_into_pu!(pu, x; cache::EKCache, is_secondorder_ode=false)
+    d = cache.d
+    if is_secondorder_ode
+        @info "hmm" x.Σ
+        # _gaussian_mul!(pu, cache.SolProj, x)
+        # _matmul!(pu.μ, cache.SolProj, x.μ)
+        _matmul!(view(pu.μ, 1:d), cache.E1, x.μ)
+        _matmul!(view(pu.μ, d+1:2d), cache.E0, x.μ)
+        # fast_X_A_Xt!(pu.Σ, x.Σ, cache.SolProj)
+        _matmul!(pu.Σ.R, x.Σ.R, cache.SolProj')
+        # @info "?" pu.Σ
+        # _matmul!(view(pu.Σ.R, :, 1:d), x.Σ.R, cache.E1')
+        # _matmul!(view(pu.Σ.R, :, d+1:2d), x.Σ.R, cache.E0')
+        # @info "?" pu.Σ.R x.Σ.R*cache.SolProj'
+    else
+        @assert cache.SolProj == cache.E0
+        _gaussian_mul!(pu, cache.E0, x)
+    end
+    return pu
+end
 
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
@@ -64,7 +89,7 @@ For that functionality, use `OrdinaryDiffEq.step!(integ)`.
 """
 function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
-    @unpack d, SolProj = integ.cache
+    @unpack d = integ.cache
     @unpack xprev, x_pred, u_pred, x_filt, err_tmp = integ.cache
     @unpack A, Q, Ah, Qh, P, PI = integ.cache
 

@@ -58,7 +58,7 @@ function calibrate_solution!(integ, mle_diffusion)
 
     # Re-write into the solution estimates
     for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
-        _gaussian_mul!(pu, integ.cache.SolProj, x)
+        write_into_pu!(pu, x; cache=integ.cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
     end
     # [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
 end
@@ -109,7 +109,12 @@ function smooth_solution!(integ)
         K = backward_kernels[i]
         marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_3DxD)
 
-        _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
+        write_into_pu!(
+            sol.pu[i],
+            x_smooth[i];
+            cache=integ.cache,
+            is_secondorder_ode=integ.f isa DynamicalODEFunction,
+        )
         sol.u[i][:] .= sol.pu[i].μ
     end
     return nothing
@@ -129,7 +134,12 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
         OrdinaryDiffEq.copyat_or_push!(
             integ.sol.pu,
             integ.saveiter,
-            _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
+            write_into_pu!(
+                integ.cache.pu_tmp,
+                integ.cache.x;
+                cache=integ.cache,
+                is_secondorder_ode=integ.f isa DynamicalODEFunction,
+            ),
         )
     end
 end
@@ -149,7 +159,8 @@ function DiffEqBase.savevalues!(
         i = integ.saveiter
         OrdinaryDiffEq.copyat_or_push!(integ.sol.diffusions, i, integ.cache.local_diffusion)
         OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
-        _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
+        write_into_pu!(integ.cache.pu_tmp, integ.cache.x;
+                       cache=integ.cache, is_secondorder_ode=integ.f isa DynamicalODEFunction),
         OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
         if integ.alg.smooth
