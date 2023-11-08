@@ -9,8 +9,15 @@ using Statistics
 # See also: https://devdocs.sciml.ai/dev/alg_dev/test_problems/
 
 DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, sol2::TestSolution; kwargs...) =
-    DiffEqDevTools.appxtrue(mean(sol), sol2; kwargs...)
-DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, sol2::SciMLBase.AbstractODESolution; kwargs...) =
-    DiffEqDevTools.appxtrue(mean(sol), sol2; kwargs...)
+    __appxtrue(sol, sol2; kwargs...)
+DiffEqDevTools.appxtrue(
+    sol::ProbNumDiffEq.ProbODESolution,
+    sol2::SciMLBase.AbstractODESolution;
+    kwargs...,
+) = __appxtrue(sol, sol2; kwargs...)
+
+function __appxtrue(sol, sol2; kwargs...)
+    return DiffEqDevTools.appxtrue(mean(sol), sol2; dense_errors=sol.dense, kwargs...)
+end
 
 end
