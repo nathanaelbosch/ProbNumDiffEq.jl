@@ -200,7 +200,7 @@ function local_diagonal_diffusion(cache)
     c1 = view(HQH.R, :, 1)
     Q0_11 = dot(c1, c1)
 
-    Σ_ii = @. tmp = z^2 / Q0_11
+    Σ_ii = @. m_tmp.μ = z^2 / Q0_11
     # Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 

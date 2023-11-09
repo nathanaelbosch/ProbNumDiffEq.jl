@@ -109,15 +109,7 @@ function OrdinaryDiffEq.alg_cache(
     Proj = projection(FAC)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
-    SolProj = if is_secondorder_ode
-        if FAC isa IsometricKroneckerCovariance
-            [Proj(1).B; Proj(0).B]
-        else
-            [Proj(1); Proj(0)]
-        end
-    else
-        Proj(0)
-    end
+    SolProj = solution_space_projection(FAC, is_secondorder_ode)
 
     # Prior dynamics
     prior = if alg.prior isa IWP
