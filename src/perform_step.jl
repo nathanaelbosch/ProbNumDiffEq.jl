@@ -43,41 +43,6 @@ function write_into_solution!(u, μ; cache::EKCache, is_secondorder_ode=false)
         _matmul!(view(u, :), cache.E0, μ)
     end
 end
-function write_into_pu!(pu, x; cache::EKCache, is_secondorder_ode=false)
-    d = cache.d
-    if !(pu.Σ.R isa Kronecker.KroneckerProduct)
-        _gaussian_mul!(pu, cache.SolProj, x)
-    else
-        if !is_secondorder_ode
-            @assert cache.SolProj == cache.E0
-            _matmul!(view(pu.μ, 1:d), cache.E0, x.μ)
-            _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.E0.B')
-        else
-            _gaussian_mul!(pu, cache.SolProj, x)
-            # _matmul!(view(pu.μ, 1:d), cache.E1, x.μ)
-            # _matmul!(view(pu.μ, d+1:2d), cache.E0, x.μ)
-            # _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.SolProj')
-        end
-    end
-    return pu
-end
-function project_to_solution_space(pu, x; integ::EKCache, is_secondorder_ode=false)
-    d = cache.d
-    if !(pu.Σ.R isa Kronecker.KroneckerProduct)
-        _gaussian_mul!(pu, cache.SolProj, x)
-    else
-        if !is_secondorder_ode
-            @assert cache.SolProj == cache.E0
-            _matmul!(view(pu.μ, 1:d), cache.E0, x.μ)
-            _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.E0.B')
-        else
-            _matmul!(view(pu.μ, 1:d), cache.E1, x.μ)
-            _matmul!(view(pu.μ, d+1:2d), cache.E0, x.μ)
-            _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.SolProj')
-        end
-    end
-    return pu
-end
 
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])

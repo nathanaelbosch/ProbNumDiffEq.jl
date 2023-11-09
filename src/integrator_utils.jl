@@ -109,7 +109,7 @@ function smooth_solution!(integ)
         K = backward_kernels[i]
         marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_3DxD)
 
-_gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
+        _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
         sol.u[i][:] .= sol.pu[i].μ
     end
     return nothing
