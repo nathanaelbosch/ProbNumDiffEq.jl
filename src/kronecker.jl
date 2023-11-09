@@ -1,3 +1,4 @@
+copy(K::Kronecker.KroneckerProduct) = Kronecker.KroneckerProduct(copy(K.A), copy(K.B))
 @doc raw"""
     IsometricKroneckerProduct(left_factor_dim::Int64, right_factor::AbstractMatrix)
 

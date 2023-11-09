@@ -50,21 +50,18 @@ function write_into_solution!(u, μ; cache::EKCache, is_secondorder_ode=false)
 end
 function write_into_pu!(pu, x; cache::EKCache, is_secondorder_ode=false)
     d = cache.d
-    if is_secondorder_ode
-        @info "hmm" x.Σ
-        # _gaussian_mul!(pu, cache.SolProj, x)
-        # _matmul!(pu.μ, cache.SolProj, x.μ)
-        _matmul!(view(pu.μ, 1:d), cache.E1, x.μ)
-        _matmul!(view(pu.μ, d+1:2d), cache.E0, x.μ)
-        # fast_X_A_Xt!(pu.Σ, x.Σ, cache.SolProj)
-        _matmul!(pu.Σ.R, x.Σ.R, cache.SolProj')
-        # @info "?" pu.Σ
-        # _matmul!(view(pu.Σ.R, :, 1:d), x.Σ.R, cache.E1')
-        # _matmul!(view(pu.Σ.R, :, d+1:2d), x.Σ.R, cache.E0')
-        # @info "?" pu.Σ.R x.Σ.R*cache.SolProj'
+    if !(pu.Σ.R isa Kronecker.KroneckerProduct)
+        _gaussian_mul!(pu, cache.SolProj, x)
     else
-        @assert cache.SolProj == cache.E0
-        _gaussian_mul!(pu, cache.E0, x)
+        if !is_secondorder_ode
+            @assert cache.SolProj == cache.E0
+            _matmul!(view(pu.μ, 1:d), cache.E0, x.μ)
+            _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.E0.B')
+        else
+            _matmul!(view(pu.μ, 1:d), cache.E1, x.μ)
+            _matmul!(view(pu.μ, d+1:2d), cache.E0, x.μ)
+            _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.SolProj)
+        end
     end
     return pu
 end

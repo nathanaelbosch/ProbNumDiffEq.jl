@@ -90,14 +90,9 @@ function DiffEqBase.build_solution(
     N = length((size(prob.u0)..., length(u)))
 
     uElType = eltype(prob.u0)
-    d, q = cache.d, cache.q
-    D = d * (q + 1)
 
-    FAC = cache.covariance_factorization
-    pu_cov = PSDMatrix(factorized_zeros(FAC, D, d))
-    x_cov = PSDMatrix(factorized_zeros(FAC, D, D))
-    pu = StructArray{Gaussian{Vector{uElType},typeof(pu_cov)}}(undef, 0)
-    x_filt = StructArray{Gaussian{Vector{uElType},typeof(x_cov)}}(undef, 0)
+    pu = StructArray{typeof(cache.pu_tmp)}(undef, 0)
+    x_filt = StructArray{typeof(cache.x)}(undef, 0)
     x_smooth = copy(x_filt)
 
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
@@ -112,9 +107,7 @@ function DiffEqBase.build_solution(
         errors = nothing
     end
 
-    uElTypeNoUnits = OrdinaryDiffEq.recursive_unitless_bottom_eltype(u)
-    q = 1
-    diffusion_prototype = initial_diffusion(alg.diffusionmodel, d, q, uElTypeNoUnits)
+    diffusion_prototype = cache.default_diffusion
 
     ll = zero(uElType)
     return ProbODESolution{T,N}(
