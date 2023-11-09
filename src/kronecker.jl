@@ -30,6 +30,7 @@ IsometricKroneckerProduct(ldim::Integer, B::AbstractVector) =
 const IKP = IsometricKroneckerProduct
 
 Kronecker.getmatrices(K::IKP) = (I(K.ldim), K.B)
+Kronecker.getallfactors(K::IKP) = (I(K.ldim), K.B)
 
 Base.zero(A::IKP) = IsometricKroneckerProduct(A.ldim, zero(A.B))
 Base.one(A::IKP) = IsometricKroneckerProduct(A.ldim, one(A.B))
