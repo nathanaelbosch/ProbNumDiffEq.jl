@@ -41,7 +41,7 @@ ALGS = (
         EK0(diffusionmodel=FixedMVDiffusion()),
         EK0(diffusionmodel=DynamicMVDiffusion()),
     )
-        @test_nowarn solve(_prob, alg)
+        @test solve(_prob, alg) isa ProbNumDiffEq.AbstractProbODESolution
 
         sol = solve(_prob, alg, abstol=1e-7, reltol=1e-7)
         @test sol isa ProbNumDiffEq.ProbODESolution
@@ -51,6 +51,7 @@ ALGS = (
     end
 
     @testset "ClassicSolverInit" begin
-        @test_nowarn solve(_prob, EK1(initialization=ClassicSolverInit()))
+        @test solve(_prob, EK1(initialization=ClassicSolverInit())) isa
+              ProbNumDiffEq.AbstractProbODESolution
     end
 end
