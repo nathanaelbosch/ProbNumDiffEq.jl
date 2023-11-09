@@ -160,7 +160,11 @@ function OrdinaryDiffEq.alg_cache(
         similar(Array{uElType}, _d),
         PSDMatrix(
             if FAC isa IsometricKroneckerCovariance
-                Kronecker.kronecker(similar(Matrix{uElType}, D ÷ d, _d ÷ d), I(d))
+                if is_secondorder_ode
+                    Kronecker.kronecker(similar(Matrix{uElType}, D ÷ d, _d ÷ d), I(d))
+                else
+                    factorized_similar(FAC, D, d)
+                end
             else
                 similar(Matrix{uElType}, D, _d)
             end,

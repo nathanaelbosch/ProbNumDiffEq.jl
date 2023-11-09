@@ -61,7 +61,9 @@ function Base.:*(M::SecondOrderODESolutionProjector, x::SRGaussian)
     @unpack d = M.covariance_structure
     E0 = IsometricKroneckerProduct(d, M.E0B)
     E1 = IsometricKroneckerProduct(d, M.E1B)
-    return [E1; E0] * x
+    μ = [E1 * x.μ; E0 * x.μ]
+    Σ = PSDMatrix([x.Σ.R * E1' x.Σ.R * E0'])
+    return Gaussian(μ, Σ)
 end
 
 function solution_space_projection(C::IsometricKroneckerCovariance, is_secondorder_ode)
