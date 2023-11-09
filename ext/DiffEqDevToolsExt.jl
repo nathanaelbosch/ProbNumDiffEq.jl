@@ -11,7 +11,7 @@ function chi2(gaussian_estimate, actual_value)
     diff = μ - actual_value
     if iszero(Σ)
         if iszero(diff)
-	          return 1
+            return 1
         else
             throw(SingularException())
         end
@@ -20,14 +20,22 @@ function chi2(gaussian_estimate, actual_value)
     return chi2_pinv
 end
 
-function DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, ref::TestSolution; kwargs...)
+function DiffEqDevTools.appxtrue(
+    sol::ProbNumDiffEq.ProbODESolution,
+    ref::TestSolution;
+    kwargs...,
+)
     ref.dense = sol.dense
     out = DiffEqDevTools.appxtrue(mean(sol), ref; kwargs...)
     out = _add_prob_errors!(out, sol, ref.interp)
     return out
 end
 
-function DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, ref::SciMLBase.AbstractODESolution; kwargs...)
+function DiffEqDevTools.appxtrue(
+    sol::ProbNumDiffEq.ProbODESolution,
+    ref::SciMLBase.AbstractODESolution;
+    kwargs...,
+)
     out = DiffEqDevTools.appxtrue(mean(sol), ref; dense_errors=sol.dense, kwargs...)
     out = _add_prob_errors!(out, sol, ref)
     return out
