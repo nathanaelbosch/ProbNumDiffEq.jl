@@ -58,7 +58,12 @@ function calibrate_solution!(integ, mle_diffusion)
 
     # Re-write into the solution estimates
     for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
-        write_into_pu!(pu, x; cache=integ.cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
+        write_into_pu!(
+            pu,
+            x;
+            cache=integ.cache,
+            is_secondorder_ode=integ.f isa DynamicalODEFunction,
+        )
     end
     # [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
 end
@@ -160,7 +165,7 @@ function DiffEqBase.savevalues!(
         OrdinaryDiffEq.copyat_or_push!(integ.sol.diffusions, i, integ.cache.local_diffusion)
         OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         write_into_pu!(integ.cache.pu_tmp, integ.cache.x;
-                       cache=integ.cache, is_secondorder_ode=integ.f isa DynamicalODEFunction),
+            cache=integ.cache, is_secondorder_ode=integ.f isa DynamicalODEFunction),
         OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
         if integ.alg.smooth
