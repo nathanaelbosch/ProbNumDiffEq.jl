@@ -20,16 +20,20 @@ function chi2(gaussian_estimate, actual_value)
     return chi2_pinv
 end
 
-DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, ref::TestSolution; kwargs...) =
-    __appxtrue(sol, ref; kwargs...)
-DiffEqDevTools.appxtrue(
-    sol::ProbNumDiffEq.ProbODESolution,
-    ref::SciMLBase.AbstractODESolution;
-    kwargs...,
-) = __appxtrue(sol, ref; kwargs...)
+function DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, ref::TestSolution; kwargs...)
+    ref.dense = sol.dense
+    out = DiffEqDevTools.appxtrue(mean(sol), ref; kwargs...)
+    out = _add_prob_errors!(out, sol, ref.interp)
+    return out
+end
 
-function __appxtrue(sol, ref; kwargs...)
+function DiffEqDevTools.appxtrue(sol::ProbNumDiffEq.ProbODESolution, ref::SciMLBase.AbstractODESolution; kwargs...)
     out = DiffEqDevTools.appxtrue(mean(sol), ref; dense_errors=sol.dense, kwargs...)
+    out = _add_prob_errors!(out, sol, ref)
+    return out
+end
+
+function _add_prob_errors!(out, sol, ref)
     out.errors[:chi2_final] = chi2(sol.pu[end], ref.u[end])[1]
     if :l2 in keys(out.errors)
         out.errors[:chi2_steps] = mean(chi2.(sol.pu, ref.(sol.t)))
