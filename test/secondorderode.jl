@@ -35,6 +35,8 @@ ALGS = (
     @testset "$alg" for alg in (
         EK0(),
         EK1(),
+        EK0(initialization=ForwardDiffInit(2)),
+        EK1(initialization=ForwardDiffInit(2)),
         EK1(diffusionmodel=FixedDiffusion()),
         EK0(diffusionmodel=FixedMVDiffusion()),
         EK0(diffusionmodel=DynamicMVDiffusion()),
