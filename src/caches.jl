@@ -109,12 +109,7 @@ function OrdinaryDiffEq.alg_cache(
     Proj = projection(FAC)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
-    SolProj = if is_secondorder_ode
-        E0 isa IsometricKroneckerProduct ?
-        IsometricKroneckerProduct(d, [Proj(1).B; Proj(0).B]) : [Proj(1); Proj(0)]
-    else
-        Proj(0)
-    end
+    SolProj = solution_space_projection(FAC, is_secondorder_ode)
 
     # Prior dynamics
     prior = if alg.prior isa IWP
@@ -160,14 +155,22 @@ function OrdinaryDiffEq.alg_cache(
     # Caches
     du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
     ddu = factorized_similar(FAC, length(u), length(u))
-    pu_tmp = if !is_secondorder_ode # same dimensions as `measurement`
-        copy(measurement)
-    else # then `u` has 2d dimensions
-        Gaussian(
-            similar(Array{uElType}, 2d),
-            PSDMatrix(factorized_similar(FAC, D, 2d)),
-        )
-    end
+    _d = is_secondorder_ode ? 2d : d
+    pu_tmp = Gaussian(
+        similar(Array{uElType}, _d),
+        PSDMatrix(
+            if FAC isa IsometricKroneckerCovariance
+                if is_secondorder_ode
+                    Kronecker.kronecker(similar(Matrix{uElType}, D ÷ d, _d ÷ d), I(d))
+                else
+                    factorized_similar(FAC, D, d)
+                end
+            else
+                similar(Matrix{uElType}, D, _d)
+            end,
+        ),
+    )
+
     K = factorized_similar(FAC, D, d)
     G = factorized_similar(FAC, D, D)
     Smat = factorized_similar(FAC, d, d)
