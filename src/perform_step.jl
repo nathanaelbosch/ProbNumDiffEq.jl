@@ -60,7 +60,7 @@ function write_into_pu!(pu, x; cache::EKCache, is_secondorder_ode=false)
         else
             _matmul!(view(pu.μ, 1:d), cache.E1, x.μ)
             _matmul!(view(pu.μ, d+1:2d), cache.E0, x.μ)
-            _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.SolProj)
+            _matmul!(pu.Σ.R.A, x.Σ.R.B, cache.SolProj')
         end
     end
     return pu

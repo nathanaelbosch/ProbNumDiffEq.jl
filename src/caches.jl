@@ -110,7 +110,11 @@ function OrdinaryDiffEq.alg_cache(
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
     SolProj = if is_secondorder_ode
-        [Proj(1); Proj(0)]
+        if FAC isa IsometricKroneckerCovariance
+            [Proj(1).B; Proj(0).B]
+        else
+            [Proj(1); Proj(0)]
+        end
     else
         Proj(0)
     end
