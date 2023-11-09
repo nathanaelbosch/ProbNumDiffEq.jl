@@ -14,12 +14,7 @@ function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::
 
     # These are necessary since the solution object is not 100% initialized by default
     OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
-    initial_pu = write_into_pu!(
-        cache.pu_tmp,
-        cache.x;
-        cache=integ.cache,
-        is_secondorder_ode=integ.f isa DynamicalODEFunction,
-    )
+    initial_pu = _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x)
     OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
 
     return nothing
