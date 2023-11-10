@@ -531,13 +531,15 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
-  [0bca4576] SciMLBase v2.7.3
+⌃ [0bca4576] SciMLBase v2.7.3
   [505e40e9] SciPyDiffEq v0.2.1
   [ce78b400] SimpleUnPack v1.1.0
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
+Info Packages marked with ⌃ have new versions available and may be upgradab
+le.
 ```
 
 
@@ -668,7 +670,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-  [7ed4a6bd] LinearSolve v2.17.1
+⌃ [7ed4a6bd] LinearSolve v2.17.1
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.166
@@ -678,7 +680,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [d8e11817] MLStyle v0.4.17
   [1914dd2f] MacroTools v0.5.11
   [d125e4d3] ManualMemory v0.1.8
-  [739be429] MbedTLS v1.1.7
+⌃ [739be429] MbedTLS v1.1.7
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.1.0
   [961ee093] ModelingToolkit v8.72.2
@@ -699,12 +701,12 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [429524aa] Optim v1.7.8
   [bac558e1] OrderedCollections v1.6.2
   [1dea7af3] OrdinaryDiffEq v6.59.0
-  [90014a1f] PDMats v0.11.28
+⌃ [90014a1f] PDMats v0.11.28
   [fe68d972] PSDMatrices v0.4.6
   [65ce6f38] PackageExtensionCompat v1.0.2
   [65888b18] ParameterizedFunctions v5.16.0
   [d96e819e] Parameters v0.12.3
-  [69de0a69] Parsers v2.7.2
+⌃ [69de0a69] Parsers v2.7.2
   [b98c9c47] Pipe v1.3.0
   [32113eaa] PkgBenchmark v0.2.12
   [ccf2f8ad] PlotThemes v3.1.0
@@ -723,7 +725,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [27ebfcd6] Primes v0.5.4
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
   [33c8b6b6] ProgressLogging v0.1.4
-  [438e738f] PyCall v1.96.1
+⌃ [438e738f] PyCall v1.96.1
   [1fd47b50] QuadGK v2.9.1
   [6f49c342] RCall v0.13.18
   [74087812] Random123 v1.6.1
@@ -732,7 +734,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [3cdcf5f2] RecipesBase v1.3.4
   [01d81517] RecipesPipeline v0.6.12
   [731186ca] RecursiveArrayTools v2.38.10
-  [f2c3362d] RecursiveFactorization v0.2.20
+⌃ [f2c3362d] RecursiveFactorization v0.2.20
   [189a3867] Reexport v1.2.2
   [05181044] RelocatableFolders v1.0.1
   [ae029012] Requires v1.3.0
@@ -743,7 +745,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.6
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
-  [0bca4576] SciMLBase v2.7.3
+⌃ [0bca4576] SciMLBase v2.7.3
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.7
   [505e40e9] SciPyDiffEq v0.2.1
@@ -944,7 +946,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility c
-onstraints restrict them from upgrading. To see why use `status --outdated
--m`
+Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
+th ⌅ are restricted by compatibility constraints from upgrading. To see why
+ use `status --outdated -m`
 ```
