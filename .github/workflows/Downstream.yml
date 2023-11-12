@@ -18,7 +18,7 @@ jobs:
         julia-version: [1]
         os: [ubuntu-latest]
         package:
-          - {user: nathanaelbosch, repo: Fenrir.jl, group: All}
+          - {user: nathanaelbosch, repo: Fenrir.jl, group: Downstream}
 
     steps:
       - uses: actions/checkout@v2
