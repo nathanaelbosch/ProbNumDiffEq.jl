@@ -108,11 +108,9 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
-plot(wp, title = "Adaptive steps - no smoothing", color = colors)
+plot(wp, title="Adaptive steps - no smoothing", color=colors)
 ```
 
 ## Adaptive steps - with smoothing
@@ -145,11 +143,14 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
-plot(wp, title = "Adaptive steps - with smoothing", color = colors)
+plot(wp, title="Adaptive steps - with smoothing", color=colors)
+```
+
+Dense errors
+```julia
+plot(wp, x= L2, title="Adaptive steps - with smoothing", color=colors)
 ```
 
 
@@ -181,11 +182,9 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
-plot(wp, title = "Fixed steps - no smoothing", color = colors)
+plot(wp, title="Fixed steps - no smoothing", color=colors)
 ```
 
 
@@ -221,9 +220,13 @@ wp = WorkPrecisionSet(
     verbose = false,
 )
 
-plot(wp, title = "Fixed steps - with smoothing", color = colors)
+plot(wp, title="Fixed steps - with smoothing", color=colors)
 ```
 
+Dense errors
+```julia
+plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
+```
 
 ## Appendix
 
