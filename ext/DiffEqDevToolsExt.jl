@@ -11,9 +11,10 @@ function chi2(gaussian_estimate, actual_value)
     diff = μ - actual_value
     if iszero(Σ)
         if iszero(diff)
-            return 1
+            return one(eltype(actual_value))
         else
-            throw(SingularException())
+            @warn "Singular covariance matrix leads to bad (infinite) chi2 estimate"
+            return convert(eltype(actual_value), Inf)
         end
     end
     chi2_pinv = diff' * (Σ \ diff)
