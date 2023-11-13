@@ -290,7 +290,7 @@ plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ## EK0 vs. EK1: Calibration
 Final time-point:
 ```julia
-plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2])
+plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (final)")
 
 # Should be distributed according to a Chi-squared distribution:
 low, high, mid = quantile(Chisq(2), [0.01, 0.99])..., mean(Chisq(2))
@@ -305,7 +305,7 @@ hline!([mid], linestyle=:solid, color=:black, label="")
 
 Discrete time-series:
 ```julia
-plot(wp, x=:l2, y=:chi2_steps, color=[1 1 1 1 2 2 2 2])
+plot(wp, x=:l2, y=:chi2_steps, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (discrete steps)")
 hline!([low, high], linestyle=:dash, color=:black, label="",
        fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
@@ -317,7 +317,7 @@ hline!([mid], linestyle=:solid, color=:black, label="")
 
 Interpolation:
 ```julia
-plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2])
+plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (dense)")
 hline!([low, high], linestyle=:dash, color=:black, label="",
        fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
@@ -371,7 +371,10 @@ plot(wp, color=[2 2 3 3 4 4 5 5])
 
 Calibration:
 ```julia
-plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5])
+plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5], yguide="Chi-squared (final)")
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
+hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
 ![](figures/lotkavolterra_15_1.svg)
@@ -416,7 +419,10 @@ plot(wp, color=[2 2 3 3])
 
 Calibration:
 ```julia
-plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3])
+plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3], yguide="Chi-squared (final)")
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
+hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
 ![](figures/lotkavolterra_17_1.svg)
