@@ -114,7 +114,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_4_1.svg)
@@ -123,7 +123,7 @@ plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 
 ### Interpolation errors (L2)
 ```julia
-plot(wp, y=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_5_1.svg)
@@ -191,7 +191,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_7_1.svg)
@@ -200,7 +200,7 @@ plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 
 ### Interpolation errors (L2)
 ```julia
-plot(wp, y=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_8_1.svg)
@@ -280,7 +280,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[1 1 1 1 2 2 2 2])
+plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ```
 
 ![](figures/lotkavolterra_10_1.svg)
@@ -372,7 +372,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 2 3 3 3 4 4 4 5 5 5])
+plot(wp, color=[2 2 3 3 4 4 5 5])
 ```
 
 ![](figures/lotkavolterra_14_1.svg)
@@ -408,7 +408,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 2 3 3 3])
+plot(wp, color=[2 2 3 3])
 ```
 
 ![](figures/lotkavolterra_15_1.svg)

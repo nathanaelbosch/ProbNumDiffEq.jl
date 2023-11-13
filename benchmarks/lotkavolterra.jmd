@@ -103,12 +103,12 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ### Interpolation errors (L2)
 ```julia
-plot(wp, y=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ## EK1 across orders
@@ -168,12 +168,12 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ### Interpolation errors (L2)
 ```julia
-plot(wp, y=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ## EK0 vs. EK1: Work-Precision
@@ -245,7 +245,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[1 1 1 1 2 2 2 2])
+plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ```
 
 ## EK0 vs. EK1: Calibration
@@ -308,7 +308,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 2 3 3 3 4 4 4 5 5 5])
+plot(wp, color=[2 2 3 3 4 4 5 5])
 ```
 
 ### EK1
@@ -340,7 +340,7 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 2 3 3 3])
+plot(wp, color=[2 2 3 3])
 ```
 
 ## Comparison of the different initialization schemes
