@@ -16,7 +16,7 @@ Benchmark adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/NonStiffODE/LotkaVolterra_wpd/).
 
 ```julia
-using LinearAlgebra, Statistics
+using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
 using ProbNumDiffEq
 
@@ -55,7 +55,7 @@ plot(test_sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto)
 
 ## EK0 across orders
 
-Final timepoint only:
+### Final timepoint only
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -79,8 +79,6 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
@@ -90,7 +88,7 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 
 
 
-Discrete time-series errors (l2):
+### Discrete time-series errors (l2)
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -114,36 +112,18 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = true,
-    dense_errors = true,
-    verbose = false,
-    error_estimate = :l2,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_4_1.svg)
 
 
 
-Interpolation errors (L2):
+### Interpolation errors (L2)
 ```julia
-wp = WorkPrecisionSet(
-    prob, abstols, reltols, setups;
-    names = labels,
-    appxsol = test_sol,
-    dense = DENSE,
-    save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
-    maxiters = Int(1e7),
-    timeseries_errors = true,
-    dense_errors = true,
-    verbose = false,
-    error_estimate = :L2,
-)
-
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, y=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_5_1.svg)
@@ -152,7 +132,7 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 
 ## EK1 across orders
 
-Last timepoint only:
+### Final timepoint only
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -176,8 +156,6 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
@@ -187,7 +165,7 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 
 
 
-Discrete time-series errors (l2):
+### Discrete time-series errors (l2)
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -211,43 +189,25 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = true,
-    dense_errors = true,
-    verbose = false,
-    error_estimate = :l2,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, y=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_7_1.svg)
 
 
 
-Interpolation errors (L2):
+### Interpolation errors (L2)
 ```julia
-wp = WorkPrecisionSet(
-    prob, abstols, reltols, setups;
-    names = labels,
-    appxsol = test_sol,
-    dense = DENSE,
-    save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
-    maxiters = Int(1e7),
-    timeseries_errors = true,
-    dense_errors = true,
-    verbose = false,
-    error_estimate = :L2,
-)
-
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, y=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ![](figures/lotkavolterra_8_1.svg)
 
 
 
-## EK0 vs. EK1
+## EK0 vs. EK1: Work-Precision
 
 Final timepoint only:
 ```julia
@@ -279,9 +239,6 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    dense_errors = false,
-    verbose = false,
 )
 
 plot(wp, color=[1 1 1 1 2 2 2 2])
@@ -321,10 +278,6 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    dense_errors = true,
-    verbose = true,
-    error_estimate = :L2,
 )
 
 plot(wp, color=[1 1 1 1 2 2 2 2])
@@ -334,23 +287,71 @@ plot(wp, color=[1 1 1 1 2 2 2 2])
 
 
 
-## EK0: Diffusion Comparison
+## EK0 vs. EK1: Calibration
+Final time-point:
+```julia
+plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2])
+
+# Should be distributed according to a Chi-squared distribution:
+low, high, mid = quantile(Chisq(2), [0.01, 0.99]), mean(Chisq(2))
+hline!([low, high], linestyle=:dash, color=:black, label="")
+hline!([mid], linestyle=:solid, color=:black, label="")
+```
+
+```
+Error: BoundsError: attempt to access Tuple{Vector{Float64}, Float64} at in
+dex [3]
+```
+
+
+
+
+
+Discrete time-series:
+```julia
+plot(wp, x=:l2, y=:chi2_steps, color=[1 1 1 1 2 2 2 2])
+hline!([low, high], linestyle=:dash, color=:black, label="")
+hline!([mid], linestyle=:solid, color=:black, label="")
+```
+
+```
+Error: Cannot convert Float64 to series data for plotting
+```
+
+
+
+
+
+Interpolation:
+```julia
+plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2])
+hline!([low, high], linestyle=:dash, color=:black, label="")
+hline!([mid], linestyle=:solid, color=:black, label="")
+```
+
+```
+Error: Cannot convert Float64 to series data for plotting
+```
+
+
+
+
+
+## Comparison of the different diffusion models
+
+### EK0
 
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
 _setups = [
-  "EK0(2) Dynamic" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
   "EK0(3) Dynamic" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK0(0) Dynamic" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK0(2) Fixed" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(5) Dynamic" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
   "EK0(3) Fixed" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
   "EK0(5) Fixed" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
-  "EK0(2) DynamicMV" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
   "EK0(3) DynamicMV" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
-  "EK0(0) DynamicMV" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
-  "EK0(2) FixedMV" => Dict(:alg => EK0(order=2, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
+  "EK0(5) DynamicMV" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
   "EK0(3) FixedMV" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
   "EK0(5) FixedMV" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
 ]
@@ -369,28 +370,24 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
 plot(wp, color=[2 2 2 3 3 3 4 4 4 5 5 5])
 ```
 
-![](figures/lotkavolterra_11_1.svg)
+![](figures/lotkavolterra_14_1.svg)
 
 
 
-## EK1: DynamicDiffusion vs FixedDiffusion
+### EK1
 
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
 _setups = [
-  "EK1(2) Dynamic" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
   "EK1(3) Dynamic" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
   "EK1(5) Dynamic" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK1(2) Fixed" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=FixedDiffusion()))
   "EK1(3) Fixed" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
   "EK1(5) Fixed" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
 ]
@@ -409,14 +406,12 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
 plot(wp, color=[2 2 2 3 3 3])
 ```
 
-![](figures/lotkavolterra_12_1.svg)
+![](figures/lotkavolterra_15_1.svg)
 
 
 
@@ -450,8 +445,6 @@ for o in orders
         save_everystep = SAVE_EVERYSTEP,
         numruns = 10,
         maxiters = Int(1e7),
-        timeseries_errors = false,
-        verbose = false,
     )
 
     p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5), title = "Order $o")
@@ -465,19 +458,7 @@ plot(
 )
 ```
 
-```
-Error: MethodError: no method matching LinearAlgebra.SingularException()
-
-Closest candidates are:
-  LinearAlgebra.SingularException(!Matched::Int64)
-   @ LinearAlgebra ~/.julia/juliaup/julia-1.9.3+0.x64.linux.gnu/share/julia
-/stdlib/v1.9/LinearAlgebra/src/exceptions.jl:21
-  LinearAlgebra.SingularException(!Matched::Any)
-   @ LinearAlgebra ~/.julia/juliaup/julia-1.9.3+0.x64.linux.gnu/share/julia
-/stdlib/v1.9/LinearAlgebra/src/exceptions.jl:21
-```
-
-
+![](figures/lotkavolterra_16_1.svg)
 
 
 
@@ -497,11 +478,11 @@ Build Info:
   Official https://julialang.org/ release
 Platform Info:
   OS: Linux (x86_64-linux-gnu)
-  CPU: 12 × Intel(R) Core(TM) i7-6800K CPU @ 3.40GHz
+  CPU: 6 × 13th Gen Intel(R) Core(TM) i9-13900K
   WORD_SIZE: 64
   LIBM: libopenlibm
-  LLVM: libLLVM-14.0.6 (ORCJIT, broadwell)
-  Threads: 12 on 12 virtual cores
+  LLVM: libLLVM-14.0.6 (ORCJIT, goldmont)
+  Threads: 6 on 6 virtual cores
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
@@ -519,11 +500,11 @@ Pkg.status()
 
 ```
 Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
-  [f3b72e0c] DiffEqDevTools v2.39.1
+  [f3b72e0c] DiffEqDevTools v2.41.0 `~/.julia/dev/DiffEqDevTools`
+  [31c24e10] Distributions v0.25.103
   [7073ff75] IJulia v1.24.2
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.0.3
-  [e2752cbe] MATLABDiffEq v1.2.0
   [961ee093] ModelingToolkit v8.72.2
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
@@ -531,15 +512,13 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
-⌃ [0bca4576] SciMLBase v2.7.3
+  [0bca4576] SciMLBase v2.8.0
   [505e40e9] SciPyDiffEq v0.2.1
   [ce78b400] SimpleUnPack v1.1.0
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
-Info Packages marked with ⌃ have new versions available and may be upgradab
-le.
 ```
 
 
@@ -557,13 +536,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
 ⌅ [c3fe647b] AbstractAlgebra v0.32.5
   [621f4979] AbstractFFTs v1.5.0
   [1520ce14] AbstractTrees v0.4.4
+  [7d9f7c33] Accessors v0.1.33
   [79e6a3ab] Adapt v3.7.1
   [ec485272] ArnoldiMethod v0.2.0
   [c9d4266f] ArrayAllocators v0.3.0
   [4fba245c] ArrayInterface v7.5.1
   [6e4b80f9] BenchmarkTools v1.3.2
   [e2ed5e7c] Bijections v0.1.6
-  [d1d4a3ce] BitFlags v0.1.7
+  [d1d4a3ce] BitFlags v0.1.8
   [62783981] BitTwiddlingConvenienceFunctions v0.1.5
   [fa961155] CEnum v0.5.0
   [2a0fbf3d] CPUSummary v0.2.4
@@ -583,6 +563,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [bbf7d656] CommonSubexpressions v0.3.0
   [34da2185] Compat v4.10.0
   [b152e2b5] CompositeTypes v0.1.3
+  [a33af91c] CompositionsBase v0.1.2
   [2569d6c7] ConcreteStructs v0.2.3
   [f0e56b4a] ConcurrentUtilities v2.3.0
   [8f4d0f93] Conda v1.9.1
@@ -599,7 +580,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8bb1440f] DelimitedFiles v1.9.1
   [2b5f629d] DiffEqBase v6.138.1
   [459566f4] DiffEqCallbacks v2.33.1
-  [f3b72e0c] DiffEqDevTools v2.39.1
+  [f3b72e0c] DiffEqDevTools v2.41.0 `~/.julia/dev/DiffEqDevTools`
   [77a26b50] DiffEqNoiseProcess v5.19.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
@@ -649,6 +630,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [842dd82b] InlineStrings v1.4.0
   [18e54dd8] IntegerMathUtils v0.1.2
   [8197267c] IntervalSets v0.7.8
+  [3587e190] InverseFunctions v0.1.12
   [41ab1584] InvertedIndices v1.3.0
   [92d709cd] IrrationalConstants v0.2.2
   [c8e1da08] IterTools v1.8.0
@@ -666,21 +648,19 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2ee39098] LabelledArrays v1.14.0
   [984bce1d] LambertW v0.4.6
   [23fbe1c1] Latexify v0.16.1
+  [73f95e8e] LatticeRules v0.0.1
   [10f19ff3] LayoutPointers v0.1.15
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-⌃ [7ed4a6bd] LinearSolve v2.17.1
+  [7ed4a6bd] LinearSolve v2.20.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.166
-  [10e44e05] MATLAB v0.8.4
-  [e2752cbe] MATLABDiffEq v1.2.0
-  [33e6dc65] MKL v0.6.1
   [d8e11817] MLStyle v0.4.17
   [1914dd2f] MacroTools v0.5.11
   [d125e4d3] ManualMemory v0.1.8
-⌃ [739be429] MbedTLS v1.1.7
+  [739be429] MbedTLS v1.1.8
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.1.0
   [961ee093] ModelingToolkit v8.72.2
@@ -701,12 +681,12 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [429524aa] Optim v1.7.8
   [bac558e1] OrderedCollections v1.6.2
   [1dea7af3] OrdinaryDiffEq v6.59.0
-⌃ [90014a1f] PDMats v0.11.28
+  [90014a1f] PDMats v0.11.29
   [fe68d972] PSDMatrices v0.4.6
   [65ce6f38] PackageExtensionCompat v1.0.2
   [65888b18] ParameterizedFunctions v5.16.0
   [d96e819e] Parameters v0.12.3
-⌃ [69de0a69] Parsers v2.7.2
+  [69de0a69] Parsers v2.8.0
   [b98c9c47] Pipe v1.3.0
   [32113eaa] PkgBenchmark v0.2.12
   [ccf2f8ad] PlotThemes v3.1.0
@@ -722,11 +702,12 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [aea7be01] PrecompileTools v1.2.0
   [21216c6a] Preferences v1.4.1
   [08abe8d2] PrettyTables v2.2.8
-  [27ebfcd6] Primes v0.5.4
+  [27ebfcd6] Primes v0.5.5
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
   [33c8b6b6] ProgressLogging v0.1.4
-⌃ [438e738f] PyCall v1.96.1
+  [438e738f] PyCall v1.96.2
   [1fd47b50] QuadGK v2.9.1
+  [8a4e6c94] QuasiMonteCarlo v0.3.2
   [6f49c342] RCall v0.13.18
   [74087812] Random123 v1.6.1
   [fb686558] RandomExtensions v0.4.4
@@ -734,7 +715,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [3cdcf5f2] RecipesBase v1.3.4
   [01d81517] RecipesPipeline v0.6.12
   [731186ca] RecursiveArrayTools v2.38.10
-⌃ [f2c3362d] RecursiveFactorization v0.2.20
+  [f2c3362d] RecursiveFactorization v0.2.21
   [189a3867] Reexport v1.2.2
   [05181044] RelocatableFolders v1.0.1
   [ae029012] Requires v1.3.0
@@ -745,7 +726,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.6
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
-⌃ [0bca4576] SciMLBase v2.7.3
+  [0bca4576] SciMLBase v2.8.0
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.7
   [505e40e9] SciPyDiffEq v0.2.1
@@ -759,6 +740,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [699a6c99] SimpleTraits v0.9.4
   [ce78b400] SimpleUnPack v1.1.0
   [66db9d55] SnoopPrecompile v1.0.3
+  [ed01d8cd] Sobol v1.5.0
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
   [47a9eef4] SparseDiffTools v2.11.0
@@ -773,7 +755,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2913bbd2] StatsBase v0.34.2
   [4c63d2b9] StatsFuns v1.3.0
   [3eaba693] StatsModels v0.7.3
-⌅ [7792a7ef] StrideArraysCore v0.4.17
+  [7792a7ef] StrideArraysCore v0.5.1
   [69024149] StringEncodings v0.3.7
   [892a3eda] StringManipulation v0.3.4
   [09ab397b] StructArrays v0.6.16
@@ -799,7 +781,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [5c2747f8] URIs v1.5.1
   [3a884ed6] UnPack v1.0.2
   [1cfade01] UnicodeFun v0.4.1
-  [1986cc42] Unitful v1.17.0
+  [1986cc42] Unitful v1.18.0
   [45397f5d] UnitfulLatexify v1.6.3
   [a7c27f48] Unityper v0.1.5
   [41fe7b60] Unzip v0.2.0
@@ -946,7 +928,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
-th ⌅ are restricted by compatibility constraints from upgrading. To see why
- use `status --outdated -m`
+Info Packages marked with ⌅ have new versions available but compatibility c
+onstraints restrict them from upgrading. To see why use `status --outdated 
+-m`
 ```
