@@ -64,7 +64,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -95,7 +94,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -151,10 +149,7 @@ for o in orders
         appxsol = test_sol,
         dense = DENSE,
         save_everystep = SAVE_EVERYSTEP,
-        numruns = 10,
         maxiters = Int(1e7),
-        timeseries_errors = false,
-        verbose = false,
     )
 
     p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5))
@@ -195,10 +190,7 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
@@ -248,10 +240,7 @@ wp = WorkPrecisionSet(
     appxsol = [test_sol, test_sol2],
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
 plot(wp, x=:final, color=[1 1 1 1 2 2 2 2])
