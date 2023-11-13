@@ -20,3 +20,5 @@ for file in FILES
         fig_ext=".svg",
     )
 end
+
+delete!(ENV, "GKSwstype");

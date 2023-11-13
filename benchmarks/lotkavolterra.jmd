@@ -254,22 +254,25 @@ Final time-point:
 plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2])
 
 # Should be distributed according to a Chi-squared distribution:
-low, high, mid = quantile(Chisq(2), [0.01, 0.99]), mean(Chisq(2))
-hline!([low, high], linestyle=:dash, color=:black, label="")
+low, high, mid = quantile(Chisq(2), [0.01, 0.99])..., mean(Chisq(2))
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
 Discrete time-series:
 ```julia
 plot(wp, x=:l2, y=:chi2_steps, color=[1 1 1 1 2 2 2 2])
-hline!([low, high], linestyle=:dash, color=:black, label="")
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
 Interpolation:
 ```julia
 plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2])
-hline!([low, high], linestyle=:dash, color=:black, label="")
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 

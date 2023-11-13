@@ -293,47 +293,37 @@ Final time-point:
 plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2])
 
 # Should be distributed according to a Chi-squared distribution:
-low, high, mid = quantile(Chisq(2), [0.01, 0.99]), mean(Chisq(2))
-hline!([low, high], linestyle=:dash, color=:black, label="")
+low, high, mid = quantile(Chisq(2), [0.01, 0.99])..., mean(Chisq(2))
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
-```
-Error: BoundsError: attempt to access Tuple{Vector{Float64}, Float64} at in
-dex [3]
-```
-
-
+![](figures/lotkavolterra_11_1.svg)
 
 
 
 Discrete time-series:
 ```julia
 plot(wp, x=:l2, y=:chi2_steps, color=[1 1 1 1 2 2 2 2])
-hline!([low, high], linestyle=:dash, color=:black, label="")
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
-```
-Error: Cannot convert Float64 to series data for plotting
-```
-
-
+![](figures/lotkavolterra_12_1.svg)
 
 
 
 Interpolation:
 ```julia
 plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2])
-hline!([low, high], linestyle=:dash, color=:black, label="")
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
-```
-Error: Cannot convert Float64 to series data for plotting
-```
-
-
+![](figures/lotkavolterra_13_1.svg)
 
 
 
