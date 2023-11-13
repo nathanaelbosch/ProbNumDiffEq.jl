@@ -369,6 +369,15 @@ plot(wp, color=[2 2 3 3 4 4 5 5])
 
 
 
+Calibration:
+```julia
+plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5])
+```
+
+![](figures/lotkavolterra_15_1.svg)
+
+
+
 ### EK1
 
 ```julia
@@ -401,7 +410,16 @@ wp = WorkPrecisionSet(
 plot(wp, color=[2 2 3 3])
 ```
 
-![](figures/lotkavolterra_15_1.svg)
+![](figures/lotkavolterra_16_1.svg)
+
+
+
+Calibration:
+```julia
+plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3])
+```
+
+![](figures/lotkavolterra_17_1.svg)
 
 
 
@@ -448,7 +466,7 @@ plot(
 )
 ```
 
-![](figures/lotkavolterra_16_1.svg)
+![](figures/lotkavolterra_18_1.svg)
 
 
 

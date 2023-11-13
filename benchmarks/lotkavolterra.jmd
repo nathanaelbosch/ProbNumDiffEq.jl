@@ -314,6 +314,11 @@ wp = WorkPrecisionSet(
 plot(wp, color=[2 2 3 3 4 4 5 5])
 ```
 
+Calibration:
+```julia
+plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5])
+```
+
 ### EK1
 
 ```julia
@@ -344,6 +349,11 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, color=[2 2 3 3])
+```
+
+Calibration:
+```julia
+plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3])
 ```
 
 ## Comparison of the different initialization schemes
