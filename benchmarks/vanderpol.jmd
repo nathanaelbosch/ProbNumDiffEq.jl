@@ -34,7 +34,7 @@ tspan = (0.0, 6.3)
 u0 = [2.0, 0.0]
 prob = ODEProblem(vanderpol!, u0, tspan, p)
 
-test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
+test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-2.5, 2.5), xticks=:auto)
 ```
 
@@ -209,7 +209,7 @@ u0 = [2.0]
 du0 = [0.0]
 prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
 
-test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
+test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-2.5, 2.5), xticks=:auto)
 ```
 

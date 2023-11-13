@@ -65,7 +65,7 @@ u0 = [p.V0, m_inf(p.V0, p.VT), n_inf(p.V0, p.VT), h_inf(p.V0, p.VT)]
 
 prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f, u0, (0.0, 100.0), p)
 
-test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14, dense=false)
+test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol,
      legend=false,
      layout=(4,1),

@@ -77,7 +77,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -110,7 +109,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -154,7 +152,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -187,7 +184,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -237,7 +233,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -276,7 +271,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -358,7 +352,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -406,7 +399,6 @@ wp = WorkPrecisionSet(
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
 )
 
@@ -457,7 +449,6 @@ for o in orders
         appxsol = test_sol,
         dense = DENSE,
         save_everystep = SAVE_EVERYSTEP,
-        numruns = 10,
         maxiters = Int(1e7),
     )
 

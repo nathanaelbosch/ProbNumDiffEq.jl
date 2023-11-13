@@ -21,4 +21,4 @@ for file in FILES
     )
 end
 
-delete!(ENV, "GKSwstype");
+delete!(ENV, "GKSwstype"); nothing
