@@ -9,7 +9,7 @@
 
 
 ```julia
-using LinearAlgebra, Statistics
+using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, SciMLBase, OrdinaryDiffEq, Plots, SimpleUnPack
 using ProbNumDiffEq
 
@@ -36,14 +36,14 @@ theme(:dao;
 αh(V, VT) = 0.128 * exp(-(V - VT - 17) / 18)
 βh(V, VT) = 4 / (1 + exp(-(V - VT - 40) / 5))
 
-Inj(t) = (10 <= t <= 90) ? 500one(t) : zero(t)
+Inj(t) = (5 <= t <= 40) ? 500one(t) : zero(t)
 
 function f(du, u, p, t)
     @unpack gNa, gK, ENa, EK, area, C, Eleak, VT, gleak = p
 
     V, m, n, h = u
 
-    I_inj = Inj(t) * 1e-6 # uA
+    I_inj = Inj(t) * 1e-6
 
     du[2] = dmdt = (αm(V, VT) * (1 - m) - βm(V, VT) * m)
     du[3] = dndt = (αn(V, VT) * (1 - n) - βn(V, VT) * n)
@@ -63,7 +63,7 @@ n_inf(V, VT) = 1 / (1 + βn(V, VT) / αn(V, VT))
 h_inf(V, VT) = 1 / (1 + βh(V, VT) / αh(V, VT))
 u0 = [p.V0, m_inf(p.V0, p.VT), n_inf(p.V0, p.VT), h_inf(p.V0, p.VT)]
 
-prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f, u0, (0.0, 100.0), p)
+prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f, u0, (0.0, 50.0), p)
 
 test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol,
@@ -107,6 +107,7 @@ wp = WorkPrecisionSet(
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
+    numruns = 5,
 )
 
 plot(wp, title="Adaptive steps - no smoothing", color=colors)
@@ -141,6 +142,7 @@ wp = WorkPrecisionSet(
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
+    numruns = 5,
 )
 
 plot(wp, title="Adaptive steps - with smoothing", color=colors)
@@ -148,7 +150,28 @@ plot(wp, title="Adaptive steps - with smoothing", color=colors)
 
 Dense errors
 ```julia
-plot(wp, x= L2, title="Adaptive steps - with smoothing", color=colors)
+plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
+```
+
+### Calibration
+```julia
+plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
+     palette=Plots.palette([:blue, :red], length(_setups)))
+
+# Should be distributed according to a Chi-squared distribution:
+d = 4
+low, high, mid = quantile(Chisq(d), [0.01, 0.99])..., mean(Chisq(d))
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
+hline!([mid], linestyle=:solid, color=:black, label="")
+```
+
+```julia
+plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
+     palette=Plots.palette([:blue, :red], length(_setups)))
+hline!([low, high], linestyle=:dash, color=:black, label="",
+       fill_between=true, fillcolor=:green, fillalpha=0.15)
+hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
 
@@ -179,6 +202,7 @@ wp = WorkPrecisionSet(
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
+    numruns = 5,
 )
 
 plot(wp, title="Fixed steps - no smoothing", color=colors)
@@ -212,16 +236,10 @@ wp = WorkPrecisionSet(
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
+    numruns = 5,
 )
 
 plot(wp, title="Fixed steps - with smoothing", color=colors)
-```
-
-Dense errors
-```julia
-plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
 ```
 
 ## Appendix
