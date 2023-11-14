@@ -155,8 +155,7 @@ plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
 
 ### Calibration
 ```julia
-plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
-     palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color=colors)
 
 # Should be distributed according to a Chi-squared distribution:
 d = 4
@@ -167,8 +166,7 @@ hline!([mid], linestyle=:solid, color=:black, label="")
 ```
 
 ```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
-     palette=Plots.palette([:blue, :red], length(_setups)))
+plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)", color=colors)
 hline!([low, high], linestyle=:dash, color=:black, label="",
        fill_between=true, fillcolor=:green, fillalpha=0.15)
 hline!([mid], linestyle=:solid, color=:black, label="")
