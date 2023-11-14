@@ -44,17 +44,6 @@ end
 
 function _add_prob_errors!(out, sol, ref)
     out.errors[:chi2_final] = chi2(sol.pu[end], ref.u[end])[1]
-    if :l2 in keys(out.errors)
-        # out.errors[:chi2_steps] = sum(chi2.(sol.pu, ref.(sol.t)))
-        # This is hard to evaluate as it follows a distribution that depends on the number
-        # of steps taken. Therefore, don't compute it for now!
-    end
-    if :L2 in keys(out.errors)
-        densetimes = collect(range(sol.t[1], stop=sol.t[end], length=100))
-        interp_pu = sol(densetimes).u
-        interp_ref = ref(densetimes).u
-        out.errors[:chi2_interp] = sum(chi2.(interp_pu, interp_ref))
-    end
     return out
 end
 
