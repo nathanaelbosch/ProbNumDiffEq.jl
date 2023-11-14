@@ -189,13 +189,6 @@ plot_chisq_interval!(4)
 
 ![](figures/hodgkinhuxley_6_1.svg)
 
-```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)", color=colors)
-plot_chisq_interval!(4*100)
-```
-
-![](figures/hodgkinhuxley_7_1.svg)
-
 
 
 
@@ -232,7 +225,7 @@ wp = WorkPrecisionSet(
 plot(wp, title="Fixed steps - no smoothing", color=colors)
 ```
 
-![](figures/hodgkinhuxley_8_1.svg)
+![](figures/hodgkinhuxley_7_1.svg)
 
 
 
@@ -270,7 +263,7 @@ wp = WorkPrecisionSet(
 plot(wp, title="Fixed steps - with smoothing", color=colors)
 ```
 
-![](figures/hodgkinhuxley_9_1.svg)
+![](figures/hodgkinhuxley_8_1.svg)
 
 
 

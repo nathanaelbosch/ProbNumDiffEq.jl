@@ -301,16 +301,6 @@ plot_chisq_interval!(2)
 
 
 
-Interpolation:
-```julia
-plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (dense)")
-plot_chisq_interval!(2*100)
-```
-
-![](figures/lotkavolterra_12_1.svg)
-
-
-
 ## Comparison of the different diffusion models
 
 ### EK0
@@ -348,7 +338,7 @@ wp = WorkPrecisionSet(
 plot(wp, color=[2 2 3 3 4 4 5 5])
 ```
 
-![](figures/lotkavolterra_13_1.svg)
+![](figures/lotkavolterra_12_1.svg)
 
 
 
@@ -358,7 +348,7 @@ plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5], yguide="Chi-squared (
 plot_chisq_interval!(2)
 ```
 
-![](figures/lotkavolterra_14_1.svg)
+![](figures/lotkavolterra_13_1.svg)
 
 
 
@@ -393,7 +383,7 @@ wp = WorkPrecisionSet(
 plot(wp, color=[2 2 3 3])
 ```
 
-![](figures/lotkavolterra_15_1.svg)
+![](figures/lotkavolterra_14_1.svg)
 
 
 
@@ -403,7 +393,7 @@ plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3], yguide="Chi-squared (final)")
 plot_chisq_interval!(2)
 ```
 
-![](figures/lotkavolterra_16_1.svg)
+![](figures/lotkavolterra_15_1.svg)
 
 
 
@@ -449,7 +439,7 @@ plot(
 )
 ```
 
-![](figures/lotkavolterra_17_1.svg)
+![](figures/lotkavolterra_16_1.svg)
 
 
 

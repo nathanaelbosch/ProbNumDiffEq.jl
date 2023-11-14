@@ -144,14 +144,6 @@ plot_chisq_interval!(2)
 
 ![](figures/vanderpol_6_1.svg)
 
-```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
-     palette=Plots.palette([:blue, :red], length(_setups)))
-plot_chisq_interval!(2*100)
-```
-
-![](figures/vanderpol_7_1.svg)
-
 
 
 ## Comparison of the different initialization schemes
@@ -197,7 +189,7 @@ plot(
 )
 ```
 
-![](figures/vanderpol_8_1.svg)
+![](figures/vanderpol_7_1.svg)
 
 ```julia
 DENSE = false;
@@ -233,7 +225,7 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
-![](figures/vanderpol_9_1.svg)
+![](figures/vanderpol_8_1.svg)
 
 
 
@@ -254,7 +246,7 @@ test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
 ```
 
-![](figures/vanderpol_10_1.svg)
+![](figures/vanderpol_9_1.svg)
 
 ```julia
 DENSE = true;
@@ -291,13 +283,13 @@ color = [1 1 1 1 2 2 2 2]
 plot(wp; x=:final, color)
 ```
 
-![](figures/vanderpol_11_1.svg)
+![](figures/vanderpol_10_1.svg)
 
 ```julia
 plot(wp; x=:L2, color)
 ```
 
-![](figures/vanderpol_12_1.svg)
+![](figures/vanderpol_11_1.svg)
 
 
 
@@ -308,14 +300,7 @@ plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color)
 plot_chisq_interval!(2)
 ```
 
-![](figures/vanderpol_13_1.svg)
-
-```julia
-plot(wp; x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)", color)
-plot_chisq_interval!(2*100)
-```
-
-![](figures/vanderpol_14_1.svg)
+![](figures/vanderpol_12_1.svg)
 
 
 

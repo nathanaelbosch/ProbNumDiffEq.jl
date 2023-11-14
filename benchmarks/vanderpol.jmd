@@ -123,12 +123,6 @@ end
 plot_chisq_interval!(2)
 ```
 
-```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
-     palette=Plots.palette([:blue, :red], length(_setups)))
-plot_chisq_interval!(2*100)
-```
-
 ## Comparison of the different initialization schemes
 
 ```julia
@@ -267,11 +261,6 @@ plot(wp; x=:L2, color)
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color)
 plot_chisq_interval!(2)
-```
-
-```julia
-plot(wp; x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)", color)
-plot_chisq_interval!(2*100)
 ```
 
 

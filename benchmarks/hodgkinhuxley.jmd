@@ -168,11 +168,6 @@ end
 plot_chisq_interval!(4)
 ```
 
-```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)", color=colors)
-plot_chisq_interval!(4*100)
-```
-
 
 ## Fixed steps - no smoothing
 
