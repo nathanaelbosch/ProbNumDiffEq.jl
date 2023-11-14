@@ -8,7 +8,7 @@
 
 
 ```julia
-using LinearAlgebra, Statistics
+using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots, ODEInterfaceDiffEq
 using ModelingToolkit
 using ProbNumDiffEq
@@ -115,11 +115,8 @@ wp = WorkPrecisionSet(
     appxsol = ref_sols,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
+    numruns = 5,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    dense_errors = false,
-    verbose = false,
 )
 
 plot(wp,
@@ -129,6 +126,25 @@ plot(wp,
 )
 ```
 
+### Calibration
+
+```julia
+_wp = WorkPrecisionSet(wp.wps[1:end-3], wp.N-3, wp.abstols, wp.reltols, wp.prob, wp.setups[1:end-3],
+                       wp.names[1:end-3], wp.error_estimate, wp.numruns)
+plot(_wp; x=:final, y=:chi2_final,
+     color=[1 2 2 2 2],
+     linestyle=[:dash :solid :solid :dash :dash],
+     alpha=[1 1 1 1 1],
+)
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(length(u0)*2)
+```
 
 
 ## Appendix
