@@ -107,17 +107,17 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 
 ## Calibration
 ```julia
-plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)"
+plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ```julia
-plot(wp, x=:l2, y=:chi2_steps, yguide="Chi-squared (discrete steps)"
+plot(wp, x=:l2, y=:chi2_steps, yguide="Chi-squared (discrete steps)",
      palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)"
+plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
      palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
@@ -253,12 +253,12 @@ plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ### Calibration
 
 ```julia
-plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)"
+plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
 ```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)"
+plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
      palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 

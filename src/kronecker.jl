@@ -162,10 +162,30 @@ function mul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
 
     V = reshape_no_alloc(v, (d, length(v) ÷ d))
     X = reshape_no_alloc(x, (c, length(x) ÷ c))
-    _matmul!(X, N, V)
+    mul!(X, N, V)
     return x
 end
 function mul_vectrick!(
+    x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
+    N = A.B
+    c, d = size(N)
+
+    V = reshape_no_alloc(v, (d, length(v) ÷ d))
+    X = reshape_no_alloc(x, (c, length(x) ÷ c))
+    mul!(X, N, V, alpha, beta)
+    return x
+end
+
+function _matmul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
+    N = A.B
+    c, d = size(N)
+
+    V = reshape_no_alloc(v, (d, length(v) ÷ d))
+    X = reshape_no_alloc(x, (c, length(x) ÷ c))
+    _matmul!(X, N, V)
+    return x
+end
+function _matmul_vectrick!(
     x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
     N = A.B
     c, d = size(N)
@@ -186,12 +206,12 @@ end
 
 # fast_linalg.jl
 for TC in [:AbstractVector, :AbstractMatrix]
-    @eval _matmul!(C::$TC, A::IKP, B::$TC) = mul_vectrick!(C, A, B)
+    @eval _matmul!(C::$TC, A::IKP, B::$TC) = _matmul_vectrick!(C, A, B)
     @eval _matmul!(
         C::$TC{T},
         A::IKP{T},
         B::$TC{T},
-    ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C, A, B)
+    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C, A, B)
     @eval _matmul!(C::$TC, A::$TC, B::IKP) = _matmul!(C', B', A')'
     @eval _matmul!(
         C::$TC{T},
@@ -200,21 +220,21 @@ for TC in [:AbstractVector, :AbstractMatrix]
     ) where {T<:LinearAlgebra.BlasFloat} = _matmul!(C', B', A')'
 
     @eval _matmul!(C::$TC, A::IKP, B::$TC, alpha::Number, beta::Number) =
-        mul_vectrick!(C, A, B, alpha, beta)
+        _matmul_vectrick!(C, A, B, alpha, beta)
     @eval _matmul!(
         C::$TC{T},
         A::IKP{T},
         B::$TC{T},
         alpha::Number,
         beta::Number,
-    ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C, A, B, alpha, beta)
+    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C, A, B, alpha, beta)
     @eval _matmul!(C::$TC, A::$TC, B::IKP, alpha::Number, beta::Number) =
-        mul_vectrick!(C', B', A', alpha, beta)'
+        _matmul_vectrick!(C', B', A', alpha, beta)'
     @eval _matmul!(
         C::$TC{T},
         A::$TC{T},
         B::IKP{T},
         alpha::Number,
         beta::Number,
-    ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C', B', A', alpha, beta)'
+    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C', B', A', alpha, beta)'
 end
