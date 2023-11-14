@@ -38,7 +38,7 @@ u0 = [2.0, 0.0]
 prob = ODEProblem(vanderpol!, u0, tspan, p)
 
 test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
-plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-2.5, 2.5), xticks=:auto)
+plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-5, 5), xticks=:auto)
 ```
 
 ![](figures/vanderpol_2_1.svg)
@@ -259,7 +259,7 @@ du0 = [0.0]
 prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
 
 test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
-plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-2.5, 2.5), xticks=:auto)
+plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
 ```
 
 ![](figures/vanderpol_11_1.svg)
@@ -282,8 +282,9 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (6:11)
-reltols = 1.0 ./ 10.0 .^ (3:8)
+abstols = 1.0 ./ 10.0 .^ (5:8)
+reltols = 1.0 ./ 10.0 .^ (2:5)
+
 
 wp = WorkPrecisionSet(
     [prob, prob2], abstols, reltols, setups;
