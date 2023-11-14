@@ -61,8 +61,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -89,8 +89,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -124,8 +124,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -152,8 +152,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -193,8 +193,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -227,8 +227,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -248,26 +248,20 @@ Final time-point:
 plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (final)")
 
 # Should be distributed according to a Chi-squared distribution:
-low, high, mid = quantile(Chisq(2), [0.01, 0.99])..., mean(Chisq(2))
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
-```
-
-Discrete time-series:
-```julia
-plot(wp, x=:l2, y=:chi2_steps, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (discrete steps)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(2)
 ```
 
 Interpolation:
 ```julia
 plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (dense)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2*100)
 ```
 
 ## Comparison of the different diffusion models
@@ -292,8 +286,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -310,9 +304,7 @@ plot(wp, color=[2 2 3 3 4 4 5 5])
 Calibration:
 ```julia
 plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5], yguide="Chi-squared (final)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2)
 ```
 
 ### EK1
@@ -331,8 +323,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -349,9 +341,7 @@ plot(wp, color=[2 2 3 3])
 Calibration:
 ```julia
 plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3], yguide="Chi-squared (final)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2)
 ```
 
 ## Comparison of the different initialization schemes
@@ -360,8 +350,8 @@ hline!([mid], linestyle=:solid, color=:black, label="")
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 orders = (2, 3, 5, 8)
 ps = []

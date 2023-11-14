@@ -3,8 +3,8 @@ ENV["GKSwstype"] = "nul"
 
 FILES = [
     "lotkavolterra.jmd",
+    "hodgkinhuxley.jmd",
     # "vanderpol.jmd",
-    # "hodgkinhuxley.jmd",
     # "rober.jmd",
     # "pleiades.jmd",
     # "multi-language-wrappers.jmd",

@@ -158,18 +158,19 @@ plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color=colors)
 
 # Should be distributed according to a Chi-squared distribution:
-d = 4
-low, high, mid = quantile(Chisq(d), [0.01, 0.99])..., mean(Chisq(d))
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(4)
 ```
 
 ```julia
 plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)", color=colors)
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(4*100)
 ```
 
 

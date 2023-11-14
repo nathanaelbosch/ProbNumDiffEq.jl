@@ -68,8 +68,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -100,8 +100,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -143,8 +143,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -175,8 +175,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -224,8 +224,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -262,8 +262,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -287,37 +287,27 @@ Final time-point:
 plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (final)")
 
 # Should be distributed according to a Chi-squared distribution:
-low, high, mid = quantile(Chisq(2), [0.01, 0.99])..., mean(Chisq(2))
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(2)
 ```
 
 ![](figures/lotkavolterra_11_1.svg)
 
 
 
-Discrete time-series:
-```julia
-plot(wp, x=:l2, y=:chi2_steps, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (discrete steps)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
-```
-
-![](figures/lotkavolterra_12_1.svg)
-
-
-
 Interpolation:
 ```julia
 plot(wp, x=:L2, y=:chi2_interp, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (dense)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2*100)
 ```
 
-![](figures/lotkavolterra_13_1.svg)
+![](figures/lotkavolterra_12_1.svg)
 
 
 
@@ -343,8 +333,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -358,19 +348,17 @@ wp = WorkPrecisionSet(
 plot(wp, color=[2 2 3 3 4 4 5 5])
 ```
 
-![](figures/lotkavolterra_14_1.svg)
+![](figures/lotkavolterra_13_1.svg)
 
 
 
 Calibration:
 ```julia
 plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5], yguide="Chi-squared (final)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2)
 ```
 
-![](figures/lotkavolterra_15_1.svg)
+![](figures/lotkavolterra_14_1.svg)
 
 
 
@@ -390,8 +378,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
@@ -405,19 +393,17 @@ wp = WorkPrecisionSet(
 plot(wp, color=[2 2 3 3])
 ```
 
-![](figures/lotkavolterra_16_1.svg)
+![](figures/lotkavolterra_15_1.svg)
 
 
 
 Calibration:
 ```julia
 plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3], yguide="Chi-squared (final)")
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2)
 ```
 
-![](figures/lotkavolterra_17_1.svg)
+![](figures/lotkavolterra_16_1.svg)
 
 
 
@@ -427,8 +413,8 @@ hline!([mid], linestyle=:solid, color=:black, label="")
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 orders = (2, 3, 5, 8)
 ps = []
@@ -463,7 +449,7 @@ plot(
 )
 ```
 
-![](figures/lotkavolterra_18_1.svg)
+![](figures/lotkavolterra_17_1.svg)
 
 
 
@@ -505,7 +491,7 @@ Pkg.status()
 
 ```
 Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
-  [f3b72e0c] DiffEqDevTools v2.41.0 `~/.julia/dev/DiffEqDevTools`
+  [f3b72e0c] DiffEqDevTools v2.42.0
   [31c24e10] Distributions v0.25.103
   [7073ff75] IJulia v1.24.2
   [7f56f5a3] LSODA v0.7.5
@@ -518,15 +504,13 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
-⌃ [0bca4576] SciMLBase v2.7.3
+  [0bca4576] SciMLBase v2.8.0
   [505e40e9] SciPyDiffEq v0.2.1
   [ce78b400] SimpleUnPack v1.1.0
   [90137ffa] StaticArrays v1.6.5
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
-Info Packages marked with ⌃ have new versions available and may be upgradab
-le.
 ```
 
 
@@ -544,13 +528,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
 ⌅ [c3fe647b] AbstractAlgebra v0.32.5
   [621f4979] AbstractFFTs v1.5.0
   [1520ce14] AbstractTrees v0.4.4
+  [7d9f7c33] Accessors v0.1.33
   [79e6a3ab] Adapt v3.7.1
   [ec485272] ArnoldiMethod v0.2.0
   [c9d4266f] ArrayAllocators v0.3.0
   [4fba245c] ArrayInterface v7.5.1
   [6e4b80f9] BenchmarkTools v1.3.2
   [e2ed5e7c] Bijections v0.1.6
-⌃ [d1d4a3ce] BitFlags v0.1.7
+  [d1d4a3ce] BitFlags v0.1.8
   [62783981] BitTwiddlingConvenienceFunctions v0.1.5
   [fa961155] CEnum v0.5.0
   [2a0fbf3d] CPUSummary v0.2.4
@@ -570,6 +555,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [bbf7d656] CommonSubexpressions v0.3.0
   [34da2185] Compat v4.10.0
   [b152e2b5] CompositeTypes v0.1.3
+  [a33af91c] CompositionsBase v0.1.2
   [2569d6c7] ConcreteStructs v0.2.3
   [f0e56b4a] ConcurrentUtilities v2.3.0
   [8f4d0f93] Conda v1.9.1
@@ -586,7 +572,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8bb1440f] DelimitedFiles v1.9.1
   [2b5f629d] DiffEqBase v6.138.1
   [459566f4] DiffEqCallbacks v2.33.1
-  [f3b72e0c] DiffEqDevTools v2.41.0 `~/.julia/dev/DiffEqDevTools`
+  [f3b72e0c] DiffEqDevTools v2.42.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
   [163ba53b] DiffResults v1.1.0
   [b552c78f] DiffRules v1.15.1
@@ -605,7 +591,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [e2ba6199] ExprTools v0.1.10
   [c87230d0] FFMPEG v0.4.1
   [7a1cc6ca] FFTW v1.7.1
-⌃ [7034ab61] FastBroadcast v0.2.7
+  [7034ab61] FastBroadcast v0.2.8
   [9aa1b823] FastClosures v0.3.2
   [442a2c76] FastGaussQuadrature v1.0.0
   [29a986be] FastLapackInterface v2.0.0
@@ -636,6 +622,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [842dd82b] InlineStrings v1.4.0
   [18e54dd8] IntegerMathUtils v0.1.2
   [8197267c] IntervalSets v0.7.8
+  [3587e190] InverseFunctions v0.1.12
   [41ab1584] InvertedIndices v1.3.0
   [92d709cd] IrrationalConstants v0.2.2
   [c8e1da08] IterTools v1.8.0
@@ -653,21 +640,21 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2ee39098] LabelledArrays v1.14.0
   [984bce1d] LambertW v0.4.6
   [23fbe1c1] Latexify v0.16.1
+  [73f95e8e] LatticeRules v0.0.1
   [10f19ff3] LayoutPointers v0.1.15
   [50d2b5c4] Lazy v0.15.1
   [1d6d02ad] LeftChildRightSiblingTrees v0.2.0
   [d3d80556] LineSearches v7.2.0
-⌃ [7ed4a6bd] LinearSolve v2.17.1
+  [7ed4a6bd] LinearSolve v2.20.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
   [bdcacae8] LoopVectorization v0.12.166
   [10e44e05] MATLAB v0.8.4
   [e2752cbe] MATLABDiffEq v1.2.0
-  [33e6dc65] MKL v0.6.1
   [d8e11817] MLStyle v0.4.17
   [1914dd2f] MacroTools v0.5.11
   [d125e4d3] ManualMemory v0.1.8
-⌃ [739be429] MbedTLS v1.1.7
+  [739be429] MbedTLS v1.1.8
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.1.0
   [961ee093] ModelingToolkit v8.72.2
@@ -688,12 +675,12 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [429524aa] Optim v1.7.8
   [bac558e1] OrderedCollections v1.6.2
   [1dea7af3] OrdinaryDiffEq v6.59.0
-⌃ [90014a1f] PDMats v0.11.28
+  [90014a1f] PDMats v0.11.29
   [fe68d972] PSDMatrices v0.4.6
   [65ce6f38] PackageExtensionCompat v1.0.2
   [65888b18] ParameterizedFunctions v5.16.0
   [d96e819e] Parameters v0.12.3
-⌃ [69de0a69] Parsers v2.7.2
+  [69de0a69] Parsers v2.8.0
   [b98c9c47] Pipe v1.3.0
   [32113eaa] PkgBenchmark v0.2.12
   [ccf2f8ad] PlotThemes v3.1.0
@@ -708,12 +695,13 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [d236fae5] PreallocationTools v0.4.12
   [aea7be01] PrecompileTools v1.2.0
   [21216c6a] Preferences v1.4.1
-  [08abe8d2] PrettyTables v2.2.8
-⌃ [27ebfcd6] Primes v0.5.4
+  [08abe8d2] PrettyTables v2.3.0
+  [27ebfcd6] Primes v0.5.5
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
   [33c8b6b6] ProgressLogging v0.1.4
-⌃ [438e738f] PyCall v1.96.1
+  [438e738f] PyCall v1.96.2
   [1fd47b50] QuadGK v2.9.1
+  [8a4e6c94] QuasiMonteCarlo v0.3.2
   [6f49c342] RCall v0.13.18
   [74087812] Random123 v1.6.1
   [fb686558] RandomExtensions v0.4.4
@@ -721,7 +709,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [3cdcf5f2] RecipesBase v1.3.4
   [01d81517] RecipesPipeline v0.6.12
   [731186ca] RecursiveArrayTools v2.38.10
-⌃ [f2c3362d] RecursiveFactorization v0.2.20
+  [f2c3362d] RecursiveFactorization v0.2.21
   [189a3867] Reexport v1.2.2
   [05181044] RelocatableFolders v1.0.1
   [ae029012] Requires v1.3.0
@@ -732,7 +720,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.6
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
-⌃ [0bca4576] SciMLBase v2.7.3
+  [0bca4576] SciMLBase v2.8.0
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.7
   [505e40e9] SciPyDiffEq v0.2.1
@@ -746,6 +734,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [699a6c99] SimpleTraits v0.9.4
   [ce78b400] SimpleUnPack v1.1.0
   [66db9d55] SnoopPrecompile v1.0.3
+  [ed01d8cd] Sobol v1.5.0
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
   [47a9eef4] SparseDiffTools v2.11.0
@@ -760,7 +749,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [2913bbd2] StatsBase v0.34.2
   [4c63d2b9] StatsFuns v1.3.0
   [3eaba693] StatsModels v0.7.3
-⌅ [7792a7ef] StrideArraysCore v0.4.17
+  [7792a7ef] StrideArraysCore v0.5.1
   [69024149] StringEncodings v0.3.7
   [892a3eda] StringManipulation v0.3.4
   [09ab397b] StructArrays v0.6.16
@@ -770,7 +759,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [0c5d862f] Symbolics v5.10.0
   [3783bdb8] TableTraits v1.0.1
   [bd369af6] Tables v1.11.1
-⌃ [92b13dbe] TaylorIntegration v0.14.3
+  [92b13dbe] TaylorIntegration v0.14.4
   [6aa5eb33] TaylorSeries v0.15.2
   [62fd8b95] TensorCore v0.1.1
   [5d786b92] TerminalLoggers v0.1.7
@@ -786,7 +775,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [5c2747f8] URIs v1.5.1
   [3a884ed6] UnPack v1.0.2
   [1cfade01] UnicodeFun v0.4.1
-⌃ [1986cc42] Unitful v1.17.0
+  [1986cc42] Unitful v1.18.0
   [45397f5d] UnitfulLatexify v1.6.3
   [a7c27f48] Unityper v0.1.5
   [41fe7b60] Unzip v0.2.0
@@ -933,7 +922,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.48.0+0
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
-th ⌅ are restricted by compatibility constraints from upgrading. To see why
- use `status --outdated -m`
+Info Packages marked with ⌅ have new versions available but compatibility c
+onstraints restrict them from upgrading. To see why use `status --outdated 
+-m`
 ```

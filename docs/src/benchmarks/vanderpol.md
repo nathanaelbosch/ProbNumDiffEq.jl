@@ -91,7 +91,7 @@ SAVE_EVERYSTEP = true;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 3:7
+  for order in 3:6
 ]
 
 labels = first.(_setups)
@@ -132,33 +132,25 @@ plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
 
 # Should be distributed according to a Chi-squared distribution:
-low, high, mid = quantile(Chisq(2), [0.01, 0.99])..., mean(Chisq(2))
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(2)
 ```
 
 ![](figures/vanderpol_6_1.svg)
 
 ```julia
-plot(wp, x=:l2, y=:chi2_steps, yguide="Chi-squared (discrete steps)",
+plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
      palette=Plots.palette([:blue, :red], length(_setups)))
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2*100)
 ```
 
 ![](figures/vanderpol_7_1.svg)
-
-```julia
-plot(wp, x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)",
-     palette=Plots.palette([:blue, :red], length(_setups)))
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
-```
-
-![](figures/vanderpol_8_1.svg)
 
 
 
@@ -205,7 +197,7 @@ plot(
 )
 ```
 
-![](figures/vanderpol_9_1.svg)
+![](figures/vanderpol_8_1.svg)
 
 ```julia
 DENSE = false;
@@ -241,7 +233,7 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
-![](figures/vanderpol_10_1.svg)
+![](figures/vanderpol_9_1.svg)
 
 
 
@@ -262,7 +254,7 @@ test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
 ```
 
-![](figures/vanderpol_11_1.svg)
+![](figures/vanderpol_10_1.svg)
 
 ```julia
 DENSE = true;
@@ -299,13 +291,13 @@ color = [1 1 1 1 2 2 2 2]
 plot(wp; x=:final, color)
 ```
 
-![](figures/vanderpol_12_1.svg)
+![](figures/vanderpol_11_1.svg)
 
 ```julia
 plot(wp; x=:L2, color)
 ```
 
-![](figures/vanderpol_13_1.svg)
+![](figures/vanderpol_12_1.svg)
 
 
 
@@ -313,21 +305,17 @@ plot(wp; x=:L2, color)
 
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color)
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2)
 ```
 
-![](figures/vanderpol_14_1.svg)
+![](figures/vanderpol_13_1.svg)
 
 ```julia
 plot(wp; x=:L2, y=:chi2_interp, yguide="Chi-squared (dense)", color)
-hline!([low, high], linestyle=:dash, color=:black, label="",
-       fill_between=true, fillcolor=:green, fillalpha=0.15)
-hline!([mid], linestyle=:solid, color=:black, label="")
+plot_chisq_interval!(2*100)
 ```
 
-![](figures/vanderpol_15_1.svg)
+![](figures/vanderpol_14_1.svg)
 
 
 
