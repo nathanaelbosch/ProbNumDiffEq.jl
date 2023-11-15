@@ -3,6 +3,9 @@
 Adapted from
 [SciMLBenchmarks.jl multi-language wrapper benchmark](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/MultiLanguage/ode_wrapper_packages/).
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 # Imports
 using LinearAlgebra, Statistics
@@ -20,17 +23,12 @@ Plots.theme(
     xticks=10.0 .^ (-16:1:16),
     yticks=10.0 .^ (-6:1:5),
 )
-```
 
-
-```julia
-# Constants used throughout this benchmark
+# Constants used throughout this benchmark as we only consider final values
 const DENSE = false # used to decide if we smooth or not
 const SAVE_EVERYSTEP = false;
-```
 
-
-```julia
+# COLORS and a realted utility
 COLORS = Dict(
     "Julia" => :LightGreen,
     "Julia (static)" => :DarkGreen,
@@ -48,17 +46,13 @@ tocolor(n) = if split(n, '(')[1] in keys(COLORS)
 else
     COLORS[split(n, ':')[1]]
 end
-```
 
-```
-tocolor (generic function with 1 method)
-```
-
-
-
-```julia
+# Do not show "deprecated warnings"
 deprecated_filter(log_args) = !contains(log_args.message, "deprecated")
 filtered_logger = ActiveFilteredLogger(deprecated_filter, global_logger());
+```
+```@raw html
+</details>
 ```
 
 
@@ -66,6 +60,9 @@ filtered_logger = ActiveFilteredLogger(deprecated_filter, global_logger());
 
 ## Non-Stiff Problem 1: Lotka-Volterra
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 f = @ode_def LotkaVolterra begin
   dx = a*x - b*x*y
@@ -81,9 +78,15 @@ sol = solve(prob,Vern7(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
 plot(sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_5_1.svg)
+![](figures/multi-language-wrappers_2_1.svg)
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 _setups = [
   "Julia: DP5" => Dict(:alg=>DP5())
@@ -128,13 +131,19 @@ end
 
 plot(wp, title = "Non-stiff 1: Lotka-Volterra", color = colors)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_6_1.svg)
+![](figures/multi-language-wrappers_3_1.svg)
 
 
 
 ## Non-Stiff Problem 2: Rigid Body
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 f = @ode_def RigidBodyBench begin
   dy1  = -2*y2*y3
@@ -149,9 +158,15 @@ sol = solve(prob,Vern7(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
 plot(sol, title="Rigid Body Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_7_1.svg)
+![](figures/multi-language-wrappers_4_1.svg)
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 _setups = [
   "Julia: DP5" => Dict(:alg=>DP5())
@@ -196,13 +211,19 @@ end
 
 plot(wp, title = "Non-stiff 2: Rigid-Body", color = colors)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_8_1.svg)
+![](figures/multi-language-wrappers_5_1.svg)
 
 
 
 ## Stiff Problem 1: ROBER
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 rober = @ode_def begin
   dy₁ = -k₁*y₁+k₃*y₂*y₃
@@ -217,9 +238,15 @@ sol = solve(prob,CVODE_BDF(),abstol=1/10^14,reltol=1/10^14,dense=false)
 test_sol = sol
 plot(sol, title="ROBER Solution", legend=false, xlims=(1e0, 1e5), xticks=:auto, yticks=:auto)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_9_1.svg)
+![](figures/multi-language-wrappers_6_1.svg)
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 _setups = [
   "Julia: Rosenbrock23" => Dict(:alg=>Rosenbrock23())
@@ -259,13 +286,19 @@ end
 
 plot(wp, title = "Stiff 1: ROBER", color = colors)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_10_1.svg)
+![](figures/multi-language-wrappers_7_1.svg)
 
 
 
 ## Stiff Problem 2: HIRES
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 f = @ode_def Hires begin
   dy1 = -1.71*y1 + 0.43*y2 + 8.32*y3 + 0.0007
@@ -289,9 +322,15 @@ sol = solve(prob,Rodas5(),abstol=1/10^14,reltol=1/10^14, dense=false)
 test_sol = sol
 plot(sol, title="HIRES Solution", legend=false, xticks=:auto, yticks=:auto)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_11_1.svg)
+![](figures/multi-language-wrappers_8_1.svg)
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 _setups = [
   "Julia: Rosenbrock23" => Dict(:alg=>Rosenbrock23())
@@ -333,15 +372,21 @@ end
 
 plot(wp, title = "Stiff 2: Hires", color=colors)
 ```
+```@raw html
+</details>
+```
 
-![](figures/multi-language-wrappers_12_1.svg)
+![](figures/multi-language-wrappers_9_1.svg)
 
 
 
 
 ## Appendix
 
-Computer information:
+```@raw html
+<details><summary>Computer information:</summary>
+```
+
 ```julia
 using InteractiveUtils
 InteractiveUtils.versioninfo()
@@ -362,14 +407,16 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Package information:</summary>
+```
 
-
-
-Package Information:
 ```julia
 using Pkg
 Pkg.status()
@@ -399,11 +446,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [0518478a] deSolveDiffEq v0.1.1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Full manifest:</summary>
+```
 
-
-
-And the full manifest:
 ```julia
 Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
@@ -808,9 +858,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility c
-onstraints restrict them from upgrading. To see why use `status --outdated 
--m`
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
 ```
 
+```@raw html
+</details>
+```
 

@@ -20,15 +20,12 @@ Plots.theme(
     xticks=10.0 .^ (-16:1:16),
     yticks=10.0 .^ (-6:1:5),
 )
-```
 
-```julia
-# Constants used throughout this benchmark
+# Constants used throughout this benchmark as we only consider final values
 const DENSE = false # used to decide if we smooth or not
 const SAVE_EVERYSTEP = false;
-```
 
-```julia
+# COLORS and a realted utility
 COLORS = Dict(
     "Julia" => :LightGreen,
     "Julia (static)" => :DarkGreen,
@@ -46,9 +43,8 @@ tocolor(n) = if split(n, '(')[1] in keys(COLORS)
 else
     COLORS[split(n, ':')[1]]
 end
-```
 
-```julia
+# Do not show "deprecated warnings"
 deprecated_filter(log_args) = !contains(log_args.message, "deprecated")
 filtered_logger = ActiveFilteredLogger(deprecated_filter, global_logger());
 ```
@@ -305,20 +301,7 @@ plot(wp, title = "Stiff 2: Hires", color=colors)
 
 
 ## Appendix
-
-Computer information:
-```julia
-using InteractiveUtils
-InteractiveUtils.versioninfo()
-```
-
-Package Information:
-```julia
-using Pkg
-Pkg.status()
-```
-
-And the full manifest:
-```julia
-Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
+```julia, echo=false
+include("utils.jl")
+appendix()
 ```

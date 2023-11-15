@@ -92,20 +92,7 @@ plot_chisq_interval!(3)
 
 
 ## Appendix
-
-Computer information:
-```julia
-using InteractiveUtils
-InteractiveUtils.versioninfo()
-```
-
-Package Information:
-```julia
-using Pkg
-Pkg.status()
-```
-
-And the full manifest:
-```julia
-Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
+```julia, echo=false
+include("utils.jl")
+appendix()
 ```

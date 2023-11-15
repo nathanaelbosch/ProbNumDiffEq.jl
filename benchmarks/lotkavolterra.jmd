@@ -291,12 +291,14 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 3 3 4 4 5 5])
+color = [2 2 3 3 4 4 5 5]
+linestyle = [:solid :dash :solid :dash :solid :dash :solid :dash]
+plot(wp; color, linestyle)
 ```
 
 Calibration:
 ```julia
-plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5], yguide="Chi-squared (final)")
+plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
 plot_chisq_interval!(2)
 ```
 
@@ -328,12 +330,14 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 3 3])
+color = [2 2 3 3]
+linestyle = [:solid :dash :solid :dash]
+plot(wp; color, linestyle)
 ```
 
 Calibration:
 ```julia
-plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3], yguide="Chi-squared (final)")
+plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
 plot_chisq_interval!(2)
 ```
 
@@ -381,20 +385,7 @@ plot(
 
 
 ## Appendix
-
-Computer information:
-```julia
-using InteractiveUtils
-InteractiveUtils.versioninfo()
-```
-
-Package Information:
-```julia
-using Pkg
-Pkg.status()
-```
-
-And the full manifest:
-```julia
-Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
+```julia, echo=false
+include("utils.jl")
+appendix()
 ```

@@ -1,0 +1,101 @@
+# OREGO benchmark
+
+
+!!! note "Summary"
+    TODO
+
+
+Adapted from
+[SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/DAE/OregoDAE/).
+
+```julia
+using LinearAlgebra, Statistics, Distributions
+using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
+using ModelingToolkit
+using ProbNumDiffEq
+
+Plots.theme(
+    :dao;
+    markerstrokewidth=0.5,
+    legend=:outertopright,
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
+)
+```
+
+### OREGO problem definition
+
+```julia
+@variables t y1(t)=1.0 y2(t)=2.0 y3(t)=3.0
+@parameters p1=77.27 p2=8.375e-6 p3=0.161
+D = Differential(t)
+eqs = [
+  D(y1) ~ p1*(y2+y1*(1-p2*y1-y2))
+  D(y2) ~ (y3-(1+y1)*y2)/p1
+  D(y3) ~ p3*(y1-y3)
+]
+@named sys = ODESystem(eqs)
+simpsys = structural_simplify(sys)
+mmprob = ODEProblem(sys,[],(0.0,30.0))
+daeprob = DAEProblem(sys,[D(y1)=>77.26935286375,
+                          D(y2)=>-0.012941633234114146,
+                          D(y3)=>-0.322],[],(0.0,30.0))
+odaeprob = ODAEProblem(simpsys,[],(0.0,30.0))
+
+ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14)
+
+plot(ref_sol, title="OREGO Solution", legend=false, xticks=:auto)
+```
+
+## EK1 accross orders
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+_setups = [
+  "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
+  for order in 2:4
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:8)
+reltols = 1.0 ./ 10.0 .^ (1:5)
+
+wp = WorkPrecisionSet(
+    mmprob, abstols, reltols, setups;
+    names = labels,
+    appxsol = ref_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+
+### Calibration
+
+```julia
+plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)",
+     palette=Plots.palette([:blue, :red], length(_setups)))
+
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(3)
+```
+
+
+## Appendix
+```julia, echo=false
+include("utils.jl")
+appendix()
+```

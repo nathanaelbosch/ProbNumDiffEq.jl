@@ -60,6 +60,7 @@ makedocs(
             ],
             "Differential-Algebraic Equations (DAEs)" => [
                 "ROBER" => "benchmarks/rober.md",
+                "OREGO" => "benchmarks/orego.md",
             ],
         ],
         "Internals" => [

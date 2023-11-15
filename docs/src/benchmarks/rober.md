@@ -9,6 +9,9 @@
 Adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/DAE/ROBERDAE/).
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
@@ -23,12 +26,18 @@ Plots.theme(
     xticks=10.0 .^ (-16:1:16),
 )
 ```
+```@raw html
+</details>
+```
 
 
 
 
 ### ROBER problem definition
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 @variables t y₁(t)=1.0 y₂(t)=0.0 y₃(t)=0.0
 @parameters k₁=0.04 k₂=3e7 k₃=1e4
@@ -46,6 +55,9 @@ odaeprob = ODAEProblem(structural_simplify(sys),[],(0.0,1e5)) # can't handle thi
 ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14)
 plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1), xticks=:auto)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/rober_2_1.svg)
 
@@ -53,6 +65,9 @@ plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims
 
 ## EK1 across orders
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -80,6 +95,9 @@ wp = WorkPrecisionSet(
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/rober_3_1.svg)
 
@@ -87,6 +105,9 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 
 ### Calibration
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
@@ -100,6 +121,9 @@ function plot_chisq_interval!(df, q=0.01)
 end
 plot_chisq_interval!(3)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/rober_4_1.svg)
 
@@ -108,7 +132,10 @@ plot_chisq_interval!(3)
 
 ## Appendix
 
-Computer information:
+```@raw html
+<details><summary>Computer information:</summary>
+```
+
 ```julia
 using InteractiveUtils
 InteractiveUtils.versioninfo()
@@ -129,14 +156,16 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Package information:</summary>
+```
 
-
-
-Package Information:
 ```julia
 using Pkg
 Pkg.status()
@@ -166,11 +195,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [0518478a] deSolveDiffEq v0.1.1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Full manifest:</summary>
+```
 
-
-
-And the full manifest:
 ```julia
 Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
@@ -575,7 +607,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility c
-onstraints restrict them from upgrading. To see why use `status --outdated 
--m`
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+```
+
+```@raw html
+</details>
 ```

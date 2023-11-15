@@ -7,6 +7,9 @@
     - If the problem is a second-order ODE, _implement it as a second-order ODE_!
 
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots, ODEInterfaceDiffEq
@@ -21,12 +24,18 @@ Plots.theme(
     xticks=10.0 .^ (-16:1:16),
 )
 ```
+```@raw html
+</details>
+```
 
 
 
 
 ### Pleiades problem definition
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 # first-order ODE
 @fastmath function pleiades(du, u, p, t)
@@ -85,12 +94,18 @@ plot(ref_sol1, idxs=[(14+i,21+i) for i in 1:7], title="Pleiades Solution", legen
      xticks=:auto, yticks=:auto)
 scatter!(ref_sol1.u[end][15:21], ref_sol1.u[end][22:end], color=1:7)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/pleiades_2_1.svg)
 
 
 
 ## EK0 vs EK1 & first-order vs. second-order
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -131,6 +146,9 @@ plot(wp,
      alpha=[1 1 1 1 1 1 1 1 0.5 0.5 0.5],
 )
 ```
+```@raw html
+</details>
+```
 
 ![](figures/pleiades_3_1.svg)
 
@@ -138,6 +156,9 @@ plot(wp,
 
 ### Calibration
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 # We can only evaluate calibration for the PN solvers
 _wp = WorkPrecisionSet(wp.wps[1:end-3], wp.N-3, wp.abstols, wp.reltols, wp.prob, wp.setups[1:end-3],
@@ -155,6 +176,9 @@ function plot_chisq_interval!(df, q=0.01)
 end
 plot_chisq_interval!(length(u0)*2)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/pleiades_4_1.svg)
 
@@ -163,7 +187,10 @@ plot_chisq_interval!(length(u0)*2)
 
 ## Appendix
 
-Computer information:
+```@raw html
+<details><summary>Computer information:</summary>
+```
+
 ```julia
 using InteractiveUtils
 InteractiveUtils.versioninfo()
@@ -184,14 +211,16 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Package information:</summary>
+```
 
-
-
-Package Information:
 ```julia
 using Pkg
 Pkg.status()
@@ -221,11 +250,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [0518478a] deSolveDiffEq v0.1.1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Full manifest:</summary>
+```
 
-
-
-And the full manifest:
 ```julia
 Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
@@ -630,9 +662,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility c
-onstraints restrict them from upgrading. To see why use `status --outdated 
--m`
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
 ```
 
+```@raw html
+</details>
+```
 

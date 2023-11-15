@@ -15,6 +15,9 @@
 Benchmark adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/NonStiffODE/LotkaVolterra_wpd/).
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
@@ -28,12 +31,18 @@ Plots.theme(
     xticks=10.0 .^ (-16:1:16),
 )
 ```
+```@raw html
+</details>
+```
 
 
 
 
 ### Lotka-Volterra problem definition
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 f = @ode_def LotkaVolterra begin
   dx = a*x - b*x*y
@@ -47,6 +56,9 @@ prob = ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)
 test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_2_1.svg)
 
@@ -55,6 +67,9 @@ plot(test_sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto)
 ## EK0 across orders
 
 ### Final timepoint only
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -81,12 +96,18 @@ wp = WorkPrecisionSet(
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_3_1.svg)
 
 
 
 ### Discrete time-series errors (l2)
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -113,14 +134,23 @@ wp = WorkPrecisionSet(
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_4_1.svg)
 
 
 
 ### Interpolation errors (L2)
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+```@raw html
+</details>
 ```
 
 ![](figures/lotkavolterra_5_1.svg)
@@ -130,6 +160,9 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ## EK1 across orders
 
 ### Final timepoint only
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -156,12 +189,18 @@ wp = WorkPrecisionSet(
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_6_1.svg)
 
 
 
 ### Discrete time-series errors (l2)
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -188,14 +227,23 @@ wp = WorkPrecisionSet(
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_7_1.svg)
 
 
 
 ### Interpolation errors (L2)
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+```@raw html
+</details>
 ```
 
 ![](figures/lotkavolterra_8_1.svg)
@@ -205,6 +253,9 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ## EK0 vs. EK1: Work-Precision
 
 Final timepoint only:
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -237,12 +288,18 @@ wp = WorkPrecisionSet(
 
 plot(wp, color=[1 1 1 1 2 2 2 2])
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_9_1.svg)
 
 
 
 Interpolation errors (L2):
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -275,6 +332,9 @@ wp = WorkPrecisionSet(
 
 plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_10_1.svg)
 
@@ -282,6 +342,9 @@ plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 
 ## EK0 vs. EK1: Calibration
 Final time-point:
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (final)")
 
@@ -295,6 +358,9 @@ function plot_chisq_interval!(df, q=0.01)
 end
 plot_chisq_interval!(2)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_11_1.svg)
 
@@ -304,6 +370,9 @@ plot_chisq_interval!(2)
 
 ### EK0
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -334,7 +403,12 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 3 3 4 4 5 5])
+color = [2 2 3 3 4 4 5 5]
+linestyle = [:solid :dash :solid :dash :solid :dash :solid :dash]
+plot(wp; color, linestyle)
+```
+```@raw html
+</details>
 ```
 
 ![](figures/lotkavolterra_12_1.svg)
@@ -342,9 +416,15 @@ plot(wp, color=[2 2 3 3 4 4 5 5])
 
 
 Calibration:
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
-plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3 4 4 5 5], yguide="Chi-squared (final)")
+plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
 plot_chisq_interval!(2)
+```
+```@raw html
+</details>
 ```
 
 ![](figures/lotkavolterra_13_1.svg)
@@ -353,6 +433,9 @@ plot_chisq_interval!(2)
 
 ### EK1
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -379,7 +462,12 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp, color=[2 2 3 3])
+color = [2 2 3 3]
+linestyle = [:solid :dash :solid :dash]
+plot(wp; color, linestyle)
+```
+```@raw html
+</details>
 ```
 
 ![](figures/lotkavolterra_14_1.svg)
@@ -387,9 +475,15 @@ plot(wp, color=[2 2 3 3])
 
 
 Calibration:
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
-plot(wp, x=:final, y=:chi2_final, color=[2 2 3 3], yguide="Chi-squared (final)")
+plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
 plot_chisq_interval!(2)
+```
+```@raw html
+</details>
 ```
 
 ![](figures/lotkavolterra_15_1.svg)
@@ -398,6 +492,9 @@ plot_chisq_interval!(2)
 
 ## Comparison of the different initialization schemes
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -437,6 +534,9 @@ plot(
     xlabel=["" "" "" "Error (final)"],
 )
 ```
+```@raw html
+</details>
+```
 
 ![](figures/lotkavolterra_16_1.svg)
 
@@ -445,7 +545,10 @@ plot(
 
 ## Appendix
 
-Computer information:
+```@raw html
+<details><summary>Computer information:</summary>
+```
+
 ```julia
 using InteractiveUtils
 InteractiveUtils.versioninfo()
@@ -466,14 +569,16 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Package information:</summary>
+```
 
-
-
-Package Information:
 ```julia
 using Pkg
 Pkg.status()
@@ -503,11 +608,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [0518478a] deSolveDiffEq v0.1.1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Full manifest:</summary>
+```
 
-
-
-And the full manifest:
 ```julia
 Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
@@ -912,7 +1020,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility c
-onstraints restrict them from upgrading. To see why use `status --outdated 
--m`
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+```
+
+```@raw html
+</details>
 ```

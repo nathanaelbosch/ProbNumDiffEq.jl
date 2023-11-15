@@ -7,6 +7,9 @@
     - Since Van der Pol is actually a second-order ODE, _do solve it as a second-order ODE_.
 
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
@@ -20,12 +23,18 @@ Plots.theme(
     xticks = 10.0 .^ (-16:1:16)
 )
 ```
+```@raw html
+</details>
+```
 
 
 
 
 ### Van der Pol problem definition
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 function vanderpol!(du, u, p, t)
     du[1] = u[2]
@@ -39,6 +48,9 @@ prob = ODEProblem(vanderpol!, u0, tspan, p)
 test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-5, 5), xticks=:auto)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_2_1.svg)
 
@@ -49,6 +61,9 @@ plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-5, 5), xticks
 ### Final value only
 
 This does not require smoothing or saving intermediate values.
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -76,6 +91,9 @@ wp = WorkPrecisionSet(
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_3_1.svg)
 
@@ -84,13 +102,16 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ### Full trajectory
 
 This does require smoothing or saving intermediate values.
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 3:6
+  for order in 3:7
 ]
 
 labels = first.(_setups)
@@ -111,14 +132,23 @@ wp = WorkPrecisionSet(
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_4_1.svg)
 
 
 
 Interpolation errors:
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+```@raw html
+</details>
 ```
 
 ![](figures/vanderpol_5_1.svg)
@@ -126,6 +156,9 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 
 
 ## Calibration
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
@@ -140,6 +173,9 @@ function plot_chisq_interval!(df, q=0.01)
 end
 plot_chisq_interval!(2)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_6_1.svg)
 
@@ -147,6 +183,9 @@ plot_chisq_interval!(2)
 
 ## Comparison of the different initialization schemes
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -187,9 +226,15 @@ plot(
     xlabel=["" "" "" "Error"],
 )
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_7_1.svg)
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -223,6 +268,9 @@ wp = WorkPrecisionSet(
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_8_1.svg)
 
@@ -231,6 +279,9 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^
 
 ## Solving the first- vs second-order ODE
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 function vanderpol2!(ddu, du, u, p, t)
     ddu[1] = p[1] * ((1 - u[1]^2) * du[1] - u[1])
@@ -244,9 +295,15 @@ prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
 test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_9_1.svg)
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -281,11 +338,20 @@ wp = WorkPrecisionSet(
 color = [1 1 1 1 2 2 2 2]
 plot(wp; x=:final, color)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/vanderpol_10_1.svg)
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp; x=:L2, color)
+```
+```@raw html
+</details>
 ```
 
 ![](figures/vanderpol_11_1.svg)
@@ -294,9 +360,15 @@ plot(wp; x=:L2, color)
 
 ### Calibration
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color)
 plot_chisq_interval!(2)
+```
+```@raw html
+</details>
 ```
 
 ![](figures/vanderpol_12_1.svg)
@@ -306,7 +378,10 @@ plot_chisq_interval!(2)
 
 ## Appendix
 
-Computer information:
+```@raw html
+<details><summary>Computer information:</summary>
+```
+
 ```julia
 using InteractiveUtils
 InteractiveUtils.versioninfo()
@@ -329,11 +404,14 @@ Environment:
   JULIA_STACKTRACE_MINIMAL = true
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Package information:</summary>
+```
 
-
-
-Package Information:
 ```julia
 using Pkg
 Pkg.status()
@@ -363,11 +441,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [0518478a] deSolveDiffEq v0.1.1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Full manifest:</summary>
+```
 
-
-
-And the full manifest:
 ```julia
 Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
@@ -772,7 +853,9 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility c
-onstraints restrict them from upgrading. To see why use `status --outdated 
--m`
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+```
+
+```@raw html
+</details>
 ```

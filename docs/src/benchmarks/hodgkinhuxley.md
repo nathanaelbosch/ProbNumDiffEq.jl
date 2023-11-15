@@ -8,6 +8,9 @@
     - The probabilistic exponential Rosenbrock-type integrator `RosenbrockExpEK` performs worse than the EK1.
 
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, SciMLBase, OrdinaryDiffEq, Plots, SimpleUnPack
@@ -22,12 +25,18 @@ Plots.theme(
     yticks=10.0 .^ (-6:1:5),
 )
 ```
+```@raw html
+</details>
+```
 
 
 
 
 ### Hodgkin-Huxley problem definition
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 αm(V, VT) = -0.32 * (V - VT - 13) / (exp(-(V - VT - 13) / 4) - 1)
 βm(V, VT) = 0.28 * (V - VT - 40) / (exp((V - VT - 40) / 5) - 1)
@@ -79,6 +88,9 @@ plot(test_sol,
      xticks=:auto, yticks=:auto
 )
 ```
+```@raw html
+</details>
+```
 
 ![](figures/hodgkinhuxley_2_1.svg)
 
@@ -86,6 +98,9 @@ plot(test_sol,
 
 ## Adaptive steps - no smoothing
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = SAVE_EVERYSTEP = false
 
@@ -118,6 +133,9 @@ wp = WorkPrecisionSet(
 
 plot(wp, title="Adaptive steps - no smoothing", color=colors)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/hodgkinhuxley_3_1.svg)
 
@@ -125,6 +143,9 @@ plot(wp, title="Adaptive steps - no smoothing", color=colors)
 
 ## Adaptive steps - with smoothing
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = SAVE_EVERYSTEP = true
 
@@ -157,14 +178,23 @@ wp = WorkPrecisionSet(
 
 plot(wp, title="Adaptive steps - with smoothing", color=colors)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/hodgkinhuxley_4_1.svg)
 
 
 
 Dense errors
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
+```
+```@raw html
+</details>
 ```
 
 ![](figures/hodgkinhuxley_5_1.svg)
@@ -172,6 +202,9 @@ plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
 
 
 ### Calibration
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color=colors)
 
@@ -185,6 +218,9 @@ function plot_chisq_interval!(df, q=0.01)
 end
 plot_chisq_interval!(4)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/hodgkinhuxley_6_1.svg)
 
@@ -193,6 +229,9 @@ plot_chisq_interval!(4)
 
 ## Fixed steps - no smoothing
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = SAVE_EVERYSTEP = false
 
@@ -223,6 +262,9 @@ wp = WorkPrecisionSet(
 
 plot(wp, title="Fixed steps - no smoothing", color=colors)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/hodgkinhuxley_7_1.svg)
 
@@ -231,6 +273,9 @@ plot(wp, title="Fixed steps - no smoothing", color=colors)
 
 ## Fixed steps - with smoothing
 
+```@raw html
+<details><summary>Code:</summary>
+```
 ```julia
 DENSE = SAVE_EVERYSTEP = true
 
@@ -261,6 +306,9 @@ wp = WorkPrecisionSet(
 
 plot(wp, title="Fixed steps - with smoothing", color=colors)
 ```
+```@raw html
+</details>
+```
 
 ![](figures/hodgkinhuxley_8_1.svg)
 
@@ -268,7 +316,10 @@ plot(wp, title="Fixed steps - with smoothing", color=colors)
 
 ## Appendix
 
-Computer information:
+```@raw html
+<details><summary>Computer information:</summary>
+```
+
 ```julia
 using InteractiveUtils
 InteractiveUtils.versioninfo()
@@ -289,14 +340,16 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
-  JULIA_IMAGE_THREADS = 1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Package information:</summary>
+```
 
-
-
-Package Information:
 ```julia
 using Pkg
 Pkg.status()
@@ -326,11 +379,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [0518478a] deSolveDiffEq v0.1.1
 ```
 
+```@raw html
+</details>
+```
 
+```@raw html
+<details><summary>Full manifest:</summary>
+```
 
-
-
-And the full manifest:
 ```julia
 Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
@@ -735,9 +791,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility c
-onstraints restrict them from upgrading. To see why use `status --outdated 
--m`
+Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
 ```
 
+```@raw html
+</details>
+```
 
