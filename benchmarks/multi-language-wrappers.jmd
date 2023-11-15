@@ -11,17 +11,14 @@ using ODEInterface, ODEInterfaceDiffEq, Sundials, SciPyDiffEq, deSolveDiffEq, MA
 using LoggingExtras
 
 using ProbNumDiffEq
-```
 
-```julia
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 400),
-    xticks = 10.0 .^ (-16:1:16),
-    yticks = 10.0 .^ (-6:1:5),
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
+    yticks=10.0 .^ (-6:1:5),
 )
 ```
 

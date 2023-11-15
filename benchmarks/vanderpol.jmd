@@ -12,12 +12,11 @@ using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
 using ProbNumDiffEq
 
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 400),
+    margin=5Plots.mm,
     xticks = 10.0 .^ (-16:1:16)
 )
 ```
@@ -80,7 +79,7 @@ SAVE_EVERYSTEP = true;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 3:6
+  for order in 3:7
 ]
 
 labels = first.(_setups)

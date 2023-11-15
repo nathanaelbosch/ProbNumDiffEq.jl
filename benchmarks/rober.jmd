@@ -10,18 +10,17 @@ Adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/DAE/ROBERDAE/).
 
 ```julia
-using LinearAlgebra, Statistics
+using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
 using ModelingToolkit
 using ProbNumDiffEq
 
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 400),
-     xticks = 10.0 .^ (-16:1:16)
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
 )
 ```
 
@@ -41,7 +40,7 @@ mmprob = ODEProblem(sys,[],(0.0,1e5))
 daeprob = DAEProblem(sys,[D(y₁)=>-0.04, D(y₂)=>0.04, D(y₃)=>0.0],[],(0.0,1e5)) # can't handle this yet
 odaeprob = ODAEProblem(structural_simplify(sys),[],(0.0,1e5)) # can't handle this yet
 
-ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14,dense=false)
+ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14)
 plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1), xticks=:auto)
 ```
 
@@ -70,11 +69,25 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+```
+
+### Calibration
+
+```julia
+plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)",
+     palette=Plots.palette([:blue, :red], length(_setups)))
+
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(3)
 ```
 
 

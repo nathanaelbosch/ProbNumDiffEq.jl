@@ -20,13 +20,12 @@ using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
 using ProbNumDiffEq
 
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 600),
-    xticks = 10.0 .^ (-16:1:16),
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
 )
 ```
 

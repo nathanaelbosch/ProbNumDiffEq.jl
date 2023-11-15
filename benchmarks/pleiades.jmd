@@ -13,13 +13,12 @@ using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundial
 using ModelingToolkit
 using ProbNumDiffEq
 
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 400),
-    xticks = 10.0 .^ (-16:1:16)
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
 )
 ```
 
@@ -129,12 +128,12 @@ plot(wp,
 ### Calibration
 
 ```julia
+# We can only evaluate calibration for the PN solvers
 _wp = WorkPrecisionSet(wp.wps[1:end-3], wp.N-3, wp.abstols, wp.reltols, wp.prob, wp.setups[1:end-3],
                        wp.names[1:end-3], wp.error_estimate, wp.numruns)
 plot(_wp; x=:final, y=:chi2_final,
-     color=[1 2 2 2 2],
-     linestyle=[:dash :solid :solid :dash :dash],
-     alpha=[1 1 1 1 1],
+     color=[1 1 1 1 2 2 2 2],
+     linestyle=[:solid :solid :dash :dash :solid :solid :dash :dash],
 )
 function plot_chisq_interval!(df, q=0.01)
     dist = Chisq(df)

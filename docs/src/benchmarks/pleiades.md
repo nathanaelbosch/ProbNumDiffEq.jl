@@ -13,13 +13,12 @@ using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundial
 using ModelingToolkit
 using ProbNumDiffEq
 
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 400),
-    xticks = 10.0 .^ (-16:1:16)
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
 )
 ```
 
@@ -140,12 +139,12 @@ plot(wp,
 ### Calibration
 
 ```julia
+# We can only evaluate calibration for the PN solvers
 _wp = WorkPrecisionSet(wp.wps[1:end-3], wp.N-3, wp.abstols, wp.reltols, wp.prob, wp.setups[1:end-3],
                        wp.names[1:end-3], wp.error_estimate, wp.numruns)
 plot(_wp; x=:final, y=:chi2_final,
-     color=[1 2 2 2 2],
-     linestyle=[:dash :solid :solid :dash :dash],
-     alpha=[1 1 1 1 1],
+     color=[1 1 1 1 2 2 2 2],
+     linestyle=[:solid :solid :dash :dash :solid :solid :dash :dash],
 )
 function plot_chisq_interval!(df, q=0.01)
     dist = Chisq(df)
@@ -171,8 +170,8 @@ InteractiveUtils.versioninfo()
 ```
 
 ```
-Julia Version 1.9.3
-Commit bed2cd540a1 (2023-08-24 14:43 UTC)
+Julia Version 1.9.4
+Commit 8e5136fa297 (2023-11-14 08:46 UTC)
 Build Info:
   Official https://julialang.org/ release
 Platform Info:
@@ -185,6 +184,7 @@ Platform Info:
 Environment:
   JULIA_NUM_THREADS = auto
   JULIA_STACKTRACE_MINIMAL = true
+  JULIA_IMAGE_THREADS = 1
 ```
 
 
@@ -205,14 +205,14 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.0.3
   [e2752cbe] MATLABDiffEq v1.2.0
-  [961ee093] ModelingToolkit v8.72.2
+  [961ee093] ModelingToolkit v8.73.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
-  [1dea7af3] OrdinaryDiffEq v6.59.0
+  [1dea7af3] OrdinaryDiffEq v6.59.1
   [65888b18] ParameterizedFunctions v5.16.0
   [91a5bcdd] Plots v1.39.0
   [bf3e78b0] ProbNumDiffEq v0.13.0 `~/.julia/dev/ProbNumDiffEq`
-  [0bca4576] SciMLBase v2.8.0
+  [0bca4576] SciMLBase v2.8.1
   [505e40e9] SciPyDiffEq v0.2.1
   [ce78b400] SimpleUnPack v1.1.0
   [90137ffa] StaticArrays v1.6.5
@@ -232,7 +232,7 @@ Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 
 ```
 Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
-  [47edcb42] ADTypes v0.2.4
+  [47edcb42] ADTypes v0.2.5
 ⌅ [c3fe647b] AbstractAlgebra v0.32.5
   [621f4979] AbstractFFTs v1.5.0
   [1520ce14] AbstractTrees v0.4.4
@@ -278,7 +278,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.18.15
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.138.1
+  [2b5f629d] DiffEqBase v6.139.0
   [459566f4] DiffEqCallbacks v2.33.1
   [f3b72e0c] DiffEqDevTools v2.42.0
   [77a26b50] DiffEqNoiseProcess v5.19.0
@@ -365,7 +365,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [739be429] MbedTLS v1.1.8
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.1.0
-  [961ee093] ModelingToolkit v8.72.2
+  [961ee093] ModelingToolkit v8.73.0
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.5.2
   [ffc61752] Mustache v1.0.19
@@ -382,7 +382,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [4d8831e6] OpenSSL v1.4.1
   [429524aa] Optim v1.7.8
   [bac558e1] OrderedCollections v1.6.2
-  [1dea7af3] OrdinaryDiffEq v6.59.0
+  [1dea7af3] OrdinaryDiffEq v6.59.1
   [90014a1f] PDMats v0.11.29
   [fe68d972] PSDMatrices v0.4.6
   [65ce6f38] PackageExtensionCompat v1.0.2
@@ -428,7 +428,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [fdea26ae] SIMD v3.4.6
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.42
-  [0bca4576] SciMLBase v2.8.0
+  [0bca4576] SciMLBase v2.8.1
   [e9a6253c] SciMLNLSolve v0.1.9
   [c0aeaf25] SciMLOperators v0.3.7
   [505e40e9] SciPyDiffEq v0.2.1
@@ -592,7 +592,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [9fa8497b] Future
   [b77e0a4c] InteractiveUtils
   [4af54fe1] LazyArtifacts
-  [b27032c2] LibCURL v0.6.3
+  [b27032c2] LibCURL v0.6.4
   [76f85450] LibGit2
   [8f399da3] Libdl
   [37e2e46d] LinearAlgebra
@@ -618,8 +618,8 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [cf7118a7] UUIDs
   [4ec0a83e] Unicode
   [e66e0078] CompilerSupportLibraries_jll v1.0.5+0
-  [deac9b47] LibCURL_jll v7.84.0+0
-  [29816b5a] LibSSH2_jll v1.10.2+0
+  [deac9b47] LibCURL_jll v8.4.0+0
+  [29816b5a] LibSSH2_jll v1.11.0+1
   [c8ffd9c3] MbedTLS_jll v2.28.2+0
   [14a3606d] MozillaCACerts_jll v2022.10.11
   [4536629a] OpenBLAS_jll v0.3.21+4
@@ -628,7 +628,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [bea87d4a] SuiteSparse_jll v5.10.1+6
   [83775a58] Zlib_jll v1.2.13+0
   [8e850b90] libblastrampoline_jll v5.8.0+0
-  [8e850ede] nghttp2_jll v1.48.0+0
+  [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
 Info Packages marked with ⌅ have new versions available but compatibility c
 onstraints restrict them from upgrading. To see why use `status --outdated 
