@@ -18,7 +18,11 @@ function chi2(gaussian_estimate, actual_value)
             return convert(eltype(actual_value), Inf)
         end
     end
-    return diff' * (Σ \ diff)
+    @static if VERSION < v"1.7"
+        return diff' * (Matrix(Σ) \ diff)
+    else
+        return diff' * (Σ \ diff)
+    end
 end
 
 function DiffEqDevTools.appxtrue(
