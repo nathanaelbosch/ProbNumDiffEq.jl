@@ -88,14 +88,11 @@ optionally the second derivative can also be set via automatic differentiation b
 * [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
 * [schober16probivp](@cite) Schober et al, "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing (2019)
 """
-struct ClassicSolverInit{ALG} <: InitializationScheme
-    alg::ALG
-    init_on_ddu::Bool
+@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
+    alg::ALG=AutoVern7(Rodas4())
+    init_on_ddu::Bool=false
 end
-ClassicSolverInit(alg::DiffEqBase.AbstractODEAlgorithm=AutoVern7(Rodas4())) =
-    ClassicSolverInit(; alg, init_on_ddu=false)
-ClassicSolverInit(; alg=AutoVern7(Rodas4()), init_on_ddu=false) =
-    ClassicSolverInit(alg, init_on_ddu)
+ClassicSolverInit(alg::DiffEqBase.AbstractODEAlgorithm) = ClassicSolverInit(; alg)
 
 """
     initial_update!(integ, cache[, init::InitializationScheme])
