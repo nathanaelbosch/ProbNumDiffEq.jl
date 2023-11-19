@@ -40,7 +40,7 @@ plot(test_sol, title="Lotka-Volterra Solution", legend=false)
 
 
 
-## EK0 accross orders
+## EK0 across orders
 
 ```julia
 DENSE = false;
@@ -77,7 +77,7 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^
 
 
 
-## EK1 accross orders
+## EK1 across orders
 
 ```julia
 DENSE = false;
@@ -723,5 +723,3 @@ Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
 th ⌅ are restricted by compatibility constraints from upgrading. To see why
  use `status --outdated -m`
 ```
-
-

@@ -15,3 +15,6 @@ servedocs-continuously:
 
 benchmark:
     julia --project=benchmarks -e 'include("benchmarks/runall.jl")'
+
+vale:
+    vale .

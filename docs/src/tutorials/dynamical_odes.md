@@ -117,7 +117,7 @@ E(dx, dy, x, y) = PotentialEnergy(x, y) + KineticEnergy(dx, dy)
 E(u) = E(u...); # convenient shorthand
 ```
 
-So, let's have a look at how the total energy changes over time when we numerically simulate the Hénon-Heiles model over a long period of time:
+Let's have a look at how the total energy changes over time when we numerically simulate the Hénon-Heiles model over a long period of time:
 Standard solve
 
 ```@example dyn

@@ -30,7 +30,7 @@ and for info on the initial distribution ``\textcolor{purple}{ \mathcal{N} \left
 We call ``\textcolor{#4063D8}{\Gamma}`` the _"diffusion"_ parameter.
 Since it is typically not known we need to estimate it; this is called _"calibration"_.
 
-There are a few different choices for how to model and estimate ``\textcolor{#4063D8}{\Gamma}``:
+ProbNumDiffEq.jl provides a few different choices for how to model and estimate ``\textcolor{#4063D8}{\Gamma}``:
 - [`FixedDiffusion`](@ref) assumes an isotropic, time-fixed ``\textcolor{#4063D8}{\Gamma} = \sigma \cdot I_d``,
 - [`DynamicDiffusion`](@ref) assumes an isotropic, time-varying ``\textcolor{#4063D8}{\Gamma}(t) = \sigma(t) \cdot I_d`` (**recommended**),
 - [`FixedMVDiffusion`](@ref) assumes a diagonal, time-fixed ``\textcolor{#4063D8}{\Gamma} = \operatorname{diag}(\sigma_1, \dots, \sigma_d)``,

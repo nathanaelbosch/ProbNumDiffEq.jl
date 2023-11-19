@@ -38,7 +38,7 @@ ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14,dense=false)
 plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1))
 ```
 
-## EK1 accross orders
+## EK1 across orders
 
 ```julia
 DENSE = false;

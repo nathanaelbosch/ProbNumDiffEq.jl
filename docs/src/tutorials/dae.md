@@ -81,7 +81,7 @@ solve(pendulum_prob, Rodas4())
 ```
 
 It does not work!
-This is because of the _index_ of the DAE; see e.g. [this explenation from the tutorial](https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/#Understanding-DAE-Index).
+This is because of the _index_ of the DAE; see for example [this explanation from the tutorial](https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/#Understanding-DAE-Index).
 
 Does this also hold for the `EK1` solver? Let's find out:
 ```@example dae
@@ -107,7 +107,7 @@ traced_sys = modelingtoolkitize(pendulum_prob)
 ```
 (how cool is this latex output ?!?)
 
-Next, lower the DAE index and simplify it with MTK's `dae_index_lowering` and `structural_simplify`:
+Next, lower the DAE index and simplify it with ModelingToolkit's `dae_index_lowering` and `structural_simplify`:
 
 ```@example dae
 simplified_sys = structural_simplify(dae_index_lowering(traced_sys))
@@ -131,7 +131,7 @@ sol3_f_evals     = sol3.stats.nf
 ```
 
 The error for the index-1 DAE solve is _much_ lower.
-So it seems that, even if the index-3 DAE could also be solved directly, index lowering might still be beneficial when solving DAEs with the `EK1`!
+Thus it seems that, even if the index-3 DAE could also be solved directly, index lowering might still be beneficial when solving DAEs with the `EK1`!
 
 
 ### References

@@ -45,7 +45,7 @@ plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims
 
 
 
-## EK1 accross orders
+## EK1 across orders
 
 ```julia
 DENSE = false;
@@ -557,5 +557,3 @@ Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
 th ⌅ are restricted by compatibility constraints from upgrading. To see why
  use `status --outdated -m`
 ```
-
-

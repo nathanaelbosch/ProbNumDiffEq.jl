@@ -6,7 +6,7 @@ In this tutorial we solve a simple non-linear ordinary differential equation (OD
     If you never used DifferentialEquations.jl, check out their
     ["Getting Started with Differential Equations in Julia" tutorial](https://docs.sciml.ai/DiffEqDocs/stable/getting_started/).
     It explains how to define and solve ODE problems and how to analyze the solution, so it's a great starting point.
-    Most of ProbNumDiffEq.jl works exaclty as you would expect from DifferentialEquations.jl -- just with some added uncertainties and related functionality on top!
+    Most of ProbNumDiffEq.jl works exactly as you would expect from DifferentialEquations.jl -- just with some added uncertainties and related functionality on top!
 
 
 In this tutorial, we consider a
@@ -126,9 +126,9 @@ plot!(sol.t, zero(errors), ribbon=3error_estimates, label="error estimate",
 
 ### More about the `ProbabilisticODESolution`
 
-The solution object returned by ProbNumDiffEq.jl mostly behaves just like any other ODESolution in DifferentialEquations.jl --
+The solution object returned by ProbNumDiffEq.jl mostly behaves just like any other `ODESolution` in DifferentialEquations.jl --
 with some added uncertainties and related functionality on top.
-So, `sol` can be indexed
+The `ProbabilisticODESolution` can be indexed
 
 ```@repl 1
 sol[1]
@@ -183,5 +183,5 @@ mean(sol(0.45))
 ## Next steps
 
 Check out one of the other tutorials:
-- "[Second Order ODEs and Energy Preservation](@ref)" explains how to solve second-order ODEs more efficiently while also better perserving energy or other conserved quantities;
-- "[Solving DAEs with Probabilistic Numerics](@ref)" demonstrates how to solve differential algebraic equatios in a probabilistic numerical way.
+- "[Second Order ODEs and Energy Preservation](@ref)" explains how to solve second-order ODEs more efficiently while also better preserving energy or other conserved quantities;
+- "[Solving DAEs with Probabilistic Numerics](@ref)" demonstrates how to solve differential algebraic equations in a probabilistic numerical way.
