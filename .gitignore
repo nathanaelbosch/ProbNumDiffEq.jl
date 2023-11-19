@@ -1,8 +1,8 @@
 /benchmarks/.ipynb_checkpoints/
 /docs/src/benchmarks/cache/
 
-.vale-styles/*
-!.vale-styles/Vocab/ProbNumDiffEq
+.github/vale-styles/*
+!.github/vale-styles/Vocab/ProbNumDiffEq
 
 build/
 .ob-jupyter/
