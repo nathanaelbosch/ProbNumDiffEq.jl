@@ -31,7 +31,7 @@ test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
 plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-2.5, 2.5))
 ```
 
-## EK1 accross orders
+## EK1 across orders
 
 ```julia
 DENSE = false;

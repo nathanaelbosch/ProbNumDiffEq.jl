@@ -33,7 +33,7 @@ test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14, dense=false)
 plot(test_sol, title="Lotka-Volterra Solution", legend=false)
 ```
 
-## EK0 accross orders
+## EK0 across orders
 
 ```julia
 DENSE = false;
@@ -66,7 +66,7 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
 ```
 
-## EK1 accross orders
+## EK1 across orders
 
 ```julia
 DENSE = false;

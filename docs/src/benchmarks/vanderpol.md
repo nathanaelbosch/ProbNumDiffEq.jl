@@ -38,7 +38,7 @@ plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-2.5, 2.5))
 
 
 
-## EK1 accross orders
+## EK1 across orders
 
 ```julia
 DENSE = false;
@@ -696,5 +696,3 @@ Info Packages marked with ⌃ and ⌅ have new versions available, but those wi
 th ⌅ are restricted by compatibility constraints from upgrading. To see why
  use `status --outdated -m`
 ```
-
-

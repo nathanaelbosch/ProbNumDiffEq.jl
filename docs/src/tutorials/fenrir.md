@@ -56,7 +56,7 @@ odedata = [true_sol(t) .+ sqrt(observation_noise_var) * randn(length(u0)) for t 
 plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
 scatter!(times, stack(odedata), markersize=2, markerstrokewidth=0.1, color=1, label=["Noisy Data" ""])
 ```
-Our goal is then to recover the true parameter `p` (and thus also the true trajectoy plotted above) the noisy data.
+Our goal is then to recover the true parameter `p` (and thus also the true trajectory plotted above) the noisy data.
 
 ## Computing the negative log-likelihood
 To do parameter inference - be it maximum-likelihod, maximum a posteriori, or full Bayesian inference with MCMC - we need to evaluate the likelihood of given a parameter estimate ``\theta_\text{est}``.
