@@ -17,4 +17,4 @@ benchmark:
     julia --project=benchmarks -e 'include("benchmarks/runall.jl")'
 
 vale:
-    vale .
+    git ls-files | xargs vale
