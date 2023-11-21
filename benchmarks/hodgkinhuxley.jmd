@@ -4,8 +4,9 @@
 !!! note "Summary"
     Hodgkin-Huxley is a four-dimensional ODE, which can be stiff or non-stiff depending on the parameters;
     here we consider a non-stiff version. We see that:
-    - The EKO seems faster than the EK1.
-    - The probabilistic exponential Rosenbrock-type integrator `RosenbrockExpEK` performs worse than the EK1.
+    - [**`EK0` is the fastest solver**.](@ref hh_solver_comparison)
+    - [**`RosenbrockExpEK` is slowest; but suffers less from smoothing than `EK0` and `EK1`**.](@ref hh_solver_comparison)
+    - [Results are similar for fixed time steps.](@ref hh_fixed_steps)
 
 
 ```julia
@@ -22,8 +23,6 @@ Plots.theme(
     yticks=10.0 .^ (-6:1:5),
 )
 ```
-
-### Hodgkin-Huxley problem definition
 
 ```julia
 αm(V, VT) = -0.32 * (V - VT - 13) / (exp(-(V - VT - 13) / 4) - 1)
@@ -77,7 +76,9 @@ plot(test_sol,
 )
 ```
 
-## Adaptive steps - no smoothing
+## [Solver comparison: `EK0` vs. `EK1` vs `RosenbrockExpEK`](@id hh_solver_comparison)
+
+### Without smoothing
 
 ```julia
 DENSE = SAVE_EVERYSTEP = false
@@ -112,7 +113,7 @@ wp = WorkPrecisionSet(
 plot(wp, title="Adaptive steps - no smoothing", color=colors)
 ```
 
-## Adaptive steps - with smoothing
+### With smoothing
 
 ```julia
 DENSE = SAVE_EVERYSTEP = true
@@ -147,10 +148,16 @@ wp = WorkPrecisionSet(
 plot(wp, title="Adaptive steps - with smoothing", color=colors)
 ```
 
-Dense errors
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
 ```julia
 plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
 ```
+```@raw html
+</details>
+```
+
 
 ### Calibration
 ```julia
@@ -168,8 +175,9 @@ plot_chisq_interval!(4)
 ```
 
 
-## Fixed steps - no smoothing
+## [Fixed-step solver comparison](@id hh_fixed_steps)
 
+Without smothing:
 ```julia
 DENSE = SAVE_EVERYSTEP = false
 
@@ -201,9 +209,9 @@ wp = WorkPrecisionSet(
 plot(wp, title="Fixed steps - no smoothing", color=colors)
 ```
 
-
-## Fixed steps - with smoothing
-
+```@raw html
+<details><summary>With smoothing:</summary>
+```
 ```julia
 DENSE = SAVE_EVERYSTEP = true
 
@@ -233,6 +241,9 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, title="Fixed steps - with smoothing", color=colors)
+```
+```@raw html
+</details>
 ```
 
 ## Appendix
