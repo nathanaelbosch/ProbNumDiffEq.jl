@@ -20,8 +20,9 @@ Weave.register_format!(
 ENV["GKSwstype"] = "nul"
 
 set_chunk_defaults!(
-    :fig_width => 9,
+    :fig_width => 8,
     :fig_height => 5,
+    :out_width => "100%",
 )
 
 FILES = [

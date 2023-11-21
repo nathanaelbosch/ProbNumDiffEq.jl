@@ -3,13 +3,18 @@
 
 !!! note "Summary"
     Lotka-Volterra is a simple, low-dimensional, non-stiff ODE. We see that:
-    - For such a low-dimensional problem the EK0 and EK1 have a very similar runtime
-      (but note that by using ParameterizedFunctions.jl, the Jacobian of the vector field is available analytically).
-    - Orders behave as in classic solvers:
-      Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy.
-    - _Do not use EK0 with order > 5!_ The adaptive step size selection apparently does not work well for high orders.
-    - The default choice of `diffusionmodel=DynamicDiffusion` and `initialization=TaylorModeInit` are probably fine.
-    - If you only need to solve for the last time point, do set `smooth=false`, `dense=false`, and `save_everystep=false`.
+    - [**`EK0` and `EK1` have a very similar runtime**.](@ref lv_ek0_vs_ek1)
+      But note that Lotka-Volterra is a non-stiff low-dimensional problem:
+      if it were stiff, [`EK1`](@ref) would be better;
+      if it were high-dimensional, [`EK0`](@ref) would be faster.
+    - [**Orders behave as in classic solvers: Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy**](@ref lv_ek1_comparison).
+    - [**_Do not use `EK0` with order > 5_**](@ref lv_ek0_comparison):
+      The adaptive step size selection apparently does not work well for high orders right now.
+    - [**Use `diffusionmodel=DynamicDiffusion`**](@ref lv_diffusion):
+      Error-wise, the performance of the diffusion models is similar, but _the calibration of `FixedDiffusion` and `FixedMVDiffusion` with adaptive steps is currently broken_.
+    - [**Initialization schemes are all similar, but `initialization=TaylorModeInit` performs best.**](@ref lv_initialization)
+    - **If you only need to solve for the last time point, set `smooth=false`, `dense=false`, and `save_everystep=false`.**
+      This greatly reduces the run time of the solver.
 
 
 Benchmark adapted from
@@ -36,10 +41,6 @@ Plots.theme(
 ```
 
 
-
-
-### Lotka-Volterra problem definition
-
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -64,9 +65,8 @@ plot(test_sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto)
 
 
 
-## EK0 across orders
+## [[`EK0`](@ref) Benchmark Across Orders](@id lv_ek0_comparison)
 
-### Final timepoint only
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -104,7 +104,9 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 
 
 
-### Discrete time-series errors (l2)
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -141,8 +143,13 @@ plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ![](figures/lotkavolterra_4_1.svg)
 
 
+```@raw html
+</details>
+```
 
-### Interpolation errors (L2)
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -156,10 +163,12 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ![](figures/lotkavolterra_5_1.svg)
 
 
+```@raw html
+</details>
+```
 
-## EK1 across orders
+## [[`EK1`](@ref) Benchmark Across Orders](@id lv_ek1_comparison)
 
-### Final timepoint only
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -197,7 +206,9 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 
 
 
-### Discrete time-series errors (l2)
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -234,8 +245,13 @@ plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ![](figures/lotkavolterra_7_1.svg)
 
 
+```@raw html
+</details>
+```
 
-### Interpolation errors (L2)
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -249,10 +265,12 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ![](figures/lotkavolterra_8_1.svg)
 
 
+```@raw html
+</details>
+```
 
-## EK0 vs. EK1: Work-Precision
+## [[`EK0`](@ref) vs. [`EK1`](@ref): Work-Precision](@id lv_ek0_vs_ek1)
 
-Final timepoint only:
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -296,7 +314,9 @@ plot(wp, color=[1 1 1 1 2 2 2 2])
 
 
 
-Interpolation errors (L2):
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -339,9 +359,11 @@ plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ![](figures/lotkavolterra_10_1.svg)
 
 
+```@raw html
+</details>
+```
 
-## EK0 vs. EK1: Calibration
-Final time-point:
+## [`EK0`](@ref) vs. [`EK1`](@ref): Calibration
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -366,9 +388,9 @@ plot_chisq_interval!(2)
 
 
 
-## Comparison of the different diffusion models
+## [Diffusion model comparison](@id lv_diffusion)
 
-### EK0
+### [`EK0`](@ref) with different diffusions
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -413,9 +435,6 @@ plot(wp; color, linestyle)
 
 ![](figures/lotkavolterra_12_1.svg)
 
-
-
-Calibration:
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -431,7 +450,7 @@ plot_chisq_interval!(2)
 
 
 
-### EK1
+### [`EK1`](@ref) with different diffusions
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -472,9 +491,6 @@ plot(wp; color, linestyle)
 
 ![](figures/lotkavolterra_14_1.svg)
 
-
-
-Calibration:
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -490,7 +506,7 @@ plot_chisq_interval!(2)
 
 
 
-## Comparison of the different initialization schemes
+## [Initialization scheme comparison](@id lv_initialization)
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -592,7 +608,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.0.3
   [e2752cbe] MATLABDiffEq v1.2.0
-  [961ee093] ModelingToolkit v8.73.0
+⌃ [961ee093] ModelingToolkit v8.73.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [1dea7af3] OrdinaryDiffEq v6.59.1
@@ -606,6 +622,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
+Info Packages marked with ⌃ have new versions available and may be upgradable.
 ```
 
 ```@raw html
@@ -656,7 +673,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [a33af91c] CompositionsBase v0.1.2
   [2569d6c7] ConcreteStructs v0.2.3
   [f0e56b4a] ConcurrentUtilities v2.3.0
-  [8f4d0f93] Conda v1.9.1
+⌃ [8f4d0f93] Conda v1.9.1
   [187b0558] ConstructionBase v1.5.4
   [d38c429a] Contour v0.6.2
   [587fd27a] CovarianceEstimation v0.2.9
@@ -755,7 +772,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [739be429] MbedTLS v1.1.8
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.1.0
-  [961ee093] ModelingToolkit v8.73.0
+⌃ [961ee093] ModelingToolkit v8.73.0
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.5.2
   [ffc61752] Mustache v1.0.19
@@ -799,7 +816,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [33c8b6b6] ProgressLogging v0.1.4
   [438e738f] PyCall v1.96.2
   [1fd47b50] QuadGK v2.9.1
-  [8a4e6c94] QuasiMonteCarlo v0.3.2
+⌃ [8a4e6c94] QuasiMonteCarlo v0.3.2
   [6f49c342] RCall v0.13.18
   [74087812] Random123 v1.6.1
   [fb686558] RandomExtensions v0.4.4
@@ -835,7 +852,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [ed01d8cd] Sobol v1.5.0
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-  [47a9eef4] SparseDiffTools v2.11.0
+⌃ [47a9eef4] SparseDiffTools v2.11.0
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -1020,9 +1037,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`
 ```
 
 ```@raw html
 </details>
 ```
+

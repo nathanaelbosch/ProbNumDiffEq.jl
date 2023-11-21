@@ -3,13 +3,18 @@
 
 !!! note "Summary"
     Lotka-Volterra is a simple, low-dimensional, non-stiff ODE. We see that:
-    - For such a low-dimensional problem the EK0 and EK1 have a very similar runtime
-      (but note that by using ParameterizedFunctions.jl, the Jacobian of the vector field is available analytically).
-    - Orders behave as in classic solvers:
-      Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy.
-    - _Do not use EK0 with order > 5!_ The adaptive step size selection apparently does not work well for high orders.
-    - The default choice of `diffusionmodel=DynamicDiffusion` and `initialization=TaylorModeInit` are probably fine.
-    - If you only need to solve for the last time point, do set `smooth=false`, `dense=false`, and `save_everystep=false`.
+    - [**`EK0` and `EK1` have a very similar runtime**.](@ref lv_ek0_vs_ek1)
+      But note that Lotka-Volterra is a non-stiff low-dimensional problem:
+      if it were stiff, [`EK1`](@ref) would be better;
+      if it were high-dimensional, [`EK0`](@ref) would be faster.
+    - [**Orders behave as in classic solvers: Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy**](@ref lv_ek1_comparison).
+    - [**_Do not use `EK0` with order > 5_**](@ref lv_ek0_comparison):
+      The adaptive step size selection apparently does not work well for high orders right now.
+    - [**Use `diffusionmodel=DynamicDiffusion`**](@ref lv_diffusion):
+      Error-wise, the performance of the diffusion models is similar, but _the calibration of `FixedDiffusion` and `FixedMVDiffusion` with adaptive steps is currently broken_.
+    - [**Initialization schemes are all similar, but `initialization=TaylorModeInit` performs best.**](@ref lv_initialization)
+    - **If you only need to solve for the last time point, set `smooth=false`, `dense=false`, and `save_everystep=false`.**
+      This greatly reduces the run time of the solver.
 
 
 Benchmark adapted from
@@ -29,8 +34,6 @@ Plots.theme(
 )
 ```
 
-### Lotka-Volterra problem definition
-
 ```julia
 f = @ode_def LotkaVolterra begin
   dx = a*x - b*x*y
@@ -45,9 +48,8 @@ test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto)
 ```
 
-## EK0 across orders
+## [[`EK0`](@ref) Benchmark Across Orders](@id lv_ek0_comparison)
 
-### Final timepoint only
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -75,7 +77,9 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
-### Discrete time-series errors (l2)
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -102,15 +106,22 @@ wp = WorkPrecisionSet(
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
-### Interpolation errors (L2)
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
-## EK1 across orders
+## [[`EK1`](@ref) Benchmark Across Orders](@id lv_ek1_comparison)
 
-### Final timepoint only
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -138,7 +149,9 @@ wp = WorkPrecisionSet(
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 
-### Discrete time-series errors (l2)
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -165,15 +178,22 @@ wp = WorkPrecisionSet(
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
-### Interpolation errors (L2)
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
+```@raw html
+</details>
+```
 
-## EK0 vs. EK1: Work-Precision
+## [[`EK0`](@ref) vs. [`EK1`](@ref): Work-Precision](@id lv_ek0_vs_ek1)
 
-Final timepoint only:
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -207,7 +227,9 @@ wp = WorkPrecisionSet(
 plot(wp, color=[1 1 1 1 2 2 2 2])
 ```
 
-Interpolation errors (L2):
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -240,9 +262,11 @@ wp = WorkPrecisionSet(
 
 plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ```
+```@raw html
+</details>
+```
 
-## EK0 vs. EK1: Calibration
-Final time-point:
+## [`EK0`](@ref) vs. [`EK1`](@ref): Calibration
 ```julia
 plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (final)")
 
@@ -257,9 +281,9 @@ end
 plot_chisq_interval!(2)
 ```
 
-## Comparison of the different diffusion models
+## [Diffusion model comparison](@id lv_diffusion)
 
-### EK0
+### [`EK0`](@ref) with different diffusions
 
 ```julia
 DENSE = false;
@@ -296,13 +320,12 @@ linestyle = [:solid :dash :solid :dash :solid :dash :solid :dash]
 plot(wp; color, linestyle)
 ```
 
-Calibration:
 ```julia
 plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
 plot_chisq_interval!(2)
 ```
 
-### EK1
+### [`EK1`](@ref) with different diffusions
 
 ```julia
 DENSE = false;
@@ -335,13 +358,12 @@ linestyle = [:solid :dash :solid :dash]
 plot(wp; color, linestyle)
 ```
 
-Calibration:
 ```julia
 plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
 plot_chisq_interval!(2)
 ```
 
-## Comparison of the different initialization schemes
+## [Initialization scheme comparison](@id lv_initialization)
 
 ```julia
 DENSE = false;
