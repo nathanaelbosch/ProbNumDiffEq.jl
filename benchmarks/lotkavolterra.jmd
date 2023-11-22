@@ -1,23 +1,46 @@
 # Lotka-Volterra benchmark
 
-Adapted from
+
+!!! note "Summary"
+    Lotka-Volterra is a simple, low-dimensional, non-stiff ODE. We see that:
+    - [**`EK0` and `EK1` have a very similar runtime**.](@ref lv_ek0_vs_ek1)
+      But note that Lotka-Volterra is a non-stiff low-dimensional problem:
+      if it were stiff, [`EK1`](@ref) would be better;
+      if it were high-dimensional, [`EK0`](@ref) would be faster.
+    - [**Orders behave as in classic solvers: Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy**](@ref lv_ek1_comparison).
+    - [**_Do not use `EK0` with order > 5_**](@ref lv_ek0_comparison):
+      The adaptive step size selection apparently does not work well for high orders right now.
+    - [**Use `diffusionmodel=DynamicDiffusion`**](@ref lv_diffusion):
+      Error-wise, the performance of the diffusion models is similar, but _the calibration of `FixedDiffusion` and `FixedMVDiffusion` with adaptive steps is currently broken_.
+    - [**Initialization schemes are all similar, but `initialization=TaylorModeInit` performs best.**](@ref lv_initialization)
+    - **If you only need to solve for the last time point, set `smooth=false`, `dense=false`, and `save_everystep=false`.**
+      This greatly reduces the run time of the solver.
+
+
+Benchmark adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/NonStiffODE/LotkaVolterra_wpd/).
 
-```julia
-using LinearAlgebra, Statistics
+```julia, results="hidden"
+using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
 using ProbNumDiffEq
 
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 400),
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
 )
-```
 
-### Lotka-Volterra problem definition
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+```
 
 ```julia
 f = @ode_def LotkaVolterra begin
@@ -29,11 +52,11 @@ tspan = (0.0, 10.0)
 u0 = [1.0, 1.0]
 prob = ODEProblem{true, SciMLBase.FullSpecialize}(f, u0, tspan, p)
 
-test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14, dense=false)
-plot(test_sol, title="Lotka-Volterra Solution", legend=false)
+test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14)
+plot(test_sol, title="Lotka-Volterra Solution", legend=false, xticks=:auto)
 ```
 
-## EK0 across orders
+## [[`EK0`](@ref) Benchmark Across Orders](@id lv_ek0_comparison)
 
 ```julia
 DENSE = false;
@@ -47,26 +70,93 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+
+_ref_setups = [
+    "Tsit5" => Dict(:alg => Tsit5())
+    "Vern7" => Dict(:alg => Vern7())
+    "RadauIIA5" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp_final = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = false,
+    save_everystep = false,
+    maxiters = Int(1e7),
+)
+ref_wp_dense = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = true,
+    save_everystep = true,
+    maxiters = Int(1e7),
+)
+
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
-## EK1 across orders
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
+```julia
+DENSE = true;
+SAVE_EVERYSTEP = true;
+
+_setups = [
+  "EK0(order=$order)" => Dict(:alg => EK0(order=order, smooth=DENSE))
+  for order in 2:7
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+)
+
+plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:l2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
+```
+
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
+```julia
+plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
+```
+
+## [[`EK1`](@ref) Benchmark Across Orders](@id lv_ek1_comparison)
 
 ```julia
 DENSE = false;
@@ -80,26 +170,68 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:13)
-reltols = 1.0 ./ 10.0 .^ (1:10)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
-plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
-## EK0 vs. EK1
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
+```julia
+DENSE = true;
+SAVE_EVERYSTEP = true;
+
+_setups = [
+  "EK1(order=$order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
+  for order in 2:7
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+)
+
+plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:l2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
+```
+
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
+```julia
+plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
+```
+
+## [[`EK0`](@ref) vs. [`EK1`](@ref): Work-Precision](@id lv_ek0_vs_ek1)
 
 ```julia
 DENSE = false;
@@ -119,70 +251,158 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
-plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))
+plot(wp, color=[1 1 1 1 2 2 2 2])
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
-## DynamicDiffusion vs FixedDiffusion
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
+```julia
+DENSE = true;
+SAVE_EVERYSTEP = true;
+
+_setups = [
+  "EK0(order=2)" => Dict(:alg => EK0(order=2, smooth=DENSE))
+  "EK0(order=3)" => Dict(:alg => EK0(order=3, smooth=DENSE))
+  "EK0(order=4)" => Dict(:alg => EK0(order=4, smooth=DENSE))
+  "EK0(order=5)" => Dict(:alg => EK0(order=5, smooth=DENSE))
+  "EK1(order=2)" => Dict(:alg => EK1(order=2, smooth=DENSE))
+  "EK1(order=3)" => Dict(:alg => EK1(order=3, smooth=DENSE))
+  "EK1(order=4)" => Dict(:alg => EK1(order=4, smooth=DENSE))
+  "EK1(order=5)" => Dict(:alg => EK1(order=5, smooth=DENSE))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+)
+
+plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
+```
+
+## [`EK0`](@ref) vs. [`EK1`](@ref): Calibration
+```julia
+plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (final)")
+plot_chisq_interval!(2)
+```
+
+## [Diffusion model comparison](@id lv_diffusion)
+
+### [`EK0`](@ref) with different diffusions
 
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
 _setups = [
-  "EK1(2) dynamic" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK1(3) dynamic" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK1(5) dynamic" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
-  "EK1(2) fixed" => Dict(:alg => EK1(order=2, smooth=DENSE, diffusionmodel=FixedDiffusion()))
-  "EK1(3) fixed" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
-  "EK1(5) fixed" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(3) Dynamic" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK0(5) Dynamic" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK0(3) Fixed" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(5) Fixed" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK0(3) DynamicMV" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
+  "EK0(5) DynamicMV" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=DynamicMVDiffusion()))
+  "EK0(3) FixedMV" => Dict(:alg => EK0(order=3, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
+  "EK0(5) FixedMV" => Dict(:alg => EK0(order=5, smooth=DENSE, diffusionmodel=FixedMVDiffusion()))
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
 )
 
-plot(wp, color=[2 2 2 3 3 3], xticks = 10.0 .^ (-16:1:5))
+color = [2 2 3 3 4 4 5 5]
+linestyle = [:solid :dash :solid :dash :solid :dash :solid :dash]
+plot(wp; color, linestyle)
 ```
 
-## Comparison of the different initialization schemes
+```julia
+plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
+plot_chisq_interval!(2)
+```
+
+### [`EK1`](@ref) with different diffusions
 
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
 
-abstols = 1.0 ./ 10.0 .^ (4:14)
-reltols = 1.0 ./ 10.0 .^ (1:11)
+_setups = [
+  "EK1(3) Dynamic" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK1(5) Dynamic" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=DynamicDiffusion()))
+  "EK1(3) Fixed" => Dict(:alg => EK1(order=3, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+  "EK1(5) Fixed" => Dict(:alg => EK1(order=5, smooth=DENSE, diffusionmodel=FixedDiffusion()))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+)
+
+color = [2 2 3 3]
+linestyle = [:solid :dash :solid :dash]
+plot(wp; color, linestyle)
+```
+
+```julia
+plot(wp; x=:final, y=:chi2_final, color, linestyle, yguide="Chi-squared (final)")
+plot_chisq_interval!(2)
+```
+
+## [Initialization scheme comparison](@id lv_initialization)
+
+```julia
+DENSE = false;
+SAVE_EVERYSTEP = false;
+
+abstols = 1.0 ./ 10.0 .^ (4:12)
+reltols = 1.0 ./ 10.0 .^ (1:9)
 
 orders = (2, 3, 5, 8)
 ps = []
@@ -200,52 +420,26 @@ for o in orders
     wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
         names = labels,
-        #print_names = true,
         appxsol = test_sol,
         dense = DENSE,
         save_everystep = SAVE_EVERYSTEP,
-        numruns = 10,
         maxiters = Int(1e7),
-        timeseries_errors = false,
-        verbose = false,
     )
 
-    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5))
+    p = plot(wp, color=[2 4 5 6], xticks = 10.0 .^ (-16:1:5), title = "Order $o")
     push!(ps, p)
 end
 plot(
     ps...,
     layout=(length(orders), 1),
-    size = (1000, length(orders)*300),
-    xlabel=["" "" "" "Error"],
+    size = (800, length(orders)*300),
+    xlabel=["" "" "" "Error (final)"],
 )
 ```
 
 
-## Conclusion
-
-- For such a low-dimensional problem the EK0 and EK1 have a very similar runtime.
-  Though note that by using ParameterizedFunctions.jl, the Jacobian of the vector field is available analytically.
-- Orders behave as in classic solvers:
-  Use low order for low accuracy, medium order for medium accuracy, high order for high accuracy.
-- Most likely, the default choice of `diffusionmodel=DynamicDiffusion` and `initialization=TaylorModeInit` are fine.
-
-
 ## Appendix
-
-Computer information:
-```julia
-using InteractiveUtils
-InteractiveUtils.versioninfo()
-```
-
-Package Information:
-```julia
-using Pkg
-Pkg.status()
-```
-
-And the full manifest:
-```julia
-Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
+```julia, echo=false
+include("utils.jl")
+appendix()
 ```

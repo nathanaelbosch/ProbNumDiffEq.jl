@@ -1,20 +1,28 @@
 # Hodgkin-Huxley benchmark
 
-```julia
-using LinearAlgebra, Statistics
+
+!!! note "Summary"
+    Hodgkin-Huxley is a four-dimensional ODE, which can be stiff or non-stiff depending on the parameters;
+    here we consider a non-stiff version. We see that:
+    - [**`EK0` is the fastest solver**.](@ref hh_solver_comparison)
+    - [**`RosenbrockExpEK` is slowest; but suffers less from smoothing than `EK0` and `EK1`**.](@ref hh_solver_comparison)
+    - [Results are similar for fixed time steps.](@ref hh_fixed_steps)
+
+
+```julia, results="hidden"
+using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, SciMLBase, OrdinaryDiffEq, Plots, SimpleUnPack
 using ProbNumDiffEq
 
-# Plotting theme
-theme(:dao;
+Plots.theme(
+    :dao;
     markerstrokewidth=0.5,
     legend=:outertopright,
-    bottom_margin=5Plots.mm,
-    size = (1000, 400),
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
+    yticks=10.0 .^ (-6:1:5),
 )
 ```
-
-### Hodgkin-Huxley problem definition
 
 ```julia
 αm(V, VT) = -0.32 * (V - VT - 13) / (exp(-(V - VT - 13) / 4) - 1)
@@ -26,14 +34,14 @@ theme(:dao;
 αh(V, VT) = 0.128 * exp(-(V - VT - 17) / 18)
 βh(V, VT) = 4 / (1 + exp(-(V - VT - 40) / 5))
 
-Inj(t) = (10 <= t <= 90) ? 500one(t) : zero(t)
+Inj(t) = (5 <= t <= 40) ? 500one(t) : zero(t)
 
 function f(du, u, p, t)
     @unpack gNa, gK, ENa, EK, area, C, Eleak, VT, gleak = p
 
     V, m, n, h = u
 
-    I_inj = Inj(t) * 1e-6 # uA
+    I_inj = Inj(t) * 1e-6
 
     du[2] = dmdt = (αm(V, VT) * (1 - m) - βm(V, VT) * m)
     du[3] = dndt = (αn(V, VT) * (1 - n) - βn(V, VT) * n)
@@ -53,9 +61,9 @@ n_inf(V, VT) = 1 / (1 + βn(V, VT) / αn(V, VT))
 h_inf(V, VT) = 1 / (1 + βh(V, VT) / αh(V, VT))
 u0 = [p.V0, m_inf(p.V0, p.VT), n_inf(p.V0, p.VT), h_inf(p.V0, p.VT)]
 
-prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f, u0, (0.0, 100.0), p)
+prob = ODEProblem{true,SciMLBase.FullSpecialize()}(f, u0, (0.0, 50.0), p)
 
-test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14, dense=false)
+test_sol = solve(prob, Vern7(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol,
      legend=false,
      layout=(4,1),
@@ -64,10 +72,13 @@ plot(test_sol,
      xlabel=["" "" "" "t"],
      size = (1000, 600),
      color=[1 2 3 4],
+     xticks=:auto, yticks=:auto
 )
 ```
 
-## Adaptive steps - no smoothing
+## [Solver comparison: `EK0` vs. `EK1` vs `RosenbrockExpEK`](@id hh_solver_comparison)
+
+### Without smoothing
 
 ```julia
 DENSE = SAVE_EVERYSTEP = false
@@ -92,26 +103,44 @@ reltols = 1.0 ./ 10.0 .^ (3:7)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
+    numruns = 5,
 )
 
-plot(
-    wp,
-    title = "Adaptive steps - no smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
+plot(wp, title="Adaptive steps - no smoothing", color=colors)
+
+
+_ref_setups = [
+    "Tsit5" => Dict(:alg => Tsit5())
+    "Vern7" => Dict(:alg => Vern7())
+    "RadauIIA5" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp_final = WorkPrecisionSet(
+    prob, abstols ./ 1000, reltols ./ 1000, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = false,
+    save_everystep = false,
+    maxiters = Int(1e7),
 )
+ref_wp_dense = WorkPrecisionSet(
+    prob, abstols ./ 1000, reltols ./ 1000, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = true,
+    save_everystep = true,
+    maxiters = Int(1e7),
+)
+
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
-## Adaptive steps - with smoothing
+### With smoothing
 
 ```julia
 DENSE = SAVE_EVERYSTEP = true
@@ -136,28 +165,48 @@ reltols = 1.0 ./ 10.0 .^ (3:7)
 wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
+    numruns = 5,
 )
 
-plot(
-    wp,
-    title = "Adaptive steps - with smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title="Adaptive steps - with smoothing", color=colors)
+plot!(ref_wp_dense, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
+```
+
+```@raw html
+<details><summary>Interoplation errors (L2):</summary>
+```
+```julia
+plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
 ```
 
 
-## Fixed steps - no smoothing
+### Calibration
+```julia
+plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color=colors)
 
+# Should be distributed according to a Chi-squared distribution:
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+plot_chisq_interval!(4)
+```
+
+
+## [Fixed-step solver comparison](@id hh_fixed_steps)
+
+Without smothing:
 ```julia
 DENSE = SAVE_EVERYSTEP = false
 
@@ -179,28 +228,19 @@ wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     adaptive = false,
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
+    numruns = 5,
 )
 
-plot(
-    wp,
-    title = "Fixed steps - no smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title="Fixed steps - no smoothing", color=colors)
 ```
 
-
-## Fixed steps - with smoothing
-
+```@raw html
+<details><summary>With smoothing:</summary>
+```
 ```julia
 DENSE = SAVE_EVERYSTEP = true
 
@@ -222,41 +262,21 @@ wp = WorkPrecisionSet(
     prob, abstols, reltols, setups;
     adaptive = false,
     names = labels,
-    #print_names = true,
     appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
-    numruns = 10,
     maxiters = Int(1e7),
-    timeseries_errors = false,
-    verbose = false,
+    numruns = 5,
 )
 
-plot(
-    wp,
-    title = "Fixed steps - with smoothing",
-    color = colors,
-    xticks = 10.0 .^ (-16:1:5),
-    yticks = 10.0 .^ (-6:1:5),
-)
+plot(wp, title="Fixed steps - with smoothing", color=colors)
 ```
-
+```@raw html
+</details>
+```
 
 ## Appendix
-
-Computer information:
-```julia
-using InteractiveUtils
-InteractiveUtils.versioninfo()
-```
-
-Package Information:
-```julia
-using Pkg
-Pkg.status()
-```
-
-And the full manifest:
-```julia
-Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
+```julia, echo=false
+include("utils.jl")
+appendix()
 ```

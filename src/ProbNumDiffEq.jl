@@ -13,7 +13,6 @@ using Reexport
 import SciMLBase
 import SciMLBase: interpret_vars, getsyms
 using OrdinaryDiffEq
-using DiffEqDevTools
 using SpecialMatrices, ToeplitzMatrices
 using FastBroadcast
 using StaticArrayInterface
@@ -90,7 +89,10 @@ include("solve.jl")
 
 include("preconditioning.jl")
 
-include("devtools.jl")
+if !isdefined(Base, :get_extension)
+    include("../ext/DiffEqDevToolsExt.jl")
+end
+
 include("callbacks.jl")
 export ManifoldUpdate
 

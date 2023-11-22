@@ -59,6 +59,7 @@ makedocs(
                 "Pleiades" => "benchmarks/pleiades.md",
             ],
             "Differential-Algebraic Equations (DAEs)" => [
+                "OREGO" => "benchmarks/orego.md",
                 "ROBER" => "benchmarks/rober.md",
             ],
         ],

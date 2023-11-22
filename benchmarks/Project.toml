@@ -1,5 +1,6 @@
 [deps]
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
 LSODA = "7f56f5a3-f504-529b-bc02-0b1fe5e64312"
 LoggingExtras = "e6f89c97-d47a-5376-807f-9c37f3926c36"
@@ -18,3 +19,6 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Sundials = "c3572dad-4567-51f8-b174-8c6c989267f4"
 Weave = "44d3d7a6-8a23-5bf8-98c5-b353f8df5ec9"
 deSolveDiffEq = "0518478a-701b-4815-806c-24ad5cb92f09"
+
+[compat]
+DiffEqDevTools = "2.42.0"
