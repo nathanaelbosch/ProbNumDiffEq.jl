@@ -125,7 +125,7 @@ const GROUP = get(ENV, "GROUP", "All")
             Aqua.test_all(
                 ProbNumDiffEq,
                 ambiguities=false,
-                piracy=false,
+                piracies=false,
             )
         end
     end
