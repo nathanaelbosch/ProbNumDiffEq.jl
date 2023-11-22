@@ -3,11 +3,11 @@
 
 !!! note "Summary"
     Pleiades is a medium-dimensional, non-stiff, second-order ODE. We see that:
-    - The `EK0` is _much_ faster than the `EK1` as it scales linearly with the ODE dimension.
-    - If the problem is a second-order ODE, _implement it as a second-order ODE_!
+    - [**The `EK0` is _much_ faster than the `EK1` as it scales linearly with the ODE dimension.**](@ref pleiades_results)
+    - [**If the problem is a second-order ODE, _implement it as a second-order ODE_!**](@ref pleiades_results)
 
 
-```julia
+```julia, results="hidden"
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots, ODEInterfaceDiffEq
 using ModelingToolkit
@@ -20,9 +20,15 @@ Plots.theme(
     margin=5Plots.mm,
     xticks=10.0 .^ (-16:1:16),
 )
-```
 
-### Pleiades problem definition
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+```
 
 ```julia
 # first-order ODE
@@ -83,7 +89,7 @@ plot(ref_sol1, idxs=[(14+i,21+i) for i in 1:7], title="Pleiades Solution", legen
 scatter!(ref_sol1.u[end][15:21], ref_sol1.u[end][22:end], color=1:7)
 ```
 
-## EK0 vs EK1 & first-order vs. second-order
+## [`EK0` vs `EK1` & first-order vs. second-order](@id pleiades_results)
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -97,9 +103,6 @@ _setups = [
   "EK1(5) (1st order ODE)" => Dict(:alg => EK1(order=5, smooth=DENSE), :prob_choice => 1)
   "EK1(4) (2nd order ODE)" => Dict(:alg => EK1(order=4, smooth=DENSE), :prob_choice => 2)
   "EK1(6) (2nd order ODE)" => Dict(:alg => EK1(order=6, smooth=DENSE), :prob_choice => 2)
-  "Classic: Tsit5" => Dict(:alg => Tsit5(), :prob_choice => 1)
-  "Classic: RadauIIA5" => Dict(:alg => RadauIIA5(), :prob_choice => 1)
-  "Classic: DPRKN6" => Dict(:alg => DPRKN6(), :prob_choice => 2)
 ]
 
 labels = first.(_setups)
@@ -118,30 +121,32 @@ wp = WorkPrecisionSet(
     maxiters = Int(1e7),
 )
 
-plot(wp,
-     color=[1 1 1 1 2 2 2 2 3 3 3],
-     linestyle=[:solid :solid :dash :dash :solid :solid :dash :dash :solid :solid :dash],
-     alpha=[1 1 1 1 1 1 1 1 0.5 0.5 0.5],
+color = [1 1 1 1 2 2 2 2]
+linestyle = [:solid :solid :dash :dash :solid :solid :dash :dash]
+plot(wp; color, linestyle)
+
+_ref_setups = [
+    "Classic: Tsit5" => Dict(:alg => Tsit5(), :prob_choice => 1)
+    "Classic: RadauIIA5" => Dict(:alg => RadauIIA5(), :prob_choice => 1)
+    "Classic: DPRKN6" => Dict(:alg => DPRKN6(), :prob_choice => 2)
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp = WorkPrecisionSet(
+    probs, abstols ./ 1000, reltols ./ 1000, ref_setups;
+    names = ref_labels,
+    appxsol = ref_sols,
+    dense = false,
+    save_everystep = false,
+    maxiters = Int(1e7),
 )
+plot!(ref_wp, x=:final, color=:gray, alpha=0.7, linestyle=[:solid :solid :dash])
 ```
 
 ### Calibration
 
 ```julia
-# We can only evaluate calibration for the PN solvers
-_wp = WorkPrecisionSet(wp.wps[1:end-3], wp.N-3, wp.abstols, wp.reltols, wp.prob, wp.setups[1:end-3],
-                       wp.names[1:end-3], wp.error_estimate, wp.numruns)
-plot(_wp; x=:final, y=:chi2_final,
-     color=[1 1 1 1 2 2 2 2],
-     linestyle=[:solid :solid :dash :dash :solid :solid :dash :dash],
-)
-function plot_chisq_interval!(df, q=0.01)
-    dist = Chisq(df)
-    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
-    hline!([low, high], linestyle=:dash, color=:black, label="",
-           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
-    hline!([mid], linestyle=:solid, color=:black, label="")
-end
+plot(wp; x=:final, y=:chi2_final, color, linestyle)
 plot_chisq_interval!(length(u0)*2)
 ```
 

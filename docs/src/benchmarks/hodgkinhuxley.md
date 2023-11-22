@@ -131,6 +131,33 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, title="Adaptive steps - no smoothing", color=colors)
+
+
+_ref_setups = [
+    "Tsit5" => Dict(:alg => Tsit5())
+    "Vern7" => Dict(:alg => Vern7())
+    "RadauIIA5" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp_final = WorkPrecisionSet(
+    prob, abstols ./ 1000, reltols ./ 1000, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = false,
+    save_everystep = false,
+    maxiters = Int(1e7),
+)
+ref_wp_dense = WorkPrecisionSet(
+    prob, abstols ./ 1000, reltols ./ 1000, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = true,
+    save_everystep = true,
+    maxiters = Int(1e7),
+)
+
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -176,6 +203,7 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, title="Adaptive steps - with smoothing", color=colors)
+plot!(ref_wp_dense, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -193,6 +221,7 @@ plot(wp, title="Adaptive steps - with smoothing", color=colors)
 ```
 ```julia
 plot(wp, x=:L2, title="Adaptive steps - with smoothing", color=colors)
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>

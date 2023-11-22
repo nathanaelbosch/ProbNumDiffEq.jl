@@ -2,14 +2,14 @@
 
 
 !!! note "Summary"
-    - The `EK1` can solve mass-matrix DAEs! But it only really works well for low tolerances.
-    - Order 3 seems to work well here. But the order-to-error-tolerance heuristic should in principle still hold: lower tolerance level ``\rightarrow`` higher order.
+    - [**The `EK1` can solve mass-matrix DAEs.** But for this problem, it only works well for low tolerances.](@ref rober_results)
+    - For this problem it only works well for low tolerances, but the order-to-error-tolerance heuristic should in principle still hold: lower tolerance level ``\rightarrow`` higher order.
 
 
 Adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/DAE/ROBERDAE/).
 
-```julia
+```julia, results="hidden"
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
 using ModelingToolkit
@@ -22,9 +22,15 @@ Plots.theme(
     margin=5Plots.mm,
     xticks=10.0 .^ (-16:1:16),
 )
-```
 
-### ROBER problem definition
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+```
 
 ```julia
 @variables t y₁(t)=1.0 y₂(t)=0.0 y₃(t)=0.0
@@ -44,7 +50,7 @@ ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14)
 plot(ref_sol, idxs=[y₁,y₂,y₃], title="ROBER Solution", legend=false, ylims=(0, 1), xticks=:auto)
 ```
 
-## EK1 across orders
+## [`EK1` across orders](@id rober_results)
 
 ```julia
 DENSE = false;
@@ -58,8 +64,8 @@ _setups = [
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:8)
-reltols = 1.0 ./ 10.0 .^ (1:5)
+abstols = 1.0 ./ 10.0 .^ (4:7)
+reltols = 1.0 ./ 10.0 .^ (1:4)
 
 wp = WorkPrecisionSet(
     mmprob, abstols, reltols, setups;
@@ -72,6 +78,24 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+
+
+_ref_setups = [
+    "Rosenbrock23" => Dict(:alg => Rosenbrock23())
+    "Rodas4P" => Dict(:alg => Rodas4P())
+    "RadauIIA" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp = WorkPrecisionSet(
+    mmprob, abstols ./ 10000, reltols ./ 10000, ref_setups;
+    names = ref_labels,
+    appxsol = ref_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+)
+plot!(ref_wp, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
 ### Calibration
@@ -79,14 +103,6 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
-
-function plot_chisq_interval!(df, q=0.01)
-    dist = Chisq(df)
-    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
-    hline!([low, high], linestyle=:dash, color=:black, label="",
-           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
-    hline!([mid], linestyle=:solid, color=:black, label="")
-end
 plot_chisq_interval!(3)
 ```
 

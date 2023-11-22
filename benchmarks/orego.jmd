@@ -2,13 +2,14 @@
 
 
 !!! note "Summary"
-    TODO
+    - [**The `EK1` is able to solve mass-matrix DAEs.** To achieve low error, use order 4 or higher.](@ref orego_results)
+    - The order-to-error-tolerance heuristic holds: lower tolerance level ``\rightarrow`` higher order.
 
 
 Adapted from
 [SciMLBenchmarks.jl](https://docs.sciml.ai/SciMLBenchmarksOutput/stable/DAE/OregoDAE/).
 
-```julia
+```julia, results="hidden"
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
 using ModelingToolkit
@@ -21,9 +22,15 @@ Plots.theme(
     margin=5Plots.mm,
     xticks=10.0 .^ (-16:1:16),
 )
-```
 
-### OREGO problem definition
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+```
 
 ```julia
 @variables t y1(t)=1.0 y2(t)=2.0 y3(t)=3.0
@@ -47,7 +54,7 @@ ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14)
 plot(ref_sol, title="OREGO Solution", legend=false, xticks=:auto)
 ```
 
-## EK1 accross orders
+## [`EK1` across orders](@id orego_results)
 
 ```julia
 DENSE = false;
@@ -55,14 +62,14 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 2:4
+  for order in 2:6
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:8)
-reltols = 1.0 ./ 10.0 .^ (1:5)
+abstols = 1.0 ./ 10.0 .^ (6:10)
+reltols = 1.0 ./ 10.0 .^ (3:7)
 
 wp = WorkPrecisionSet(
     mmprob, abstols, reltols, setups;
@@ -75,6 +82,24 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+
+
+_ref_setups = [
+    "Rosenbrock23" => Dict(:alg => Rosenbrock23())
+    "Rodas4P" => Dict(:alg => Rodas4P())
+    "RadauIIA" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp = WorkPrecisionSet(
+    mmprob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = ref_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+)
+plot!(ref_wp, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
 ### Calibration
@@ -82,14 +107,6 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
-
-function plot_chisq_interval!(df, q=0.01)
-    dist = Chisq(df)
-    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
-    hline!([low, high], linestyle=:dash, color=:black, label="",
-           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
-    hline!([mid], linestyle=:solid, color=:black, label="")
-end
 plot_chisq_interval!(3)
 ```
 

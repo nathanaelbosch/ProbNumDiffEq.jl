@@ -3,11 +3,13 @@
 
 !!! note "Summary"
     Van der Pol is a low-dimensional, stiff, second-order ODE. We see that:
-    - The `EK1` is very well able to solve stiff problems.
-    - Since Van der Pol is actually a second-order ODE, _do solve it as a second-order ODE_.
+    - [**The `EK1` is very well able to solve stiff problems.**](@ref vdp_main_results)
+    - [**Since Van der Pol is actually a second-order ODE, _do solve it as a second-order ODE_.**](@ref vdp_second_order)
+    - [**Use the `TaylorInit` or `ForwardDiffInit` initialization.**](@ref vdp_initialization)
+      While `SimpleInit` works well for lower orders, it fails for higher orders. And since Taylor-mode initialization is fast and works well, there is no reason not to use it.
 
 
-```julia
+```julia, results="hidden"
 using LinearAlgebra, Statistics, Distributions
 using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
 using ProbNumDiffEq
@@ -19,9 +21,15 @@ Plots.theme(
     margin=5Plots.mm,
     xticks = 10.0 .^ (-16:1:16)
 )
-```
 
-### Van der Pol problem definition
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
+```
 
 ```julia
 function vanderpol!(du, u, p, t)
@@ -37,11 +45,8 @@ test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
 plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-5, 5), xticks=:auto)
 ```
 
-## EK1 across orders
+## [`EK1` across orders](@id vdp_main_results)
 
-### Final value only
-
-This does not require smoothing or saving intermediate values.
 ```julia
 DENSE = false;
 SAVE_EVERYSTEP = false;
@@ -68,11 +73,37 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+
+_ref_setups = [
+    "Rosenbrock23" => Dict(:alg => Rosenbrock23())
+    "Rodas4P" => Dict(:alg => Rodas4P())
+    "RadauIIA5" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp_final = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = false,
+    save_everystep = false,
+    maxiters = Int(1e7),
+)
+ref_wp_dense = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = true,
+    save_everystep = true,
+    maxiters = Int(1e7),
+)
+
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
-### Full trajectory
-
-This does require smoothing or saving intermediate values.
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
 ```julia
 DENSE = true;
 SAVE_EVERYSTEP = true;
@@ -99,30 +130,31 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:l2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
 ```
 
-Interpolation errors:
+```@raw html
+<details><summary>Interpolation errors (L2):</summary>
+```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
 ```
 
 ## Calibration
 ```julia
 plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
-
-# Should be distributed according to a Chi-squared distribution:
-function plot_chisq_interval!(df, q=0.01)
-    dist = Chisq(df)
-    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
-    hline!([low, high], linestyle=:dash, color=:black, label="",
-           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
-    hline!([mid], linestyle=:solid, color=:black, label="")
-end
 plot_chisq_interval!(2)
 ```
 
-## Comparison of the different initialization schemes
+## [Comparison of the different initialization schemes](@id vdp_initialization)
 
 ```julia
 DENSE = false;
@@ -200,7 +232,7 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^
 ```
 
 
-## Solving the first- vs second-order ODE
+## [Solving the first- vs second-order ODE](@id vdp_second_order)
 
 ```julia
 function vanderpol2!(ddu, du, u, p, t)
@@ -213,7 +245,8 @@ du0 = [0.0]
 prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
 
 test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
-plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
+# plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
+nothing
 ```
 
 ```julia
@@ -249,10 +282,18 @@ wp = WorkPrecisionSet(
 
 color = [1 1 1 1 2 2 2 2]
 plot(wp; x=:final, color)
+plot!(ref_wp_dense, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 
+```@raw html
+<details><summary>Interpolation errors (L2):</summary>
+```
 ```julia
 plot(wp; x=:L2, color)
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
+```
+```@raw html
+</details>
 ```
 
 ### Calibration

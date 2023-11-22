@@ -2,7 +2,8 @@
 
 
 !!! note "Summary"
-    TODO
+    - [**The `EK1` is able to solve mass-matrix DAEs.** To achieve low error, use order 4 or higher.](@ref orego_results)
+    - The order-to-error-tolerance heuristic holds: lower tolerance level ``\rightarrow`` higher order.
 
 
 Adapted from
@@ -24,15 +25,19 @@ Plots.theme(
     margin=5Plots.mm,
     xticks=10.0 .^ (-16:1:16),
 )
+
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
 ```
 ```@raw html
 </details>
 ```
 
-
-
-
-### OREGO problem definition
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -66,7 +71,7 @@ plot(ref_sol, title="OREGO Solution", legend=false, xticks=:auto)
 
 
 
-## EK1 accross orders
+## [`EK1` across orders](@id orego_results)
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -77,14 +82,14 @@ SAVE_EVERYSTEP = false;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 2:4
+  for order in 2:6
 ]
 
 labels = first.(_setups)
 setups = last.(_setups)
 
-abstols = 1.0 ./ 10.0 .^ (4:8)
-reltols = 1.0 ./ 10.0 .^ (1:5)
+abstols = 1.0 ./ 10.0 .^ (6:10)
+reltols = 1.0 ./ 10.0 .^ (3:7)
 
 wp = WorkPrecisionSet(
     mmprob, abstols, reltols, setups;
@@ -97,6 +102,24 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+
+
+_ref_setups = [
+    "Rosenbrock23" => Dict(:alg => Rosenbrock23())
+    "Rodas4P" => Dict(:alg => Rodas4P())
+    "RadauIIA" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp = WorkPrecisionSet(
+    mmprob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = ref_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+)
+plot!(ref_wp, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -114,14 +137,6 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 ```julia
 plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
-
-function plot_chisq_interval!(df, q=0.01)
-    dist = Chisq(df)
-    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
-    hline!([low, high], linestyle=:dash, color=:black, label="",
-           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
-    hline!([mid], linestyle=:solid, color=:black, label="")
-end
 plot_chisq_interval!(3)
 ```
 ```@raw html
@@ -182,7 +197,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.0.3
   [e2752cbe] MATLABDiffEq v1.2.0
-  [961ee093] ModelingToolkit v8.73.0
+⌃ [961ee093] ModelingToolkit v8.73.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [1dea7af3] OrdinaryDiffEq v6.59.1
@@ -196,6 +211,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
+Info Packages marked with ⌃ have new versions available and may be upgradable.
 ```
 
 ```@raw html
@@ -246,7 +262,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [a33af91c] CompositionsBase v0.1.2
   [2569d6c7] ConcreteStructs v0.2.3
   [f0e56b4a] ConcurrentUtilities v2.3.0
-  [8f4d0f93] Conda v1.9.1
+⌃ [8f4d0f93] Conda v1.9.1
   [187b0558] ConstructionBase v1.5.4
   [d38c429a] Contour v0.6.2
   [587fd27a] CovarianceEstimation v0.2.9
@@ -345,7 +361,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [739be429] MbedTLS v1.1.8
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.1.0
-  [961ee093] ModelingToolkit v8.73.0
+⌃ [961ee093] ModelingToolkit v8.73.0
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.5.2
   [ffc61752] Mustache v1.0.19
@@ -389,7 +405,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [33c8b6b6] ProgressLogging v0.1.4
   [438e738f] PyCall v1.96.2
   [1fd47b50] QuadGK v2.9.1
-  [8a4e6c94] QuasiMonteCarlo v0.3.2
+⌃ [8a4e6c94] QuasiMonteCarlo v0.3.2
   [6f49c342] RCall v0.13.18
   [74087812] Random123 v1.6.1
   [fb686558] RandomExtensions v0.4.4
@@ -425,7 +441,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [ed01d8cd] Sobol v1.5.0
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-  [47a9eef4] SparseDiffTools v2.11.0
+⌃ [47a9eef4] SparseDiffTools v2.11.0
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -610,7 +626,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`
 ```
 
 ```@raw html

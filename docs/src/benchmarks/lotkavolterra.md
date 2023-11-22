@@ -35,6 +35,14 @@ Plots.theme(
     margin=5Plots.mm,
     xticks=10.0 .^ (-16:1:16),
 )
+
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
 ```
 ```@raw html
 </details>
@@ -95,6 +103,32 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+
+_ref_setups = [
+    "Tsit5" => Dict(:alg => Tsit5())
+    "Vern7" => Dict(:alg => Vern7())
+    "RadauIIA5" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp_final = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = false,
+    save_everystep = false,
+    maxiters = Int(1e7),
+)
+ref_wp_dense = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = true,
+    save_everystep = true,
+    maxiters = Int(1e7),
+)
+
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -135,6 +169,7 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:l2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -155,6 +190,7 @@ plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -197,6 +233,7 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -237,6 +274,7 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:l2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -257,6 +295,7 @@ plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -305,6 +344,7 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, color=[1 1 1 1 2 2 2 2])
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -351,6 +391,7 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -369,15 +410,6 @@ plot(wp, x=:L2, color=[1 1 1 1 2 2 2 2])
 ```
 ```julia
 plot(wp, x=:final, y=:chi2_final, color=[1 1 1 1 2 2 2 2], yguide="Chi-squared (final)")
-
-# Should be distributed according to a Chi-squared distribution:
-function plot_chisq_interval!(df, q=0.01)
-    dist = Chisq(df)
-    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
-    hline!([low, high], linestyle=:dash, color=:black, label="",
-           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
-    hline!([mid], linestyle=:solid, color=:black, label="")
-end
 plot_chisq_interval!(2)
 ```
 ```@raw html

@@ -3,8 +3,10 @@
 
 !!! note "Summary"
     Van der Pol is a low-dimensional, stiff, second-order ODE. We see that:
-    - The `EK1` is very well able to solve stiff problems.
-    - Since Van der Pol is actually a second-order ODE, _do solve it as a second-order ODE_.
+    - [**The `EK1` is very well able to solve stiff problems.**](@ref vdp_main_results)
+    - [**Since Van der Pol is actually a second-order ODE, _do solve it as a second-order ODE_.**](@ref vdp_second_order)
+    - [**Use the `TaylorInit` or `ForwardDiffInit` initialization.**](@ref vdp_initialization)
+      While `SimpleInit` works well for lower orders, it fails for higher orders. And since Taylor-mode initialization is fast and works well, there is no reason not to use it.
 
 
 ```@raw html
@@ -22,15 +24,19 @@ Plots.theme(
     margin=5Plots.mm,
     xticks = 10.0 .^ (-16:1:16)
 )
+
+function plot_chisq_interval!(df, q=0.01)
+    dist = Chisq(df)
+    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
+    hline!([low, high], linestyle=:dash, color=:black, label="",
+           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
+    hline!([mid], linestyle=:solid, color=:black, label="")
+end
 ```
 ```@raw html
 </details>
 ```
 
-
-
-
-### Van der Pol problem definition
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -56,11 +62,8 @@ plot(test_sol, title="Van der Pol Solution", legend=false, ylims=(-5, 5), xticks
 
 
 
-## EK1 across orders
+## [`EK1` across orders](@id vdp_main_results)
 
-### Final value only
-
-This does not require smoothing or saving intermediate values.
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -90,6 +93,32 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
+
+_ref_setups = [
+    "Rosenbrock23" => Dict(:alg => Rosenbrock23())
+    "Rodas4P" => Dict(:alg => Rodas4P())
+    "RadauIIA5" => Dict(:alg => RadauIIA5())
+]
+ref_labels = first.(_ref_setups)
+ref_setups = last.(_ref_setups)
+ref_wp_final = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = false,
+    save_everystep = false,
+    maxiters = Int(1e7),
+)
+ref_wp_dense = WorkPrecisionSet(
+    prob, abstols, reltols, ref_setups;
+    names = ref_labels,
+    appxsol = test_sol,
+    dense = true,
+    save_everystep = true,
+    maxiters = Int(1e7),
+)
+
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -99,9 +128,9 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)))
 
 
 
-### Full trajectory
-
-This does require smoothing or saving intermediate values.
+```@raw html
+<details><summary>Discrete time-series errors (l2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
@@ -131,6 +160,7 @@ wp = WorkPrecisionSet(
 )
 
 plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:l2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -139,13 +169,19 @@ plot(wp, x=:l2, palette=Plots.palette([:blue, :red], length(_setups)))
 ![](figures/vanderpol_4_1.svg)
 
 
+```@raw html
+</details>
+```
 
-Interpolation errors:
+```@raw html
+<details><summary>Interpolation errors (L2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
 ```julia
 plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -154,6 +190,9 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ![](figures/vanderpol_5_1.svg)
 
 
+```@raw html
+</details>
+```
 
 ## Calibration
 ```@raw html
@@ -162,15 +201,6 @@ plot(wp, x=:L2, palette=Plots.palette([:blue, :red], length(_setups)))
 ```julia
 plot(wp, x=:final, y=:chi2_final, yguide="Chi-squared (final)",
      palette=Plots.palette([:blue, :red], length(_setups)))
-
-# Should be distributed according to a Chi-squared distribution:
-function plot_chisq_interval!(df, q=0.01)
-    dist = Chisq(df)
-    low, high, mid = quantile(dist, [q, 1-q])..., mean(dist)
-    hline!([low, high], linestyle=:dash, color=:black, label="",
-           fill_between=[high nothing], fillcolor=:green, fillalpha=0.15)
-    hline!([mid], linestyle=:solid, color=:black, label="")
-end
 plot_chisq_interval!(2)
 ```
 ```@raw html
@@ -181,7 +211,7 @@ plot_chisq_interval!(2)
 
 
 
-## Comparison of the different initialization schemes
+## [Comparison of the different initialization schemes](@id vdp_initialization)
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -277,7 +307,7 @@ plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^
 
 
 
-## Solving the first- vs second-order ODE
+## [Solving the first- vs second-order ODE](@id vdp_second_order)
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -293,13 +323,13 @@ du0 = [0.0]
 prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
 
 test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14)
-plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
+# plot(test_sol2, title="Van der Pol Solution (2nd order)", legend=false, ylims=(-5, 5), xticks=:auto)
+nothing
 ```
 ```@raw html
 </details>
 ```
 
-![](figures/vanderpol_9_1.svg)
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -337,6 +367,7 @@ wp = WorkPrecisionSet(
 
 color = [1 1 1 1 2 2 2 2]
 plot(wp; x=:final, color)
+plot!(ref_wp_dense, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -344,11 +375,17 @@ plot(wp; x=:final, color)
 
 ![](figures/vanderpol_10_1.svg)
 
+
+
+```@raw html
+<details><summary>Interpolation errors (L2):</summary>
+```
 ```@raw html
 <details><summary>Code:</summary>
 ```
 ```julia
 plot(wp; x=:L2, color)
+plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -357,6 +394,9 @@ plot(wp; x=:L2, color)
 ![](figures/vanderpol_11_1.svg)
 
 
+```@raw html
+</details>
+```
 
 ### Calibration
 
@@ -425,7 +465,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.0.3
   [e2752cbe] MATLABDiffEq v1.2.0
-  [961ee093] ModelingToolkit v8.73.0
+⌃ [961ee093] ModelingToolkit v8.73.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.13.3
   [1dea7af3] OrdinaryDiffEq v6.59.1
@@ -439,6 +479,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [c3572dad] Sundials v4.20.1
   [44d3d7a6] Weave v0.10.12
   [0518478a] deSolveDiffEq v0.1.1
+Info Packages marked with ⌃ have new versions available and may be upgradable.
 ```
 
 ```@raw html
@@ -489,7 +530,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [a33af91c] CompositionsBase v0.1.2
   [2569d6c7] ConcreteStructs v0.2.3
   [f0e56b4a] ConcurrentUtilities v2.3.0
-  [8f4d0f93] Conda v1.9.1
+⌃ [8f4d0f93] Conda v1.9.1
   [187b0558] ConstructionBase v1.5.4
   [d38c429a] Contour v0.6.2
   [587fd27a] CovarianceEstimation v0.2.9
@@ -588,7 +629,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [739be429] MbedTLS v1.1.8
   [442fdcdd] Measures v0.3.2
   [e1d29d7a] Missings v1.1.0
-  [961ee093] ModelingToolkit v8.73.0
+⌃ [961ee093] ModelingToolkit v8.73.0
   [46d2c3a1] MuladdMacro v0.2.4
   [102ac46a] MultivariatePolynomials v0.5.2
   [ffc61752] Mustache v1.0.19
@@ -632,7 +673,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [33c8b6b6] ProgressLogging v0.1.4
   [438e738f] PyCall v1.96.2
   [1fd47b50] QuadGK v2.9.1
-  [8a4e6c94] QuasiMonteCarlo v0.3.2
+⌃ [8a4e6c94] QuasiMonteCarlo v0.3.2
   [6f49c342] RCall v0.13.18
   [74087812] Random123 v1.6.1
   [fb686558] RandomExtensions v0.4.4
@@ -668,7 +709,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [ed01d8cd] Sobol v1.5.0
   [b85f4697] SoftGlobalScope v1.1.0
   [a2af1166] SortingAlgorithms v1.2.0
-  [47a9eef4] SparseDiffTools v2.11.0
+⌃ [47a9eef4] SparseDiffTools v2.11.0
   [e56a9233] Sparspak v0.3.9
   [276daf66] SpecialFunctions v2.3.1
   [928aab9d] SpecialMatrices v3.0.0
@@ -853,9 +894,10 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850b90] libblastrampoline_jll v5.8.0+0
   [8e850ede] nghttp2_jll v1.52.0+1
   [3f19e933] p7zip_jll v17.4.0+0
-Info Packages marked with ⌅ have new versions available but compatibility constraints restrict them from upgrading. To see why use `status --outdated -m`
+Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`
 ```
 
 ```@raw html
 </details>
 ```
+
