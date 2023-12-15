@@ -61,13 +61,9 @@ IOUP{T}(
         update_rate_parameter,
     )
 
-function to_1d_sde(p::IOUP)
+function to_sde(p::IOUP{T,D,<:Number}) where {T,D}
     q = p.num_derivatives
     r = p.rate_parameter
-    if !(r isa Number)
-        m = "The rate parameter must be a scalar to convert the IOUP to a 1D SDE."
-        throw(ArgumentError(m))
-    end
 
     F_breve = diagm(1 => ones(q))
     F_breve[end, end] = r
@@ -75,21 +71,15 @@ function to_1d_sde(p::IOUP)
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    return LTISDE(F_breve, L_breve)
+    d = p.wiener_process_dimension
+    F = IsometricKroneckerProduct(d, F_breve)
+    L = IsometricKroneckerProduct(d, L_breve)
+    return LTISDE(F, L)
 end
 function to_sde(p::IOUP)
     d = p.wiener_process_dimension
     q = p.num_derivatives
     r = p.rate_parameter
-
-    if r isa Number
-        d = p.wiener_process_dimension
-        _sde = to_1d_sde(p)
-        F_breve, L_breve = drift(_sde), dispersion(_sde)
-        F = kron(I(d), F_breve)
-        L = kron(I(d), L_breve)
-        return LTISDE(F, L)
-    end
 
     R = if r isa AbstractVector
         @assert length(r) == d
@@ -112,21 +102,38 @@ function to_sde(p::IOUP)
 end
 
 function discretize(p::IOUP, dt::Real)
-    r = p.rate_parameter
-    A, Q = if p.rate_parameter isa Number
-        A_breve, QR_breve = discretize_sqrt(to_1d_sde(p), dt)
-
-        d = p.wiener_process_dimension
-        A = kron(I(d), A_breve)
-        QR = kron(I(d), QR_breve)
-        Q = PSDMatrix(QR)
-        A, Q
-    else
-        @assert r isa AbstractVector || r isa AbstractMatrix
-        A, QR = discretize_sqrt(to_sde(p), dt)
-        Q = PSDMatrix(QR)
-        A, Q
-    end
-
+    A, QR = discretize_sqrt(to_sde(p), dt)
+    Q = PSDMatrix(QR)
     return A, Q
+end
+
+function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Any,<:AbstractMatrix})
+    q = prior.num_derivatives
+    r = prior.rate_parameter
+    F[q+1:q+1:end, q+1:q+1:end] = r
+end
+function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Any,<:AbstractVector})
+    q = prior.num_derivatives
+    r = prior.rate_parameter
+    F[q+1:q+1:end, q+1:q+1:end] = Diagonal(r)
+end
+function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Any,<:Number})
+    d = prior.wiener_process_dimension
+    q = prior.num_derivatives
+    r = prior.rate_parameter
+    F[q+1:q+1:end, q+1:q+1:end] = Diagonal(Fill(r, d))
+end
+
+function make_transition_matrices!(cache, prior::IOUP, dt)
+    @unpack F, L, A, Q, Ah, Qh, P, PI = cache
+
+    update_sde_drift!(F, prior)
+
+    make_preconditioners!(cache, dt)
+
+    FiniteHorizonGramians.exp_and_gram_chol!(
+        Ah, Qh.R, F, L, dt, cache.FHG_method, cache.FHG_cache)
+
+    _matmul!(A, P, _matmul!(A, Ah, PI))
+    fast_X_A_Xt!(Q, Qh, P)
 end

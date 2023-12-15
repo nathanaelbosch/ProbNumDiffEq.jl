@@ -43,9 +43,10 @@ Matern{T}(wiener_process_dimension, num_derivatives, lengthscale) where {T} =
         lengthscale,
     )
 
-function to_1d_sde(p::Matern)
+function to_sde(p::Matern)
     q = p.num_derivatives
     l = p.lengthscale
+    @assert l isa Number
 
     ν = q - 1 / 2
     λ = sqrt(2ν) / l
@@ -56,14 +57,9 @@ function to_1d_sde(p::Matern)
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    return LTISDE(F_breve, L_breve)
-end
-function to_sde(p::Matern)
     d = p.wiener_process_dimension
-    _sde = to_1d_sde(p)
-    F_breve, L_breve = drift(_sde), dispersion(_sde)
-    F = kron(I(d), F_breve)
-    L = kron(I(d), L_breve)
+    F = IsometricKroneckerProduct(d, F_breve)
+    L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)
 end
 function discretize(p::Matern, dt::Real)

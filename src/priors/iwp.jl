@@ -36,12 +36,16 @@ IWP{elType}(wiener_process_dimension, num_derivatives) where {elType} =
 IWP(wiener_process_dimension, num_derivatives) =
     IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
 
-function to_1d_sde(p::IWP)
-    q = p.num_derivatives
+function to_sde(p::IWP)
+    d, q = p.wiener_process_dimension, p.num_derivatives
+
     F_breve = diagm(1 => ones(q))
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
-    return LTISDE(F_breve, L_breve)
+
+    F = IsometricKroneckerProduct(d, F_breve)
+    L = IsometricKroneckerProduct(d, L_breve)
+    return LTISDE(F, L)
 end
 
 """
