@@ -18,3 +18,8 @@ benchmark:
 
 vale:
     git ls-files | xargs vale
+
+test-lower-compat:
+    julia .just/downgrade.jl "Pkg,TOML" "v0"
+    julia --project=. -e "using ProbNumDiffEq"
+    git restore Project.toml
