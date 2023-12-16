@@ -65,18 +65,14 @@ end
 function discretize(p::Matern, dt::Real)
     l = p.lengthscale
     @assert l isa Number
-    A, Q = begin
-        A_breve, Q_breve = discretize(to_1d_sde(p), dt)
-        d = p.wiener_process_dimension
-        # QR_breve = cholesky!(Symmetric(Q_breve)).L'
-        E = eigen(Symmetric(Q_breve))
-        QR_breve = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
+    A, Q = discretize(to_sde(p), dt)
+    @assert Q isa IsometricKroneckerProduct
+    d = Q.ldim
+    Q_breve = Q.B
 
-        A = kron(I(d), A_breve)
-        QR = kron(I(d), QR_breve)
-        Q = PSDMatrix(QR)
-        A, Q
-    end
-
+    E = eigen(Symmetric(Q_breve))
+    QR_breve = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
+    QR = IsometricKroneckerProduct(d, QR_breve)
+    Q = PSDMatrix(QR)
     return A, Q
 end

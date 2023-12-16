@@ -29,6 +29,17 @@ length(sde::LTISDE) = 2
 discretize(sde::LTISDE, dt::Real) =
     matrix_fraction_decomposition(drift(sde), dispersion(sde), dt)
 
+
+function matrix_fraction_decomposition(
+    drift::IsometricKroneckerProduct,
+    dispersion::IsometricKroneckerProduct,
+    dt::Real,
+)
+    d = drift.ldim
+    A_breve, Q_breve = matrix_fraction_decomposition(drift.B, dispersion.B, dt)
+    return IsometricKroneckerProduct(d, A_breve), IsometricKroneckerProduct(d, Q_breve)
+end
+
 function matrix_fraction_decomposition(
     drift::AbstractMatrix,
     dispersion::AbstractVecOrMat,
@@ -42,7 +53,8 @@ function matrix_fraction_decomposition(
     return A, Q
 end
 
-function discretize_sqrt_with_quadraturetrick(sde::LTISDE, dt::Real)
+# Previous implementation, outdated thanks to FiniteHorizonGramians.jl:
+function _discretize_sqrt_with_quadraturetrick(sde::LTISDE, dt::Real)
     F, L = drift(sde), dispersion(sde)
 
     D = size(F, 1)

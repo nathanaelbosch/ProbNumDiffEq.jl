@@ -9,16 +9,11 @@ h = 0.1
 
 @testset "General prior API" begin
     for prior in (IWP(2, 3), IOUP(2, 3, 1), Matern(2, 3, 1))
-        @test_nowarn PNDE.to_1d_sde(prior)
         sde = PNDE.to_sde(prior)
         A1, Q1 = PNDE.discretize(sde, h)
         A2, Q2 = PNDE.discretize(prior, h)
         @test A1 ≈ A2
         @test Q1 ≈ Matrix(Q2)
-    end
-
-    for prior in (IOUP(2, 3, ones(2)), IOUP(2, 3, I(2)))
-        @test_throws ArgumentError PNDE.to_1d_sde(prior)
     end
 end
 

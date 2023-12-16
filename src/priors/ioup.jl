@@ -102,9 +102,19 @@ function to_sde(p::IOUP)
 end
 
 function discretize(p::IOUP, dt::Real)
-    A, QR = discretize_sqrt(to_sde(p), dt)
-    Q = PSDMatrix(QR)
-    return A, Q
+    F, L = to_sde(p)
+    if F isa IsometricKroneckerProduct
+        method = FiniteHorizonGramians.ExpAndGram{eltype(F.B),13}()
+        A_breve, QR_breve = FiniteHorizonGramians.exp_and_gram_chol(F.B, L.B, dt, method)
+        A = IsometricKroneckerProduct(F.ldim, A_breve)
+        Q = PSDMatrix(IsometricKroneckerProduct(F.ldim, QR_breve))
+        return A, Q
+    else
+        method = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
+        A, QR = FiniteHorizonGramians.exp_and_gram_chol(F, L, dt, method)
+        Q = PSDMatrix(QR)
+        return A, Q
+    end
 end
 
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Any,<:AbstractMatrix})
