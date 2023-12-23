@@ -238,3 +238,13 @@ for TC in [:AbstractVector, :AbstractMatrix]
         beta::Number,
     ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C', B', A', alpha, beta)'
 end
+
+function Kronecker.ldiv_vec_trick!(x::AbstractVector, A::IKP, v::AbstractVector)
+    N = A.B
+    c, d = size(N)
+
+    V = reshape_no_alloc(v, (c, length(v) ÷ c))
+    X = reshape_no_alloc(x, (d, length(x) ÷ d))
+    copyto!(X, N \ V)
+    return x
+end
