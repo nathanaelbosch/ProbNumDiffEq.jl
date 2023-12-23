@@ -112,8 +112,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
-    # cache.log_likelihood = logpdf(cache.measurement, zeros(d))
-    # integ.sol.log_likelihood += integ.cache.log_likelihood
+    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
+    integ.sol.log_likelihood += cache.log_likelihood
 
     # Update state and save the ODE solution value
     x_filt = update!(cache, x_pred)

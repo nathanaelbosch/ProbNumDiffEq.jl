@@ -98,6 +98,6 @@ end
 include("callbacks.jl")
 export ManifoldUpdate
 
-include("precompile.jl")
+# include("precompile.jl")
 
 end

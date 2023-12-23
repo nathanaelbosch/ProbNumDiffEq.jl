@@ -33,3 +33,11 @@ end
 
 const SRGaussianList{T,S} = StructArray{SRGaussian{T,S}}
 mean(s::SRGaussianList) = s.μ
+
+# redefine logpdf as the one from GaussianDistributions does not work with PSDMatrix
+function logpdf(G::SRGaussian, x)
+    μ, Σ = G
+    d = length(μ)
+    z = Σ.R' \ (x - μ)
+    return -0.5 * z'z - 0.5 * d * log(2π) - 0.5 * logdet(Σ)
+end
