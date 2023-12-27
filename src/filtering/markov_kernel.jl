@@ -44,9 +44,6 @@ isapprox(K1::AffineNormalKernel, K2::AffineNormalKernel; kwargs...) =
 ==(K1::AffineNormalKernel, K2::AffineNormalKernel) =
     K1.A == K2.A && K1.b == K2.b && K1.C == K2.C
 
-# Little bit of type piracy here:
-isapprox(M1::PSDMatrix, M2::PSDMatrix; kwargs...) = isapprox(M1.R, M2.R; kwargs...)
-
 """
     marginalize!(
         xout::Gaussian{Vector{T},PSDMatrix{T,S}}
