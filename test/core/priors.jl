@@ -22,11 +22,10 @@ h = 0.1
         @test A1 ≈ A3
         @test Matrix(Q1) ≈ Q3
 
-        if !(sde.F isa PNDE.IsometricKroneckerProduct)
-            A4, Q4R = PNDE._discretize_sqrt_with_quadraturetrick(sde, h)
-            @test A1 ≈ A4
-            @test Q1.R ≈ Q4R
-        end
+        A4, Q4R = PNDE._discretize_sqrt_with_quadraturetrick(
+            PNDE.LTISDE(Matrix(sde.F), Matrix(sde.L)), h)
+        @test A1 ≈ A4
+        @test Q1.R ≈ Q4R
     end
 end
 
