@@ -59,7 +59,7 @@ function _discretize_sqrt_with_quadraturetrick(sde::LTISDE, dt::Real)
 
     D = size(F, 1)
     d = size(L, 2)
-    N = Int(D / d)
+    N = D # more robust than Int(D / d)
     R = similar(F, N * d, D)
     method = ExpMethodHigham2005()
     expcache = ExponentialUtilities.alloc_mem(F, method)
