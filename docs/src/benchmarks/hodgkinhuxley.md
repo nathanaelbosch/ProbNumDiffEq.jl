@@ -296,7 +296,6 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
     numruns = 5,
-    tstops = current_tspan,
 )
 
 plot(wp, title="Fixed steps - no smoothing", color=colors)
@@ -341,7 +340,6 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
     numruns = 5,
-    tstops = current_tspan,
 )
 
 plot(wp, title="Fixed steps - with smoothing", color=colors)
