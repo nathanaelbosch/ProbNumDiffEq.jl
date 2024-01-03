@@ -25,8 +25,20 @@ iterate(sde::LTISDE) = sde.F, true
 iterate(sde::LTISDE, s) = s ? (sde.L, false) : nothing
 length(sde::LTISDE) = 2
 
-discretize(sde::LTISDE, dt::Real) =
-    matrix_fraction_decomposition(drift(sde), dispersion(sde), dt)
+discretize(sde::LTISDE, dt::Real) = discretize(drift(sde), dispersion(sde), dt)
+discretize(F::AbstractMatrix, L::AbstractMatrix, dt::Real) = begin
+    method = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
+    A, QR = FiniteHorizonGramians.exp_and_gram_chol(F, L, dt, method)
+    Q = PSDMatrix(QR)
+    return A, Q
+end
+discretize(F::IsometricKroneckerProduct, L::IsometricKroneckerProduct, dt::Real) = begin
+    method = FiniteHorizonGramians.ExpAndGram{eltype(F.B),13}()
+    A_breve, QR_breve = FiniteHorizonGramians.exp_and_gram_chol(F.B, L.B, dt, method)
+    A = IsometricKroneckerProduct(F.ldim, A_breve)
+    Q = PSDMatrix(IsometricKroneckerProduct(F.ldim, QR_breve))
+    return A, Q
+end
 
 function matrix_fraction_decomposition(
     drift::IsometricKroneckerProduct,

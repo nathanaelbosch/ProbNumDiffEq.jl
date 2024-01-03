@@ -9,7 +9,7 @@ function init_preconditioner(C::DenseCovariance{elType}) where {elType}
     return P, PI
 end
 
-function make_preconditioners!(cache::AbstractODEFilterCache, dt)
+function make_preconditioners!(cache, dt)
     @unpack P, PI, d, q = cache
     return make_preconditioners!(P, PI, d, q, dt)
 end

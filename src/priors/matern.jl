@@ -66,13 +66,5 @@ function discretize(p::Matern, dt::Real)
     l = p.lengthscale
     @assert l isa Number
     A, Q = discretize(to_sde(p), dt)
-    @assert Q isa IsometricKroneckerProduct
-    d = Q.ldim
-    Q_breve = Q.B
-
-    E = eigen(Symmetric(Q_breve))
-    QR_breve = Diagonal(sqrt.(max.(E.values, 0))) * E.vectors'
-    QR = IsometricKroneckerProduct(d, QR_breve)
-    Q = PSDMatrix(QR)
     return A, Q
 end
