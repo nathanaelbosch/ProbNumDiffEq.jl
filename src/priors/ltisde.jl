@@ -25,10 +25,8 @@ iterate(sde::LTISDE) = sde.F, true
 iterate(sde::LTISDE, s) = s ? (sde.L, false) : nothing
 length(sde::LTISDE) = 2
 
-
 discretize(sde::LTISDE, dt::Real) =
     matrix_fraction_decomposition(drift(sde), dispersion(sde), dt)
-
 
 function matrix_fraction_decomposition(
     drift::IsometricKroneckerProduct,
