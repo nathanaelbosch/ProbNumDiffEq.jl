@@ -44,7 +44,8 @@ Plots.theme(
 αh(V, VT) = 0.128 * exp(-(V - VT - 17) / 18)
 βh(V, VT) = 4 / (1 + exp(-(V - VT - 40) / 5))
 
-Inj(t) = (5 <= t <= 40) ? 500one(t) : zero(t)
+const current_tspan = (5, 40)
+Inj(t) = (current_tspan[1] <= t <= current_tspan[2]) ? 500one(t) : zero(t)
 
 function f(du, u, p, t)
     @unpack gNa, gK, ENa, EK, area, C, Eleak, VT, gleak = p
@@ -114,7 +115,7 @@ _setups = [
 
 labels = first.(_setups)
 setups = last.(_setups)
-colors = [1 1 2 2 2 3 3]
+colors = [1 1 2 2 3 3]
 
 abstols = 1.0 ./ 10.0 .^ (6:10)
 reltols = 1.0 ./ 10.0 .^ (3:7)
@@ -127,6 +128,7 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
     numruns = 5,
+    tstops = current_tspan,
 )
 
 plot(wp, title="Adaptive steps - no smoothing", color=colors)
@@ -146,6 +148,7 @@ ref_wp_final = WorkPrecisionSet(
     dense = false,
     save_everystep = false,
     maxiters = Int(1e7),
+    tstops = current_tspan,
 )
 ref_wp_dense = WorkPrecisionSet(
     prob, abstols ./ 1000, reltols ./ 1000, ref_setups;
@@ -154,6 +157,7 @@ ref_wp_dense = WorkPrecisionSet(
     dense = true,
     save_everystep = true,
     maxiters = Int(1e7),
+    tstops = current_tspan,
 )
 
 plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
@@ -185,7 +189,7 @@ _setups = [
 
 labels = first.(_setups)
 setups = last.(_setups)
-colors = [1 1 2 2 2 3 3]
+colors = [1 1 2 2 3 3]
 
 abstols = 1.0 ./ 10.0 .^ (6:10)
 reltols = 1.0 ./ 10.0 .^ (3:7)
@@ -198,6 +202,7 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
     numruns = 5,
+    tstops = current_tspan,
 )
 
 plot(wp, title="Adaptive steps - with smoothing", color=colors)
@@ -291,6 +296,7 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
     numruns = 5,
+    tstops = current_tspan,
 )
 
 plot(wp, title="Fixed steps - no smoothing", color=colors)
@@ -335,6 +341,7 @@ wp = WorkPrecisionSet(
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
     numruns = 5,
+    tstops = current_tspan,
 )
 
 plot(wp, title="Fixed steps - with smoothing", color=colors)
