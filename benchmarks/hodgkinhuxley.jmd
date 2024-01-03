@@ -88,9 +88,8 @@ _setups = [
   "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
   "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
-  "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, smooth=DENSE))
   "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
-  "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
 ]
 
 labels = first.(_setups)
@@ -150,9 +149,8 @@ _setups = [
   "EK0(3)" => Dict(:alg=>EK0(order=3, smooth=DENSE))
   "EK1(2)" => Dict(:alg=>EK1(order=2, smooth=DENSE))
   "EK1(3)" => Dict(:alg=>EK1(order=3, smooth=DENSE))
-  "EK1(5)" => Dict(:alg=>EK1(order=5, smooth=DENSE))
+  "RosenbrockExpEK1(2)" => Dict(:alg=>RosenbrockExpEK(order=2, smooth=DENSE))
   "RosenbrockExpEK1(3)" => Dict(:alg=>RosenbrockExpEK(order=3, smooth=DENSE))
-  "RosenbrockExpEK1(5)" => Dict(:alg=>RosenbrockExpEK(order=5, smooth=DENSE))
 ]
 
 labels = first.(_setups)
