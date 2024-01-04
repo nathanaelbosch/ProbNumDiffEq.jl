@@ -71,6 +71,7 @@ function update!(
     K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
+    C_d::AbstractVector,
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
@@ -98,7 +99,11 @@ function update!(
         _matmul!(K2_cache, P_p, H')
     end
 
-    rdiv!(K, length(_S) == 1 ? _S[1] : cholesky!(_S))
+    S_chol = length(_S) == 1 ? _S[1] : cholesky!(_S)
+    rdiv!(K, S_chol)
+
+    loglikelihood = zero(eltype(K))
+    loglikelihood = pn_logpdf!(measurement, S_chol, C_d)
 
     # x_out.μ .= m_p .+ K * (0 .- z)
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
@@ -111,7 +116,16 @@ function update!(
 
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
-    return x_out
+    return x_out, loglikelihood
+end
+function pn_logpdf!(measurement, S_chol, tmpmean)
+    μ = measurement.μ
+    Σ = S_chol
+
+    d = length(μ)
+    z = ldiv!(Σ, copy!(tmpmean, μ))
+
+    return -0.5 * μ'z - 0.5 * d * log(2π) - 0.5 * logdet(Σ)
 end
 
 # Kronecker version
@@ -124,6 +138,7 @@ function update!(
     K2_cache::IsometricKroneckerProduct,
     M_cache::IsometricKroneckerProduct,
     C_dxd::IsometricKroneckerProduct,
+    C_d::AbstractVector,
 ) where {T}
     D = length(x_out.μ)  # full_state_dim
     d = H.ldim           # ode_dimension_dim
@@ -138,6 +153,6 @@ function update!(
     _M_cache = M_cache.B
     _C_dxd = C_dxd.B
 
-    update!(_x_out, _x_pred, _measurement, _H, _K1_cache, _K2_cache, _M_cache, _C_dxd)
-    return x_out
+    _, loglikelihood = update!(_x_out, _x_pred, _measurement, _H, _K1_cache, _K2_cache, _M_cache, _C_dxd, C_d)
+    return x_out, loglikelihood
 end

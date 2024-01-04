@@ -5,7 +5,7 @@ mutable struct EKCache{
     RType,CFacType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,
     AType,QType,
     FType,LType,FHGMethodType,FHGCacheType,
-    HType,matType,bkType,diffusionType,diffModelType,measModType,measType,
+    HType,vecType,matType,bkType,diffusionType,diffModelType,measModType,measType,
     puType,llType,dtType,rateType,UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
@@ -53,6 +53,7 @@ mutable struct EKCache{
     K1::matType
     G1::matType
     Smat::HType
+    C_d::vecType
     C_dxd::matType
     C_dxD::matType
     C_Dxd::matType
@@ -187,6 +188,7 @@ function OrdinaryDiffEq.alg_cache(
     G = factorized_similar(FAC, D, D)
     Smat = factorized_similar(FAC, d, d)
 
+    C_d = similar(Array{uElType}, d)
     C_dxd = factorized_similar(FAC, d, d)
     C_dxD = factorized_similar(FAC, d, D)
     C_Dxd = factorized_similar(FAC, D, d)
@@ -227,7 +229,7 @@ function OrdinaryDiffEq.alg_cache(
         typeof(R),typeof(FAC),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),
         typeof(F),typeof(L),typeof(FHG_method),typeof(FHG_cache),
-        typeof(H),matType,
+        typeof(H),typeof(C_d),matType,
         typeof(backward_kernel),typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
@@ -239,7 +241,7 @@ function OrdinaryDiffEq.alg_cache(
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
         H, du, ddu, K, G, Smat,
-        C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,
+        C_d, C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,
         backward_kernel,
         initdiff, initdiff * NaN, initdiff * NaN,
         err_tmp, ll, dt, du1, uf, jac_config,

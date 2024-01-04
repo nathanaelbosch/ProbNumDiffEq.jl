@@ -112,13 +112,14 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
-    cache.log_likelihood = logpdf(cache.measurement, zeros(d))
-    integ.sol.log_likelihood += cache.log_likelihood
 
     # Update state and save the ODE solution value
-    x_filt = update!(cache, x_pred)
+    x_filt, loglikelihood = update!(cache, x_pred)
     write_into_solution!(
         integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
+
+    cache.log_likelihood = loglikelihood
+    integ.sol.log_likelihood += cache.log_likelihood
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
@@ -163,10 +164,10 @@ compute_measurement_covariance!(cache) =
 
 function update!(cache, prediction)
     @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = cache
-    @unpack C_dxd, C_Dxd = cache
+    @unpack C_dxd, C_Dxd, C_d = cache
     K2 = C_Dxd
 
-    return update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, C_dxd)
+    return update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, C_dxd, C_d)
 end
 
 """
