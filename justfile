@@ -2,7 +2,7 @@ default:
     just --list
 
 format:
-    julia -e 'using JuliaFormatter; format(".")'
+    julia --project=@JuliaFormatter -e 'using JuliaFormatter; format(".")'
 
 docs:
     julia --project=docs docs/make.jl
