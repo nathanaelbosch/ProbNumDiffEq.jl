@@ -157,6 +157,16 @@ function update!(
     _M_cache = M_cache.B
     _C_dxd = C_dxd.B
 
-    _, loglikelihood = update!(_x_out, _x_pred, _measurement, _H, _K1_cache, _K2_cache, _M_cache, _C_dxd, C_d)
+    _, loglikelihood = update!(
+        _x_out,
+        _x_pred,
+        _measurement,
+        _H,
+        _K1_cache,
+        _K2_cache,
+        _M_cache,
+        _C_dxd,
+        C_d,
+    )
     return x_out, loglikelihood
 end
