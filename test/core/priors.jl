@@ -3,22 +3,29 @@ using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
 using Test
 using LinearAlgebra
+using FiniteHorizonGramians
 
 h = 0.1
 σ = 0.1
 
 @testset "General prior API" begin
     for prior in (IWP(2, 3), IOUP(2, 3, 1), Matern(2, 3, 1))
-        @test_nowarn PNDE.to_1d_sde(prior)
         sde = PNDE.to_sde(prior)
         A1, Q1 = PNDE.discretize(sde, h)
         A2, Q2 = PNDE.discretize(prior, h)
         @test A1 ≈ A2
-        @test Q1 ≈ Matrix(Q2)
-    end
+        @test Q1 ≈ Q2
+        @test Matrix(Q1) ≈ Matrix(Q2)
 
-    for prior in (IOUP(2, 3, ones(2)), IOUP(2, 3, I(2)))
-        @test_throws ArgumentError PNDE.to_1d_sde(prior)
+        A3, Q3 = PNDE.matrix_fraction_decomposition(
+            PNDE.drift(sde), PNDE.dispersion(sde), h)
+        @test A1 ≈ A3
+        @test Matrix(Q1) ≈ Q3
+
+        A4, Q4R = PNDE._discretize_sqrt_with_quadraturetrick(
+            PNDE.LTISDE(Matrix(sde.F), Matrix(sde.L)), h)
+        @test A1 ≈ A4
+        @test Q1.R ≈ Q4R
     end
 end
 
@@ -108,26 +115,61 @@ end
     end
 
     @testset "Test `make_transition_matrices!`" begin
-        struct DummyCache <: PNDE.AbstractODEFilterCache
-            d::Any
-            q::Any
-            A::Any
-            Q::Any
-            P::Any
-            PI::Any
-            Ah::Any
-            Qh::Any
-        end
-
         A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
             PNDE.DenseCovariance{Float64}(d, q), prior, h)
+
         @test AH_22_PRE ≈ A
         @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, σ^2))
 
-        cache = DummyCache(d, q, A, Q, P, PI, Ah, Qh)
+        cache = (
+            d=d,
+            q=q,
+            A=A,
+            Q=Q,
+            P=P,
+            PI=PI,
+            Ah=Ah,
+            Qh=Qh,
+        )
+
         make_transition_matrices!(cache, prior, h)
-        @test AH_22_IBM ≈ Ah
+        @test AH_22_IBM ≈ cache.Ah
         @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, σ^2))
+    end
+end
+
+function test_make_transition_matrices(prior, Atrue, Qtrue)
+    d, q = prior.wiener_process_dimension, prior.num_derivatives
+    @testset "Test `make_transition_matrices!`" begin
+        A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
+            PNDE.DenseCovariance{Float64}(d, q), prior, h)
+        F, L = PNDE.to_sde(prior)
+        FHG_method = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
+        FHG_cache = FiniteHorizonGramians.alloc_mem(F, L, FHG_method)
+
+        cache = (
+            d=d,
+            q=q,
+            A=A,
+            Q=Q,
+            P=P,
+            PI=PI,
+            Ah=Ah,
+            Qh=Qh,
+            F=F,
+            L=L,
+            FHG_method=FHG_method,
+            FHG_cache=FHG_cache,
+            prior=prior,
+        )
+
+        make_transition_matrices!(cache, prior, h)
+
+        @test Atrue ≈ cache.Ah
+        @test Qtrue ≈ cache.Qh
+
+        @test Atrue ≈ cache.PI * cache.A * cache.P
+        @test Qtrue ≈ X_A_Xt(cache.Q, cache.PI)
     end
 end
 
@@ -156,6 +198,14 @@ end
     ]
     @test sde.F ≈ F
     @test sde.L ≈ L
+
+    A1, Q1 = PNDE.discretize(prior, h)
+    A2, Q2 = PNDE.discretize(sde, h)
+    @test A1 ≈ A2
+    @test Q1 ≈ Q2
+    @test Matrix(Q1) ≈ Matrix(Q2)
+
+    test_make_transition_matrices(prior, A1, Q1)
 end
 
 @testset "Test Matern (d=2,q=2)" begin
@@ -187,4 +237,12 @@ end
     ]
     @test sde.F ≈ F
     @test sde.L ≈ L
+
+    A1, Q1 = PNDE.discretize(prior, h)
+    A2, Q2 = PNDE.discretize(sde, h)
+    @test A1 ≈ A2
+    @test Q1 ≈ Q2
+    @test Matrix(Q1) ≈ Matrix(Q2)
+
+    test_make_transition_matrices(prior, A1, Q1)
 end

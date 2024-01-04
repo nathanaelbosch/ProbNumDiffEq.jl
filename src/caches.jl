@@ -3,7 +3,9 @@
 ########################################################################################
 mutable struct EKCache{
     RType,CFacType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,
-    AType,QType,HType,matType,bkType,diffusionType,diffModelType,measModType,measType,
+    AType,QType,
+    FType,LType,FHGMethodType,FHGCacheType,
+    HType,matType,bkType,diffusionType,diffModelType,measModType,measType,
     puType,llType,dtType,rateType,UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
@@ -15,6 +17,10 @@ mutable struct EKCache{
     Q::QType
     Ah::AType
     Qh::QType
+    F::FType # Prior SDE drift
+    L::LType # Prior SDE dispersion
+    FHG_method::FHGMethodType
+    FHG_cache::FHGCacheType
     diffusionmodel::diffModelType
     measurement_model::measModType
     R::RType
@@ -125,6 +131,12 @@ function OrdinaryDiffEq.alg_cache(
         error("Invalid prior $(alg.prior)")
     end
     A, Q, Ah, Qh, P, PI = initialize_transition_matrices(FAC, prior, dt)
+    F, L = to_sde(prior)
+    F, L = to_factorized_matrix(FAC, F), to_factorized_matrix(FAC, L)
+    FHG_method =
+        !(prior isa IWP) ? FiniteHorizonGramians.ExpAndGram{eltype(F),13}() : nothing
+    FHG_cache =
+        !(prior isa IWP) ? FiniteHorizonGramians.alloc_mem(F, L, FHG_method) : nothing
 
     # Measurement Model
     measurement_model = make_measurement_model(f)
@@ -213,12 +225,15 @@ function OrdinaryDiffEq.alg_cache(
     ll = zero(uEltypeNoUnits)
     return EKCache{
         typeof(R),typeof(FAC),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
-        uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),typeof(H),matType,
+        uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),
+        typeof(F),typeof(L),typeof(FHG_method),typeof(FHG_cache),
+        typeof(H),matType,
         typeof(backward_kernel),typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
-        d, q, FAC, prior, A, Q, Ah, Qh, diffmodel, measurement_model, R, Proj, SolProj,
+        d, q, FAC, prior, A, Q, Ah, Qh, F, L, FHG_method, FHG_cache, diffmodel,
+        measurement_model, R, Proj, SolProj,
         P, PI, E0, E1, E2,
         u, u_pred, u_filt, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,

@@ -21,8 +21,34 @@ end
 drift(sde::LTISDE) = sde.F
 dispersion(sde::LTISDE) = sde.L
 
-discretize(sde::LTISDE, dt::Real) =
-    matrix_fraction_decomposition(drift(sde), dispersion(sde), dt)
+iterate(sde::LTISDE) = sde.F, true
+iterate(sde::LTISDE, s) = s ? (sde.L, false) : nothing
+length(sde::LTISDE) = 2
+
+discretize(sde::LTISDE, dt::Real) = discretize(drift(sde), dispersion(sde), dt)
+discretize(F::AbstractMatrix, L::AbstractMatrix, dt::Real) = begin
+    method = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
+    A, QR = FiniteHorizonGramians.exp_and_gram_chol(F, L, dt, method)
+    Q = PSDMatrix(QR)
+    return A, Q
+end
+discretize(F::IsometricKroneckerProduct, L::IsometricKroneckerProduct, dt::Real) = begin
+    method = FiniteHorizonGramians.ExpAndGram{eltype(F.B),13}()
+    A_breve, QR_breve = FiniteHorizonGramians.exp_and_gram_chol(F.B, L.B, dt, method)
+    A = IsometricKroneckerProduct(F.ldim, A_breve)
+    Q = PSDMatrix(IsometricKroneckerProduct(F.ldim, QR_breve))
+    return A, Q
+end
+
+function matrix_fraction_decomposition(
+    drift::IsometricKroneckerProduct,
+    dispersion::IsometricKroneckerProduct,
+    dt::Real,
+)
+    d = drift.ldim
+    A_breve, Q_breve = matrix_fraction_decomposition(drift.B, dispersion.B, dt)
+    return IsometricKroneckerProduct(d, A_breve), IsometricKroneckerProduct(d, Q_breve)
+end
 
 function matrix_fraction_decomposition(
     drift::AbstractMatrix,
@@ -37,12 +63,13 @@ function matrix_fraction_decomposition(
     return A, Q
 end
 
-function discretize_sqrt(sde::LTISDE, dt::Real)
+# Previous implementation, outdated thanks to FiniteHorizonGramians.jl:
+function _discretize_sqrt_with_quadraturetrick(sde::LTISDE, dt::Real)
     F, L = drift(sde), dispersion(sde)
 
     D = size(F, 1)
     d = size(L, 2)
-    N = Int(D / d)
+    N = D # more robust than Int(D / d)
     R = similar(F, N * d, D)
     method = ExpMethodHigham2005()
     expcache = ExponentialUtilities.alloc_mem(F, method)

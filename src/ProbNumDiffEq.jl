@@ -2,7 +2,7 @@ __precompile__()
 
 module ProbNumDiffEq
 
-import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==
+import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length
 
 using LinearAlgebra
 import LinearAlgebra: mul!
@@ -28,6 +28,8 @@ using Octavian
 using FastGaussQuadrature
 import Kronecker
 using ArrayAllocators
+using FiniteHorizonGramians
+using FillArrays
 
 @reexport using GaussianDistributions
 using GaussianDistributions: logpdf
