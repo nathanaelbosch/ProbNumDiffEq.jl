@@ -32,7 +32,7 @@ using FiniteHorizonGramians
 using FillArrays
 
 @reexport using GaussianDistributions
-using GaussianDistributions: logpdf
+import GaussianDistributions: logpdf
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!, unfactorize
