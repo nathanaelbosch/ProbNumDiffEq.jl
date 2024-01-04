@@ -71,7 +71,7 @@ function update!(
     K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
-    C_d::AbstractVector,
+    C_d::AbstractArray,
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
@@ -119,7 +119,7 @@ function update!(
     return x_out, loglikelihood
 end
 function pn_logpdf!(measurement, S_chol, tmpmean)
-    μ = measurement.μ
+    μ = reshape(measurement.μ, :)
     Σ = S_chol
 
     d = length(μ)
