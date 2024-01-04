@@ -435,7 +435,7 @@ Pkg.status(mode=Pkg.PKGMODE_MANIFEST)
 ```
 Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [47edcb42] ADTypes v0.2.6
-  [c3fe647b] AbstractAlgebra v0.34.7
+⌅ [c3fe647b] AbstractAlgebra v0.34.7
   [621f4979] AbstractFFTs v1.5.0
   [1520ce14] AbstractTrees v0.4.4
   [7d9f7c33] Accessors v0.1.33
@@ -561,7 +561,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [7ed4a6bd] LinearSolve v2.22.0
   [2ab3a3ac] LogExpFunctions v0.3.26
   [e6f89c97] LoggingExtras v1.0.3
-  [bdcacae8] LoopVectorization v0.12.166
+  [bdcacae8] LoopVectorization v0.12.168
   [10e44e05] MATLAB v0.8.4
   [e2752cbe] MATLABDiffEq v1.2.0
   [d8e11817] MLStyle v0.4.17
@@ -607,7 +607,7 @@ Status `~/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
 ⌅ [f27b6e38] Polynomials v3.2.13
   [2dfb63ee] PooledArrays v1.4.3
   [85a6dd25] PositiveFactorizations v0.2.4
-  [d236fae5] PreallocationTools v0.4.16
+  [d236fae5] PreallocationTools v0.4.17
   [aea7be01] PrecompileTools v1.2.0
   [21216c6a] Preferences v1.4.1
   [08abe8d2] PrettyTables v2.3.1
