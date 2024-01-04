@@ -80,7 +80,11 @@ function update!(
     # But, it is necessary to make the classic solver init stable
     if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
         copy!(x_out, x_pred)
-        return x_out
+        if iszero(z)
+            return x_out, convert(eltype(z), Inf)
+        else
+            return x_out, convert(eltype(z), -Inf)
+        end
     end
 
     D = size(m_p, 1)
