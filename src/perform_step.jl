@@ -165,8 +165,8 @@ function update!(cache, prediction)
     @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = cache
     @unpack C_dxd, C_Dxd = cache
     K2 = C_Dxd
-    update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, C_dxd)
-    return x_filt
+
+    return update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, C_dxd)
 end
 
 """

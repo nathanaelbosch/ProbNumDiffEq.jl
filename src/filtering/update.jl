@@ -138,6 +138,6 @@ function update!(
     _M_cache = M_cache.B
     _C_dxd = C_dxd.B
 
-    return update!(
-        _x_out, _x_pred, _measurement, _H, _K1_cache, _K2_cache, _M_cache, _C_dxd)
+    update!(_x_out, _x_pred, _measurement, _H, _K1_cache, _K2_cache, _M_cache, _C_dxd)
+    return x_out
 end
