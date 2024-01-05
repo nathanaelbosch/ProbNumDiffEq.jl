@@ -124,6 +124,7 @@ end
     measurement = Gaussian(z, S)
 
     C_dxd = zeros(o, o)
+    C_d = zeros(o)
     C_Dxd = zeros(d, o)
     C_DxD = zeros(d, d)
     C_2DxD = zeros(2d, d)
@@ -184,6 +185,7 @@ end
                 S = measurement.Σ
                 msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
                 O_cache = C_dxd
+                z_cache = C_d
                 x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
                 x_out = copy(x_pred)
                 ProbNumDiffEq.update!(
@@ -195,6 +197,7 @@ end
                     K2_cache,
                     M_cache,
                     O_cache,
+                    z_cache,
                 )
                 @test m ≈ x_out.μ
                 @test P ≈ Matrix(x_out.Σ)
@@ -206,6 +209,7 @@ end
                 S = measurement.Σ
                 msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
                 O_cache = C_dxd
+                z_cache = C_d
                 x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(P_p_R)))
                 x_out = copy(x_pred)
                 ProbNumDiffEq.update!(
@@ -217,6 +221,7 @@ end
                     K2_cache,
                     M_cache,
                     O_cache,
+                    z_cache,
                 )
                 @test x_out == x_pred
             end

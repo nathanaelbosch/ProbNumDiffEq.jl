@@ -121,7 +121,7 @@ function init_condition_on!(
     data::AbstractVector,
     cache,
 )
-    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, m_tmp = cache
+    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, m_tmp, C_d = cache
 
     # measurement mean
     _matmul!(m_tmp.μ, H, x.μ)
@@ -130,5 +130,5 @@ function init_condition_on!(
     # measurement cov
     fast_X_A_Xt!(m_tmp.Σ, x.Σ, H)
     copy!(x_tmp, x)
-    update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd)
+    update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
 end
