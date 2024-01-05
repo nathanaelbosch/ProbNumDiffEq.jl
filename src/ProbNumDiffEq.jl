@@ -32,7 +32,6 @@ using FiniteHorizonGramians
 using FillArrays
 
 @reexport using GaussianDistributions
-import GaussianDistributions: logpdf
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!, unfactorize
@@ -98,6 +97,6 @@ end
 include("callbacks.jl")
 export ManifoldUpdate
 
-# include("precompile.jl")
+include("precompile.jl")
 
 end
