@@ -129,7 +129,7 @@ const GROUP = get(ENV, "GROUP", "All")
             )
         end
         @timedtestset "Code linting (JET.jl)" begin
-            @test JET.test_package(
+            JET.test_package(
                 ProbNumDiffEq;
                 target_defined_modules=true,
             )
