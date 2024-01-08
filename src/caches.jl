@@ -134,10 +134,13 @@ function OrdinaryDiffEq.alg_cache(
     A, Q, Ah, Qh, P, PI = initialize_transition_matrices(FAC, prior, dt)
     F, L = to_sde(prior)
     F, L = to_factorized_matrix(FAC, F), to_factorized_matrix(FAC, L)
-    FHG_method =
-        !(prior isa IWP) ? FiniteHorizonGramians.ExpAndGram{eltype(F),13}() : nothing
-    FHG_cache =
-        !(prior isa IWP) ? FiniteHorizonGramians.alloc_mem(F, L, FHG_method) : nothing
+    FHG_method, FHG_cache = if !(prior isa IWP)
+        m = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
+        c = FiniteHorizonGramians.alloc_mem(F, L, m)
+        m, c
+    else
+        nothing, nothing
+    end
 
     # Measurement Model
     measurement_model = make_measurement_model(f)
