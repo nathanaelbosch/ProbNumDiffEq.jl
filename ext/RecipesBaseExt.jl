@@ -6,7 +6,6 @@ using Statistics
 import ProbNumDiffEq: AbstractProbODESolution
 import SciMLBase: interpret_vars, getsyms
 
-
 @recipe function f(
     sol::AbstractProbODESolution;
     idxs=nothing,
