@@ -54,7 +54,7 @@ function initialize_transition_matrices(
     p::AbstractODEFilterPrior,
     dt,
 )
-    error("The chosen prior can not be implemented with a $fac factorization")
+    error("The chosen prior can not be implemented with a $FAC factorization")
 end
 
 """

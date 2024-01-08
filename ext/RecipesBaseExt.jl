@@ -1,6 +1,11 @@
-########################################################################################
-# Plotting
-########################################################################################
+module RecipesBaseExt
+
+using RecipesBase
+using ProbNumDiffEq
+using Statistics
+import ProbNumDiffEq: AbstractProbODESolution
+import SciMLBase: interpret_vars, getsyms
+
 @recipe function f(
     sol::AbstractProbODESolution;
     idxs=nothing,
@@ -12,11 +17,11 @@
 )
     if vars !== nothing
         Base.depwarn(
-            "To maintain consistency with solution indexing, keyword argument vars will be removed in a future version. Please use keyword argument idxs instead.",
+            "To maintain consistency with solution indexing, keyword argument `vars` will be removed in a future version. Please use keyword argument `idxs` instead.",
             :f; force=true)
         (idxs !== nothing) &&
             error(
-                "Simultaneously using keywords vars and idxs is not supported. Please only use idxs.",
+                "Simultaneously using keywords `vars` and `idxs` is not supported. Please only use idxs.",
             )
         idxs = vars
     end
@@ -28,8 +33,8 @@
         sol_rvs = sol_rvs[tstart.<=times.<=tend]
         times = times[tstart.<=times.<=tend]
     end
-    values = stack(mean.(sol_rvs))
-    stds = stack(std.(sol_rvs))
+    values = stack(mean.(sol_rvs))'
+    stds = stack(std.(sol_rvs))'
 
     if isnothing(idxs)
         ribbon --> ribbon_width * stds
@@ -62,7 +67,9 @@
             end
             return _x, _y, _z
         else
-            error("Error with `vars` argument")
+            error("Error with `idxs` argument")
         end
     end
+end
+
 end

@@ -26,6 +26,11 @@ struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
 end
 IsometricKroneckerProduct(ldim::Integer, B::AbstractVector) =
     IsometricKroneckerProduct(ldim, reshape(B, :, 1))
+IsometricKroneckerProduct(M::AbstractMatrix) = throw(
+    ArgumentError(
+        "Can not create IsometricKroneckerProduct from the provided matrix of type $(typeof(M))",
+    ),
+)
 
 const IKP = IsometricKroneckerProduct
 

@@ -20,7 +20,6 @@ using FunctionWrappersWrappers
 using TaylorSeries, TaylorIntegration
 @reexport using StructArrays
 using SimpleUnPack
-using RecipesBase
 using RecursiveArrayTools
 using ForwardDiff
 using ExponentialUtilities
@@ -75,7 +74,7 @@ include("initialization/classicsolverinit.jl")
 
 include("solution.jl")
 include("solution_sampling.jl")
-include("solution_plotting.jl")
+# include("solution_plotting.jl")
 
 include("integrator_utils.jl")
 include("filtering/markov_kernel.jl")
