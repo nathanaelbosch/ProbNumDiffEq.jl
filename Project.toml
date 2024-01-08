@@ -36,9 +36,11 @@ ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 
 [weakdeps]
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
 [extensions]
 DiffEqDevToolsExt = "DiffEqDevTools"
+RecipesBaseExt = "RecipesBase"
 
 [compat]
 ArrayAllocators = "0.3"

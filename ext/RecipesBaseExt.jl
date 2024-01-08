@@ -1,6 +1,12 @@
-########################################################################################
-# Plotting
-########################################################################################
+module RecipesBaseExt
+
+using RecipesBase
+using ProbNumDiffEq
+using Statistics
+import ProbNumDiffEq: AbstractProbODESolution
+import SciMLBase: interpret_vars, getsyms
+
+
 @recipe function f(
     sol::AbstractProbODESolution;
     idxs=nothing,
@@ -28,8 +34,8 @@
         sol_rvs = sol_rvs[tstart.<=times.<=tend]
         times = times[tstart.<=times.<=tend]
     end
-    values = stack(mean.(sol_rvs))
-    stds = stack(std.(sol_rvs))
+    values = stack(mean.(sol_rvs))'
+    stds = stack(std.(sol_rvs))'
 
     if isnothing(idxs)
         ribbon --> ribbon_width * stds
@@ -65,4 +71,6 @@
             error("Error with `idxs` argument")
         end
     end
+end
+
 end
