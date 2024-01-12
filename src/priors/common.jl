@@ -1,12 +1,20 @@
 abstract type AbstractGaussMarkovPrior{elType} end
 
+# Fields they should have and Interface
+wiener_process_dimension(p::AbstractGaussMarkovProcess) = p.wiener_process_dimension
+num_derivatives(p::AbstractGaussMarkovProcess) = p.num_derivatives
+initial_distribution(::AbstractGaussMarkovProcess) = nothing
+sde(::AbstractGaussMarkovProcess) = nothing
+discretize(p::AbstractGaussMarkovProcess, step_size::Real) = discretize(sde(p), step_size)
+
+# General implementations
 function initialize_preconditioner(
     FAC::CovarianceStructure{T1},
     p::AbstractGaussMarkovPrior{T},
     dt,
 ) where {T,T1}
     @assert T == T1
-    d, q = p.wiener_process_dimension, p.num_derivatives
+    d, q = wiener_process_dimension(p), num_derivatives(p)
     P, PI = init_preconditioner(FAC)
     make_preconditioner!(P, dt, d, q)
     make_preconditioner_inv!(PI, dt, d, q)
@@ -41,7 +49,7 @@ function initialize_transition_matrices(
     p::AbstractGaussMarkovPrior{T},
     dt,
 ) where {T}
-    d, q = p.wiener_process_dimension, p.num_derivatives
+    d, q = wiener_process_dimension(p), num_derivatives(p)
     D = d * (q + 1)
     Ah, Qh = zeros(T, D, D), PSDMatrix(zeros(T, D, D))
     P, PI = initialize_preconditioner(FAC, p, dt)

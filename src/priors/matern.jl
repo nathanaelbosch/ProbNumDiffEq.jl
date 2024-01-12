@@ -44,7 +44,7 @@ Matern{T}(wiener_process_dimension, num_derivatives, lengthscale) where {T} =
     )
 
 function to_sde(p::Matern)
-    q = p.num_derivatives
+    q = num_derivatives(p)
     l = p.lengthscale
     @assert l isa Number
 
@@ -57,7 +57,7 @@ function to_sde(p::Matern)
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    d = p.wiener_process_dimension
+    d = wiener_process_dimension(p)
     F = IsometricKroneckerProduct(d, F_breve)
     L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)

@@ -62,7 +62,7 @@ IOUP{T}(
     )
 
 function to_sde(p::IOUP{T,D,<:Number}) where {T,D}
-    q = p.num_derivatives
+    q = num_derivatives(p)
     r = p.rate_parameter
 
     F_breve = diagm(1 => ones(q))
@@ -71,14 +71,14 @@ function to_sde(p::IOUP{T,D,<:Number}) where {T,D}
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    d = p.wiener_process_dimension
+    d = wiener_process_dimension(p)
     F = IsometricKroneckerProduct(d, F_breve)
     L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)
 end
 function to_sde(p::IOUP)
-    d = p.wiener_process_dimension
-    q = p.num_derivatives
+    d = wiener_process_dimension(p)
+    q = num_derivatives(p)
     r = p.rate_parameter
 
     R = if r isa AbstractVector

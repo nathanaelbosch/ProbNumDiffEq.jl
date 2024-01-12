@@ -37,7 +37,7 @@ IWP(wiener_process_dimension, num_derivatives) =
     IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
 
 function to_sde(p::IWP)
-    d, q = p.wiener_process_dimension, p.num_derivatives
+    d, q = wiener_process_dimension(p), num_derivatives(p)
 
     F_breve = diagm(1 => ones(q))
     L_breve = zeros(q + 1)
@@ -79,8 +79,8 @@ adjusted such that we obtain the left square root, with different ordering of th
     return L
 end
 
-function preconditioned_discretize_1d(iwp::IWP{elType}) where {elType}
-    q = iwp.num_derivatives
+function preconditioned_discretize_1d(p::IWP{elType}) where {elType}
+    q = num_derivatives(p)
 
     A_breve = binomial.(q:-1:0, (q:-1:0)')
     # Q_breve = Cauchy(collect(q:-1.0:0.0), collect((q+1):-1.0:1.0)) |> Matrix  # for Julia1.6
@@ -101,11 +101,11 @@ Generate the discrete dynamics for a q-times integrated Wiener process (IWP).
 The returned matrices `A::AbstractMatrix` and `Q::PSDMatrix` should be used in combination
 with the preconditioners; see `./src/preconditioning.jl`.
 """
-function preconditioned_discretize(iwp::IWP)
-    A_breve, Q_breve = preconditioned_discretize_1d(iwp)
+function preconditioned_discretize(p::IWP)
+    A_breve, Q_breve = preconditioned_discretize_1d(p)
     QR_breve = Q_breve.R
 
-    d = iwp.wiener_process_dimension
+    d = wiener_process_dimension(p)
     A = IsometricKroneckerProduct(d, Matrix(A_breve))
     QR = IsometricKroneckerProduct(d, Matrix(QR_breve))
     Q = PSDMatrix(QR)
@@ -113,8 +113,8 @@ function preconditioned_discretize(iwp::IWP)
     return A, Q
 end
 
-function discretize_1d(iwp::IWP{elType}, dt::Real) where {elType}
-    q = iwp.num_derivatives
+function discretize_1d(p::IWP{elType}, dt::Real) where {elType}
+    q = num_derivatives(p)
 
     v = 0:q
 
@@ -134,7 +134,7 @@ end
 
 function discretize(p::IWP, dt::Real)
     A_breve, Q_breve = discretize_1d(p, dt)
-    d = p.wiener_process_dimension
+    d = wiener_process_dimension(p)
     A = IsometricKroneckerProduct(d, A_breve)
     QR = IsometricKroneckerProduct(d, Q_breve.R)
     Q = PSDMatrix(QR)
