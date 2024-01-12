@@ -146,15 +146,8 @@ function OrdinaryDiffEq.alg_cache(
     measurement_model = make_measurement_model(f)
 
     # Initial State
-    initial_variance = ones(uElType, q + 1)
-    μ0 = uElType <: LinearAlgebra.BlasFloat ? Array{uElType}(calloc, D) : zeros(uElType, D)
-    Σ0 = PSDMatrix(
-        to_factorized_matrix(
-            FAC,
-            IsometricKroneckerProduct(d, diagm(sqrt.(initial_variance))),
-        ),
-    )
-    x0 = Gaussian(μ0, Σ0)
+    x0 = initial_distribution(prior)
+    x0 = Gaussian(x0.μ, to_factorized_matrix(FAC, x0.Σ))
 
     # Diffusion Model
     diffmodel = alg.diffusionmodel
