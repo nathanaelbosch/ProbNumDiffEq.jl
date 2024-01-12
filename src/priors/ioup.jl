@@ -72,7 +72,7 @@ remake(
     wiener_process_dimension,
     num_derivatives,
     rate_parameter,
-    upate_rate_parameter=update_rate_parameter,
+    update_rate_parameter,
 )
 
 function to_sde(p::IOUP{T,D,<:Number}) where {T,D}
