@@ -36,6 +36,13 @@ IWP{elType}(wiener_process_dimension, num_derivatives) where {elType} =
 IWP(wiener_process_dimension, num_derivatives) =
     IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
 
+remake(
+    p::IWP{T};
+    elType=T,
+    wiener_process_dimension=p.wiener_process_dimension,
+    num_derivatives=p.num_derivatives,
+) where {T} = IWP{elType}(wiener_process_dimension, num_derivatives)
+
 function to_sde(p::IWP)
     d, q = wiener_process_dimension(p), num_derivatives(p)
 

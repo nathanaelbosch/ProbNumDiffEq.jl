@@ -42,6 +42,13 @@ Matern{T}(wiener_process_dimension, num_derivatives, lengthscale) where {T} =
         num_derivatives,
         lengthscale,
     )
+remake(
+    p::Matern{T};
+    elType=T,
+    wiener_process_dimension=p.wiener_process_dimension,
+    num_derivatives=p.num_derivatives,
+    lengthscale=p.lengthscale,
+) where {T} = Matern{elType}(wiener_process_dimension, num_derivatives, lengthscale)
 
 initial_distribution(p::Matern{T}) where {T} = begin
     d, q = wiener_process_dimension(p), num_derivatives(p)

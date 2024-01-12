@@ -119,18 +119,8 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = solution_space_projection(FAC, is_secondorder_ode)
 
     # Prior dynamics
-    prior = if alg.prior isa IWP
-        IWP{uElType}(d, alg.prior.num_derivatives)
-    elseif alg.prior isa IOUP && ismissing(alg.prior.rate_parameter)
-        r = Array{uElType}(calloc, d, d)
-        IOUP{uElType}(d, q, r, alg.prior.update_rate_parameter)
-    elseif alg.prior isa IOUP
-        IOUP{uElType}(d, q, alg.prior.rate_parameter, alg.prior.update_rate_parameter)
-    elseif alg.prior isa Matern
-        Matern{uElType}(d, q, alg.prior.lengthscale)
-    else
-        error("Invalid prior $(alg.prior)")
-    end
+    prior = remake(alg.prior; elType=uElType, wiener_process_dimension=d)
+
     A, Q, Ah, Qh, P, PI = initialize_transition_matrices(FAC, prior, dt)
     F, L = to_sde(prior)
     F, L = to_factorized_matrix(FAC, F), to_factorized_matrix(FAC, L)

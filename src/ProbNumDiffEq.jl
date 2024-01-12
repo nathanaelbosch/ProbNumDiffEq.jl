@@ -11,7 +11,7 @@ import Statistics: mean, var, std
 using Reexport
 @reexport using DiffEqBase
 import SciMLBase
-import SciMLBase: interpret_vars, getsyms
+import SciMLBase: interpret_vars, getsyms, remake
 using OrdinaryDiffEq
 using SpecialMatrices, ToeplitzMatrices
 using FastBroadcast

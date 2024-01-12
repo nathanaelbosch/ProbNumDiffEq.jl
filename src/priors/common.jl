@@ -14,6 +14,9 @@ initial_distribution(p::AbstractGaussMarkovProcess{T}) where {T} = begin
     return Gaussian(μ0, Σ0)
 end
 
+""
+remake(p::AbstractGaussMarkovProcess{T}; elType=T, kwargs...) where {T}
+
 """
     to_sde(p::AbstractGaussMarkovProcess)
 
@@ -23,7 +26,7 @@ to_sde(p::AbstractGaussMarkovProcess)
 
 # General implementations
 function initialize_preconditioner(
-    FAC::CovarianceStructure{T1}, p::AbstractGaussMarkovProcess{T}, dt,) where {T,T1}
+    FAC::CovarianceStructure{T1}, p::AbstractGaussMarkovProcess{T}, dt) where {T,T1}
     @assert T == T1
     d, q = wiener_process_dimension(p), num_derivatives(p)
     P, PI = init_preconditioner(FAC)
@@ -68,7 +71,11 @@ function initialize_transition_matrices(
     Q = copy(Qh)
     return A, Q, Ah, Qh, P, PI
 end
-initialize_transition_matrices(FAC::CovarianceStructure, p::AbstractGaussMarkovProcess, dt) =
+initialize_transition_matrices(
+    FAC::CovarianceStructure,
+    p::AbstractGaussMarkovProcess,
+    dt,
+) =
     error("The chosen prior can not be implemented with a $FAC factorization")
 
 """
