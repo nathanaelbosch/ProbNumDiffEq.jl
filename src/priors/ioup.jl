@@ -67,7 +67,7 @@ remake(
     wiener_process_dimension=p.wiener_process_dimension,
     num_derivatives=p.num_derivatives,
     rate_parameter=p.rate_parameter,
-    upate_rate_parameter=p.update_rate_parameter,
+    update_rate_parameter=p.update_rate_parameter,
 ) where {T} = IOUP{elType}(
     wiener_process_dimension,
     num_derivatives,
