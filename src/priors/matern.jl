@@ -43,6 +43,15 @@ Matern{T}(wiener_process_dimension, num_derivatives, lengthscale) where {T} =
         lengthscale,
     )
 
+initial_distribution(p::Matern{T}) where {T} = begin
+    d, q = wiener_process_dimension(p), num_derivatives(p)
+    D = d * (q + 1)
+    sde = to_sde(p)
+    μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
+    Σ0 = PSDMatrix(plyapc(sde.F, sde.L)')
+    return Gaussian(μ0, Σ0)
+end
+
 function to_sde(p::Matern)
     q = num_derivatives(p)
     l = p.lengthscale
