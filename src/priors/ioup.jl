@@ -24,7 +24,7 @@ where ``L`` is the `rate_parameter`.
 julia> solve(prob, EK1(prior=IOUP(2, -1)))
 ```
 """
-struct IOUP{elType,dimType,R} <: AbstractODEFilterPrior{elType}
+struct IOUP{elType,dimType,R} <: AbstractGaussMarkovPrior{elType}
     wiener_process_dimension::dimType
     num_derivatives::Int
     rate_parameter::R

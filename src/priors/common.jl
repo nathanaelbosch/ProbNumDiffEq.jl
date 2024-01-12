@@ -1,8 +1,8 @@
-abstract type AbstractODEFilterPrior{elType} end
+abstract type AbstractGaussMarkovPrior{elType} end
 
 function initialize_preconditioner(
     FAC::CovarianceStructure{T1},
-    p::AbstractODEFilterPrior{T},
+    p::AbstractGaussMarkovPrior{T},
     dt,
 ) where {T,T1}
     @assert T == T1
@@ -14,7 +14,7 @@ function initialize_preconditioner(
 end
 
 """
-    initilize_transition_matrices!(p::AbstractODEFilterPrior)
+    initilize_transition_matrices!(p::AbstractGaussMarkovPrior)
 
 Create all the (moslty empty) matrices that relate to the transition model.
 
@@ -38,7 +38,7 @@ See also: [`make_transition_matrices`](@ref).
 """
 function initialize_transition_matrices(
     FAC::DenseCovariance,
-    p::AbstractODEFilterPrior{T},
+    p::AbstractGaussMarkovPrior{T},
     dt,
 ) where {T}
     d, q = p.wiener_process_dimension, p.num_derivatives
@@ -51,14 +51,14 @@ function initialize_transition_matrices(
 end
 function initialize_transition_matrices(
     FAC::CovarianceStructure,
-    p::AbstractODEFilterPrior,
+    p::AbstractGaussMarkovPrior,
     dt,
 )
     error("The chosen prior can not be implemented with a $FAC factorization")
 end
 
 """
-    make_transition_matrices!(cache, prior::AbstractODEFilterPrior, dt)
+    make_transition_matrices!(cache, prior::AbstractGaussMarkovPrior, dt)
 
 Construct all the matrices that relate to the transition model, for a specified step size.
 
@@ -83,7 +83,7 @@ See also: [`initialize_transition_matrices`](@ref).
 
 [1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
-function make_transition_matrices!(cache, prior::AbstractODEFilterPrior, dt)
+function make_transition_matrices!(cache, prior::AbstractGaussMarkovPrior, dt)
     @unpack A, Q, Ah, Qh, P, PI = cache
     make_preconditioners!(cache, dt)
     _Ah, _Qh = discretize(cache.prior, dt)
@@ -99,8 +99,8 @@ make_transition_matrices!(cache::AbstractODEFilterCache, dt) =
     make_transition_matrices!(cache, cache.prior, dt)
 
 """
-    to_sde(p::AbstractODEFilterPrior)
+    to_sde(p::AbstractGaussMarkovPrior)
 
 Convert the prior to the corresponding SDE.
 """
-to_sde(p::AbstractODEFilterPrior)
+to_sde(p::AbstractGaussMarkovPrior)

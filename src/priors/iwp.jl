@@ -25,7 +25,7 @@ This is typically the preferred usage.
 julia> solve(prob, EK1(prior=IWP(2)))
 ```
 """
-struct IWP{elType,dimType} <: AbstractODEFilterPrior{elType}
+struct IWP{elType,dimType} <: AbstractGaussMarkovProcess{elType}
     wiener_process_dimension::dimType
     num_derivatives::Int
 end
