@@ -29,6 +29,7 @@ import Kronecker
 using ArrayAllocators
 using FiniteHorizonGramians
 using FillArrays
+using MatrixEquations
 
 @reexport using GaussianDistributions
 
