@@ -4,15 +4,19 @@ abstract type AbstractGaussMarkovPrior{elType} end
 wiener_process_dimension(p::AbstractGaussMarkovProcess) = p.wiener_process_dimension
 num_derivatives(p::AbstractGaussMarkovProcess) = p.num_derivatives
 initial_distribution(::AbstractGaussMarkovProcess) = nothing
-sde(::AbstractGaussMarkovProcess) = nothing
+sde(p::AbstractGaussMarkovProcess) = to_sde(p) # for now
 discretize(p::AbstractGaussMarkovProcess, step_size::Real) = discretize(sde(p), step_size)
+
+"""
+    to_sde(p::AbstractGaussMarkovPrior)
+
+Convert the prior to the corresponding SDE.
+"""
+to_sde(p::AbstractGaussMarkovPrior)
 
 # General implementations
 function initialize_preconditioner(
-    FAC::CovarianceStructure{T1},
-    p::AbstractGaussMarkovPrior{T},
-    dt,
-) where {T,T1}
+    FAC::CovarianceStructure{T1}, p::AbstractGaussMarkovPrior{T}, dt,) where {T,T1}
     @assert T == T1
     d, q = wiener_process_dimension(p), num_derivatives(p)
     P, PI = init_preconditioner(FAC)
@@ -57,13 +61,8 @@ function initialize_transition_matrices(
     Q = copy(Qh)
     return A, Q, Ah, Qh, P, PI
 end
-function initialize_transition_matrices(
-    FAC::CovarianceStructure,
-    p::AbstractGaussMarkovPrior,
-    dt,
-)
+initialize_transition_matrices(FAC::CovarianceStructure, p::AbstractGaussMarkovPrior, dt) =
     error("The chosen prior can not be implemented with a $FAC factorization")
-end
 
 """
     make_transition_matrices!(cache, prior::AbstractGaussMarkovPrior, dt)
@@ -94,7 +93,7 @@ See also: [`initialize_transition_matrices`](@ref).
 function make_transition_matrices!(cache, prior::AbstractGaussMarkovPrior, dt)
     @unpack A, Q, Ah, Qh, P, PI = cache
     make_preconditioners!(cache, dt)
-    _Ah, _Qh = discretize(cache.prior, dt)
+    _Ah, _Qh = discretize(prior, dt)
     copy!(Ah, _Ah)
     copy!(Qh, _Qh)
     # A = P * Ah * PI
@@ -105,10 +104,3 @@ end
 # convenience function
 make_transition_matrices!(cache::AbstractODEFilterCache, dt) =
     make_transition_matrices!(cache, cache.prior, dt)
-
-"""
-    to_sde(p::AbstractGaussMarkovPrior)
-
-Convert the prior to the corresponding SDE.
-"""
-to_sde(p::AbstractGaussMarkovPrior)
