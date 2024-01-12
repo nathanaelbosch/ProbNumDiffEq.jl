@@ -1,4 +1,4 @@
-abstract type AbstractGaussMarkovPrior{elType} end
+abstract type AbstractGaussMarkovProcess{elType} end
 
 # Fields they should have and Interface
 wiener_process_dimension(p::AbstractGaussMarkovProcess) = p.wiener_process_dimension
@@ -8,15 +8,15 @@ sde(p::AbstractGaussMarkovProcess) = to_sde(p) # for now
 discretize(p::AbstractGaussMarkovProcess, step_size::Real) = discretize(sde(p), step_size)
 
 """
-    to_sde(p::AbstractGaussMarkovPrior)
+    to_sde(p::AbstractGaussMarkovProcess)
 
 Convert the prior to the corresponding SDE.
 """
-to_sde(p::AbstractGaussMarkovPrior)
+to_sde(p::AbstractGaussMarkovProcess)
 
 # General implementations
 function initialize_preconditioner(
-    FAC::CovarianceStructure{T1}, p::AbstractGaussMarkovPrior{T}, dt,) where {T,T1}
+    FAC::CovarianceStructure{T1}, p::AbstractGaussMarkovProcess{T}, dt,) where {T,T1}
     @assert T == T1
     d, q = wiener_process_dimension(p), num_derivatives(p)
     P, PI = init_preconditioner(FAC)
@@ -26,7 +26,7 @@ function initialize_preconditioner(
 end
 
 """
-    initilize_transition_matrices!(p::AbstractGaussMarkovPrior)
+    initilize_transition_matrices!(p::AbstractGaussMarkovProcess)
 
 Create all the (moslty empty) matrices that relate to the transition model.
 
@@ -50,7 +50,7 @@ See also: [`make_transition_matrices`](@ref).
 """
 function initialize_transition_matrices(
     FAC::DenseCovariance,
-    p::AbstractGaussMarkovPrior{T},
+    p::AbstractGaussMarkovProcess{T},
     dt,
 ) where {T}
     d, q = wiener_process_dimension(p), num_derivatives(p)
@@ -61,11 +61,11 @@ function initialize_transition_matrices(
     Q = copy(Qh)
     return A, Q, Ah, Qh, P, PI
 end
-initialize_transition_matrices(FAC::CovarianceStructure, p::AbstractGaussMarkovPrior, dt) =
+initialize_transition_matrices(FAC::CovarianceStructure, p::AbstractGaussMarkovProcess, dt) =
     error("The chosen prior can not be implemented with a $FAC factorization")
 
 """
-    make_transition_matrices!(cache, prior::AbstractGaussMarkovPrior, dt)
+    make_transition_matrices!(cache, prior::AbstractGaussMarkovProcess, dt)
 
 Construct all the matrices that relate to the transition model, for a specified step size.
 
@@ -90,7 +90,7 @@ See also: [`initialize_transition_matrices`](@ref).
 
 [1] N. Krämer, P. Hennig: **Stable Implementation of Probabilistic ODE Solvers** (2020)
 """
-function make_transition_matrices!(cache, prior::AbstractGaussMarkovPrior, dt)
+function make_transition_matrices!(cache, prior::AbstractGaussMarkovProcess, dt)
     @unpack A, Q, Ah, Qh, P, PI = cache
     make_preconditioners!(cache, dt)
     _Ah, _Qh = discretize(prior, dt)

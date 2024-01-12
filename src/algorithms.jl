@@ -25,7 +25,7 @@ which scales cubically with the problem size._
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
-- `prior::AbstractGaussMarkovPrior`: Prior to be used by the ODE filter.
+- `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
@@ -73,7 +73,7 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
-- `prior::AbstractGaussMarkovPrior`: Prior to be used by the ODE filter.
+- `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).

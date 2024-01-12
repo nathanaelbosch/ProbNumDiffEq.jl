@@ -27,7 +27,7 @@ where ``l`` is the `lengthscale`.
 julia> solve(prob, EK1(prior=Matern(2, 1)))
 ```
 """
-struct Matern{elType,dimType,R} <: AbstractGaussMarkovPrior{elType}
+struct Matern{elType,dimType,R} <: AbstractGaussMarkovProcess{elType}
     wiener_process_dimension::dimType
     num_derivatives::Int
     lengthscale::R
