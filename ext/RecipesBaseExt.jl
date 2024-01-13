@@ -78,17 +78,22 @@ end
     N_samples = 10
     )
     marginals = ProbNumDiffEq.marginalize(process, plotrange);
+    d = ProbNumDiffEq.wiener_process_dimension(process)
     q = ProbNumDiffEq.num_derivatives(process)
     means = [mean(m) for m in marginals] |> stack |> permutedims;
     stddevs = [std(m) for m in marginals] |> stack |> permutedims;
 
+    perm = permutedims(reshape(collect(1:d*(q+1)), q+1, d))[:]
+    reorder(X) = X[:, perm]
+
     @series begin
-        ribbon --> 3stddevs
+        ribbon --> 3reorder(stddevs)
         label --> ""
         fillalpha --> 0.2
-        layout --> (q+1,1)
-        plotrange, means
+        layout --> (q+1,d)
+        plotrange, reorder(means)
     end
+
 
     if N_samples>0
         samples = ProbNumDiffEq.sample(process, plotrange, N_samples) |> stack;
@@ -97,7 +102,7 @@ end
             @series begin
                 primary --> false
                 label := ""
-                plotrange, samples[:, :, i]
+                plotrange, reorder(samples[:, :, i])
             end
         end
     end
