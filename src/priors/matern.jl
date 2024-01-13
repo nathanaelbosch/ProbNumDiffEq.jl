@@ -78,9 +78,3 @@ function to_sde(p::Matern)
     L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)
 end
-function discretize(p::Matern, dt::Real)
-    l = p.lengthscale
-    @assert l isa Number
-    A, Q = discretize(to_sde(p), dt)
-    return A, Q
-end

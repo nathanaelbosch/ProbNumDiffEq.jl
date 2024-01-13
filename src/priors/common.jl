@@ -3,8 +3,8 @@ abstract type AbstractGaussMarkovProcess{elType} end
 # Fields they should have and Interface
 wiener_process_dimension(p::AbstractGaussMarkovProcess) = p.wiener_process_dimension
 num_derivatives(p::AbstractGaussMarkovProcess) = p.num_derivatives
-sde(p::AbstractGaussMarkovProcess) = to_sde(p) # for now
-discretize(p::AbstractGaussMarkovProcess, step_size::Real) = discretize(sde(p), step_size)
+to_sde(p::AbstractGaussMarkovProcess) = missing
+discretize(p::AbstractGaussMarkovProcess, step_size::Real) = discretize(to_sde(p), step_size)
 initial_distribution(p::AbstractGaussMarkovProcess{T}) where {T} = begin
     d, q = wiener_process_dimension(p), num_derivatives(p)
     D = d * (q + 1)
