@@ -72,4 +72,35 @@ import SciMLBase: interpret_vars, getsyms
     end
 end
 
+@recipe function f(
+    process::ProbNumDiffEq.AbstractGaussMarkovProcess,
+    plotrange;
+    N_samples = 10
+    )
+    marginals = ProbNumDiffEq.marginalize(process, plotrange);
+    q = ProbNumDiffEq.num_derivatives(process)
+    means = [mean(m) for m in marginals] |> stack |> permutedims;
+    stddevs = [std(m) for m in marginals] |> stack |> permutedims;
+
+    @series begin
+        ribbon --> 3stddevs
+        label --> ""
+        fillalpha --> 0.2
+        layout --> (q+1,1)
+        plotrange, means
+    end
+
+    if N_samples>0
+        samples = ProbNumDiffEq.sample(process, plotrange, N_samples) |> stack;
+        samples = permutedims(samples, (3, 1, 2));
+        for i in 1:N_samples
+            @series begin
+                primary --> false
+                label := ""
+                plotrange, samples[:, :, i]
+            end
+        end
+    end
+end
+
 end

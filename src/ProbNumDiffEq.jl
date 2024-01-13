@@ -6,7 +6,7 @@ import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate
 
 using LinearAlgebra
 import LinearAlgebra: mul!
-import Statistics: mean, var, std
+import Statistics: mean, var, std, cov
 
 using Reexport
 @reexport using DiffEqBase

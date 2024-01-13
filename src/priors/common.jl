@@ -119,3 +119,31 @@ end
 # convenience function
 make_transition_matrices!(cache::AbstractODEFilterCache, dt) =
     make_transition_matrices!(cache, cache.prior, dt)
+
+function marginalize(process::AbstractGaussMarkovProcess, ts)
+    out = []
+    X = initial_distribution(process)
+    push!(out, X)
+    for i in 2:length(ts)
+        dt = ts[i] - ts[i-1]
+        A, Q = ProbNumDiffEq.discretize(process, dt)
+        X = predict(X, A, Q)
+        push!(out, X)
+    end
+    return out
+end
+
+function sample(process::AbstractGaussMarkovProcess, ts, N=1)
+    out = []
+    X = initial_distribution(process)
+    X = Gaussian(mean(X), Matrix(cov(X)))
+    samples = rand(X, N)
+    push!(out, samples)
+    for i in 2:length(ts)
+        dt = ts[i] - ts[i-1]
+        A, Q = Matrix.(discretize(process, dt))
+        samples = [rand(Gaussian(A*samples[:, j], Q)) for j in 1:N] |> stack |> permutedims
+        push!(out, samples)
+    end
+    return out
+end
