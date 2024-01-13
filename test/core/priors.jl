@@ -4,6 +4,7 @@ import ProbNumDiffEq as PNDE
 using Test
 using LinearAlgebra
 using FiniteHorizonGramians
+using Statistics
 
 h = 0.1
 σ = 0.1
@@ -245,4 +246,11 @@ end
     @test Matrix(Q1) ≈ Matrix(Q2)
 
     test_make_transition_matrices(prior, A1, Q1)
+
+    @testset "Test initial distribution being stationary" begin
+        D0 = PNDE.initial_distribution(prior)
+        D1 = PNDE.predict(D0, A1, Q1)
+        @test mean(D0) ≈ mean(D1)
+        @test Matrix(cov(D0)) ≈ Matrix(cov(D1))
+    end
 end
