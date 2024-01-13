@@ -75,34 +75,45 @@ end
 @recipe function f(
     process::ProbNumDiffEq.AbstractGaussMarkovProcess,
     plotrange;
-    N_samples = 10
-    )
-    marginals = ProbNumDiffEq.marginalize(process, plotrange);
+    N_samples=10,
+    plot_derivatives=false,
+)
+    marginals = ProbNumDiffEq.marginalize(process, plotrange)
     d = ProbNumDiffEq.wiener_process_dimension(process)
     q = ProbNumDiffEq.num_derivatives(process)
-    means = [mean(m) for m in marginals] |> stack |> permutedims;
-    stddevs = [std(m) for m in marginals] |> stack |> permutedims;
+    means = [mean(m) for m in marginals] |> stack |> permutedims
+    stddevs = [std(m) for m in marginals] |> stack |> permutedims
 
-    perm = permutedims(reshape(collect(1:d*(q+1)), q+1, d))[:]
+    perm = permutedims(reshape(collect(1:d*(q+1)), q + 1, d))[:]
     reorder(X) = X[:, perm]
 
-    @series begin
-        ribbon --> 3reorder(stddevs)
-        label --> ""
-        fillalpha --> 0.2
-        layout --> (q+1,d)
-        plotrange, reorder(means)
+    E0 = ProbNumDiffEq.projection(d, q)(0)
+    if !plot_derivatives
+        stddevs = stddevs * E0'
+        means = means * E0'
+        q = 0
     end
 
+    @series begin
+        ribbon --> 3stddevs
+        label --> ""
+        fillalpha --> 0.2
+        layout --> (d, q + 1)
+        plotrange, means
+    end
 
-    if N_samples>0
-        samples = ProbNumDiffEq.sample(process, plotrange, N_samples) |> stack;
-        samples = permutedims(samples, (3, 1, 2));
+    if N_samples > 0
+        samples = ProbNumDiffEq.sample(process, plotrange, N_samples) |> stack
+        samples = permutedims(samples, (3, 1, 2))
         for i in 1:N_samples
             @series begin
+                s = samples[:, :, i]
+                if !plot_derivatives
+                    s = s * E0'
+                end
                 primary --> false
                 label := ""
-                plotrange, reorder(samples[:, :, i])
+                plotrange, s
             end
         end
     end

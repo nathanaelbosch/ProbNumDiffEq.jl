@@ -137,13 +137,13 @@ function sample(process::AbstractGaussMarkovProcess, ts, N=1)
     out = []
     X = initial_distribution(process)
     X = Gaussian(mean(X), Matrix(cov(X)))
-    samples = rand(X, N)
-    push!(out, samples)
+    s = rand(X, N)
+    push!(out, s)
     for i in 2:length(ts)
         dt = ts[i] - ts[i-1]
         A, Q = Matrix.(discretize(process, dt))
-        samples = [rand(Gaussian(A*samples[:, j], Q)) for j in 1:N] |> stack |> permutedims
-        push!(out, samples)
+        s = [rand(Gaussian(A * s[:, j], Q)) for j in 1:N] |> stack |> permutedims
+        push!(out, s)
     end
     return out
 end
