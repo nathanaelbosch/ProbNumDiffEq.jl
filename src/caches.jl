@@ -120,8 +120,10 @@ function OrdinaryDiffEq.alg_cache(
 
     # Prior dynamics
     prior = remake(alg.prior; elType=uElType, wiener_process_dimension=d)
-    if ((prior isa IOUP) && (prior.update_rate_parameter) &&
-        (prior.rate_parameter isa Missing))
+    if (
+        (prior isa IOUP) && (prior.update_rate_parameter) &&
+        (prior.rate_parameter isa Missing)
+    )
         prior = remake(prior; rate_parameter=Array{uElType}(calloc, d, d))
     end
 
