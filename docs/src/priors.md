@@ -30,8 +30,24 @@ The other priors are rather experimental / niche at the time of writing.
 
 ## API
 
+## API
 ```@docs
 IWP
 IOUP
 Matern
+```
+
+```@docs
+ProbNumDiffEq.AbstractGaussMarkovProcess
+ProbNumDiffEq.wiener_process_dimension
+ProbNumDiffEq.num_derivatives
+ProbNumDiffEq.to_sde
+ProbNumDiffEq.discretize
+ProbNumDiffEq.initial_distribution
+ProbNumDiffEq.LTISDE
+```
+
+```@docs
+ProbNumDiffEq.marginalize
+ProbNumDiffEq.sample
 ```
