@@ -1,16 +1,19 @@
-using ProbNumDiffEq: make_transition_matrices!
+using ProbNumDiffEq: make_transition_matrices!, wiener_process_dimension
 using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
 using Test
 using LinearAlgebra
 using FiniteHorizonGramians
 using Statistics
+using Plots
 
 h = 0.1
 σ = 0.1
 
 @testset "General prior API" begin
     for prior in (IWP(2, 3), IOUP(2, 3, 1), Matern(2, 3, 1))
+        d, q = PNDE.wiener_process_dimension(prior), PNDE.num_derivatives(prior)
+
         sde = PNDE.to_sde(prior)
         A1, Q1 = PNDE.discretize(sde, h)
         A2, Q2 = PNDE.discretize(prior, h)
@@ -27,6 +30,19 @@ h = 0.1
             PNDE.LTISDE(Matrix(sde.F), Matrix(sde.L)), h)
         @test A1 ≈ A4
         @test Q1.R ≈ Q4R
+
+        ts = 0:0.1:1
+        marginals = @test_nowarn PNDE.marginalize(prior, ts)
+        @test length(marginals) == length(ts)
+        @test marginals[1] isa Gaussian
+
+        N = 3
+        samples = @test_nowarn PNDE.sample(prior, ts, N)
+        @test length(samples) == length(ts)
+        @test size(samples[1]) == (d*(q+1), N)
+
+        @test_nowarn plot(prior, ts; plot_derivatives=true)
+        @test_nowarn plot(prior, ts; plot_derivatives=false)
     end
 end
 
