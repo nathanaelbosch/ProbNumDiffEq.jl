@@ -39,7 +39,7 @@ h = 0.1
         N = 3
         samples = @test_nowarn PNDE.sample(prior, ts, N)
         @test length(samples) == length(ts)
-        @test size(samples[1]) == (d*(q+1), N)
+        @test size(samples[1]) == (d * (q + 1), N)
 
         @test_nowarn plot(prior, ts; plot_derivatives=true)
         @test_nowarn plot(prior, ts; plot_derivatives=false)
