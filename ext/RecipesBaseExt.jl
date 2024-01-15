@@ -72,6 +72,18 @@ import SciMLBase: interpret_vars, getsyms
     end
 end
 
+ith(i) = if i == 0
+    "0th"
+elseif i == 1
+    "1st"
+elseif i == 2
+    "2nd"
+elseif i == 3
+    "3rd"
+else
+    "$(i)th"
+end
+
 @recipe function f(
     process::ProbNumDiffEq.AbstractGaussMarkovProcess,
     plotrange;
@@ -93,6 +105,14 @@ end
         means = means * E0'
         q = 0
     end
+
+    dui(i) = "u" * "'"^i
+    if plot_derivatives
+        # title --> [i == 1 ? "$(ith(j))" : "" for i in 1:d for j in 0:q] |> permutedims
+        title --> [i == 1 ? "$(dui(j))" : "" for i in 1:d for j in 0:q] |> permutedims
+    end
+    ylabel --> [q == 0 ? "u$i" : "" for i in 1:d for q in 0:q] |> permutedims
+    xlabel --> [i == d ? "t" : "" for i in 1:d for q in 0:q] |> permutedims
 
     @series begin
         ribbon --> 3stddevs
