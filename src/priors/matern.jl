@@ -1,5 +1,5 @@
 @doc raw"""
-    Matern([wiener_process_dimension::Integer,]
+    Matern([wiener_process_dimension::Integer=1,]
            num_derivatives::Integer,
            lengthscale::Number)
 
@@ -32,16 +32,13 @@ struct Matern{elType,R} <: AbstractGaussMarkovProcess{elType}
     num_derivatives::Int
     lengthscale::R
 end
-Matern(num_derivatives, lengthscale) =
-    Matern(1, num_derivatives, lengthscale)
+Matern{elType}(wiener_process_dimension, num_derivatives, lengthscale) where {elType} =
+    Matern{elType,typeof(lengthscale)}(wiener_process_dimension, num_derivatives, lengthscale)
 Matern(wiener_process_dimension, num_derivatives, lengthscale) =
     Matern{typeof(1.0)}(wiener_process_dimension, num_derivatives, lengthscale)
-Matern{T}(wiener_process_dimension, num_derivatives, lengthscale) where {T} =
-    Matern{T,typeof(wiener_process_dimension),typeof(lengthscale)}(
-        wiener_process_dimension,
-        num_derivatives,
-        lengthscale,
-    )
+Matern(num_derivatives, lengthscale) =
+    Matern(1, num_derivatives, lengthscale)
+
 remake(
     p::Matern{T};
     elType=T,

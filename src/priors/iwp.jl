@@ -1,5 +1,5 @@
 @doc raw"""
-    IWP([wiener_process_dimension::Integer,] num_derivatives::Integer)
+    IWP([wiener_process_dimension::Integer=1,] num_derivatives::Integer)
 
 Integrated Wiener process.
 
@@ -9,7 +9,9 @@ and in the probabilistic numerics literature in general
 It is also the prior that has the most efficient implementation.
 
 The IWP can be created without specifying the dimension of the Wiener process,
-in which case it will be inferred from the dimension of the ODE during the solve.
+in which case it will be one-dimensional. The ODE solver then assumes that each dimension
+of the ODE solution should be modeled with the same prior, and adjusts the dimension to the
+ODE dimension during the solve.
 This is typically the preferred usage.
 
 # In math
@@ -29,12 +31,9 @@ struct IWP{elType} <: AbstractGaussMarkovProcess{elType}
     wiener_process_dimension::Int
     num_derivatives::Int
 end
-# most convenient user-facing constructor:
-IWP(num_derivatives) = IWP{typeof(1.0)}(1, num_derivatives)
-IWP{elType}(wiener_process_dimension, num_derivatives) where {elType} =
-    IWP{elType,typeof(wiener_process_dimension)}(wiener_process_dimension, num_derivatives)
 IWP(wiener_process_dimension, num_derivatives) =
     IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
+IWP(num_derivatives) = IWP(1, num_derivatives)
 
 remake(
     p::IWP{T};
