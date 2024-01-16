@@ -5,19 +5,28 @@
 
 Integrated Ornstein--Uhlenbeck process.
 
-As with the [`IWP`](@ref), the IOUP can be created without specifying its dimension,
-in which case it will be inferred from the dimension of the ODE during the solve.
-This is typically the preferred usage.
-The rate parameter however always needs to be specified.
+This prior is mostly used in the context of
+[Probabilistic Exponential Integrators](@ref probexpinttutorial)
+to include the linear part of a semi-linear ODE in the prior,
+so it is used in the [`ExpEK`](@ref) and the [`RosenbrockExpEK`](@ref).
 
 # In math
+The IOUP is a Gauss--Markov process, which we model with a state representation
+```math
+\begin{aligned}
+Y(t) = \left[ Y^{(0)}(t), Y^{(1)}(t), \dots Y^{(q)}(t) \right],
+\end{aligned}
+```
+defined as the solution of the stochastic differential equation
 ```math
 \begin{aligned}
 \text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
 \text{d} Y^{(q)}(t) &= L Y^{(q)}(t) \ \text{d}t + \Gamma \ \text{d}W(t),
 \end{aligned}
 ```
-where ``L`` is the `rate_parameter`.
+where ``L`` is called the `rate_parameter`.
+Then, ``Y^{(0)}(t)`` is the ``q``-times integrated Ornstein--Uhlenbeck process (IOUP) and
+``Y^{(i)}(t)`` is the ``i``-th derivative of the IOUP, for ``i = 1, \dots, q``.
 
 # Examples
 ```julia-repl

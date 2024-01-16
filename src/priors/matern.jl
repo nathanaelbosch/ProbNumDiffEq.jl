@@ -5,12 +5,19 @@
 
 Matern process.
 
-As with the [`IWP`](@ref), the Matern can be created without specifying its dimension,
-in which case it will be inferred from the dimension of the ODE during the solve.
-This is typically the preferred usage.
-The lengthscale parameter however always needs to be specified.
+The class of [`Matern`](@ref) processes is well-known in the Gaussian process literature,
+and they also have a corresponding SDE representation similarly to the
+[`IWP`](@ref) and the [`IOUP`](@ref).
+See also [sarkka19appliedsde](@cite) for more details.
 
 # In math
+A Matern process is a Gauss--Markov process, which we model with a state representation
+```math
+\begin{aligned}
+Y(t) = \left[ Y^{(0)}(t), Y^{(1)}(t), \dots Y^{(q)}(t) \right],
+\end{aligned}
+```
+defined as the solution of the stochastic differential equation
 ```math
 \begin{aligned}
 \text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
@@ -20,7 +27,9 @@ The lengthscale parameter however always needs to be specified.
   Y^{(j)}(t) \right) \ \text{d}t + \Gamma \ \text{d}W(t).
 \end{aligned}
 ```
-where ``l`` is the `lengthscale`.
+where ``l`` is called the `lengthscale` parameter.
+Then, ``Y^{(0)}(t)`` is a Matern process and
+``Y^{(i)}(t)`` is the ``i``-th derivative of this process, for ``i = 1, \dots, q``.
 
 # Examples
 ```julia-repl

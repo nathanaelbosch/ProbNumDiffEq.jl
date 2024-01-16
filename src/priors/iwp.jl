@@ -1,26 +1,35 @@
 @doc raw"""
     IWP([dim::Integer=1,] num_derivatives::Integer)
 
-Integrated Wiener process.
+``q``-times integrated Wiener process.
 
-**This is the recommended prior!** It is the most well-tested prior, both in this package
-and in the probabilistic numerics literature in general
-(see the [references](@ref references)).
+**This is the recommended prior!**
+The IWP is the most common prior choice in the probabilistic ODE solver literature
+(see the [references](@ref references)) and is the default choice for the solvers in
+ProbNumDiffEq.jl.
 It is also the prior that has the most efficient implementation.
 
 The IWP can be created without specifying the dimension of the Wiener process,
 in which case it will be one-dimensional. The ODE solver then assumes that each dimension
-of the ODE solution should be modeled with the same prior, and adjusts the dimension to the
-ODE dimension during the solve.
+of the ODE solution should be modeled with the same prior.
 This is typically the preferred usage.
 
 # In math
+The IWP is a Gauss--Markov process, which we model with a state representation
+```math
+\begin{aligned}
+Y(t) = \left[ Y^{(0)}(t), Y^{(1)}(t), \dots Y^{(q)}(t) \right],
+\end{aligned}
+```
+defined as the solution of the stochastic differential equation
 ```math
 \begin{aligned}
 \text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
 \text{d} Y^{(q)}(t) &= \Gamma \ \text{d}W(t).
 \end{aligned}
 ```
+Then, ``Y^{(0)}(t)`` is the ``q``-times integrated Wiener process (IWP) and
+``Y^{(i)}(t)`` is the ``i``-th derivative of the IWP, for ``i = 1, \dots, q``.
 
 # Examples
 ```julia-repl
