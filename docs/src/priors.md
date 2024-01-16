@@ -24,7 +24,7 @@ Then ``Y^{(i)}(t)`` models the ``i``-th derivative of ``y(t)``.
 If you're more interested in the _diffusion_ ``\textcolor{#4063D8}{\Gamma}`` check out the [Diffusion models and calibration](@ref) section,
 and for info on the initial distribution ``\textcolor{purple}{ \mathcal{N} \left( \mu_0, \Sigma_0 \right) }`` check out the [Initialization](@ref) section.
 
-!!! tip
+!!! info
     **If you're unsure which prior to use, just stick to the integrated Wiener process prior [`IWP`](@ref)!**
     This is also the default choice for all solvers.
     The other priors are rather experimental / niche at the time of writing.
