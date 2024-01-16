@@ -95,7 +95,7 @@ function OrdinaryDiffEq.alg_cache(
 
     is_secondorder_ode = f isa DynamicalODEFunction
 
-    q = alg.prior.num_derivatives
+    q = num_derivatives(alg.prior)
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
@@ -119,9 +119,8 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = solution_space_projection(FAC, is_secondorder_ode)
 
     # Prior dynamics
-    @assert (wiener_process_dimension(alg.prior) == 1 ||
-             wiener_process_dimension(alg.prior) == d)
-    prior = remake(alg.prior; elType=uElType, wiener_process_dimension=d)
+    @assert (dim(alg.prior) == 1 || dim(alg.prior) == d)
+    prior = remake(alg.prior; elType=uElType, dim=d)
     if (
         (prior isa IOUP) && (prior.update_rate_parameter) &&
         (prior.rate_parameter isa Missing)

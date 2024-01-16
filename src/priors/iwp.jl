@@ -1,5 +1,5 @@
 @doc raw"""
-    IWP([wiener_process_dimension::Integer=1,] num_derivatives::Integer)
+    IWP([dim::Integer=1,] num_derivatives::Integer)
 
 Integrated Wiener process.
 
@@ -28,22 +28,21 @@ julia> solve(prob, EK1(prior=IWP(2)))
 ```
 """
 struct IWP{elType} <: AbstractGaussMarkovProcess{elType}
-    wiener_process_dimension::Int
-    num_derivatives::Int
+    d::Int
+    q::Int
 end
-IWP(wiener_process_dimension, num_derivatives) =
-    IWP{typeof(1.0)}(wiener_process_dimension, num_derivatives)
+IWP(dim, num_derivatives) = IWP{typeof(1.0)}(dim, num_derivatives)
 IWP(num_derivatives) = IWP(1, num_derivatives)
 
 remake(
     p::IWP{T};
     elType=T,
-    wiener_process_dimension=p.wiener_process_dimension,
-    num_derivatives=p.num_derivatives,
-) where {T} = IWP{elType}(wiener_process_dimension, num_derivatives)
+    dim=p.d,
+    num_derivatives=p.q,
+) where {T} = IWP{elType}(dim, num_derivatives)
 
 function to_sde(p::IWP)
-    d, q = wiener_process_dimension(p), num_derivatives(p)
+    @unpack d, q = p
 
     F_breve = diagm(1 => ones(q))
     L_breve = zeros(q + 1)
@@ -86,7 +85,7 @@ adjusted such that we obtain the left square root, with different ordering of th
 end
 
 function preconditioned_discretize_1d(p::IWP{elType}) where {elType}
-    q = num_derivatives(p)
+    @unpack q = p
 
     A_breve = binomial.(q:-1:0, (q:-1:0)')
     # Q_breve = Cauchy(collect(q:-1.0:0.0), collect((q+1):-1.0:1.0)) |> Matrix  # for Julia1.6
@@ -111,7 +110,7 @@ function preconditioned_discretize(p::IWP)
     A_breve, Q_breve = preconditioned_discretize_1d(p)
     QR_breve = Q_breve.R
 
-    d = wiener_process_dimension(p)
+    @unpack d = p
     A = IsometricKroneckerProduct(d, Matrix(A_breve))
     QR = IsometricKroneckerProduct(d, Matrix(QR_breve))
     Q = PSDMatrix(QR)
@@ -120,7 +119,7 @@ function preconditioned_discretize(p::IWP)
 end
 
 function discretize_1d(p::IWP{elType}, dt::Real) where {elType}
-    q = num_derivatives(p)
+    @unpack q = p
 
     v = 0:q
 
@@ -140,7 +139,7 @@ end
 
 function discretize(p::IWP, dt::Real)
     A_breve, Q_breve = discretize_1d(p, dt)
-    d = wiener_process_dimension(p)
+    @unpack d = p
     A = IsometricKroneckerProduct(d, A_breve)
     QR = IsometricKroneckerProduct(d, Q_breve.R)
     Q = PSDMatrix(QR)

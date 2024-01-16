@@ -29,13 +29,17 @@ abstract type AbstractGaussMarkovProcess{elType} end
 # Interface
 ############################################################################################
 """
-    wiener_process_dimension(p::AbstractGaussMarkovProcess)
+    dim(p::AbstractGaussMarkovProcess)
 
-Return the dimension of the Wiener process driving the highest derivative of the process.
+Return the dimension of the process.
+
+This is not the dimension of the "state" that is used to efficiently model the prior
+process as a state-space model, but it is the dimension of the process itself that we aim
+to model.
 
 See [`AbstractGaussMarkovProcess`](@ref) for more details on Gauss-Markov processes in ProbNumDiffEq.
 """
-wiener_process_dimension(p::AbstractGaussMarkovProcess) = p.wiener_process_dimension
+dim(p::AbstractGaussMarkovProcess) = p.d
 
 """
     num_derivatives(p::AbstractGaussMarkovProcess)
@@ -44,7 +48,7 @@ Return the number of derivatives that are represented by the processes state.
 
 See [`AbstractGaussMarkovProcess`](@ref) for more details on Gauss-Markov processes in ProbNumDiffEq.
 """
-num_derivatives(p::AbstractGaussMarkovProcess) = p.num_derivatives
+num_derivatives(p::AbstractGaussMarkovProcess) = p.q
 
 """
     discretize(p::AbstractGaussMarkovProcess, step_size::Real)
@@ -64,7 +68,7 @@ explicitly overwitten (e.g. for Matern processes to have the stationary distribu
 This implementation is likely to change in the future to allow for more flexibility.
 """
 initial_distribution(p::AbstractGaussMarkovProcess{T}) where {T} = begin
-    d, q = wiener_process_dimension(p), num_derivatives(p)
+    @unpack d, q = p
     D = d * (q + 1)
     initial_variance = ones(T, q + 1)
     μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
@@ -106,7 +110,7 @@ to_sde(p::AbstractGaussMarkovProcess)
 function initialize_preconditioner(
     FAC::CovarianceStructure{T1}, p::AbstractGaussMarkovProcess{T}, dt) where {T,T1}
     @assert T == T1
-    d, q = wiener_process_dimension(p), num_derivatives(p)
+    @unpack d, q = p
     P, PI = init_preconditioner(FAC)
     make_preconditioner!(P, dt, d, q)
     make_preconditioner_inv!(PI, dt, d, q)
@@ -141,7 +145,7 @@ function initialize_transition_matrices(
     p::AbstractGaussMarkovProcess{T},
     dt,
 ) where {T}
-    d, q = wiener_process_dimension(p), num_derivatives(p)
+    @unpack d, q = p
     D = d * (q + 1)
     Ah, Qh = zeros(T, D, D), PSDMatrix(zeros(T, D, D))
     P, PI = initialize_preconditioner(FAC, p, dt)

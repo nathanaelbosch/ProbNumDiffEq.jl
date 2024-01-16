@@ -28,27 +28,27 @@ julia> solve(prob, EK1(prior=Matern(2, 1)))
 ```
 """
 struct Matern{elType,R} <: AbstractGaussMarkovProcess{elType}
-    wiener_process_dimension::Int
-    num_derivatives::Int
+    d::Int
+    q::Int
     lengthscale::R
 end
-Matern{elType}(wiener_process_dimension, num_derivatives, lengthscale) where {elType} =
-    Matern{elType,typeof(lengthscale)}(wiener_process_dimension, num_derivatives, lengthscale)
-Matern(wiener_process_dimension, num_derivatives, lengthscale) =
-    Matern{typeof(1.0)}(wiener_process_dimension, num_derivatives, lengthscale)
+Matern{elType}(dim, num_derivatives, lengthscale) where {elType} =
+    Matern{elType,typeof(lengthscale)}(dim, num_derivatives, lengthscale)
+Matern(dim, num_derivatives, lengthscale) =
+    Matern{typeof(1.0)}(dim, num_derivatives, lengthscale)
 Matern(num_derivatives, lengthscale) =
     Matern(1, num_derivatives, lengthscale)
 
 remake(
     p::Matern{T};
     elType=T,
-    wiener_process_dimension=p.wiener_process_dimension,
-    num_derivatives=p.num_derivatives,
+    dim=p.d,
+    num_derivatives=p.q,
     lengthscale=p.lengthscale,
-) where {T} = Matern{elType}(wiener_process_dimension, num_derivatives, lengthscale)
+) where {T} = Matern{elType}(dim, num_derivatives, lengthscale)
 
 initial_distribution(p::Matern{T}) where {T} = begin
-    d, q = wiener_process_dimension(p), num_derivatives(p)
+    @unpack d, q = p
     D = d * (q + 1)
     sde = to_sde(p)
     μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
@@ -57,7 +57,7 @@ initial_distribution(p::Matern{T}) where {T} = begin
 end
 
 function to_sde(p::Matern)
-    q = num_derivatives(p)
+    @unpack d, q = p
     l = p.lengthscale
     @assert l isa Number
 
@@ -70,7 +70,6 @@ function to_sde(p::Matern)
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    d = wiener_process_dimension(p)
     F = IsometricKroneckerProduct(d, F_breve)
     L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)

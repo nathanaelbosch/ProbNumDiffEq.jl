@@ -1,5 +1,5 @@
 @doc raw"""
-    IOUP([wiener_process_dimension::Integer=1,]
+    IOUP([dim::Integer=1,]
          num_derivatives::Integer,
          rate_parameter::Union{Number,AbstractVector,AbstractMatrix})
 
@@ -25,30 +25,30 @@ julia> solve(prob, EK1(prior=IOUP(2, -1)))
 ```
 """
 struct IOUP{elType,R} <: AbstractGaussMarkovProcess{elType}
-    wiener_process_dimension::Int
-    num_derivatives::Int
+    d::Int
+    q::Int
     rate_parameter::R
     update_rate_parameter::Bool
 end
 IOUP{elType}(
-    wiener_process_dimension,
+    dim,
     num_derivatives,
     rate_parameter,
     update_rate_parameter=false,
 ) where {elType} = IOUP{elType,typeof(rate_parameter)}(
-    wiener_process_dimension,
+    dim,
     num_derivatives,
     rate_parameter,
     update_rate_parameter,
 )
 IOUP(
-    wiener_process_dimension,
+    dim,
     num_derivatives,
     rate_parameter,
     update_rate_parameter=false,
 ) =
     IOUP{typeof(1.0)}(
-        wiener_process_dimension,
+        dim,
         num_derivatives,
         rate_parameter,
         update_rate_parameter,
@@ -63,12 +63,12 @@ end
 remake(
     p::IOUP{T};
     elType=T,
-    wiener_process_dimension=p.wiener_process_dimension,
-    num_derivatives=p.num_derivatives,
+    dim=p.d,
+    num_derivatives=p.q,
     rate_parameter=p.rate_parameter,
     update_rate_parameter=p.update_rate_parameter,
 ) where {T} = IOUP{elType}(
-    wiener_process_dimension,
+    dim,
     num_derivatives,
     rate_parameter,
     update_rate_parameter,
@@ -84,14 +84,13 @@ function to_sde(p::IOUP{T,<:Number}) where {T}
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    d = wiener_process_dimension(p)
+    @unpack d = p
     F = IsometricKroneckerProduct(d, F_breve)
     L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)
 end
 function to_sde(p::IOUP)
-    d = wiener_process_dimension(p)
-    q = num_derivatives(p)
+    @unpack d, q = p
     r = p.rate_parameter
 
     R = if r isa AbstractVector
@@ -115,18 +114,17 @@ function to_sde(p::IOUP)
 end
 
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:AbstractMatrix})
-    q = prior.num_derivatives
+    q = prior.q
     r = prior.rate_parameter
     F[q+1:q+1:end, q+1:q+1:end] = r
 end
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:AbstractVector})
-    q = prior.num_derivatives
+    q = prior.q
     r = prior.rate_parameter
     F[q+1:q+1:end, q+1:q+1:end] = Diagonal(r)
 end
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Number})
-    d = prior.wiener_process_dimension
-    q = prior.num_derivatives
+    @unpack d, q = prior
     r = prior.rate_parameter
     F[q+1:q+1:end, q+1:q+1:end] = Diagonal(Fill(r, d))
 end

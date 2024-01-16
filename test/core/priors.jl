@@ -156,7 +156,7 @@ end
 end
 
 function test_make_transition_matrices(prior, Atrue, Qtrue)
-    d, q = prior.wiener_process_dimension, prior.num_derivatives
+    @unpack d, q = prior
     @testset "Test `make_transition_matrices!`" begin
         A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
             PNDE.DenseCovariance{Float64}(d, q), prior, h)
