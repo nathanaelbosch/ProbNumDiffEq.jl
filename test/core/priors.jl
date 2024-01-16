@@ -1,4 +1,4 @@
-using ProbNumDiffEq: make_transition_matrices!, wiener_process_dimension
+using ProbNumDiffEq: make_transition_matrices!
 using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
 using Test
@@ -6,13 +6,14 @@ using LinearAlgebra
 using FiniteHorizonGramians
 using Statistics
 using Plots
+using SimpleUnPack
 
 h = 0.1
 σ = 0.1
 
 @testset "General prior API" begin
     for prior in (IWP(2, 3), IOUP(2, 3, 1), Matern(2, 3, 1))
-        d, q = PNDE.wiener_process_dimension(prior), PNDE.num_derivatives(prior)
+        @unpack d, q = prior
 
         sde = PNDE.to_sde(prior)
         A1, Q1 = PNDE.discretize(sde, h)
