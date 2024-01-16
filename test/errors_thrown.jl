@@ -28,6 +28,6 @@ end
 @testset "Invalid prior" begin
     prob = prob_ode_lotkavolterra
     @test_throws DimensionMismatch solve(prob, EK0(prior=IWP(dim=3, num_derivatives=2)))
-    @test_throws ArgumentError solve(prob, EK0(
-        prior=IOUP(num_derivatives=1, rate_parameter=3, update_rate_parameter=true)))
+    prior = IOUP(num_derivatives=1, rate_parameter=3, update_rate_parameter=true)
+    @test_throws ArgumentError solve(prob, EK0(; prior))
 end

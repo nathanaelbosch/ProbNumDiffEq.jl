@@ -105,10 +105,12 @@ function OrdinaryDiffEq.alg_cache(
 
     FAC = get_covariance_structure(alg; elType=uElType, d, q)
     if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
-        throw(ArgumentError(
-            "The selected algorithm uses an efficient Kronecker-factorized " *
-            "implementation which is incompatible with the provided mass matrix. " *
-            "Try using the `EK1` instead."))
+        throw(
+            ArgumentError(
+                "The selected algorithm uses an efficient Kronecker-factorized " *
+                "implementation which is incompatible with the provided mass matrix. " *
+                "Try using the `EK1` instead."),
+        )
     end
 
     matType = typeof(factorized_similar(FAC, d, d))
@@ -121,19 +123,23 @@ function OrdinaryDiffEq.alg_cache(
 
     # Prior dynamics
     if !(dim(alg.prior) == 1 || dim(alg.prior) == d)
-        throw(DimensionMismatch(
-            "The dimension of the prior is not compatible with the dimension " *
-            "of the problem! The given ODE is $(d)-dimensional, but the prior is " *
-            "$(dim(alg.prior))-dimensional. Please make sure that the dimension of " *
-            "the prior is either 1 or $(d)."))
+        throw(
+            DimensionMismatch(
+                "The dimension of the prior is not compatible with the dimension " *
+                "of the problem! The given ODE is $(d)-dimensional, but the prior is " *
+                "$(dim(alg.prior))-dimensional. Please make sure that the dimension of " *
+                "the prior is either 1 or $(d)."),
+        )
     end
     prior = remake(alg.prior; elType=uElType, dim=d)
     if (prior isa IOUP) && prior.update_rate_parameter
         if !(prior.rate_parameter isa Missing)
-            throw(ArgumentError(
-                "Do not manually set the `rate_parameter` of the IOUP prior when " *
-                "using the `update_rate_parameter=true` option." *
-                "Reset the prior and try again."))
+            throw(
+                ArgumentError(
+                    "Do not manually set the `rate_parameter` of the IOUP prior when " *
+                    "using the `update_rate_parameter=true` option." *
+                    "Reset the prior and try again."),
+            )
         end
         prior = remake(prior; rate_parameter=Array{uElType}(calloc, d, d))
     end
