@@ -12,7 +12,9 @@ h = 0.1
 σ = 0.1
 
 @testset "General prior API" begin
-    for prior in (IWP(2, 3), IOUP(2, 3, 1), Matern(2, 3, 1))
+    for prior in (IWP(dim=2, num_derivatives=3),
+                  IOUP(dim=2, num_derivatives=3, rate_parameter=1),
+                  Matern(dim=2, num_derivatives=3, lengthscale=1))
         d, q = dim(prior), num_derivatives(prior)
 
         sde = PNDE.to_sde(prior)
@@ -50,7 +52,7 @@ end
 @testset "Test IWP (d=2,q=2)" begin
     d, q = 2, 2
 
-    prior = PNDE.IWP(d, q)
+    prior = PNDE.IWP(dim=d, num_derivatives=q)
 
     # true sde parameters
     F = [
@@ -195,7 +197,7 @@ end
     d, q = 2, 2
     r = randn(d, d)
 
-    prior = PNDE.IOUP(d, q, r)
+    prior = PNDE.IOUP(dim=d, num_derivatives=q, rate_parameter=r)
 
     sde = PNDE.to_sde(prior)
     F = [
@@ -234,7 +236,7 @@ end
     λ = sqrt(2ν) / l
     a(i) = binomial(q + 1, i - 1)
 
-    prior = PNDE.Matern(d, q, l)
+    prior = PNDE.Matern(dim=d, num_derivatives=q, lengthscale=l)
 
     sde = PNDE.to_sde(prior)
     F = [

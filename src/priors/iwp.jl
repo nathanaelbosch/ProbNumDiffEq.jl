@@ -40,7 +40,6 @@ struct IWP{elType} <: AbstractGaussMarkovProcess{elType}
     dim::Int
     num_derivatives::Int
 end
-IWP(dim, num_derivatives) = IWP{typeof(1.0)}(dim, num_derivatives)
 IWP(; dim, num_derivatives) = IWP{typeof(1.0)}(dim, num_derivatives)
 IWP(num_derivatives) = IWP(; dim=1, num_derivatives)
 
