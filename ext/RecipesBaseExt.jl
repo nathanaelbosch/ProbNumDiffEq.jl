@@ -91,7 +91,7 @@ end
     plot_derivatives=false,
 )
     marginals = ProbNumDiffEq.marginalize(process, plotrange)
-    d = ProbNumDiffEq.wiener_process_dimension(process)
+    d = ProbNumDiffEq.dim(process)
     q = ProbNumDiffEq.num_derivatives(process)
     means = [mean(m) for m in marginals] |> stack |> permutedims
     stddevs = [std(m) for m in marginals] |> stack |> permutedims
