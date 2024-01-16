@@ -119,6 +119,8 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = solution_space_projection(FAC, is_secondorder_ode)
 
     # Prior dynamics
+    @assert (wiener_process_dimension(alg.prior) == 1 ||
+             wiener_process_dimension(alg.prior) == d)
     prior = remake(alg.prior; elType=uElType, wiener_process_dimension=d)
     if (
         (prior isa IOUP) && (prior.update_rate_parameter) &&

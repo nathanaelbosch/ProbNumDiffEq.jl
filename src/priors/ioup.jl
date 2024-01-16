@@ -24,18 +24,18 @@ where ``L`` is the `rate_parameter`.
 julia> solve(prob, EK1(prior=IOUP(2, -1)))
 ```
 """
-struct IOUP{elType,dimType,R} <: AbstractGaussMarkovProcess{elType}
-    wiener_process_dimension::dimType
+struct IOUP{elType,R} <: AbstractGaussMarkovProcess{elType}
+    wiener_process_dimension::Int
     num_derivatives::Int
     rate_parameter::R
     update_rate_parameter::Bool
 end
 IOUP(num_derivatives; update_rate_parameter) = begin
     @assert update_rate_parameter
-    IOUP(missing, num_derivatives, missing, update_rate_parameter)
+    IOUP(1, num_derivatives, missing, update_rate_parameter)
 end
 IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
-    IOUP(missing, num_derivatives, rate_parameter, update_rate_parameter)
+    IOUP(1, num_derivatives, rate_parameter, update_rate_parameter)
 IOUP(
     wiener_process_dimension,
     num_derivatives,

@@ -25,12 +25,12 @@ This is typically the preferred usage.
 julia> solve(prob, EK1(prior=IWP(2)))
 ```
 """
-struct IWP{elType,dimType} <: AbstractGaussMarkovProcess{elType}
-    wiener_process_dimension::dimType
+struct IWP{elType} <: AbstractGaussMarkovProcess{elType}
+    wiener_process_dimension::Int
     num_derivatives::Int
 end
 # most convenient user-facing constructor:
-IWP(num_derivatives) = IWP{typeof(1.0)}(missing, num_derivatives)
+IWP(num_derivatives) = IWP{typeof(1.0)}(1, num_derivatives)
 IWP{elType}(wiener_process_dimension, num_derivatives) where {elType} =
     IWP{elType,typeof(wiener_process_dimension)}(wiener_process_dimension, num_derivatives)
 IWP(wiener_process_dimension, num_derivatives) =
