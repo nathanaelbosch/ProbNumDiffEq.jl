@@ -1,5 +1,5 @@
 @doc raw"""
-    Matern([wiener_process_dimension::Integer=1,]
+    Matern([dim::Integer=1,]
            num_derivatives::Integer,
            lengthscale::Number)
 

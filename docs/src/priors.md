@@ -30,59 +30,87 @@ The other priors are rather experimental / niche at the time of writing.
 
 ## Prior choices
 
-ProbNumDiffEq.jl currently supports
-integrated Wiener processes ([`IWP`](@ref)),
-integrated Ornstein--Uhlenbeck processes ([`IOUP`](@ref)), and
-Matérn processes ([`Matern`](@ref)) as priors for the solvers.
+ProbNumDiffEq.jl currently supports three classes of priors for the solvers:
+- ``q``-times integrated Wiener processes ([`IWP`](@ref))
+- ``q``-times integrated Ornstein--Uhlenbeck processes ([`IOUP`](@ref))
+- Matérn processes ([`Matern`](@ref))
 Let's look at each of them in turn and visualize some examples.
 
 ```@example priors
 using ProbNumDiffEq, Plots
 plotrange = range(0, 10, length=250)
+nothing # hide
 ```
 
-### Integrated Wiener process prior [`IWP`](@ref)
-This is the default prior for all solvers, and it is the most common choice in the literature.
+### Integrated Wiener process ([`IWP`](@ref))
+The ``q``-times integrated Wiener process prior [`IWP`](@ref) is the most common prior choice in the probabilistic ODE solver literature,
+and is the default choice for the solvers in ProbNumDiffEq.jl.
 
-Two-times integrated Wiener process to model a one-dimensional ODE solution:
+Here is how the [`IWP`](@ref) looks for varying smoothness parameters ``q``:
 ```@example priors
-plot(IWP(1), plotrange; ylims=(-10,10))
+plot(
+    plot(IWP(1), plotrange; title="q=1"),
+    plot(IWP(2), plotrange; title="q=2"),
+    plot(IWP(3), plotrange; title="q=3"),
+    plot(IWP(4), plotrange; title="q=4");
+    ylims=(-20,20),
+)
 ```
 
-Four-times integrated Wiener process to model a two-dimensional ODE solution:
+
+### Integrated Ornstein--Uhlenbeck process ([`IOUP`](@ref))
+The ``q``-times integrated Ornstein--Uhlenbeck process prior [`IOUP`](@ref) is a generalization of the IWP prior,
+where the drift matrix ``\textcolor{#389826}{A}`` is not zero, but is of the form
+```math
+\begin{aligned}
+\textcolor{#389826}{A} = \begin{bmatrix} 0 & 0 & 0 & \dots & R \end{bmatrix},
+\end{aligned}
+```
+where ``R`` is a ``q \times q`` matrix called the "rate parameter" of the prior.
+That is, the ``q``-th derivative of the solution is not just driven by the Wiener process, but also by a linear ODE with drift ``R``.
+This prior is mostly used in the context of [Probabilistic Exponential Integrators](@ref probexpinttutorial) to include the linear part of a semi-linear ODE in the prior.
+
+Here is how the [`IOUP`](@ref) looks for varying rate parameters:
 ```@example priors
-plot(IWP(4), plotrange; ylims=(-10,10))
+plot(
+    plot(IOUP(1, -1), plotrange; title="q=1,rate=-1"),
+    plot(IOUP(1, 1), plotrange; title="q=1,rate=1"),
+    plot(IOUP(4, -1), plotrange; title="q=4,rate=-1"),
+    plot(IOUP(4, 1), plotrange; title="q=4,rate=1"),
+    ylims=(-20,20),
+)
 ```
 
-### Integrated Ornstein--Uhlenbeck process prior [`IOUP`](@ref)
-This prior is mostly used in the context of [Probabilistic Exponential Integrators](@ref probexpinttutorial).
-
-
+In the context of [Probabilistic Exponential Integrators](@ref probexpinttutorial), the rate parameter is often chosen according to the given ODE.
+Here is an example for a damped oscillator:
 ```@example priors
-plot(IOUP(1, -1), plotrange; ylims=(-10, 10))
+plot(IOUP(2, 1, [-0.2 -2π; 2π -0.2]), plotrange; plot_title="damped oscillator prior");
 ```
 
-```@example priors
-plot(IOUP(1, 1), plotrange; ylims=(-10, 10))
-```
+### Matérn process ([`Matern`](@ref))
+The class of [`Matern`](@ref) processes is well-known in the Gaussian process literature.
+These processes also have a corresponding SDE representation as explained in the background section above,
+with a specific drift matrix ``\textcolor{#389826}{A}`` [sarkka19appliedsde](@cite).
 
+Here is how the [`Matern`](@ref) looks for varying smoothness parameters ``q``:
 ```@example priors
-rate_parameter = [-0.2 -2π; 2π -0.2]
-plot(IOUP(2, 1, rate_parameter), plotrange)
-
+plot(
+    plot(Matern(1, 1), plotrange; title="q=1"),
+    plot(Matern(2, 1), plotrange; title="q=2"),
+    plot(Matern(3, 1), plotrange; title="q=3"),
+    plot(Matern(4, 1), plotrange; title="q=4");
+)
 ```
-
-### Matérn process prior [`Matern`](@ref)
-Matérn processes are well-known in the Gaussian process literature, but not much explored for probabilistic ODE solvers.
-
+and for varying length scales ``\ell``:
 ```@example priors
-plot(Matern(2, 1), plotrange)
-```
-```@example priors
-plot(Matern(2, 10), plotrange)
-```
-```@example priors
-plot(Matern(2, 0.1), plotrange)
+plot(
+    plot(Matern(1, 2), plotrange; title="q=1,l=2"),
+    plot(Matern(1, 1), plotrange; title="q=1,l=1"),
+    plot(Matern(1, 0.5), plotrange; title="q=1,l=0.5"),
+    plot(Matern(4, 2), plotrange; title="q=4,l=2"),
+    plot(Matern(4, 1), plotrange; title="q=4,l=1"),
+    plot(Matern(4, 0.5), plotrange; title="q=4,l=0.5");
+)
 ```
 
 ## API
@@ -96,7 +124,7 @@ Matern
 ```@docs
 ProbNumDiffEq.AbstractGaussMarkovProcess
 ProbNumDiffEq.LTISDE
-ProbNumDiffEq.wiener_process_dimension
+ProbNumDiffEq.dim
 ProbNumDiffEq.num_derivatives
 ProbNumDiffEq.to_sde
 ProbNumDiffEq.discretize
