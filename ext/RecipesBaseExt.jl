@@ -72,17 +72,18 @@ import SciMLBase: interpret_vars, getsyms
     end
 end
 
-ith(i) = if i == 0
-    "0th"
-elseif i == 1
-    "1st"
-elseif i == 2
-    "2nd"
-elseif i == 3
-    "3rd"
-else
-    "$(i)th"
-end
+ith(i) =
+    if i == 0
+        "0th"
+    elseif i == 1
+        "1st"
+    elseif i == 2
+        "2nd"
+    elseif i == 3
+        "3rd"
+    else
+        "$(i)th"
+    end
 
 @recipe function f(
     process::ProbNumDiffEq.AbstractGaussMarkovProcess,
