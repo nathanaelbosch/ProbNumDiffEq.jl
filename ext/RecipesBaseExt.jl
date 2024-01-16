@@ -118,7 +118,11 @@ end
         ribbon --> 3stddevs
         label --> ""
         fillalpha --> 0.2
-        layout --> (d, q + 1)
+        layout --> if plot_derivatives
+            (d, q + 1)
+        else
+            d
+        end
         plotrange, means
     end
 
