@@ -2,7 +2,7 @@
 
 **TL;DR: If you're unsure which prior to use, just stick to the default integrated Wiener process prior [`IWP`](@ref)!**
 
-# Background
+## Background
 
 We model the ODE solution ``y(t)`` with a Gauss--Markov prior.
 More precisely, let
@@ -28,7 +28,62 @@ and for info on the initial distribution ``\textcolor{purple}{ \mathcal{N} \left
 This is also the default choice for all solvers.
 The other priors are rather experimental / niche at the time of writing.
 
-## API
+## Prior choices
+
+ProbNumDiffEq.jl currently supports
+integrated Wiener processes ([`IWP`](@ref)),
+integrated Ornstein--Uhlenbeck processes ([`IOUP`](@ref)), and
+Matérn processes ([`Matern`](@ref)) as priors for the solvers.
+Let's look at each of them in turn and visualize some examples.
+
+```@example priors
+using ProbNumDiffEq, Plots
+plotrange = range(0, 10, length=250)
+```
+
+### Integrated Wiener process prior [`IWP`](@ref)
+This is the default prior for all solvers, and it is the most common choice in the literature.
+
+Two-times integrated Wiener process to model a one-dimensional ODE solution:
+```@example priors
+plot(IWP(1), plotrange; ylims=(-10,10))
+```
+
+Four-times integrated Wiener process to model a two-dimensional ODE solution:
+```@example priors
+plot(IWP(4), plotrange; ylims=(-10,10))
+```
+
+### Integrated Ornstein--Uhlenbeck process prior [`IOUP`](@ref)
+This prior is mostly used in the context of [Probabilistic Exponential Integrators](@ref probexpinttutorial).
+
+
+```@example priors
+plot(IOUP(1, -1), plotrange; ylims=(-10, 10))
+```
+
+```@example priors
+plot(IOUP(1, 1), plotrange; ylims=(-10, 10))
+```
+
+```@example priors
+rate_parameter = [-0.2 -2π; 2π -0.2]
+plot(IOUP(2, 1, rate_parameter), plotrange)
+
+```
+
+### Matérn process prior [`Matern`](@ref)
+Matérn processes are well-known in the Gaussian process literature, but not much explored for probabilistic ODE solvers.
+
+```@example priors
+plot(Matern(2, 1), plotrange)
+```
+```@example priors
+plot(Matern(2, 10), plotrange)
+```
+```@example priors
+plot(Matern(2, 0.1), plotrange)
+```
 
 ## API
 ```@docs
@@ -37,16 +92,18 @@ IOUP
 Matern
 ```
 
+### Internals
 ```@docs
 ProbNumDiffEq.AbstractGaussMarkovProcess
+ProbNumDiffEq.LTISDE
 ProbNumDiffEq.wiener_process_dimension
 ProbNumDiffEq.num_derivatives
 ProbNumDiffEq.to_sde
 ProbNumDiffEq.discretize
 ProbNumDiffEq.initial_distribution
-ProbNumDiffEq.LTISDE
 ```
 
+### Convenience functions to analyze and visualize priors
 ```@docs
 ProbNumDiffEq.marginalize
 ProbNumDiffEq.sample
