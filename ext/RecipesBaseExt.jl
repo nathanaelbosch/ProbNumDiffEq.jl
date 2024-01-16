@@ -112,7 +112,11 @@ end
         title --> [i == 1 ? "$(dui(j))" : "" for i in 1:d for j in 0:q] |> permutedims
     end
     ylabel --> [q == 0 ? "u$i" : "" for i in 1:d for q in 0:q] |> permutedims
-    xlabel --> [i == d ? "t" : "" for i in 1:d for q in 0:q] |> permutedims
+    xlabel --> if plot_derivatives
+        [i == d ? "t" : "" for i in 1:d for q in 0:q] |> permutedims
+    else
+        "t"
+    end
 
     @series begin
         ribbon --> 3stddevs
