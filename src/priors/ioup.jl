@@ -46,10 +46,10 @@ IOUP{elType}(
 IOUP(; dim, num_derivatives, rate_parameter, update_rate_parameter=false) =
     IOUP{typeof(1.0)}(; dim, num_derivatives, rate_parameter, update_rate_parameter)
 IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
-    IOUP(1, num_derivatives, rate_parameter, update_rate_parameter)
+    IOUP(; dim=1, num_derivatives, rate_parameter, update_rate_parameter)
 IOUP(num_derivatives; update_rate_parameter) = begin
     @assert update_rate_parameter
-    IOUP(; dim=1, num_derivatives, rate_parameter=missing, update_rate_parameter)
+    IOUP(num_derivatives, missing; update_rate_parameter)
 end
 
 remake(
