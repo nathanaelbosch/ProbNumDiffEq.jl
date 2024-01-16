@@ -43,7 +43,7 @@ IOUP{elType}(
     ; dim, num_derivatives, rate_parameter, update_rate_parameter=false) where {elType} =
         IOUP{elType,typeof(rate_parameter)}(
             dim, num_derivatives, rate_parameter, update_rate_parameter)
-IOUP(; dim, num_derivatives, rate_parameter, update_rate_parameter=false) =
+IOUP(; dim=1, num_derivatives, rate_parameter, update_rate_parameter=false) =
     IOUP{typeof(1.0)}(; dim, num_derivatives, rate_parameter, update_rate_parameter)
 IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
     IOUP(; dim=1, num_derivatives, rate_parameter, update_rate_parameter)
