@@ -1,4 +1,4 @@
-# Probabilistic Exponential Integrators
+# [Probabilistic Exponential Integrators](@id probexpinttutorial)
 
 Exponential integrators are a class of numerical methods for solving semi-linear ordinary differential equations (ODEs) of the form
 ```math
