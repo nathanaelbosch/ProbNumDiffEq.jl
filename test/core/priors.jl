@@ -15,7 +15,7 @@ h = 0.1
     for prior in (
         IWP(dim=2, num_derivatives=3),
         IOUP(dim=2, num_derivatives=3, rate_parameter=1),
-        Matern(dim=2, num_derivatives=3, lengthscale=1)
+        Matern(dim=2, num_derivatives=3, lengthscale=1),
     )
         d, q = dim(prior), num_derivatives(prior)
 
