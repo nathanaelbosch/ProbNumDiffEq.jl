@@ -1,4 +1,4 @@
-using ProbNumDiffEq: make_transition_matrices!
+using ProbNumDiffEq: make_transition_matrices!, dim, num_derivatives
 using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
 using Test
@@ -13,7 +13,7 @@ h = 0.1
 
 @testset "General prior API" begin
     for prior in (IWP(2, 3), IOUP(2, 3, 1), Matern(2, 3, 1))
-        @unpack d, q = prior
+        d, q = dim(prior), num_derivatives(prior)
 
         sde = PNDE.to_sde(prior)
         A1, Q1 = PNDE.discretize(sde, h)
@@ -157,7 +157,7 @@ end
 end
 
 function test_make_transition_matrices(prior, Atrue, Qtrue)
-    @unpack d, q = prior
+    d, q = dim(prior), num_derivatives(prior)
     @testset "Test `make_transition_matrices!`" begin
         A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
             PNDE.DenseCovariance{Float64}(d, q), prior, h)

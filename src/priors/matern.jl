@@ -36,28 +36,28 @@ Then, ``Y^{(0)}(t)`` is a Matern process and
 julia> solve(prob, EK1(prior=Matern(2, 1)))
 ```
 """
-struct Matern{elType,R} <: AbstractGaussMarkovProcess{elType}
-    d::Int
-    q::Int
-    lengthscale::R
+struct Matern{elType,L} <: AbstractGaussMarkovProcess{elType}
+    dim::Int
+    num_derivatives::Int
+    lengthscale::L
 end
-Matern{elType}(dim, num_derivatives, lengthscale) where {elType} =
+Matern{elType}(; dim, num_derivatives, lengthscale) where {elType} =
     Matern{elType,typeof(lengthscale)}(dim, num_derivatives, lengthscale)
-Matern(dim, num_derivatives, lengthscale) =
+Matern(; dim, num_derivatives, lengthscale) =
     Matern{typeof(1.0)}(dim, num_derivatives, lengthscale)
 Matern(num_derivatives, lengthscale) =
-    Matern(1, num_derivatives, lengthscale)
+    Matern(; dim=1, num_derivatives, lengthscale)
 
 remake(
     p::Matern{T};
     elType=T,
-    dim=p.d,
-    num_derivatives=p.q,
+    dim=dim(p),
+    num_derivatives=num_derivatives(p),
     lengthscale=p.lengthscale,
-) where {T} = Matern{elType}(dim, num_derivatives, lengthscale)
+) where {T} = Matern{elType}(; dim, num_derivatives, lengthscale)
 
 initial_distribution(p::Matern{T}) where {T} = begin
-    @unpack d, q = p
+    d, q = dim(p), num_derivatives(p)
     D = d * (q + 1)
     sde = to_sde(p)
     μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
@@ -66,7 +66,7 @@ initial_distribution(p::Matern{T}) where {T} = begin
 end
 
 function to_sde(p::Matern)
-    @unpack d, q = p
+    d, q = dim(p), num_derivatives(p)
     l = p.lengthscale
     @assert l isa Number
 

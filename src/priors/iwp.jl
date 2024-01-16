@@ -37,21 +37,22 @@ julia> solve(prob, EK1(prior=IWP(2)))
 ```
 """
 struct IWP{elType} <: AbstractGaussMarkovProcess{elType}
-    d::Int
-    q::Int
+    dim::Int
+    num_derivatives::Int
 end
 IWP(dim, num_derivatives) = IWP{typeof(1.0)}(dim, num_derivatives)
-IWP(num_derivatives) = IWP(1, num_derivatives)
+IWP(; dim, num_derivatives) = IWP{typeof(1.0)}(dim, num_derivatives)
+IWP(num_derivatives) = IWP(; dim=1, num_derivatives)
 
 remake(
     p::IWP{T};
     elType=T,
-    dim=p.d,
-    num_derivatives=p.q,
+    dim=dim(p),
+    num_derivatives=num_derivatives(p),
 ) where {T} = IWP{elType}(dim, num_derivatives)
 
 function to_sde(p::IWP)
-    @unpack d, q = p
+    d, q = dim(p), num_derivatives(p)
 
     F_breve = diagm(1 => ones(q))
     L_breve = zeros(q + 1)
@@ -94,7 +95,7 @@ adjusted such that we obtain the left square root, with different ordering of th
 end
 
 function preconditioned_discretize_1d(p::IWP{elType}) where {elType}
-    @unpack q = p
+    q = num_derivatives(p)
 
     A_breve = binomial.(q:-1:0, (q:-1:0)')
     # Q_breve = Cauchy(collect(q:-1.0:0.0), collect((q+1):-1.0:1.0)) |> Matrix  # for Julia1.6
@@ -119,7 +120,7 @@ function preconditioned_discretize(p::IWP)
     A_breve, Q_breve = preconditioned_discretize_1d(p)
     QR_breve = Q_breve.R
 
-    @unpack d = p
+    d = dim(p)
     A = IsometricKroneckerProduct(d, Matrix(A_breve))
     QR = IsometricKroneckerProduct(d, Matrix(QR_breve))
     Q = PSDMatrix(QR)
@@ -128,7 +129,7 @@ function preconditioned_discretize(p::IWP)
 end
 
 function discretize_1d(p::IWP{elType}, dt::Real) where {elType}
-    @unpack q = p
+    q = num_derivatives(p)
 
     v = 0:q
 
@@ -148,7 +149,7 @@ end
 
 function discretize(p::IWP, dt::Real)
     A_breve, Q_breve = discretize_1d(p, dt)
-    @unpack d = p
+    d = dim(p)
     A = IsometricKroneckerProduct(d, A_breve)
     QR = IsometricKroneckerProduct(d, Q_breve.R)
     Q = PSDMatrix(QR)

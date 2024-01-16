@@ -39,7 +39,7 @@ to model.
 
 See [`AbstractGaussMarkovProcess`](@ref) for more details on Gauss-Markov processes in ProbNumDiffEq.
 """
-dim(p::AbstractGaussMarkovProcess) = p.d
+dim(p::AbstractGaussMarkovProcess) = p.dim
 
 """
     num_derivatives(p::AbstractGaussMarkovProcess)
@@ -48,7 +48,7 @@ Return the number of derivatives that are represented by the processes state.
 
 See [`AbstractGaussMarkovProcess`](@ref) for more details on Gauss-Markov processes in ProbNumDiffEq.
 """
-num_derivatives(p::AbstractGaussMarkovProcess) = p.q
+num_derivatives(p::AbstractGaussMarkovProcess) = p.num_derivatives
 
 """
     discretize(p::AbstractGaussMarkovProcess, step_size::Real)
@@ -68,7 +68,7 @@ explicitly overwitten (e.g. for Matern processes to have the stationary distribu
 This implementation is likely to change in the future to allow for more flexibility.
 """
 initial_distribution(p::AbstractGaussMarkovProcess{T}) where {T} = begin
-    @unpack d, q = p
+    d, q = dim(p), num_derivatives(p)
     D = d * (q + 1)
     initial_variance = ones(T, q + 1)
     μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
@@ -110,7 +110,7 @@ to_sde(p::AbstractGaussMarkovProcess)
 function initialize_preconditioner(
     FAC::CovarianceStructure{T1}, p::AbstractGaussMarkovProcess{T}, dt) where {T,T1}
     @assert T == T1
-    @unpack d, q = p
+    d, q = dim(p), num_derivatives(p)
     P, PI = init_preconditioner(FAC)
     make_preconditioner!(P, dt, d, q)
     make_preconditioner_inv!(PI, dt, d, q)
@@ -145,7 +145,7 @@ function initialize_transition_matrices(
     p::AbstractGaussMarkovProcess{T},
     dt,
 ) where {T}
-    @unpack d, q = p
+    d, q = dim(p), num_derivatives(p)
     D = d * (q + 1)
     Ah, Qh = zeros(T, D, D), PSDMatrix(zeros(T, D, D))
     P, PI = initialize_preconditioner(FAC, p, dt)

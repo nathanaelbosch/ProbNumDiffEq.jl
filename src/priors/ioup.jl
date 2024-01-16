@@ -34,54 +34,32 @@ julia> solve(prob, EK1(prior=IOUP(2, -1)))
 ```
 """
 struct IOUP{elType,R} <: AbstractGaussMarkovProcess{elType}
-    d::Int
-    q::Int
+    dim::Int
+    num_derivatives::Int
     rate_parameter::R
     update_rate_parameter::Bool
 end
 IOUP{elType}(
-    dim,
-    num_derivatives,
-    rate_parameter,
-    update_rate_parameter=false,
-) where {elType} = IOUP{elType,typeof(rate_parameter)}(
-    dim,
-    num_derivatives,
-    rate_parameter,
-    update_rate_parameter,
-)
-IOUP(
-    dim,
-    num_derivatives,
-    rate_parameter,
-    update_rate_parameter=false,
-) =
-    IOUP{typeof(1.0)}(
-        dim,
-        num_derivatives,
-        rate_parameter,
-        update_rate_parameter,
-    )
+    ; dim, num_derivatives, rate_parameter, update_rate_parameter=false) where {elType} =
+        IOUP{elType,typeof(rate_parameter)}(
+            dim, num_derivatives, rate_parameter, update_rate_parameter)
+IOUP(; dim, num_derivatives, rate_parameter, update_rate_parameter=false) =
+    IOUP{typeof(1.0)}(; dim, num_derivatives, rate_parameter, update_rate_parameter)
 IOUP(num_derivatives, rate_parameter; update_rate_parameter=false) =
     IOUP(1, num_derivatives, rate_parameter, update_rate_parameter)
 IOUP(num_derivatives; update_rate_parameter) = begin
     @assert update_rate_parameter
-    IOUP(1, num_derivatives, missing, update_rate_parameter)
+    IOUP(; dim=1, num_derivatives, rate_parameter=missing, update_rate_parameter)
 end
 
 remake(
     p::IOUP{T};
     elType=T,
-    dim=p.d,
-    num_derivatives=p.q,
+    dim=dim(p),
+    num_derivatives=num_derivatives(p),
     rate_parameter=p.rate_parameter,
     update_rate_parameter=p.update_rate_parameter,
-) where {T} = IOUP{elType}(
-    dim,
-    num_derivatives,
-    rate_parameter,
-    update_rate_parameter,
-)
+) where {T} = IOUP{elType}(; dim, num_derivatives, rate_parameter, update_rate_parameter)
 
 function to_sde(p::IOUP{T,<:Number}) where {T}
     q = num_derivatives(p)
@@ -93,13 +71,13 @@ function to_sde(p::IOUP{T,<:Number}) where {T}
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    @unpack d = p
+    d = dim(p)
     F = IsometricKroneckerProduct(d, F_breve)
     L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)
 end
 function to_sde(p::IOUP)
-    @unpack d, q = p
+    d, q = dim(p), num_derivatives(p)
     r = p.rate_parameter
 
     R = if r isa AbstractVector
@@ -133,7 +111,7 @@ function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:AbstractVector
     F[q+1:q+1:end, q+1:q+1:end] = Diagonal(r)
 end
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Number})
-    @unpack d, q = prior
+    d, q = get_dq(prior)
     r = prior.rate_parameter
     F[q+1:q+1:end, q+1:q+1:end] = Diagonal(Fill(r, d))
 end
