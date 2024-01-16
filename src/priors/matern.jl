@@ -44,7 +44,7 @@ end
 Matern{elType}(; dim, num_derivatives, lengthscale) where {elType} =
     Matern{elType,typeof(lengthscale)}(dim, num_derivatives, lengthscale)
 Matern(; dim, num_derivatives, lengthscale) =
-    Matern{typeof(1.0)}(dim, num_derivatives, lengthscale)
+    Matern{typeof(1.0)}(; dim, num_derivatives, lengthscale)
 Matern(num_derivatives, lengthscale) =
     Matern(; dim=1, num_derivatives, lengthscale)
 
