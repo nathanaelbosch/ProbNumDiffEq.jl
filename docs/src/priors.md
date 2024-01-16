@@ -73,10 +73,10 @@ This prior is mostly used in the context of [Probabilistic Exponential Integrato
 Here is how the [`IOUP`](@ref) looks for varying rate parameters:
 ```@example priors
 plot(
-    plot(IOUP(1, -1), plotrange; title="q=1,rate=-1"),
-    plot(IOUP(1, 1), plotrange; title="q=1,rate=1"),
-    plot(IOUP(4, -1), plotrange; title="q=4,rate=-1"),
-    plot(IOUP(4, 1), plotrange; title="q=4,rate=1"),
+    plot(IOUP(1, -1), plotrange; title="q=1,R=-1"),
+    plot(IOUP(1, 1), plotrange; title="q=1,R=1"),
+    plot(IOUP(4, -1), plotrange; title="q=4,R=-1"),
+    plot(IOUP(4, 1), plotrange; title="q=4,R=1"),
     ylims=(-20,20),
 )
 ```
@@ -104,12 +104,10 @@ plot(
 and for varying length scales ``\ell``:
 ```@example priors
 plot(
-    plot(Matern(1, 2), plotrange; title="q=1,l=2"),
-    plot(Matern(1, 1), plotrange; title="q=1,l=1"),
-    plot(Matern(1, 0.5), plotrange; title="q=1,l=0.5"),
-    plot(Matern(4, 2), plotrange; title="q=4,l=2"),
-    plot(Matern(4, 1), plotrange; title="q=4,l=1"),
-    plot(Matern(4, 0.5), plotrange; title="q=4,l=0.5");
+    plot(Matern(2, 5), plotrange; title="l=5"),
+    plot(Matern(2, 2), plotrange; title="l=2"),
+    plot(Matern(2, 1), plotrange; title="l=1"),
+    plot(Matern(2, 0.5), plotrange; title="l=0.5"),
 )
 ```
 
