@@ -121,7 +121,7 @@ end
     @series begin
         ribbon --> 3stddevs
         label --> ""
-        fillalpha --> 0.2
+        fillalpha --> 0.1
         layout --> if plot_derivatives
             (d, q + 1)
         else
@@ -140,6 +140,7 @@ end
                     s = s * E0'
                 end
                 primary --> false
+                linealpha --> 0.3
                 label := ""
                 plotrange, s
             end
