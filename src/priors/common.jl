@@ -7,7 +7,7 @@ Gauss-Markov processes are solutions to linear time-invariant stochastic differe
 equations (SDEs). Here we assume SDEs of the form
 ```math
 \begin{aligned}
-dX_t &= F X_t dt + L dW_t
+dX_t &= F X_t dt + L dW_t \\
 X_0 &= \mathcal{N} \left( X_0; \mu_0, \Sigma_0 \right)
 \end{aligned}
 ```
@@ -98,7 +98,7 @@ Gauss-Markov processes are solutions to linear time-invariant stochastic differe
 equations (SDEs) of the form
 ```math
 \begin{aligned}
-dX_t &= F X_t dt + L dW_t
+dX_t &= F X_t dt + L dW_t \\
 X_0 &= \mathcal{N} \left( X_0; \mu_0, \Sigma_0 \right)
 \end{aligned}
 ```
