@@ -69,7 +69,8 @@ makedocs(
         ],
         "References" => "references.md",
     ],
-    warnonly=:missing_docs,
+    warnonly=Documenter.except(:missing_docs),
+    checkdocs=:none,
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.

@@ -21,7 +21,7 @@ OrdinaryDiffEq.isimplicit(::EK1) = true
 ############################################
 # Step size control
 OrdinaryDiffEq.isadaptive(::AbstractEK) = true
-OrdinaryDiffEq.alg_order(alg::AbstractEK) = alg.prior.num_derivatives
+OrdinaryDiffEq.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
 # OrdinaryDiffEq.alg_adaptive_order(alg::AbstractEK) =
 
 # PI control is the default!

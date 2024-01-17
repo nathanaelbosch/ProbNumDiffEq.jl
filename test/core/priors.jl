@@ -1,15 +1,24 @@
-using ProbNumDiffEq: make_transition_matrices!
+using ProbNumDiffEq: make_transition_matrices!, dim, num_derivatives
 using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
 using Test
 using LinearAlgebra
 using FiniteHorizonGramians
+using Statistics
+using Plots
+using SimpleUnPack
 
 h = 0.1
 σ = 0.1
 
 @testset "General prior API" begin
-    for prior in (IWP(2, 3), IOUP(2, 3, 1), Matern(2, 3, 1))
+    for prior in (
+        IWP(dim=2, num_derivatives=3),
+        IOUP(dim=2, num_derivatives=3, rate_parameter=1),
+        Matern(dim=2, num_derivatives=3, lengthscale=1),
+    )
+        d, q = dim(prior), num_derivatives(prior)
+
         sde = PNDE.to_sde(prior)
         A1, Q1 = PNDE.discretize(sde, h)
         A2, Q2 = PNDE.discretize(prior, h)
@@ -26,13 +35,26 @@ h = 0.1
             PNDE.LTISDE(Matrix(sde.F), Matrix(sde.L)), h)
         @test A1 ≈ A4
         @test Q1.R ≈ Q4R
+
+        ts = 0:0.1:1
+        marginals = @test_nowarn PNDE.marginalize(prior, ts)
+        @test length(marginals) == length(ts)
+        @test marginals[1] isa Gaussian
+
+        N = 3
+        samples = @test_nowarn PNDE.sample(prior, ts, N)
+        @test length(samples) == length(ts)
+        @test size(samples[1]) == (d * (q + 1), N)
+
+        @test_nowarn plot(prior, ts; plot_derivatives=true)
+        @test_nowarn plot(prior, ts; plot_derivatives=false)
     end
 end
 
 @testset "Test IWP (d=2,q=2)" begin
     d, q = 2, 2
 
-    prior = PNDE.IWP(d, q)
+    prior = PNDE.IWP(dim=d, num_derivatives=q)
 
     # true sde parameters
     F = [
@@ -139,7 +161,7 @@ end
 end
 
 function test_make_transition_matrices(prior, Atrue, Qtrue)
-    d, q = prior.wiener_process_dimension, prior.num_derivatives
+    d, q = dim(prior), num_derivatives(prior)
     @testset "Test `make_transition_matrices!`" begin
         A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
             PNDE.DenseCovariance{Float64}(d, q), prior, h)
@@ -177,7 +199,7 @@ end
     d, q = 2, 2
     r = randn(d, d)
 
-    prior = PNDE.IOUP(d, q, r)
+    prior = PNDE.IOUP(dim=d, num_derivatives=q, rate_parameter=r)
 
     sde = PNDE.to_sde(prior)
     F = [
@@ -216,7 +238,7 @@ end
     λ = sqrt(2ν) / l
     a(i) = binomial(q + 1, i - 1)
 
-    prior = PNDE.Matern(d, q, l)
+    prior = PNDE.Matern(dim=d, num_derivatives=q, lengthscale=l)
 
     sde = PNDE.to_sde(prior)
     F = [
@@ -245,4 +267,11 @@ end
     @test Matrix(Q1) ≈ Matrix(Q2)
 
     test_make_transition_matrices(prior, A1, Q1)
+
+    @testset "Test initial distribution being stationary" begin
+        D0 = PNDE.initial_distribution(prior)
+        D1 = PNDE.predict(D0, A1, Q1)
+        @test mean(D0) ≈ mean(D1)
+        @test Matrix(cov(D0)) ≈ Matrix(cov(D1))
+    end
 end

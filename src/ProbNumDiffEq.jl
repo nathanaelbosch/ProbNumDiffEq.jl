@@ -6,12 +6,12 @@ import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate
 
 using LinearAlgebra
 import LinearAlgebra: mul!
-import Statistics: mean, var, std
+import Statistics: mean, var, std, cov
 
 using Reexport
 @reexport using DiffEqBase
 import SciMLBase
-import SciMLBase: interpret_vars, getsyms
+import SciMLBase: interpret_vars, getsyms, remake
 using OrdinaryDiffEq
 using SpecialMatrices, ToeplitzMatrices
 using FastBroadcast
@@ -29,6 +29,7 @@ import Kronecker
 using ArrayAllocators
 using FiniteHorizonGramians
 using FillArrays
+using MatrixEquations
 
 @reexport using GaussianDistributions
 

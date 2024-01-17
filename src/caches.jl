@@ -95,7 +95,7 @@ function OrdinaryDiffEq.alg_cache(
 
     is_secondorder_ode = f isa DynamicalODEFunction
 
-    q = alg.prior.num_derivatives
+    q = num_derivatives(alg.prior)
     d = is_secondorder_ode ? length(u[1, :]) : length(u)
     D = d * (q + 1)
 
@@ -105,8 +105,11 @@ function OrdinaryDiffEq.alg_cache(
 
     FAC = get_covariance_structure(alg; elType=uElType, d, q)
     if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
-        error(
-            "The selected algorithm uses an efficient Kronecker-factorized implementation which is incompatible with the provided mass matrix. Try using the `EK1` instead.",
+        throw(
+            ArgumentError(
+                "The selected algorithm uses an efficient Kronecker-factorized " *
+                "implementation which is incompatible with the provided mass matrix. " *
+                "Try using the `EK1` instead."),
         )
     end
 
@@ -119,18 +122,28 @@ function OrdinaryDiffEq.alg_cache(
     SolProj = solution_space_projection(FAC, is_secondorder_ode)
 
     # Prior dynamics
-    prior = if alg.prior isa IWP
-        IWP{uElType}(d, alg.prior.num_derivatives)
-    elseif alg.prior isa IOUP && ismissing(alg.prior.rate_parameter)
-        r = Array{uElType}(calloc, d, d)
-        IOUP{uElType}(d, q, r, alg.prior.update_rate_parameter)
-    elseif alg.prior isa IOUP
-        IOUP{uElType}(d, q, alg.prior.rate_parameter, alg.prior.update_rate_parameter)
-    elseif alg.prior isa Matern
-        Matern{uElType}(d, q, alg.prior.lengthscale)
-    else
-        error("Invalid prior $(alg.prior)")
+    if !(dim(alg.prior) == 1 || dim(alg.prior) == d)
+        throw(
+            DimensionMismatch(
+                "The dimension of the prior is not compatible with the dimension " *
+                "of the problem! The given ODE is $(d)-dimensional, but the prior is " *
+                "$(dim(alg.prior))-dimensional. Please make sure that the dimension of " *
+                "the prior is either 1 or $(d)."),
+        )
     end
+    prior = remake(alg.prior; elType=uElType, dim=d)
+    if (prior isa IOUP) && prior.update_rate_parameter
+        if !(prior.rate_parameter isa Missing)
+            throw(
+                ArgumentError(
+                    "Do not manually set the `rate_parameter` of the IOUP prior when " *
+                    "using the `update_rate_parameter=true` option." *
+                    "Reset the prior and try again."),
+            )
+        end
+        prior = remake(prior; rate_parameter=Array{uElType}(calloc, d, d))
+    end
+
     A, Q, Ah, Qh, P, PI = initialize_transition_matrices(FAC, prior, dt)
     F, L = to_sde(prior)
     F, L = to_factorized_matrix(FAC, F), to_factorized_matrix(FAC, L)
@@ -146,15 +159,8 @@ function OrdinaryDiffEq.alg_cache(
     measurement_model = make_measurement_model(f)
 
     # Initial State
-    initial_variance = ones(uElType, q + 1)
-    μ0 = uElType <: LinearAlgebra.BlasFloat ? Array{uElType}(calloc, D) : zeros(uElType, D)
-    Σ0 = PSDMatrix(
-        to_factorized_matrix(
-            FAC,
-            IsometricKroneckerProduct(d, diagm(sqrt.(initial_variance))),
-        ),
-    )
-    x0 = Gaussian(μ0, Σ0)
+    x0 = initial_distribution(prior)
+    x0 = Gaussian(x0.μ, to_factorized_matrix(FAC, x0.Σ))
 
     # Diffusion Model
     diffmodel = alg.diffusionmodel

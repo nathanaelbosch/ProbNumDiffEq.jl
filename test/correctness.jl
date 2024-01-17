@@ -37,6 +37,12 @@ CONSTANT_ALGS = (
     EK0(order=3, smooth=true, diffusionmodel=DynamicMVDiffusion()) => 1e-8,
     EK1(order=3, smooth=true) => 1e-8,
     EK1(order=3, smooth=true, diffusionmodel=FixedDiffusion()) => 1e-8,
+    # Priors
+    EK0(prior=IOUP(3, -1), smooth=true) => 2e-9,
+    EK1(prior=IOUP(3, -1), smooth=true, diffusionmodel=FixedDiffusion()) => 1e-9,
+    EK1(prior=IOUP(3, update_rate_parameter=true), smooth=true) => 1e-9,
+    EK0(prior=Matern(3, 1), smooth=true) => 5e-7,
+    EK1(prior=Matern(4, 0.1), smooth=true, diffusionmodel=FixedDiffusion()) => 2e-5,
 )
 ADAPTIVE_ALGS = (
     EK0(order=2) => 2e-4,
@@ -53,6 +59,12 @@ ADAPTIVE_ALGS = (
     EK1(order=8) => 5e-6,
     EK1(order=3, initialization=ClassicSolverInit()) => 1e-5,
     EK1(order=3, initialization=SimpleInit()) => 1e-4,
+    # Priors
+    EK0(prior=IOUP(3, -1), smooth=true) => 1e-5,
+    EK1(prior=IOUP(3, -1), smooth=true, diffusionmodel=FixedDiffusion()) => 1e-5,
+    EK1(prior=IOUP(3, update_rate_parameter=true), smooth=true) => 2e-5,
+    EK0(prior=Matern(3, 1), smooth=true) => 1e-4,
+    EK1(prior=Matern(3, 0.1), smooth=true, diffusionmodel=FixedDiffusion()) => 1e-5,
 )
 
 PROBS = (

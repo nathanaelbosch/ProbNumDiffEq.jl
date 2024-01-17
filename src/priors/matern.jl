@@ -1,16 +1,23 @@
 @doc raw"""
-    Matern([wiener_process_dimension::Integer,]
+    Matern([dim::Integer=1,]
            num_derivatives::Integer,
            lengthscale::Number)
 
 Matern process.
 
-As with the [`IWP`](@ref), the Matern can be created without specifying its dimension,
-in which case it will be inferred from the dimension of the ODE during the solve.
-This is typically the preferred usage.
-The lengthscale parameter however always needs to be specified.
+The class of [`Matern`](@ref) processes is well-known in the Gaussian process literature,
+and they also have a corresponding SDE representation similarly to the
+[`IWP`](@ref) and the [`IOUP`](@ref).
+See also [sarkka19appliedsde](@cite) for more details.
 
 # In math
+A Matern process is a Gauss--Markov process, which we model with a state representation
+```math
+\begin{aligned}
+Y(t) = \left[ Y^{(0)}(t), Y^{(1)}(t), \dots Y^{(q)}(t) \right],
+\end{aligned}
+```
+defined as the solution of the stochastic differential equation
 ```math
 \begin{aligned}
 \text{d} Y^{(i)}(t) &= Y^{(i+1)}(t) \ \text{d}t, \qquad i = 0, \dots, q-1 \\
@@ -20,31 +27,46 @@ The lengthscale parameter however always needs to be specified.
   Y^{(j)}(t) \right) \ \text{d}t + \Gamma \ \text{d}W(t).
 \end{aligned}
 ```
-where ``l`` is the `lengthscale`.
+where ``l`` is called the `lengthscale` parameter.
+Then, ``Y^{(0)}(t)`` is a Matern process and
+``Y^{(i)}(t)`` is the ``i``-th derivative of this process, for ``i = 1, \dots, q``.
 
 # Examples
 ```julia-repl
 julia> solve(prob, EK1(prior=Matern(2, 1)))
 ```
 """
-struct Matern{elType,dimType,R} <: AbstractODEFilterPrior{elType}
-    wiener_process_dimension::dimType
+struct Matern{elType,L} <: AbstractGaussMarkovProcess{elType}
+    dim::Int
     num_derivatives::Int
-    lengthscale::R
+    lengthscale::L
 end
+Matern{elType}(; dim, num_derivatives, lengthscale) where {elType} =
+    Matern{elType,typeof(lengthscale)}(dim, num_derivatives, lengthscale)
+Matern(; dim, num_derivatives, lengthscale) =
+    Matern{typeof(1.0)}(; dim, num_derivatives, lengthscale)
 Matern(num_derivatives, lengthscale) =
-    Matern(missing, num_derivatives, lengthscale)
-Matern(wiener_process_dimension, num_derivatives, lengthscale) =
-    Matern{typeof(1.0)}(wiener_process_dimension, num_derivatives, lengthscale)
-Matern{T}(wiener_process_dimension, num_derivatives, lengthscale) where {T} =
-    Matern{T,typeof(wiener_process_dimension),typeof(lengthscale)}(
-        wiener_process_dimension,
-        num_derivatives,
-        lengthscale,
-    )
+    Matern(; dim=1, num_derivatives, lengthscale)
+
+remake(
+    p::Matern{T};
+    elType=T,
+    dim=dim(p),
+    num_derivatives=num_derivatives(p),
+    lengthscale=p.lengthscale,
+) where {T} = Matern{elType}(; dim, num_derivatives, lengthscale)
+
+initial_distribution(p::Matern{T}) where {T} = begin
+    d, q = dim(p), num_derivatives(p)
+    D = d * (q + 1)
+    sde = to_sde(p)
+    μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
+    Σ0 = PSDMatrix(plyapc(sde.F, sde.L)')
+    return Gaussian(μ0, Σ0)
+end
 
 function to_sde(p::Matern)
-    q = p.num_derivatives
+    d, q = dim(p), num_derivatives(p)
     l = p.lengthscale
     @assert l isa Number
 
@@ -57,14 +79,7 @@ function to_sde(p::Matern)
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
 
-    d = p.wiener_process_dimension
     F = IsometricKroneckerProduct(d, F_breve)
     L = IsometricKroneckerProduct(d, L_breve)
     return LTISDE(F, L)
-end
-function discretize(p::Matern, dt::Real)
-    l = p.lengthscale
-    @assert l isa Number
-    A, Q = discretize(to_sde(p), dt)
-    return A, Q
 end

@@ -13,7 +13,7 @@ prob = remake(prob, tspan=(0.0, 10.0))
 
     d, q = 2, 3
 
-    prior = PNDE.IWP(d, q)
+    prior = PNDE.IWP(dim=d, num_derivatives=q)
 
     Ah, Qh = PNDE.discretize(prior, h)
     Qh = PNDE.apply_diffusion(Qh, σ^2)

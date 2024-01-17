@@ -11,8 +11,6 @@ where ``X_t`` is the state, ``W_t`` is a Wiener process, and ``F`` and ``L`` are
 This `LTISDE` object holds the matrices ``F`` and ``L``.
 It also provides some functionality to discretize the SDE via a matrix-fraction decomposition.
 See: [`discretize(::LTISDE, ::Real)`](@ref).
-
-In this package, the LTISDE is mostly used to implement the discretization of the [`IOUP`](@ref) prior.
 """
 struct LTISDE{AT<:AbstractMatrix,BT<:AbstractVecOrMat}
     F::AT
@@ -25,6 +23,11 @@ iterate(sde::LTISDE) = sde.F, true
 iterate(sde::LTISDE, s) = s ? (sde.L, false) : nothing
 length(sde::LTISDE) = 2
 
+"""
+    discretize(p::LTISDE, step_size::Real)
+
+Compute the transition matrices of the SDE solution for a given step size.
+"""
 discretize(sde::LTISDE, dt::Real) = discretize(drift(sde), dispersion(sde), dt)
 discretize(F::AbstractMatrix, L::AbstractMatrix, dt::Real) = begin
     method = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
