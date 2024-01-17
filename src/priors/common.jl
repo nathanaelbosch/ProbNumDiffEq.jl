@@ -1,4 +1,4 @@
-"""
+@doc raw"""
     AbstractGaussMarkovProcess{elType}
 
 Abstract type for Gauss-Markov processes.
@@ -6,8 +6,10 @@ Abstract type for Gauss-Markov processes.
 Gauss-Markov processes are solutions to linear time-invariant stochastic differential
 equations (SDEs). Here we assume SDEs of the form
 ```math
+\begin{aligned}
 dX_t &= F X_t dt + L dW_t
-X_0 &= \\mathcal{N} \\left( X_0; \\mu_0, \\Sigma_0 \\right)
+X_0 &= \mathcal{N} \left( X_0; \mu_0, \Sigma_0 \right)
+\end{aligned}
 ```
 where ``X_t`` is the state, ``W_t`` is a Wiener process, and ``F`` and ``L`` are matrices.
 
@@ -87,7 +89,7 @@ Similarly, the element type of the process is also set to the element type of th
 """
 remake(p::AbstractGaussMarkovProcess{T}; elType=T, kwargs...) where {T}
 
-"""
+@doc raw"""
     to_sde(p::AbstractGaussMarkovProcess)
 
 Convert the prior to the corresponding SDE.
@@ -95,8 +97,10 @@ Convert the prior to the corresponding SDE.
 Gauss-Markov processes are solutions to linear time-invariant stochastic differential
 equations (SDEs) of the form
 ```math
+\begin{aligned}
 dX_t &= F X_t dt + L dW_t
-X_0 &= \\mathcal{N} \\left( X_0; \\mu_0, \\Sigma_0 \\right)
+X_0 &= \mathcal{N} \left( X_0; \mu_0, \Sigma_0 \right)
+\end{aligned}
 ```
 where ``X_t`` is the state, ``W_t`` is a Wiener process, and ``F`` and ``L`` are matrices.
 This function returns the corresponding SDE, i.e. the matrices ``F`` and ``L``, as a
