@@ -79,7 +79,7 @@ plot(
 In the context of [Probabilistic Exponential Integrators](@ref probexpinttutorial), the rate parameter is often chosen according to the given ODE.
 Here is an example for a damped oscillator:
 ```@example priors
-plot(IOUP(2, 1, [-0.2 -2π; 2π -0.2]), plotrange; plot_title="damped oscillator prior");
+plot(IOUP(2, 1, [-0.2 -2π; 2π -0.2]), plotrange; plot_title="damped oscillator prior")
 ```
 
 ### Matérn process ([`Matern`](@ref))
