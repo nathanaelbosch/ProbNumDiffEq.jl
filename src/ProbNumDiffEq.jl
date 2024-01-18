@@ -31,6 +31,7 @@ using ArrayAllocators
 using FiniteHorizonGramians
 using FillArrays
 using MatrixEquations
+using DiffEqCallbacks
 
 @reexport using GaussianDistributions
 
@@ -95,8 +96,10 @@ if !isdefined(Base, :get_extension)
     include("../ext/DiffEqDevToolsExt.jl")
 end
 
-include("callbacks.jl")
-export ManifoldUpdate
+include("callbacks/manifoldupdate.jl")
+export ManifoldUpdateCallback
+include("callbacks/dataupdate.jl")
+export DataUpdateLogLikelihood, DataUpdateCallback
 
 include("precompile.jl")
 

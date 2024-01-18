@@ -46,11 +46,11 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
 end
 
 """
-    ManifoldUpdate(residual::Function)
+    ManifoldUpdateCallback(residual::Function)
 
 Update the state to satisfy a zero residual function via iterated extended Kalman filtering.
 
-`ManifoldUpdate` returns a `SciMLBase.DiscreteCallback`, which, at each solver step,
+`ManifoldUpdateCallback` returns a `SciMLBase.DiscreteCallback`, which, at each solver step,
 performs an iterated extended Kalman filter update to keep the residual measurement to be
 zero. Additional arguments and keyword arguments for the `DiscreteCallback` can be passed.
 
@@ -63,7 +63,7 @@ its Jacobian has full rank.
 - `maxiters::Int`: Maximum number of IEKF iterations.
   Setting this to 1 results in a single standard EKF update.
 """
-function ManifoldUpdate(
+function ManifoldUpdateCallback(
     residual::Function,
     args...;
     maxiters=100,
