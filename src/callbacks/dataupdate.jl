@@ -3,7 +3,7 @@ mutable struct DataUpdateLogLikelihood{T<:Number}
 end
 
 function DataUpdateCallback(
-    data::NamedTuple{(:t, :u)},
+    data::NamedTuple{(:t, :u)};
     observation_noise_variance::Number,
     loglikelihood::Union{DataUpdateLogLikelihood,Nothing}=nothing
 )
