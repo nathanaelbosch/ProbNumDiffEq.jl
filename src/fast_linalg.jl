@@ -60,7 +60,7 @@ ever used internally by `triangularize!`(@ref).
 """
 function getupperright!(A)
     m, n = size(A)
-    return triu!(@view A[1:min(m, n), 1:n])
+    return UpperTriangular(triu!(A[1:min(m, n), 1:n]))
 end
 
 """
