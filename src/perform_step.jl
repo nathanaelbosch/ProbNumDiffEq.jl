@@ -223,10 +223,6 @@ To save allocations, the function modifies the given `cache` and writes into
 function estimate_errors!(cache::AbstractODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
 
-    if local_diffusion isa Real && isinf(local_diffusion)
-        return Inf
-    end
-
     R = cache.measurement.Σ.R
 
     if local_diffusion isa Diagonal
