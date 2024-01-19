@@ -5,7 +5,7 @@ end
 function DataUpdateCallback(
     data::NamedTuple{(:t, :u)},
     observation_noise_variance::Number,
-    loglikelihood::DataUpdateLogLikelihood
+    loglikelihood::Union{DataUpdateLogLikelihood,Nothing}=nothing
 )
     function affect!(integ)
         times, values = data.t, data.u
@@ -27,7 +27,9 @@ function DataUpdateCallback(
 
         _x = copy!(integ.cache.x_tmp, x)
         _, ll = update!(x, _x, obs, E0, K1, C_Dxd, C_DxD, C_dxd, C_d)
-        loglikelihood.ll += ll
+        if !isnothing(loglikelihood)
+            loglikelihood.ll += ll
+        end
     end
     return PresetTimeCallback(data.t, affect!; save_positions=(false, false))
 end
