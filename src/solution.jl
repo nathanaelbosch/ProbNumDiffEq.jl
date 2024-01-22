@@ -203,6 +203,23 @@ DiffEqBase.interp_summary(interp::ODEFilterPosterior) =
         smoothed=sol.alg.smooth)
 (sol::ProbODESolution)(t::AbstractVector, args...) =
     DiffEqArray(StructArray(sol.(t, args...)), t)
+(sol::ProbODESolution)(
+    t::AbstractVector{<:Number},
+    ::Type{deriv},
+    idxs::Nothing,
+    ::Any,
+) where {deriv} = DiffEqArray(StructArray(sol.(t)), t)
+(sol::ProbODESolution)(
+    t::AbstractVector{<:Number},
+    ::Type{deriv},
+    idxs::Integer,
+    ::Any,
+) where {deriv} = begin
+    _sol = sol(t)
+    m = [mean(pu)[idxs] for pu in _sol.u]
+    c = [diag(cov(pu))[idxs] for pu in _sol.u]
+    return DiffEqArray(StructArray(Gaussian.(m, c)), t)
+end
 
 function interpolate(
     tval::Real,
