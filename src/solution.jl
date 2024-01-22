@@ -95,9 +95,14 @@ function DiffEqBase.build_solution(
     x_filt = StructArray{typeof(cache.x)}(undef, 0)
     x_smooth = copy(x_filt)
 
+    diffusion_prototype = cache.default_diffusion
+    diffusions = typeof(diffusion_prototype)[]
+
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
 
-    interp = ODEFilterPosterior()
+    interp = ODEFilterPosterior(
+        t, x_filt, x_smooth, diffusions, cache, alg.smooth,
+    )
 
     if DiffEqBase.has_analytic(prob.f)
         u_analytic = Vector{typeof(prob.u0)}()
@@ -107,11 +112,9 @@ function DiffEqBase.build_solution(
         errors = nothing
     end
 
-    diffusion_prototype = cache.default_diffusion
-
     ll = zero(uElType)
     return ProbODESolution{T,N}(
-        u, pu, u_analytic, errors, t, k, x_filt, x_smooth, typeof(diffusion_prototype)[],
+        u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions,
         backward_kernels, ll, prob, alg, interp, cache,
         dense, 0, stats, retcode,
     )
@@ -183,9 +186,9 @@ function mean(sol::ProbODESolution{T,N}) where {T,N}
         sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode, sol,
     )
 end
-(sol::MeanProbODESolution)(t::Real, args...) = mean(sol.probsol(t, args...))
-(sol::MeanProbODESolution)(t::AbstractVector, args...) =
-    DiffEqArray(sol.probsol(t, args...).u.μ, t)
+# (sol::MeanProbODESolution)(t::Real, args...) = mean(sol.probsol(t, args...))
+# (sol::MeanProbODESolution)(t::AbstractVector, args...) =
+#     DiffEqArray(sol.probsol(t, args...).u.μ, t)
 DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) =
     DiffEqBase.calculate_solution_errors!(mean(sol), args...; kwargs...)
 
@@ -193,32 +196,25 @@ DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) 
 # Dense Output
 ########################################################################################
 abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
-struct ODEFilterPosterior <: AbstractODEFilterPosterior end
+struct ODEFilterPosterior <: AbstractODEFilterPosterior
+    ts
+    x_filt
+    x_smooth
+    diffusions
+    cache
+    smooth
+end
 DiffEqBase.interp_summary(interp::ODEFilterPosterior) =
     "ODE Filter Posterior"
 
-(sol::ProbODESolution)(t::Real, args...) =
-    sol.cache.SolProj * interpolate(
-        t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions, sol.cache;
-        smoothed=sol.alg.smooth)
-(sol::ProbODESolution)(t::AbstractVector, args...) =
-    DiffEqArray(StructArray(sol.(t, args...)), t)
-(sol::ProbODESolution)(
-    t::AbstractVector{<:Number},
-    ::Type{deriv},
-    idxs::Nothing,
-    ::Any,
-) where {deriv} = DiffEqArray(StructArray(sol.(t)), t)
-(sol::ProbODESolution)(
-    t::AbstractVector{<:Number},
-    ::Type{deriv},
-    idxs::Integer,
-    ::Any,
-) where {deriv} = begin
-    _sol = sol(t)
-    m = [mean(pu)[idxs] for pu in _sol.u]
-    c = [diag(cov(pu))[idxs] for pu in _sol.u]
-    return DiffEqArray(StructArray(Gaussian.(m, c)), t)
+function (interp::ODEFilterPosterior)(t::Real, idxs, deriv, p, continuity)
+    x = interpolate(
+        t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
+        smoothed=interp.smooth)
+    return interp.cache.SolProj * x
+end
+function (interp::ODEFilterPosterior)(t::AbstractVector{<:Real}, idxs, deriv, p, continuity)
+    return DiffEqArray([interp(ti, idxs, deriv, p, continuity) for ti in t], t)
 end
 
 function interpolate(
