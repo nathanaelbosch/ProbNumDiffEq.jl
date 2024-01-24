@@ -218,20 +218,23 @@ end
 DiffEqBase.interp_summary(interp::ODEFilterPosterior) =
     "ODE Filter Posterior"
 
-function (interp::ODEFilterPosterior)(t::Real, idxs::Nothing, deriv, p, continuity)
+function (interp::ODEFilterPosterior)(t::Real, idxs::Nothing, ::Type{deriv}, p, continuity) where {deriv}
+    @assert deriv == Val{0} "Derivatives not supported in the interpolation"
     x = interpolate(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
     return interp.cache.SolProj * x
 end
-function (interp::ODEFilterPosterior)(t::Real, idxs::Integer, deriv, p, continuity)
+function (interp::ODEFilterPosterior)(t::Real, idxs::Integer, ::Type{deriv}, p, continuity) where {deriv}
+    @assert deriv == Val{0} "Derivatives not supported in the interpolation"
     x = interpolate(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
     u = interp.cache.SolProj * x
     return Gaussian(u.μ[idxs], diag(u.Σ)[idxs])
 end
-function (interp::ODEFilterPosterior)(t::AbstractVector{<:Real}, idxs, deriv, p, continuity)
+function (interp::ODEFilterPosterior)(t::AbstractVector{<:Real}, idxs, ::Type{deriv}, p, continuity) where {deriv}
+    @assert deriv == Val{0} "Derivatives not supported in the interpolation"
     return DiffEqArray(StructArray([interp(ti, idxs, deriv, p, continuity) for ti in t]), t)
 end
 
