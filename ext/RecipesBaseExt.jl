@@ -10,7 +10,7 @@ using Statistics
 )
     means = mean.(p)
     stddevs = std.(p)
-    ribbon --> ribbon_width*stddevs
+    ribbon --> ribbon_width * stddevs
     return means
 end
 @recipe function f(
@@ -19,11 +19,11 @@ end
 )
     means = mean.(y)
     stddevs = std.(y)
-    ribbon --> ribbon_width*stddevs
+    ribbon --> ribbon_width * stddevs
     return x, means
 end
 @recipe function f(
-    x::AbstractArray{<:Gaussian}, y::AbstractArray{<:Gaussian}
+    x::AbstractArray{<:Gaussian}, y::AbstractArray{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
     xmeans = mean.(x)
