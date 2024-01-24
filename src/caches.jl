@@ -96,7 +96,7 @@ function OrdinaryDiffEq.alg_cache(
     is_secondorder_ode = f isa DynamicalODEFunction
 
     q = num_derivatives(alg.prior)
-    d = is_secondorder_ode ? length(u[1, :]) : length(u)
+    d = is_secondorder_ode ? length(u.x[1]) : length(u)
     D = d * (q + 1)
 
     uType = typeof(u)
@@ -175,7 +175,7 @@ function OrdinaryDiffEq.alg_cache(
     measurement = Gaussian(v, S)
 
     # Caches
-    du = is_secondorder_ode ? similar(u[2, :]) : similar(u)
+    du = is_secondorder_ode ? similar(u.x[2]) : similar(u)
     ddu = factorized_similar(FAC, length(u), length(u))
     _d = is_secondorder_ode ? 2d : d
     pu_tmp = Gaussian(

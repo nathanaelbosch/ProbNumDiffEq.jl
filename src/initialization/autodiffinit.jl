@@ -32,7 +32,7 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
     for (o, df) in zip(0:q, f_derivatives)
         if f isa DynamicalODEFunction
             @assert df isa ArrayPartition
-            df = df[2, :]
+            df = df.x[2]
         end
 
         df = view(df, :)
