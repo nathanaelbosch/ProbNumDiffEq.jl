@@ -207,13 +207,13 @@ DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) 
 # Dense Output
 ########################################################################################
 abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
-struct ODEFilterPosterior <: AbstractODEFilterPosterior
-    ts
-    x_filt
-    x_smooth
-    diffusions
-    cache
-    smooth
+struct ODEFilterPosterior{T1,T2,T3,T4,T5,T6} <: AbstractODEFilterPosterior
+    ts::T1
+    x_filt::T2
+    x_smooth::T3
+    diffusions::T4
+    cache::T5
+    smooth::T6
 end
 DiffEqBase.interp_summary(interp::ODEFilterPosterior) =
     "ODE Filter Posterior"
