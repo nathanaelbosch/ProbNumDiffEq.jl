@@ -1,4 +1,15 @@
 ########################################################################################
+# PNStats
+########################################################################################
+mutable struct PNStats{LL}
+    log_likelihood::LL
+end
+function Base.show(io::IO, ::MIME"text/plain", s::PNStats)
+    println(io, summary(s))
+    @printf io "%-50s %-d\n" "Log-likelihood:" s.log_likelihood
+end
+
+########################################################################################
 # Solution
 ########################################################################################
 abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
@@ -11,8 +22,8 @@ The probabilistic numerical ODE solution.
 It contains filtering and smoothing state estimates which enables plots with uncertainties,
 sampling, and dense evaluation.
 """
-mutable struct ProbODESolution{
-    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,bkType,llType,P,A,IType,
+struct ProbODESolution{
+    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,bkType,PN,P,A,IType,
     CType,DE,
 } <: AbstractProbODESolution{T,N,uType}
     u::uType
@@ -25,7 +36,7 @@ mutable struct ProbODESolution{
     x_smooth::xType
     diffusions::diffType
     backward_kernels::bkType
-    log_likelihood::llType
+    pnstats::PN
     prob::P
     alg::A
     interp::IType
@@ -37,20 +48,20 @@ mutable struct ProbODESolution{
 end
 ProbODESolution{T,N}(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
-    log_likelihood, prob, alg, interp, cache, dense, tslocation, stats, retcode,
+    pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 ) where {T,N} = ProbODESolution{
     T,N,typeof(u),typeof(pu),typeof(u_analytic),typeof(errors),typeof(t),typeof(k),
-    typeof(x_filt),typeof(diffusions),typeof(backward_kernels),typeof(log_likelihood),
+    typeof(x_filt),typeof(diffusions),typeof(backward_kernels),typeof(pnstats),
     typeof(prob),typeof(alg),typeof(interp),typeof(cache),typeof(stats),
 }(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
-    log_likelihood, prob, alg, interp, cache, dense, tslocation, stats, retcode,
+    pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 )
 
 function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.log_likelihood, sol.prob, sol.alg,
+        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
         sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, retcode,
     )
 end
@@ -112,10 +123,10 @@ function DiffEqBase.build_solution(
         errors = nothing
     end
 
-    ll = zero(uElType)
+    pnstats = PNStats(zero(uElType))
     return ProbODESolution{T,N}(
         u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions,
-        backward_kernels, ll, prob, alg, interp, cache,
+        backward_kernels, pnstats, prob, alg, interp, cache,
         dense, 0, stats, retcode,
     )
 end
@@ -127,7 +138,7 @@ function DiffEqBase.build_solution(
 ) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.log_likelihood, sol.prob, sol.alg,
+        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
         sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode,
     )
 end
