@@ -8,8 +8,8 @@ using Statistics
     p::AbstractArray{<:Gaussian};
     ribbon_width=1.96,
 )
-    means = mean.(p)
-    stddevs = std.(p)
+    means = mean.(p) |> stack |> permutedims
+    stddevs = std.(p) |> stack |> permutedims
     ribbon --> ribbon_width * stddevs
     return means
 end
@@ -17,8 +17,8 @@ end
     x, y::AbstractArray{<:Gaussian};
     ribbon_width=1.96,
 )
-    means = mean.(y)
-    stddevs = std.(y)
+    means = mean.(y) |> stack |> permutedims
+    stddevs = std.(y) |> stack |> permutedims
     ribbon --> ribbon_width * stddevs
     return x, means
 end
@@ -26,12 +26,8 @@ end
     x::AbstractArray{<:Gaussian}, y::AbstractArray{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
-    xmeans = mean.(x)
-    # xstddevs = std.(x)
-    ymeans = mean.(y)
-    # ystddevs = std.(y)
-    # xerror := xstddevs
-    # yerror := ystddevs
+    xmeans = mean.(x) |> stack |> permutedims
+    ymeans = mean.(y) |> stack |> permutedims
     return xmeans, ymeans
 end
 @recipe function f(
@@ -40,11 +36,9 @@ end
     z::AbstractArray{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
-    xmeans = mean.(x)
-    # xstddevs = std.(x)
-    ymeans = mean.(y)
-    # ystddevs = std.(y)
-    zmeans = mean.(z)
+    xmeans = mean.(x) |> stack |> permutedims
+    ymeans = mean.(y) |> stack |> permutedims
+    zmeans = mean.(z) |> stack |> permutedims
     return xmeans, ymeans, zmeans
 end
 
@@ -54,19 +48,13 @@ end
     N_samples=10,
     plot_derivatives=false,
 )
-    marginals = ProbNumDiffEq.marginalize(process, plotrange)
     d = ProbNumDiffEq.dim(process)
     q = ProbNumDiffEq.num_derivatives(process)
-    means = [mean(m) for m in marginals] |> stack |> permutedims
-    stddevs = [std(m) for m in marginals] |> stack |> permutedims
-
-    perm = permutedims(reshape(collect(1:d*(q+1)), q + 1, d))[:]
-    reorder(X) = X[:, perm]
+    marginals = ProbNumDiffEq.marginalize(process, plotrange)
 
     E0 = ProbNumDiffEq.projection(d, q)(0)
     if !plot_derivatives
-        stddevs = stddevs * E0'
-        means = means * E0'
+        marginals = [E0 * m for m in marginals]
         q = 0
     end
 
@@ -82,7 +70,6 @@ end
     end
 
     @series begin
-        ribbon --> 3stddevs
         label --> ""
         fillalpha --> 0.1
         layout --> if plot_derivatives
@@ -90,7 +77,7 @@ end
         else
             d
         end
-        plotrange, means
+        plotrange, marginals
     end
 
     if N_samples > 0
