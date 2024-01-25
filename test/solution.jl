@@ -134,10 +134,13 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
 
             @testset "Mean Solution" begin
                 msol = mean(sol)
-                # @test_nowarn msol(prob.tspan[1])
-                # @test_nowarn msol(sol.t[1:2])
-                # @test_nowarn msol
-                # @test_nowarn plot(msol)
+                x = @test_nowarn msol(prob.tspan[1])
+                @test x isa AbstractArray
+                xs = @test_nowarn msol(sol.t[1:2])
+                @test xs isa ProbNumDiffEq.DiffEqArray
+                @test xs.u isa AbstractArray{<:AbstractArray}
+                @test_nowarn msol
+                @test_nowarn plot(msol)
             end
         end
     end
