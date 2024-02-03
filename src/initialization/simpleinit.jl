@@ -25,9 +25,9 @@ function initial_update!(integ, cache, init::SimpleInit)
 
     if f isa DynamicalODEFunction
         @assert u isa ArrayPartition
-        u = u[2, :]
+        u = u.x[2]
         @assert du isa ArrayPartition
-        du = du[2, :]
+        du = du.x[2]
     end
 
     init_condition_on!(x, Proj(0), view(u, :), cache)

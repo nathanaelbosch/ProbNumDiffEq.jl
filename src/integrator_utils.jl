@@ -92,7 +92,7 @@ The actual smoothing step happens by [`marginalize!`](@ref)ing backward kernels.
 """
 function smooth_solution!(integ)
     @unpack cache, sol = integ
-    sol.x_smooth = copy(sol.x_filt)
+    append!(sol.x_smooth, sol.x_filt)
 
     @unpack x_smooth, t, backward_kernels = sol
     @unpack C_DxD, C_3DxD = cache

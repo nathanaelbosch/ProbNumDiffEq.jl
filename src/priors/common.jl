@@ -218,9 +218,8 @@ resulting Gaussian distributions.
 See also: [`sample`](@ref).
 """
 function marginalize(process::AbstractGaussMarkovProcess, times)
-    out = []
     X = initial_distribution(process)
-    push!(out, X)
+    out = [X]
     for i in 2:length(times)
         dt = times[i] - times[i-1]
         A, Q = ProbNumDiffEq.discretize(process, dt)
@@ -238,11 +237,10 @@ Samples from the Gauss-Markov process on the given time grid.
 See also: [`marginalize`](@ref).
 """
 function sample(process::AbstractGaussMarkovProcess, times, N=1)
-    out = []
     X = initial_distribution(process)
     X = Gaussian(mean(X), Matrix(cov(X)))
     s = rand(X, N)
-    push!(out, s)
+    out = [s]
     for i in 2:length(times)
         dt = times[i] - times[i-1]
         A, Q = Matrix.(discretize(process, dt))

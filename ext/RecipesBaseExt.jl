@@ -3,73 +3,63 @@ module RecipesBaseExt
 using RecipesBase
 using ProbNumDiffEq
 using Statistics
-import ProbNumDiffEq: AbstractProbODESolution
-import SciMLBase: interpret_vars, getsyms
 
 @recipe function f(
-    sol::AbstractProbODESolution;
-    idxs=nothing,
-    denseplot=sol.dense,
-    plotdensity=1000,
-    tspan=nothing,
+    p::AbstractArray{<:Gaussian};
     ribbon_width=1.96,
-    vars=nothing,
 )
-    if vars !== nothing
-        Base.depwarn(
-            "To maintain consistency with solution indexing, keyword argument `vars` will be removed in a future version. Please use keyword argument `idxs` instead.",
-            :f; force=true)
-        (idxs !== nothing) &&
-            error(
-                "Simultaneously using keywords `vars` and `idxs` is not supported. Please only use idxs.",
-            )
-        idxs = vars
-    end
+    means = mean.(p) |> stack |> permutedims
+    stddevs = std.(p) |> stack |> permutedims
+    ribbon --> ribbon_width * stddevs
+    return means
+end
+@recipe function f(
+    x, y::AbstractArray{<:Gaussian};
+    ribbon_width=1.96,
+)
+    means = mean.(y) |> stack |> permutedims
+    stddevs = std.(y) |> stack |> permutedims
+    ribbon --> ribbon_width * stddevs
+    return x, means
+end
 
-    tstart, tend = isnothing(tspan) ? (sol.t[1], sol.t[end]) : tspan
-    times = denseplot ? range(tstart, tend, length=plotdensity) : sol.t
-    sol_rvs = denseplot ? sol(times).u : sol.pu
-    if !isnothing(tspan)
-        sol_rvs = sol_rvs[tstart.<=times.<=tend]
-        times = times[tstart.<=times.<=tend]
-    end
-    values = stack(mean.(sol_rvs))'
-    stds = stack(std.(sol_rvs))'
-
-    if isnothing(idxs)
-        ribbon --> ribbon_width * stds
-        xguide --> "t"
-        yguide --> "u(t)"
-        label --> hcat(["u$(i)(t)" for i in 1:length(sol.u[1])]...)
-        return times, values
-    else
-        int_vars = interpret_vars(idxs, sol, getsyms(sol))
-        varsizes = unique(length.(int_vars))
-        @assert length(varsizes) == 1 "`idxs` argument has an errors"
-        ndims = varsizes[1] - 1  # First argument is not about dimensions
-        if ndims == 2
-            _x = []
-            _y = []
-            _labels = []
-            for (_, i, j) in int_vars
-                push!(_x, i == 0 ? times : values[:, i])
-                push!(_y, j == 0 ? times : values[:, j])
-            end
-            return _x, _y
-        elseif ndims == 3
-            _x = []
-            _y = []
-            _z = []
-            for (_, i, j, k) in int_vars
-                push!(_x, i == 0 ? times : values[:, i])
-                push!(_y, j == 0 ? times : values[:, j])
-                push!(_z, k == 0 ? times : values[:, k])
-            end
-            return _x, _y, _z
-        else
-            error("Error with `idxs` argument")
-        end
-    end
+@recipe function f(
+    x, y::Matrix{<:Gaussian};
+    ribbon_width=1.96,
+)
+    means = mean.(y)
+    stddevs = std.(y)
+    ribbon --> ribbon_width * stddevs
+    return x, means
+end
+@recipe function f(
+    x::Matrix{<:Gaussian}, y::Matrix{<:Gaussian},
+)
+    @warn "This plot does not visualize any uncertainties"
+    xmeans = mean.(x)
+    ymeans = mean.(y)
+    return xmeans, ymeans
+end
+@recipe function f(
+    x,
+    y::Matrix{<:Gaussian},
+    z::Matrix{<:Gaussian},
+)
+    @warn "This plot does not visualize any uncertainties"
+    ymeans = mean.(y)
+    zmeans = mean.(z)
+    return x, ymeans, zmeans
+end
+@recipe function f(
+    x::Matrix{<:Gaussian},
+    y::Matrix{<:Gaussian},
+    z::Matrix{<:Gaussian},
+)
+    @warn "This plot does not visualize any uncertainties"
+    xmeans = mean.(x)
+    ymeans = mean.(y)
+    zmeans = mean.(z)
+    return xmeans, ymeans, zmeans
 end
 
 @recipe function f(
@@ -78,19 +68,13 @@ end
     N_samples=10,
     plot_derivatives=false,
 )
-    marginals = ProbNumDiffEq.marginalize(process, plotrange)
     d = ProbNumDiffEq.dim(process)
     q = ProbNumDiffEq.num_derivatives(process)
-    means = [mean(m) for m in marginals] |> stack |> permutedims
-    stddevs = [std(m) for m in marginals] |> stack |> permutedims
-
-    perm = permutedims(reshape(collect(1:d*(q+1)), q + 1, d))[:]
-    reorder(X) = X[:, perm]
+    marginals = ProbNumDiffEq.marginalize(process, plotrange)
 
     E0 = ProbNumDiffEq.projection(d, q)(0)
     if !plot_derivatives
-        stddevs = stddevs * E0'
-        means = means * E0'
+        marginals = [E0 * m for m in marginals]
         q = 0
     end
 
@@ -106,7 +90,6 @@ end
     end
 
     @series begin
-        ribbon --> 3stddevs
         label --> ""
         fillalpha --> 0.1
         layout --> if plot_derivatives
@@ -114,7 +97,7 @@ end
         else
             d
         end
-        plotrange, means
+        plotrange, marginals
     end
 
     if N_samples > 0

@@ -13,7 +13,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
     init_condition_on!(x, Proj(0), _u, cache)
-    is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
+    is_secondorder ? u.x[1] : f(du, u, p, t)
     integ.stats.nf += 1
     init_condition_on!(x, Proj(1), view(du, :), cache)
 

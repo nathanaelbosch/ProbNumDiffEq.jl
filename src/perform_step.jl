@@ -119,7 +119,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
         integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
     cache.log_likelihood = loglikelihood
-    integ.sol.log_likelihood += cache.log_likelihood
+    integ.sol.pnstats.log_likelihood += cache.log_likelihood
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)

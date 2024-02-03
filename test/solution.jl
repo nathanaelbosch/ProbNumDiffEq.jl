@@ -75,6 +75,12 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                 @test sol(t0:1e-3:t1).u isa StructArray{<:Gaussian}
 
                 @test_throws ErrorException sol(t0 - 1e-2)
+
+                @testset "Derivatives" begin
+                    @test sol.(t0:1e-3:t1, Val{1}) isa Array{<:Gaussian}
+                    @test sol(t0:1e-3:t1, Val{1}).u isa StructArray{<:Gaussian}
+                    @test_throws ArgumentError sol(1e-3, Val{99})
+                end
             end
 
             # Sampling
@@ -126,15 +132,19 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
             @testset "Plotting" begin
                 @test_nowarn plot(sol)
                 @test_nowarn plot(sol, denseplot=false)
-                @test_nowarn plot(sol, idxs=(1, 2))
-                @test_nowarn plot(sol, idxs=(1, 1, 2))
+                message = "This plot does not visualize any uncertainties"
+                @test_logs (:warn, message) plot(sol, idxs=(1, 2))
+                @test_logs (:warn, message) plot(sol, idxs=(1, 1, 2))
                 @test_nowarn plot(sol, tspan=prob.tspan)
             end
 
             @testset "Mean Solution" begin
                 msol = mean(sol)
-                @test_nowarn msol(prob.tspan[1])
-                @test_nowarn msol(sol.t[1:2])
+                x = @test_nowarn msol(prob.tspan[1])
+                @test x isa AbstractArray
+                xs = @test_nowarn msol(sol.t[1:2])
+                @test xs isa ProbNumDiffEq.DiffEqArray
+                @test xs.u isa AbstractArray{<:AbstractArray}
                 @test_nowarn msol
                 @test_nowarn plot(msol)
             end

@@ -61,7 +61,7 @@ initial_distribution(p::Matern{T}) where {T} = begin
     D = d * (q + 1)
     sde = to_sde(p)
     μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
-    Σ0 = PSDMatrix(plyapc(sde.F, sde.L)')
+    Σ0 = PSDMatrix(IsometricKroneckerProduct(d, Matrix(plyapc(sde.F.B, sde.L.B)')))
     return Gaussian(μ0, Σ0)
 end
 
