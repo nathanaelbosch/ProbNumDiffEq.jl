@@ -8,8 +8,8 @@ using Statistics
     p::AbstractArray{<:Gaussian};
     ribbon_width=1.96,
 )
-    means = mean.(p) |> stack
-    stddevs = std.(p) |> stack
+    means = mean.(p) |> stack |> permutedims
+    stddevs = std.(p) |> stack |> permutedims
     ribbon --> ribbon_width * stddevs
     return means
 end
@@ -17,28 +17,48 @@ end
     x, y::AbstractArray{<:Gaussian};
     ribbon_width=1.96,
 )
-    means = mean.(y) |> stack
-    stddevs = std.(y) |> stack
+    means = mean.(y) |> stack |> permutedims
+    stddevs = std.(y) |> stack |> permutedims
+    ribbon --> ribbon_width * stddevs
+    return x, means
+end
+
+@recipe function f(
+    x, y::Matrix{<:Gaussian};
+    ribbon_width=1.96,
+)
+    means = mean.(y)
+    stddevs = std.(y)
     ribbon --> ribbon_width * stddevs
     return x, means
 end
 @recipe function f(
-    x::AbstractArray{<:Gaussian}, y::AbstractArray{<:Gaussian},
+    x::Matrix{<:Gaussian}, y::Matrix{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
-    xmeans = mean.(x) |> stack
-    ymeans = mean.(y) |> stack
+    xmeans = mean.(x)
+    ymeans = mean.(y)
     return xmeans, ymeans
 end
 @recipe function f(
-    x::AbstractArray{<:Gaussian},
-    y::AbstractArray{<:Gaussian},
-    z::AbstractArray{<:Gaussian},
+    x,
+    y::Matrix{<:Gaussian},
+    z::Matrix{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
-    xmeans = mean.(x) |> stack
-    ymeans = mean.(y) |> stack
-    zmeans = mean.(z) |> stack
+    ymeans = mean.(y)
+    zmeans = mean.(z)
+    return x, ymeans, zmeans
+end
+@recipe function f(
+    x::Matrix{<:Gaussian},
+    y::Matrix{<:Gaussian},
+    z::Matrix{<:Gaussian},
+)
+    @warn "This plot does not visualize any uncertainties"
+    xmeans = mean.(x)
+    ymeans = mean.(y)
+    zmeans = mean.(z)
     return xmeans, ymeans, zmeans
 end
 
