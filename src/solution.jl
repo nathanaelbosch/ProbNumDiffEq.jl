@@ -1,6 +1,14 @@
 ########################################################################################
 # PNStats
 ########################################################################################
+"""
+    PNStats
+
+Statistics from the probabilistic numerical ODE solver, inspired by SciMLBase.DEStats.
+
+## Fields
+- log_likelihood: Log-likelihood of the PN observations (the ODE).
+"""
 mutable struct PNStats{LL}
     log_likelihood::LL
 end
