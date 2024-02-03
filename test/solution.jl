@@ -75,6 +75,12 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                 @test sol(t0:1e-3:t1).u isa StructArray{<:Gaussian}
 
                 @test_throws ErrorException sol(t0 - 1e-2)
+
+                @testset "Derivatives" begin
+                    @test sol.(t0:1e-3:t1, Val{1}) isa Array{<:Gaussian}
+                    @test sol(t0:1e-3:t1, Val{1}).u isa StructArray{<:Gaussian}
+                    @test_throws ArgumentError sol(1e-3, Val{99})
+                end
             end
 
             # Sampling
