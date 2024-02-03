@@ -8,8 +8,8 @@ using Statistics
     p::AbstractArray{<:Gaussian};
     ribbon_width=1.96,
 )
-    means = mean.(p) |> stack |> permutedims
-    stddevs = std.(p) |> stack |> permutedims
+    means = mean.(p) |> stack
+    stddevs = std.(p) |> stack
     ribbon --> ribbon_width * stddevs
     return means
 end
@@ -17,8 +17,8 @@ end
     x, y::AbstractArray{<:Gaussian};
     ribbon_width=1.96,
 )
-    means = mean.(y) |> stack |> permutedims
-    stddevs = std.(y) |> stack |> permutedims
+    means = mean.(y) |> stack
+    stddevs = std.(y) |> stack
     ribbon --> ribbon_width * stddevs
     return x, means
 end
@@ -26,8 +26,8 @@ end
     x::AbstractArray{<:Gaussian}, y::AbstractArray{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
-    xmeans = mean.(x) |> stack |> permutedims
-    ymeans = mean.(y) |> stack |> permutedims
+    xmeans = mean.(x) |> stack
+    ymeans = mean.(y) |> stack
     return xmeans, ymeans
 end
 @recipe function f(
@@ -36,9 +36,9 @@ end
     z::AbstractArray{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
-    xmeans = mean.(x) |> stack |> permutedims
-    ymeans = mean.(y) |> stack |> permutedims
-    zmeans = mean.(z) |> stack |> permutedims
+    xmeans = mean.(x) |> stack
+    ymeans = mean.(y) |> stack
+    zmeans = mean.(z) |> stack
     return xmeans, ymeans, zmeans
 end
 
