@@ -245,11 +245,19 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    @assert deriv == Val{0} "Derivatives not supported in the interpolation"
+    q = interp.cache.q
+    dv = deriv.parameters[1]
+    proj = if deriv == Val{0}
+        interp.cache.SolProj
+    elseif dv <= q
+        interp.cache.Proj(dv)
+    else
+        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
+    end
     x = interpolate(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
-    return interp.cache.SolProj * x
+    return proj * x
 end
 function (interp::ODEFilterPosterior)(
     t::Real,
@@ -258,11 +266,19 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    @assert deriv == Val{0} "Derivatives not supported in the interpolation"
+    q = interp.cache.q
+    dv = deriv.parameters[1]
+    proj = if deriv == Val{0}
+        interp.cache.SolProj
+    elseif dv <= q
+        interp.cache.Proj(dv)
+    else
+        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
+    end
     x = interpolate(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
-    u = interp.cache.SolProj * x
+    u = proj * x
     return Gaussian(u.μ[idxs], diag(u.Σ)[idxs])
 end
 function (interp::ODEFilterPosterior)(
@@ -272,7 +288,6 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    @assert deriv == Val{0} "Derivatives not supported in the interpolation"
     return DiffEqArray(StructArray([interp(ti, idxs, deriv, p, continuity) for ti in t]), t)
 end
 

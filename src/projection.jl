@@ -6,8 +6,10 @@ function projection(
     D = d * (q + 1)
     Proj(deriv) = begin
         P = zeros(elType, d, D)
-        @simd ivdep for i in deriv*d+1:D+1:d*D
-            @inbounds P[i] = 1
+        if deriv <= q
+            @simd ivdep for i in deriv*d+1:D+1:d*D
+                @inbounds P[i] = 1
+            end
         end
         return P
     end
