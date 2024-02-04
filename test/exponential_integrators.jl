@@ -18,13 +18,13 @@ using Test
     solexp = solve(prob, ExpEK(L=p, order=3))
     solros = solve(prob, RosenbrockExpEK(order=3))
 
-    err0 = norm(uend - sol0[end])
+    err0 = norm(uend - sol0.u[end])
     @test err0 < 1e-7
-    err1 = norm(uend - sol1[end])
+    err1 = norm(uend - sol1.u[end])
     @test err1 < 1e-9
-    errexp = norm(uend - solexp[end])
+    errexp = norm(uend - solexp.u[end])
     @test errexp < 1e-10
-    errros = norm(uend - solros[end])
+    errros = norm(uend - solros.u[end])
     @test errros < 1e-13
 
     @test errros < errexp < err1 < err0

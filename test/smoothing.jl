@@ -33,8 +33,8 @@ end
     sol_smooth = solve(prob, EK0(order=q, smooth=true), adaptive=false, dt=dt)
 
     @test sol_nonsmooth.t ≈ sol_smooth.t
-    @test sol_nonsmooth[end] == sol_smooth[end]
-    @test sol_nonsmooth[end-1] != sol_smooth[end-1]
+    @test sol_nonsmooth.u[end] == sol_smooth.u[end]
+    @test sol_nonsmooth.u[end-1] != sol_smooth.u[end-1]
 
     plot(sol_smooth, label="smooth")
     plot!(sol_nonsmooth, label="nonsmooth")
