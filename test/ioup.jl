@@ -14,19 +14,19 @@ prob = ODEProblem(f, u0, tspan)
 ref = solve(prob, Vern9(), abstol=1e-9, reltol=1e-9);
 
 sol_iwp = solve(prob, EK1());
-err_iwp = norm(ref[end] - sol_iwp[end])
+err_iwp = norm(ref.u[end] - sol_iwp.u[end])
 @test err_iwp < 1e-5
 
 A_noisy = A + 1e-3 * randn(MersenneTwister(42), 2, 2)
 
 @testset "Adaptive steps" begin
     sol_ioup_noisy = solve(prob, EK1(prior=IOUP(3, A_noisy)))
-    err_ioup_noisy = norm(ref[end] - sol_ioup_noisy[end])
+    err_ioup_noisy = norm(ref.u[end] - sol_ioup_noisy.u[end])
     @test sol_ioup_noisy.stats.nf < sol_iwp.stats.nf
     @test err_ioup_noisy < 2e-5
 
     sol_ioup = solve(prob, EK1(prior=IOUP(3, A)))
-    err_ioup = norm(ref[end] - sol_ioup[end])
+    err_ioup = norm(ref.u[end] - sol_ioup.u[end])
     @test sol_ioup.stats.nf < sol_ioup_noisy.stats.nf
     @test err_ioup < 5e-10
 end
@@ -38,7 +38,7 @@ end
                 prior=IOUP(order, A_noisy),
                 diffusionmodel=FixedDiffusion(),
             ), adaptive=false, dt=1e-1)
-        err = norm(ref[end] - sol[end])
+        err = norm(ref.u[end] - sol.u[end])
         @test err < last_error
         last_error = err
     end
@@ -48,7 +48,7 @@ end
     @testset "$(typeof(r))" for r in (-α, [-α, -α], [-α 0; 0 -α], -α * I(2))
         sol = solve(prob, EK1(prior=IOUP(3, r)))
 
-        err = norm(ref[end] - sol[end])
+        err = norm(ref.u[end] - sol.u[end])
         @test err < 6e-6
     end
 end

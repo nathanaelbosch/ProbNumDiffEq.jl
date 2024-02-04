@@ -57,9 +57,9 @@ end
     @test_nowarn solve(prob, EK1(order=3), callback=ManifoldUpdate(E))
     sol2 = solve(prob, EK1(order=3), callback=ManifoldUpdate(E))
 
-    @test E(sol1[end]) .^ 2 > E(sol2[end]) .^ 2
+    @test E(sol1.u[end]) .^ 2 > E(sol2.u[end]) .^ 2
 
-    err1 = sol1[end] .- appxsol[end]
-    err2 = sol2[end] .- appxsol[end]
+    err1 = sol1.u[end] .- appxsol.u[end]
+    err2 = sol2.u[end] .- appxsol.u[end]
     @test all(err1 .^ 2 > err2 .^ 2)
 end

@@ -12,7 +12,7 @@ using Test
 
     @testset "Correct EK1" begin
         sol = solve(prob, EK1(order=3))
-        @test sol[end] ≈ ref[end] rtol = 1e-10
+        @test sol.u[end] ≈ ref.u[end] rtol = 1e-10
     end
 
     @testset "Kronecker working" begin
@@ -38,7 +38,7 @@ using Test
         s0 = ek0()
 
         ref = solve(prob, RadauIIA5(), abstol=1e-9, reltol=1e-6)
-        @test s0[end] ≈ ref[end] rtol = 1e-7
+        @test s0.u[end] ≈ ref.u[end] rtol = 1e-7
 
         @test s1.pu.Σ[1] isa PSDMatrix{<:Number,<:Matrix}
         @test s0.pu.Σ[1] isa PSDMatrix{<:Number,<:ProbNumDiffEq.IsometricKroneckerProduct}
@@ -68,14 +68,14 @@ end
 
     ref = solve(prob, RadauIIA5())
     sol = solve(prob, EK1(order=3))
-    @test sol[end] ≈ ref[end] rtol = 1e-8
+    @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 
     sol = solve(prob, EK1(order=3, initialization=ForwardDiffInit(3)))
-    @test sol[end] ≈ ref[end] rtol = 1e-8
+    @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 
     sol = solve(prob, EK1(order=3, initialization=ClassicSolverInit(RadauIIA5())))
-    @test sol[end] ≈ ref[end] rtol = 1e-8
+    @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 
     sol = solve(prob, EK1(order=3, initialization=SimpleInit()))
-    @test sol[end] ≈ ref[end] rtol = 1e-8
+    @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 end
