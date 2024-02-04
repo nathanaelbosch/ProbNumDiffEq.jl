@@ -188,8 +188,8 @@ function compute_scaled_error_estimate!(integ, cache)
         DiffEqBase.calculate_residuals!(
             err_tmp,
             err_est_unscaled,
-            integ.u[1, :],
-            integ.uprev[1, :],
+            integ.u.x[1],
+            integ.uprev.x[1],
             integ.opts.abstol,
             integ.opts.reltol,
             integ.opts.internalnorm,
