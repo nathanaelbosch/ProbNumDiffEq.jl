@@ -128,18 +128,12 @@ plot!(sol.t, zero(errors), ribbon=3error_estimates, label="error estimate",
 
 The solution object returned by ProbNumDiffEq.jl mostly behaves just like any other `ODESolution` in DifferentialEquations.jl --
 with some added uncertainties and related functionality on top.
-The `ProbabilisticODESolution` can be indexed
+The `ProbabilisticODESolution` can be indexed with
 
 ```@repl 1
-sol[1]
-sol[end]
-```
-
-and has fields `sol.t` and `sol.u` which store the time points and mean estimates:
-
-```@repl 1
-sol.t[end]
+sol.u[1]
 sol.u[end]
+sol.t[end]
 ```
 
 
