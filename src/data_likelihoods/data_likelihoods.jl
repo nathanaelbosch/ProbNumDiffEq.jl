@@ -1,12 +1,12 @@
 function dalton_data_loglik(
-    prob,
-    alg,
+    prob::SciMLBase.AbstractODEProblem,
+    alg::AbstractEK,
     args...;
     # observation model
     observation_matrix=I,
-    observation_noise_cov,
+    observation_noise_cov::Union{Number, AbstractMatrix},
     # data
-    data=data::NamedTuple{(:t, :u)},
+    data::NamedTuple{(:t, :u)},
     kwargs...
 )
     if alg.smooth
@@ -51,12 +51,12 @@ function dalton_data_loglik(
 end
 
 function filtering_data_loglik(
-    prob,
-    alg,
+    prob::SciMLBase.AbstractODEProblem,
+    alg::AbstractEK,
     args...;
     # observation model
     observation_matrix=I,
-    observation_noise_cov,
+    observation_noise_cov::Union{Number, AbstractMatrix},
     # data
     data::NamedTuple{(:t, :u)},
     kwargs...
