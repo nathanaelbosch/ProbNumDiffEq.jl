@@ -17,15 +17,15 @@ function DataUpdateCallback(
         o = length(val)
 
         @unpack K1, C_DxD, E0, C_dxd, C_Dxd, C_d = integ.cache
+        K1 = view(K1, :, 1:o)
         C_dxd = view(C_dxd, 1:o, 1:o)
-        C_Dxd = view(C_dxd, :, 1:o)
+        C_Dxd = view(C_Dxd, :, 1:o)
         C_d = view(C_dxd, 1:o)
 
         x = integ.cache.x
 
         H = observation_matrix * E0
 
-        @info "hmm?" observation_matrix H x.μ val
         obs_mean = H * x.μ - val
 
         R = if observation_noise_cov isa Number

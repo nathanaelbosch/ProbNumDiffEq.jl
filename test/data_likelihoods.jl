@@ -1,5 +1,4 @@
 using ProbNumDiffEq, Plots, Statistics, LinearAlgebra
-import Fenrir
 import ProbNumDiffEq as PNDE
 import ODEProblemLibrary: prob_ode_lotkavolterra
 using Test
@@ -56,7 +55,16 @@ fll = @test_nowarn PNDE.filtering_data_loglik(
 )
 
 H = [1 0;]
-PNDE.dalton_data_loglik(
+@test_nowarn PNDE.dalton_data_loglik(
+    prob,
+    EK1(smooth=false);
+    observation_matrix=H,
+    observation_noise_cov=σ^2,
+    data=(t=times, u=[H * d for d in data]),
+    adaptive=false, dt=DT,
+    dense=false,
+)
+@test_nowarn PNDE.filtering_data_loglik(
     prob,
     EK1(smooth=false);
     observation_matrix=H,
