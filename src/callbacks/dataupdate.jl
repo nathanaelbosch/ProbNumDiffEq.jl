@@ -35,7 +35,7 @@ function DataUpdateCallback(
         end
 
         _A = x.Σ.R * H'
-        # obs_cov = PSDMatrix(qr!([x.Σ.R * H'; sqrt(observation_noise_cov) * Eye(o)]).R)
+        # obs_cov = PSDMatrix(qr!([x.Σ.R * H'; sqrt(observation_noise_cov)]).R)
         obs_cov = _A'_A + R
         obs = Gaussian(obs_mean, obs_cov)
 
