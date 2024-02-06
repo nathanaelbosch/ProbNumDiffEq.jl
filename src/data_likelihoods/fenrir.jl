@@ -64,7 +64,7 @@ end
 
 function fit_pnsolution_to_data!(
     sol::AbstractProbODESolution,
-    observation_noise_var::Real,
+    observation_noise_var::Union{Real, AbstractMatrix},
     data::NamedTuple{(:t, :u)};
     proj=I,
 )
@@ -80,7 +80,11 @@ function fit_pnsolution_to_data!(
 
     x_posterior = copy(sol.x_filt) # the object to be filled
     state2data_projmat = proj * cache.SolProj
-    observation_noise = Diagonal(observation_noise_var .* ones(E))
+    observation_noise = if observation_noise_var isa Number
+        observation_noise_var * Eye(E)
+    else
+        observation_noise_var
+    end
     ZERO_DATA = zeros(E)
 
     # First update on the last data point
@@ -139,11 +143,11 @@ function measure!(x, H, R, m_tmp)
     return Gaussian(z, Symmetric(_S))
 end
 
-function update!(
+function fenrir_update!(
     x_out::SRGaussian,
     x_pred::SRGaussian,
     measurement::Gaussian,
-    R::Diagonal,
+    R::AbstractMatrix,
     H::AbstractMatrix,
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
@@ -201,7 +205,7 @@ function update!(
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     if !iszero(R)
-        out_Sigma_R = [x_out.Σ.R; sqrt.(R) * K']
+        out_Sigma_R = [x_out.Σ.R; cholesky(R).U * K']
         x_out.Σ.R .= triangularize!(out_Sigma_R; cachemat=M_cache)
     end
 
@@ -223,7 +227,7 @@ function compute_nll_and_update!(x, u, H, R, m_tmp, ZERO_DATA, cache)
     C_dxd = view(cache.C_dxd, 1:d, 1:d)
     K1 = view(cache.K1, :, 1:d)
     K2 = view(cache.C_Dxd, :, 1:d)
-    _, ll = update!(xout, x, msmnt, R, H, K1, K2, C_DxD, C_dxd)
+    _, ll = fenrir_update!(xout, x, msmnt, R, H, K1, K2, C_DxD, C_dxd)
     nll = -ll
 
     copy!(x, xout)
