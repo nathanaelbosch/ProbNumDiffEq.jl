@@ -1,7 +1,7 @@
 """
 $(TYPEDEF)
 """
-function fenrir_data_loglik(
+function _fenrir_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,
     args...;

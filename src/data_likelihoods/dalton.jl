@@ -1,4 +1,4 @@
-function dalton_data_loglik(
+function _dalton_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,
     args...;

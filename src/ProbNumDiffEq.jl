@@ -105,6 +105,13 @@ export DataUpdateLogLikelihood, DataUpdateCallback
 include("data_likelihoods/dalton.jl")
 include("data_likelihoods/filtering.jl")
 include("data_likelihoods/fenrir.jl")
+module DataLikelihoods
+import ..ProbNumDiffEq: _dalton_data_loglik, _filtering_data_loglik, _fenrir_data_loglik
+dalton_data_loglik = _dalton_data_loglik
+filtering_data_loglik = _filtering_data_loglik
+fenrir_data_loglik = _fenrir_data_loglik
+export dalton_data_loglik, filtering_data_loglik, fenrir_data_loglik
+end
 
 include("precompile.jl")
 
