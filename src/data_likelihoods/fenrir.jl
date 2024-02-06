@@ -139,8 +139,13 @@ function measure!(x, H, R, m_tmp)
     z, S = m_tmp
     _matmul!(z, H, x.μ)
     fast_X_A_Xt!(S, x.Σ, H)
-    _S = Matrix(S) .+= R
-    return Gaussian(z, Symmetric(_S))
+    if R isa PSDMatrix
+        _S = PSDMatrix(qr([S.R; R.R]).R)
+        return Gaussian(z, _S)
+    else
+        _S = Matrix(S) .+= R
+        return Gaussian(z, Symmetric(_S))
+    end
 end
 
 function fenrir_update!(
@@ -179,7 +184,7 @@ function fenrir_update!(
     end
 
     S_chol = try
-        cholesky!(_S)
+        cholesky!(Symmetric(Matrix(_S)))
     catch e
         if !(e isa PosDefException)
             rethrow(e)
@@ -205,8 +210,13 @@ function fenrir_update!(
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     if !iszero(R)
-        out_Sigma_R = [x_out.Σ.R; cholesky(R).U * K']
-        x_out.Σ.R .= triangularize!(out_Sigma_R; cachemat=M_cache)
+        if R isa PSDMatrix
+            out_Sigma_R = [x_out.Σ.R; R.R * K']
+            x_out.Σ.R .= triangularize!(out_Sigma_R; cachemat=M_cache)
+        else
+            out_Sigma_R = [x_out.Σ.R; cholesky(R).U * K']
+            x_out.Σ.R .= triangularize!(out_Sigma_R; cachemat=M_cache)
+        end
     end
 
     return x_out, loglikelihood

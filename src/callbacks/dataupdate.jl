@@ -34,9 +34,12 @@ function DataUpdateCallback(
             observation_noise_cov
         end
 
-        _A = x.Σ.R * H'
-        # obs_cov = PSDMatrix(qr!([x.Σ.R * H'; sqrt(observation_noise_cov)]).R)
-        obs_cov = _A'_A + R
+        obs_cov = if observation_noise_cov isa PSDMatrix
+            PSDMatrix(qr!([x.Σ.R * H'; observation_noise_cov.R]).R)
+        else
+            _A = x.Σ.R * H'
+            _A'_A + R
+        end
         obs = Gaussian(obs_mean, obs_cov)
 
         _x = copy!(integ.cache.x_tmp, x)

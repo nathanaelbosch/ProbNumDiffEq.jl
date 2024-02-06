@@ -71,6 +71,7 @@ end
         σ^2 * Eye(2),
         [σ^2 0; 0 2σ^2],
         (A = randn(2, 2); A'A),
+        (PSDMatrix(randn(2, 2))),
     )
         compare_data_likelihoods(
             EK1();
