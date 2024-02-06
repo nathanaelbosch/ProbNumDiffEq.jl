@@ -1,6 +1,7 @@
 using ProbNumDiffEq, Plots, Statistics, LinearAlgebra
 import ProbNumDiffEq as PNDE
 import ODEProblemLibrary: prob_ode_lotkavolterra
+using FillArrays
 using Test
 
 prob = prob_ode_lotkavolterra
@@ -66,13 +67,17 @@ end
 
 @testset "Matrix-valued observation noise" begin
     for Σ in (
+        σ^2 * I(2),
+        σ^2 * Eye(2),
         [σ^2 0; 0 2σ^2],
-        )
-    compare_data_likelihoods(
-        EK1();
-        observation_noise_cov=Σ,
-        data=data,
-        adaptive=false, dt=DT,
-        dense=false,
+        (A = randn(2, 2); A'A),
     )
+        compare_data_likelihoods(
+            EK1();
+            observation_noise_cov=Σ,
+            data=data,
+            adaptive=false, dt=DT,
+            dense=false,
+        )
+    end
 end
