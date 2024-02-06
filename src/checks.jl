@@ -14,8 +14,8 @@ end
 function check_densesmooth(integ)
     if integ.opts.dense && !integ.alg.smooth
         error("To use `dense=true` you need to set `smooth=true`!")
-    elseif !integ.opts.dense && integ.alg.smooth
-        @warn "If you set dense=false for efficiency, you might also want to set smooth=false."
+    # elseif !integ.opts.dense && integ.alg.smooth
+    #     @warn "If you set dense=false for efficiency, you might also want to set smooth=false."
     end
     if !integ.opts.save_everystep && integ.alg.smooth
         error("If you do not save all values, you do not need to smooth!")
