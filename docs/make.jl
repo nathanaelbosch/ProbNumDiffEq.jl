@@ -38,7 +38,6 @@ makedocs(
             "Second Order ODEs and Energy Preservation" => "tutorials/dynamical_odes.md"
             "Differential Algebraic Equations" => "tutorials/dae.md"
             "Probabilistic Exponential Integrators" => "tutorials/exponential_integrators.md"
-            "Parameter Inference" => "tutorials/fenrir.md"
         ],
         "Solvers and Options" => [
             "solvers.md",
