@@ -48,18 +48,25 @@ scatter!(times, stack(odedata)', markersize=2, markerstrokewidth=0.1, color=1, l
 Our goal is then to recover the true parameter `p` (and thus also the true trajectory plotted above) the noisy data.
 
 ## Computing the negative log-likelihood
-To do parameter inference - be it maximum-likelihod, maximum a posteriori, or full Bayesian inference with MCMC - we need to evaluate the likelihood of given a parameter estimate ``\theta_\text{est}``.
-This can be done for example with 
+To do parameter inference - be it maximum-likelihod, maximum a posteriori, or full Bayesian inference with MCMC - we need to evaluate the likelihood of given a parameter estimate ``\theta_\text{est}``, which corresponds to the probability of the data under the trajectory returned by the ODE solver
+```@example parameterinference
+θ_est = (0.1, 0.1, 2.0)
+prob = remake(true_prob, p=θ_est)
+plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
+scatter!(times, stack(odedata)', markersize=2, markerstrokewidth=0.1, color=1, label=["Noisy Data" ""])
+plot!(solve(prob, EK1(), adaptive=false, dt=1e-1), color=2, label=["Numerical solution for θ_est"])
+```
+This quantity can be computed in multiple ways; see 
+[Data Likelihoods](@ref).
+Here we use 
 [`ProbNumDiffEq.DataLikelihoods.fenrir_data_loglik`](@ref):
 ```@example parameterinference
 using ProbNumDiffEq.DataLikelihoods
 
-p_est = (0.1, 0.1, 2.0)
-prob = remake(true_prob, p=p_est)
 data = (t=times, u=odedata)
 nll = -fenrir_data_loglik(prob, EK1(smooth=true); data, observation_noise_cov=σ^2, adaptive=false, dt=1e-1)
 ```
-This is the negative marginal log-likelihood of the parameter `p_est`.
+This is the negative marginal log-likelihood of the parameter `θ_est`.
 You can use it as any other NLL: Optimize it to compute maximum-likelihood estimates or MAPs, or plug it into MCMC to sample from the posterior.
 In our paper [tronarp22fenrir](@cite) we compute MLEs by pairing Fenrir with [Optimization.jl](http://optimization.sciml.ai/stable/) and [ForwardDiff.jl](https://juliadiff.org/ForwardDiff.jl/stable/).
 Let's quickly explore how to do this next.
@@ -76,8 +83,8 @@ using Optimization, OptimizationOptimJL
 function loss(x, _)
     ode_params = x[begin:end-1]
     prob = remake(true_prob, p=ode_params)
-    κ² = exp(x[end]) # the diffusion parameter of the EK1
-    return -fenir_data_loglik(
+    κ² = exp(x[end]) # we also optimize the diffusion parameter of the EK1
+    return -fenrir_data_loglik(
         prob, EK1(smooth=true, diffusionmodel=FixedDiffusion(κ², false));
         data, observation_noise_cov=σ^2, adaptive=false, dt=1e-1
     )
@@ -85,7 +92,7 @@ end
 
 fun = OptimizationFunction(loss, Optimization.AutoForwardDiff())
 optprob = OptimizationProblem(
-    fun, [p_est..., 1e0];
+    fun, [θ_est..., 1e0];
     lb=[0.0, 0.0, 0.0, -10], ub=[1.0, 1.0, 5.0, 20] # lower and upper bounds
 )
 ```
@@ -110,7 +117,12 @@ plot!(mle_sol, color=3, label=["MLE-parameter Solution" ""])
 Looks good!
 
 
-### Reference
+## API Documentation
+
+For more details, see the API documentation of `ProbNumDiffEq.DataLikelihoods` at [Data Likelihoods](@ref).
+
+
+### References
 
 ```@bibliography
 Pages = []
