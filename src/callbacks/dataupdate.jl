@@ -20,7 +20,7 @@ function DataUpdateCallback(
         K1 = view(K1, :, 1:o)
         C_dxd = view(C_dxd, 1:o, 1:o)
         C_Dxd = view(C_Dxd, :, 1:o)
-        C_d = view(C_dxd, 1:o)
+        C_d = view(C_d, 1:o)
 
         x = integ.cache.x
 
@@ -35,6 +35,7 @@ function DataUpdateCallback(
         end
 
         _A = x.Σ.R * H'
+        # obs_cov = PSDMatrix(qr!([x.Σ.R * H'; sqrt(observation_noise_cov) * Eye(o)]).R)
         obs_cov = _A'_A + R
         obs = Gaussian(obs_mean, obs_cov)
 
