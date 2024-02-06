@@ -36,7 +36,7 @@ function fenrir_data_loglik(
     observation_noise_cov::Union{Number,AbstractMatrix},
     # data
     data::NamedTuple{(:t, :u)},
-    kwargs...
+    kwargs...,
 )
     if !alg.smooth
         throw(ArgumentError("fenrir only works with smoothing. Set `smooth=true`."))
@@ -64,7 +64,7 @@ end
 
 function fit_pnsolution_to_data!(
     sol::AbstractProbODESolution,
-    observation_noise_var::Union{Real, AbstractMatrix},
+    observation_noise_var::Union{Real,AbstractMatrix},
     data::NamedTuple{(:t, :u)};
     proj=I,
 )

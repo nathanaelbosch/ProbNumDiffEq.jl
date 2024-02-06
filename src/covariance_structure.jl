@@ -45,8 +45,6 @@ to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
 to_factorized_matrix(::IsometricKroneckerCovariance, M::AbstractMatrix) =
     error("Cannot factorize Matrix")
 to_factorized_matrix(::IsometricKroneckerCovariance, M::IsometricKroneckerProduct) = M
-to_factorized_matrix(FAC::IsometricKroneckerCovariance, M::Diagonal{T, <:Fill{T, 1}}) where {T} =
-	  IsometricKroneckerProduct(FAC.d, M.diag.value*Eye(FAC.q+1))
 
 for FT in [:DenseCovariance, :IsometricKroneckerCovariance]
     @eval to_factorized_matrix(FAC::$FT, M::PSDMatrix) =

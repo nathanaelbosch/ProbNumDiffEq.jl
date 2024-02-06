@@ -4,13 +4,14 @@ function filtering_data_loglik(
     args...;
     # observation model
     observation_matrix=I,
-    observation_noise_cov::Union{Number, AbstractMatrix},
+    observation_noise_cov::Union{Number,AbstractMatrix},
     # data
     data::NamedTuple{(:t, :u)},
-    kwargs...
+    kwargs...,
 )
     if alg.smooth
-        str = "The passed algorithm performs smoothing, but `dalton_nll` can be used without. " *
+        str =
+            "The passed algorithm performs smoothing, but `dalton_nll` can be used without. " *
             "You might want to set `smooth=false` to imprpove performance."
         @warn str
     end

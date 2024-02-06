@@ -26,19 +26,20 @@ function dalton_data_loglik(
     args...;
     # observation model
     observation_matrix=I,
-    observation_noise_cov::Union{Number, AbstractMatrix},
+    observation_noise_cov::Union{Number,AbstractMatrix},
     # data
     data::NamedTuple{(:t, :u)},
-    kwargs...
+    kwargs...,
 )
-
     if alg.smooth
-        str = "The passed algorithm performs smoothing, but `dalton_nll` can be used without. " *
+        str =
+            "The passed algorithm performs smoothing, but `dalton_nll` can be used without. " *
             "You might want to set `smooth=false` to imprpove performance."
         @warn str
     end
     if !(:adaptive in keys(kwargs))
-        throw(ArgumentError("`dalton_nll` only works with fixed step sizes. Set `adaptive=false`."))
+        str = "`dalton_nll` only works with fixed step sizes. Set `adaptive=false`."
+        throw(ArgumentError(str))
     end
 
     if :tstops in keys(kwargs)
@@ -68,10 +69,8 @@ function dalton_data_loglik(
         tstops,
     )
 
-    dalton_ll = (data_ll.ll
-                 + sol_with_data.pnstats.log_likelihood
-                 - sol_without_data.pnstats.log_likelihood)
-
+    sol_with_data_pn_ll = sol_with_data.pnstats.log_likelihood
+    sol_without_data_pn_ll = sol_without_data.pnstats.log_likelihood
+    dalton_ll = data_ll.ll + sol_with_data_pn_ll - sol_without_data_pn_ll
     return dalton_ll
 end
-
