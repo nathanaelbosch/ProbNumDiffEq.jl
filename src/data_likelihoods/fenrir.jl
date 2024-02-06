@@ -1,3 +1,6 @@
+"""
+$(TYPEDEF)
+"""
 function fenrir_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,

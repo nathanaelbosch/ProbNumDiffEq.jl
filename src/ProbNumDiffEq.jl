@@ -8,6 +8,7 @@ using LinearAlgebra
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 using Printf
+using DocStringExtensions
 
 using Reexport
 @reexport using DiffEqBase
