@@ -97,7 +97,7 @@ if !isdefined(Base, :get_extension)
 end
 
 include("callbacks/manifoldupdate.jl")
-export ManifoldUpdateCallback
+export ManifoldUpdate
 include("callbacks/dataupdate.jl")
 export DataUpdateLogLikelihood, DataUpdateCallback
 

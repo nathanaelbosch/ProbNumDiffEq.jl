@@ -49,13 +49,13 @@ appxsol = solve(prob, Vern9(), reltol=1e-9, abstol=1e-9)
     @test_nowarn solve(prob, EK1(order=3), callback=CustomCallback())
 end
 
-@testset "ManifoldUpdateCallback" begin
+@testset "ManifoldUpdate callback" begin
     sol1 = solve(prob, EK1(order=3))
 
     E(u) = [dot(u, u) - 2]
-    @test_broken solve(prob, EK0(order=3), callback=ManifoldUpdateCallback(E))
-    @test_nowarn solve(prob, EK1(order=3), callback=ManifoldUpdateCallback(E))
-    sol2 = solve(prob, EK1(order=3), callback=ManifoldUpdateCallback(E))
+    @test_broken solve(prob, EK0(order=3), callback=ManifoldUpdate(E))
+    @test_nowarn solve(prob, EK1(order=3), callback=ManifoldUpdate(E))
+    sol2 = solve(prob, EK1(order=3), callback=ManifoldUpdate(E))
 
     @test E(sol1.u[end]) .^ 2 > E(sol2.u[end]) .^ 2
 
