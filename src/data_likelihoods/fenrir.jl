@@ -27,7 +27,7 @@ so use at your own risk!
 # Reference
 * [tronarp22fenrir](@cite) Tronarp et al, "Fenrir: Physics-Enhanced Regression for Initial Value Problems", ICML (2022)
 """
-function _fenrir_data_loglik(
+function fenrir_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,
     args...;

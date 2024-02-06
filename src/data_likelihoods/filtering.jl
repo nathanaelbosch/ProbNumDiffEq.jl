@@ -1,4 +1,4 @@
-function _filtering_data_loglik(
+function filtering_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,
     args...;

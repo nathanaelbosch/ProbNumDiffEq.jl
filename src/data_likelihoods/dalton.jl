@@ -20,7 +20,7 @@ so use at your own risk!
 # Reference
 * [wu23dalton](@cite) Wu et al, "Data-Adaptive Probabilistic Likelihood Approximation for Ordinary Differential Equations", arXiv (2023)
 """
-function _dalton_data_loglik(
+function dalton_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,
     args...;
