@@ -101,7 +101,8 @@ export ManifoldUpdateCallback
 include("callbacks/dataupdate.jl")
 export DataUpdateLogLikelihood, DataUpdateCallback
 
-include("data_likelihoods/data_likelihoods.jl")
+include("data_likelihoods/dalton.jl")
+include("data_likelihoods/filtering.jl")
 include("data_likelihoods/fenrir.jl")
 
 include("precompile.jl")

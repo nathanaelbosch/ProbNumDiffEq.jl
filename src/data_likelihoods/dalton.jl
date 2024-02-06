@@ -19,9 +19,10 @@ function dalton_data_loglik(
     end
 
     if :tstops in keys(kwargs)
-        throw(ArgumentError("`dalton_nll` needs to set the tstops for the second solve, so setting it separately is not supported."))
+        str = "The passed `tstops` argument will be extended with the observation locations `data.t`."
+        @warn str
     end
-
+    tstops = union(data.t, get(kwargs, :tstops, []))
 
     data_ll = DataUpdateLogLikelihood(zero(eltype(prob.p)))
 
@@ -34,13 +35,14 @@ function dalton_data_loglik(
         callback=cb,
         save_everystep=false,
         kwargs...,
+        tstops,
     )
 
     sol_without_data = solve(
         prob, alg, args...;
         save_everystep=false,
         kwargs...,
-        tstops=data.t,
+        tstops,
     )
 
     dalton_ll = (data_ll.ll
@@ -66,6 +68,11 @@ function filtering_data_loglik(
             "You might want to set `smooth=false` to imprpove performance."
         @warn str
     end
+    if :tstops in keys(kwargs)
+        str = "The passed `tstops` argument will be extended with the observation locations `data.t`."
+        @warn str
+    end
+    tstops = union(data.t, get(kwargs, :tstops, []))
 
     data_ll = DataUpdateLogLikelihood(zero(eltype(prob.p)))
 
@@ -77,6 +84,7 @@ function filtering_data_loglik(
         prob, alg, args...;
         callback=cb,
         save_everystep=false,
+        tstops,
         kwargs...,
     )
 
