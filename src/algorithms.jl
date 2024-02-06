@@ -187,7 +187,7 @@ julia> solve(prob, RosenbrockExpEK())
 ```
 
 # Reference
-* [bosch23expint](@cite) Bosch et al, "Probabilistic Exponential Integrators", arXiv (2021)
+* [bosch23expint](@cite) Bosch et al, "Probabilistic Exponential Integrators", NeurIPS (2023)
 """
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
