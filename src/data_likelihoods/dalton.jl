@@ -1,3 +1,25 @@
+"""
+$(TYPEDSIGNATURES)
+
+Compute the DALTON [wu23dalton](@cite) approximate negative log-likelihood (NLL) of the data.
+
+You can control the step-size behaviour of the solver as you would for a standard ODE solve,
+but additionally the solver always steps through the `data.t` locations by adding them to
+`tstops`.
+You can also choose steps adaptively by setting `adaptive=true`, but this is not well-tested
+so use at your own risk!
+
+# Arguments
+- `prob::SciMLBase.AbstractODEProblem`: the initial value problem of interest
+- `alg::AbstractEK`: the probabilistic ODE solver to be used; use `EK1` for best results.
+- `data::NamedTuple{(:t, :u)}`: the data to be fitted
+- `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
+  the matrix which maps the ODE state to the measurements; typically a projection matrix
+- `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
+
+# Reference
+* [wu23dalton](@cite) Wu et al, "Data-Adaptive Probabilistic Likelihood Approximation for Ordinary Differential Equations", arXiv (2023)
+"""
 function _dalton_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,

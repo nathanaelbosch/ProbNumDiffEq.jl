@@ -1,5 +1,31 @@
 """
-$(TYPEDEF)
+$(TYPEDSIGNATURES)
+
+Compute the Fenrir [tronarp22fenrir](@cite) approximate negative log-likelihood (NLL) of the data.
+
+This is a convenience function that
+1. Solves the ODE with a `ProbNumDiffEq.EK1` of the specified order and with a diffusion
+   as provided by the `diffusion_var` argument, and
+2. Fits the ODE posterior to the data via Kalman filtering and thereby computes the
+   log-likelihood of the data on the way.
+
+You can control the step-size behaviour of the solver as you would for a standard ODE solve,
+but additionally the solver always steps through the `data.t` locations by adding them to
+`tstops`.
+
+You can also choose steps adaptively by setting `adaptive=true`, but this is not well-tested
+so use at your own risk!
+
+# Arguments
+- `prob::SciMLBase.AbstractODEProblem`: the initial value problem of interest
+- `alg::AbstractEK`: the probabilistic ODE solver to be used; use `EK1` for best results.
+- `data::NamedTuple{(:t, :u)}`: the data to be fitted
+- `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
+  the matrix which maps the ODE state to the measurements; typically a projection matrix
+- `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
+
+# Reference
+* [tronarp22fenrir](@cite) Tronarp et al, "Fenrir: Physics-Enhanced Regression for Initial Value Problems", ICML (2022)
 """
 function _fenrir_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
@@ -7,7 +33,7 @@ function _fenrir_data_loglik(
     args...;
     # observation model
     observation_matrix=I,
-    observation_noise_cov::Union{Number, AbstractMatrix},
+    observation_noise_cov::Union{Number,AbstractMatrix},
     # data
     data::NamedTuple{(:t, :u)},
     kwargs...
@@ -37,7 +63,7 @@ function _fenrir_data_loglik(
 end
 
 function fit_pnsolution_to_data!(
-    sol::ProbNumDiffEq.AbstractProbODESolution,
+    sol::AbstractProbODESolution,
     observation_noise_var::Real,
     data::NamedTuple{(:t, :u)};
     proj=I,

@@ -45,6 +45,7 @@ makedocs(
             "initialization.md",
             "diffusions.md",
         ],
+        "Data Likelihoods" => "likelihoods.md",
         "Benchmarks" => [
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
             "Non-stiff ODEs" => [
