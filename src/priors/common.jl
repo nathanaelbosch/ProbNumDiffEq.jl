@@ -219,7 +219,7 @@ See also: [`sample`](@ref).
 """
 function marginalize(process::AbstractGaussMarkovProcess, times)
     X = initial_distribution(process)
-    out = [X]
+    out = Gaussian[X]
     for i in 2:length(times)
         dt = times[i] - times[i-1]
         A, Q = ProbNumDiffEq.discretize(process, dt)

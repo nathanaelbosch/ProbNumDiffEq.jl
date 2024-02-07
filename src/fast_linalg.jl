@@ -48,6 +48,11 @@ _matmul!(
     A::Diagonal{T},
     B::Diagonal{T},
 ) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
+_matmul!(
+    C::AbstractMatrix{T},
+    A::LowerTriangular{T},
+    B::UpperTriangular{T},
+) where {T<:LinearAlgebra.BlasFloat} = mul!(C, A, B)
 
 """
     getupperright!(A)

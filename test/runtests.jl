@@ -117,6 +117,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Implicit solver kwarg compat" begin
                 include("implicit_solver_kwarg_compat.jl")
             end
+            @timedsafetestset "Data Likelihoods" begin
+                include("data_likelihoods.jl")
+            end
         end
     end
 

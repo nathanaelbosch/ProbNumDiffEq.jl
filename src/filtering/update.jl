@@ -71,7 +71,8 @@ function update!(
     K2_cache::AbstractMatrix,
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
-    C_d::AbstractArray,
+    C_d::AbstractArray;
+    R::Union{Nothing,PSDMatrix}=nothing,
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
@@ -120,6 +121,10 @@ function update!(
 
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
+    if !isnothing(R)
+        x_out.Σ.R .= triangularize!([x_out.Σ.R; R.R * K']; cachemat=M_cache)
+    end
+
     return x_out, loglikelihood
 end
 function pn_logpdf!(measurement, S_chol, tmpmean)
@@ -142,7 +147,8 @@ function update!(
     K2_cache::IsometricKroneckerProduct,
     M_cache::IsometricKroneckerProduct,
     C_dxd::IsometricKroneckerProduct,
-    C_d::AbstractVector,
+    C_d::AbstractVector;
+    R::Union{Nothing,PSDMatrix{T,<:IsometricKroneckerProduct}}=nothing,
 ) where {T}
     D = length(x_out.μ)  # full_state_dim
     d = H.ldim           # ode_dimension_dim
@@ -156,6 +162,7 @@ function update!(
     _K2_cache = K2_cache.B
     _M_cache = M_cache.B
     _C_dxd = C_dxd.B
+    _R = isnothing(R) ? nothing : PSDMatrix(R.R.B)
 
     _, loglikelihood = update!(
         _x_out,
@@ -167,6 +174,14 @@ function update!(
         _M_cache,
         _C_dxd,
         C_d,
+        R=_R,
     )
     return x_out, loglikelihood
+end
+
+# Short-hand with cache
+function update!(x_out, x, measurement, H; R=nothing, cache)
+    @unpack K1, m_tmp, C_DxD, C_dxd, C_Dxd, C_d = cache
+    K2 = C_Dxd
+    return update!(x_out, x, measurement, H, K1, K2, C_DxD, C_dxd, C_d; R)
 end

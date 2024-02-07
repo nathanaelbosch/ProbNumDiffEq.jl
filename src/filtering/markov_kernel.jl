@@ -149,7 +149,7 @@ y &\\sim \\mathcal{N} \\left( y; μ^P, Σ^P \\right), \\\\
 this function computes the conditional distribution
 ```math
 \\begin{aligned}
-x \\mid y \\sim \\mathcal{N} \\left( x; G x + d, Λ \\right),
+x \\mid y \\sim \\mathcal{N} \\left( x; G y + d, Λ \\right),
 \\end{aligned}
 ```
 where

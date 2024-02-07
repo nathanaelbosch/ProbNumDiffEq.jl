@@ -34,11 +34,11 @@ makedocs(
     pages=[
         "Home" => "index.md",
         "Tutorials" => [
-            "Getting Started" => "tutorials/getting_started.md"
-            "Second Order ODEs and Energy Preservation" => "tutorials/dynamical_odes.md"
-            "Differential Algebraic Equations" => "tutorials/dae.md"
-            "Probabilistic Exponential Integrators" => "tutorials/exponential_integrators.md"
-            "Parameter Inference" => "tutorials/fenrir.md"
+            "Getting Started" => "tutorials/getting_started.md",
+            "Second Order ODEs and Energy Preservation" => "tutorials/dynamical_odes.md",
+            "Differential Algebraic Equations" => "tutorials/dae.md",
+            "Probabilistic Exponential Integrators" => "tutorials/exponential_integrators.md",
+            "Parameter Inference" => "tutorials/ode_parameter_inference.md",
         ],
         "Solvers and Options" => [
             "solvers.md",
@@ -46,6 +46,7 @@ makedocs(
             "initialization.md",
             "diffusions.md",
         ],
+        "Data Likelihoods" => "likelihoods.md",
         "Benchmarks" => [
             "Multi-Language Wrapper Benchmark" => "benchmarks/multi-language-wrappers.md",
             "Non-stiff ODEs" => [
@@ -64,8 +65,8 @@ makedocs(
             ],
         ],
         "Internals" => [
-            "Filtering and Smoothing" => "filtering.md"
-            "Implementation via OrdinaryDiffEq.jl" => "implementation.md"
+            "Filtering and Smoothing" => "filtering.md",
+            "Implementation via OrdinaryDiffEq.jl" => "implementation.md",
         ],
         "References" => "references.md",
     ],

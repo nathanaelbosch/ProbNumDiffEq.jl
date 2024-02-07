@@ -14,7 +14,7 @@ Run Julia, enter `]` to bring up Julia's package manager, and add the ProbNumDif
 
 ```
 julia> ]
-(v1.9) pkg> add ProbNumDiffEq
+(v1.10) pkg> add ProbNumDiffEq
 ```
 
 ## Getting Started
@@ -35,10 +35,10 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
 - Arbitrary precision via Julia's built-in [arbitrary precision arithmetic](https://docs.julialang.org/en/v1/manual/integers-and-floating-point-numbers/#Arbitrary-Precision-Arithmetic)
 - Specialized solvers for second-order ODEs (see [Second Order ODEs and Energy Preservation](@ref))
 - Compatible with DAEs in mass-matrix ODE form (see [Solving DAEs with Probabilistic Numerics](@ref))
+- Data likelihoods for parameter-inference in ODEs (see [Parameter Inference with ProbNumDiffEq.jl](@ref))
 
 
 ## Related packages
 
 - [probdiffeq](https://pnkraemer.github.io/probdiffeq/): Fast and feature-rich filtering-based probabilistic ODE solvers in JAX.
 - [ProbNum](https://probnum.readthedocs.io/en/latest/): Probabilistic numerics in Python. It has not only probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
-- [Fenrir.jl](https://github.com/nathanaelbosch/Fenrir.jl): Parameter-inference in ODEs with probabilistic ODE solvers. This package builds on ProbNumDiffEq.jl to provide a negative marginal log-likelihood function, which can then be used with an optimizer or with MCMC for parameter inference.

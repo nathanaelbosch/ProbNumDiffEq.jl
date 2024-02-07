@@ -8,6 +8,7 @@ using LinearAlgebra
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 using Printf
+using DocStringExtensions
 
 using Reexport
 @reexport using DiffEqBase
@@ -31,6 +32,7 @@ using ArrayAllocators
 using FiniteHorizonGramians
 using FillArrays
 using MatrixEquations
+using DiffEqCallbacks
 
 @reexport using GaussianDistributions
 
@@ -95,8 +97,18 @@ if !isdefined(Base, :get_extension)
     include("../ext/DiffEqDevToolsExt.jl")
 end
 
-include("callbacks.jl")
+include("callbacks/manifoldupdate.jl")
 export ManifoldUpdate
+include("callbacks/dataupdate.jl")
+export DataUpdateLogLikelihood, DataUpdateCallback
+
+include("data_likelihoods/dalton.jl")
+include("data_likelihoods/filtering.jl")
+include("data_likelihoods/fenrir.jl")
+module DataLikelihoods
+import ..ProbNumDiffEq: dalton_data_loglik, filtering_data_loglik, fenrir_data_loglik
+export dalton_data_loglik, filtering_data_loglik, fenrir_data_loglik
+end
 
 include("precompile.jl")
 
