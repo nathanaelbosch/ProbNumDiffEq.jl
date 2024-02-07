@@ -129,7 +129,9 @@ function fit_pnsolution_to_data!(
                 observation_noise_cov,
                 _cache,
             )
-            LL += ll
+            if !isinf(ll)
+                LL += ll
+            end
             data_idx -= 1
         end
     end
