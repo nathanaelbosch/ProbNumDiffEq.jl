@@ -168,7 +168,7 @@ function OrdinaryDiffEq.alg_cache(
     copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
 
     # Measurement model related things
-    R = factorized_similar(FAC, d, d)
+    R = nothing # factorized_similar(FAC, d, d)
     H = factorized_similar(FAC, d, D)
     v = similar(Array{uElType}, d)
     S = PSDMatrix(factorized_zeros(FAC, D, d))

@@ -178,3 +178,10 @@ function update!(
     )
     return x_out, loglikelihood
 end
+
+# Short-hand with cache
+function update!(x_out, x, measurement, H; R=nothing, cache)
+    @unpack K1, m_tmp, C_DxD, C_dxd, C_Dxd, C_d = cache
+    K2 = C_Dxd
+    return update!(x_out, x, measurement, H, K1, K2, C_DxD, C_dxd, C_d; R)
+end

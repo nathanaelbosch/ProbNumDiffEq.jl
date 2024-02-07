@@ -114,7 +114,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     compute_measurement_covariance!(cache)
 
     # Update state and save the ODE solution value
-    x_filt, loglikelihood = update!(cache, x_pred)
+    x_filt, loglikelihood = update!(x_filt, x_pred, cache.measurement, cache.H; cache)
     write_into_solution!(
         integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
@@ -146,7 +146,6 @@ as in OrdinaryDiffEq.jl.
 function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ
     @unpack du, ddu, measurement, R, H = integ.cache
-    # @assert iszero(R)
 
     z = integ.cache.measurement
     z_tmp = integ.cache.m_tmp
@@ -159,16 +158,12 @@ function evaluate_ode!(integ, x_pred, t)
     return nothing
 end
 
-compute_measurement_covariance!(cache) =
+compute_measurement_covariance!(cache) = begin
+    @assert isnothing(cache.R)
     fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
-
-function update!(cache, prediction)
-    @unpack measurement, H, x_filt, K1, m_tmp, C_DxD = cache
-    @unpack C_dxd, C_Dxd, C_d = cache
-    K2 = C_Dxd
-
-    return update!(x_filt, prediction, measurement, H, K1, K2, C_DxD, C_dxd, C_d)
 end
+
+
 
 """
     compute_scaled_error_estimate!(integ, cache)
