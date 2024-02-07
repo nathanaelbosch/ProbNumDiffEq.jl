@@ -55,49 +55,58 @@ function fenrir_data_loglik(
     end
 
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
-    NLL, times, states =
-        fit_pnsolution_to_data!(sol, observation_noise_cov, data; proj=observation_matrix)
-    # u_probs = project_to_solution_space!(sol.pu, states, sol.cache.SolProj)
+    o = length(data.u[1])
+    R = if observation_noise_cov isa PSDMatrix
+        observation_noise_cov
+    elseif observation_noise_cov isa Number
+        PSDMatrix(sqrt(observation_noise_cov) * Eye(o))
+        elseif observation_noise_cov isa UniformScaling
+            PSDMatrix(sqrt(observation_noise_cov.λ) * Eye(o))
+        else
+            PSDMatrix(cholesky(observation_noise_cov).U)
+        end
+    LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
 
-    return -NLL
+    return LL
 end
 
 function fit_pnsolution_to_data!(
     sol::AbstractProbODESolution,
-    observation_noise_var::Union{Real,AbstractMatrix},
+    observation_noise_cov::PSDMatrix,
     data::NamedTuple{(:t, :u)};
     proj=I,
 )
     @unpack cache, backward_kernels = sol
     @unpack A, Q, x_tmp, x_tmp2, m_tmp, C_DxD, C_3DxD = cache
 
-    E = length(data.u[1])
-    P = length(sol.prob.p)
+    LL = zero(eltype(sol.prob.p))
 
-    NLL = zero(eltype(sol.prob.p))
-
-    measurement_cache = get_lowerdim_measurement_cache(m_tmp, E)
+    o = length(data.u[1])
+    @unpack x_tmp, C_dxd, C_d, K1, C_Dxd, C_DxD, m_tmp = cache
+    _cache = (
+        x_tmp=x_tmp,
+        C_DxD=C_DxD,
+        C_Dxd=view(C_Dxd, :, 1:o),
+        C_dxd=view(C_dxd, 1:o, 1:o),
+        C_d=view(C_d, 1:o),
+        K1=view(K1, :, 1:o),
+        K2=view(C_Dxd, :, 1:o),
+        m_tmp=Gaussian(view(m_tmp.μ, 1:o), PSDMatrix(view(m_tmp.Σ.R, :, 1:o))),
+    )
 
     x_posterior = copy(sol.x_filt) # the object to be filled
     state2data_projmat = proj * cache.SolProj
-    observation_noise = if observation_noise_var isa Number
-        observation_noise_var * Eye(E)
-    else
-        observation_noise_var
-    end
-    ZERO_DATA = zeros(E)
 
     # First update on the last data point
     if sol.t[end] in data.t
-        NLL += compute_nll_and_update!(
+        _, ll = measure_and_update!(
             x_posterior[end],
             data.u[end],
             state2data_projmat,
-            observation_noise,
-            measurement_cache,
-            ZERO_DATA,
-            cache,
+            observation_noise_cov,
+            _cache,
         )
+        LL += ll
     end
 
     # Now iterate backwards
@@ -113,26 +122,20 @@ function fit_pnsolution_to_data!(
         marginalize!(x_posterior[i], x_posterior[i+1], K; C_DxD, C_3DxD)
 
         if data_idx > 0 && sol.t[i] == data.t[data_idx]
-            NLL += compute_nll_and_update!(
+            _, ll = measure_and_update!(
                 x_posterior[i],
                 data.u[data_idx],
                 state2data_projmat,
-                observation_noise,
-                measurement_cache,
-                ZERO_DATA,
-                cache,
+                observation_noise_cov,
+                _cache,
             )
+            LL += ll
             data_idx -= 1
         end
     end
     @assert data_idx == 0 # to make sure we went through all the data
 
-    return NLL, sol.t, x_posterior
-end
-
-function get_lowerdim_measurement_cache(m_tmp, E)
-    _z, _S = m_tmp
-    return Gaussian(view(_z, 1:E), PSDMatrix(view(_S.R, :, 1:E)))
+    return LL, sol.t, x_posterior
 end
 
 function measure!(x, H, R, m_tmp)
@@ -148,105 +151,8 @@ function measure!(x, H, R, m_tmp)
     end
 end
 
-function fenrir_update!(
-    x_out::SRGaussian,
-    x_pred::SRGaussian,
-    measurement::Gaussian,
-    R::AbstractMatrix,
-    H::AbstractMatrix,
-    K1_cache::AbstractMatrix,
-    K2_cache::AbstractMatrix,
-    M_cache::AbstractMatrix,
-    C_dxd::AbstractMatrix,
-)
-    z, S = measurement.μ, measurement.Σ
-    m_p, P_p = x_pred.μ, x_pred.Σ
-    @assert P_p isa PSDMatrix || P_p isa Matrix
-    if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
-        copy!(x_out, x_pred)
-        return x_out
-    end
-
-    D = length(m_p)
-
-    # K = P_p * H' / S
-    _S = if S isa PSDMatrix
-        _matmul!(C_dxd, S.R', S.R)
-    else
-        copy!(C_dxd, S)
-    end
-
-    K = if P_p isa PSDMatrix
-        _matmul!(K1_cache, P_p.R, H')
-        _matmul!(K2_cache, P_p.R', K1_cache)
-    else
-        _matmul!(K2_cache, P_p, H')
-    end
-
-    S_chol = try
-        cholesky!(Symmetric(Matrix(_S)))
-    catch e
-        if !(e isa PosDefException)
-            rethrow(e)
-        end
-        @warn "Can't compute the update step with cholesky; using qr instead"
-        @assert S isa PSDMatrix
-        Cholesky(qr(S.R).R, :U, 0)
-    end
-    rdiv!(K, S_chol)
-
-    loglikelihood = zero(eltype(K))
-    loglikelihood = pn_logpdf!(measurement, S_chol, copy(z))
-
-    # x_out.μ .= m_p .+ K * (0 .- z)
-    x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
-
-    # M_cache .= I(D) .- mul!(M_cache, K, H)
-    _matmul!(M_cache, K, H, -1.0, 0.0)
-    @inbounds @simd ivdep for i in 1:D
-        M_cache[i, i] += 1
-    end
-
-    fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
-
-    if !iszero(R)
-        if R isa PSDMatrix
-            out_Sigma_R = [x_out.Σ.R; R.R * K']
-            x_out.Σ.R .= triangularize!(out_Sigma_R; cachemat=M_cache)
-        else
-            out_Sigma_R = [x_out.Σ.R; cholesky(R).U * K']
-            x_out.Σ.R .= triangularize!(out_Sigma_R; cachemat=M_cache)
-        end
-    end
-
-    return x_out, loglikelihood
-end
-function compute_nll_and_update!(x, u, H, R, m_tmp, ZERO_DATA, cache)
-    msmnt = measure!(x, H, R, m_tmp)
+function measure_and_update!(x, u, H, R, cache)
+    msmnt = measure!(x, H, R, cache.m_tmp)
     msmnt.μ .-= u
-    # nll = -pn_logpdf!(msmnt, cholesky(msmnt.Σ), copy(msmnt.μ))
-    # copy!(x, ProbNumDiffEq.update(x, msmnt, H))
-
-    @unpack K1, x_tmp2, m_tmp = cache
-    d = length(u)
-    # KC, MC, SC = view(K1, :, 1:d), x_tmp2.Σ.mat, view(m_tmp.Σ.mat, 1:d, 1:d)
-    xout = cache.x_tmp
-    # ProbNumDiffEq.update!(xout, x, msmnt, H, KC, MC, SC)
-
-    @unpack x_tmp2, m_tmp, C_DxD = cache
-    C_dxd = view(cache.C_dxd, 1:d, 1:d)
-    K1 = view(cache.K1, :, 1:d)
-    K2 = view(cache.C_Dxd, :, 1:d)
-    _, ll = fenrir_update!(xout, x, msmnt, R, H, K1, K2, C_DxD, C_dxd)
-    nll = -ll
-
-    copy!(x, xout)
-    return nll
-end
-
-function project_to_solution_space!(u_probs, states, projmat)
-    for (pu, x) in zip(u_probs, states)
-        _gaussian_mul!(pu, projmat, x)
-    end
-    return u_probs
+    return update!(x, copy!(cache.x_tmp, x), msmnt, H; R=R, cache)
 end
