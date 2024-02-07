@@ -145,7 +145,8 @@ function measure_and_update!(x, u, H, R::PSDMatrix, cache)
     _matmul!(z, H, x.μ)
     z .-= u
     fast_X_A_Xt!(S, x.Σ, H)
-    _S = PSDMatrix(qr([S.R; R.R]).R)
+    # _S = PSDMatrix(S.R'S.R + R.R'R.R)
+    _S = PSDMatrix(triangularize!([S.R; R.R], cachemat=cache.C_DxD))
     msmnt = Gaussian(z, _S)
 
     return update!(x, copy!(cache.x_tmp, x), msmnt, H; R=R, cache)
