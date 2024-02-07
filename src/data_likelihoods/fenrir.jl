@@ -138,21 +138,13 @@ function fit_pnsolution_to_data!(
     return LL, sol.t, x_posterior
 end
 
-function measure!(x, H, R, m_tmp)
-    z, S = m_tmp
+function measure_and_update!(x, u, H, R::PSDMatrix, cache)
+    z, S = cache.m_tmp
     _matmul!(z, H, x.μ)
+    z .-= u
     fast_X_A_Xt!(S, x.Σ, H)
-    if R isa PSDMatrix
-        _S = PSDMatrix(qr([S.R; R.R]).R)
-        return Gaussian(z, _S)
-    else
-        _S = Matrix(S) .+= R
-        return Gaussian(z, Symmetric(_S))
-    end
-end
+    _S = PSDMatrix(qr([S.R; R.R]).R)
+    msmnt = Gaussian(z, _S)
 
-function measure_and_update!(x, u, H, R, cache)
-    msmnt = measure!(x, H, R, cache.m_tmp)
-    msmnt.μ .-= u
     return update!(x, copy!(cache.x_tmp, x), msmnt, H; R=R, cache)
 end
