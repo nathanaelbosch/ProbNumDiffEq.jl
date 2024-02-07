@@ -42,7 +42,7 @@ function DataUpdateCallback(
     observation_noise_cov,
     loglikelihood::Union{DataUpdateLogLikelihood,Nothing}=nothing,
     save_positions=(false, false),
-    kwargs...
+    kwargs...,
 )
     function affect!(integ)
         times, values = data.t, data.u
