@@ -58,7 +58,7 @@ prob = remake(true_prob, p=θ_est)
 plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
 scatter!(times, stack(odedata)', color=1, label=["Noisy Data" ""])
 sol = solve(prob, EK1(), adaptive=false, dt=1e-1)
-plot!(sol, color=2, label=["Numerical solution for θ_est"])
+plot!(sol, color=2, label=["Numerical solution for θ_est" ""])
 ```
 This quantity can be computed in multiple ways; see 
 [Data Likelihoods](@ref).
