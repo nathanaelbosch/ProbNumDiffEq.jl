@@ -122,7 +122,16 @@ function update!(
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     if !isnothing(R)
-        x_out.Σ.R .= triangularize!([x_out.Σ.R; R.R * K']; cachemat=M_cache)
+        # M = Matrix(x_out.Σ) + K * Matrix(R) * K'
+        _matmul!(M_cache, x_out.Σ.R', x_out.Σ.R)
+        _matmul!(K1_cache, K, R.R')
+        _matmul!(M_cache, K1_cache, K1_cache', 1, 1)
+        chol = cholesky!(Symmetric(M_cache), check=false)
+        if issuccess(chol)
+            copy!(x_out.Σ.R, chol.U)
+        else
+            x_out.Σ.R .= triangularize!([x_out.Σ.R; R.R * K']; cachemat=M_cache)
+        end
     end
 
     return x_out, loglikelihood
@@ -180,7 +189,7 @@ function update!(
 end
 
 # Short-hand with cache
-function update!(x_out, x, measurement, H; R=nothing, cache)
+function update!(x_out, x, measurement, H; cache, R=nothing)
     @unpack K1, m_tmp, C_DxD, C_dxd, C_Dxd, C_d = cache
     K2 = C_Dxd
     return update!(x_out, x, measurement, H, K1, K2, C_DxD, C_dxd, C_d; R)

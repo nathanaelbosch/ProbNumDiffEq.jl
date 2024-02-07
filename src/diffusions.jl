@@ -69,7 +69,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
 
     v, S = measurement.μ, measurement.Σ
     e = m_tmp.μ
-    _S = _matmul!(Smat, S.R', S.R)
+    _S = S
     e .= v
     diffusion_t = if _S isa IsometricKroneckerProduct
         @assert length(_S.B) == 1
@@ -124,8 +124,7 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
 
     v, S = measurement.μ, measurement.Σ
     # S_11 = diag(S)[1]
-    c1 = view(S.R, :, 1)
-    S_11 = dot(c1, c1)
+    S_11 = S[1, 1]
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
@@ -159,11 +158,11 @@ For more background information
 * [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 function local_scalar_diffusion(cache)
-    @unpack d, R, H, Qh, measurement, m_tmp, Smat = cache
+    @unpack d, R, H, Qh, measurement, m_tmp, Smat, C_Dxd = cache
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
-    fast_X_A_Xt!(HQH, Qh, H)
-    HQHmat = _matmul!(Smat, HQH.R', HQH.R)
+    _matmul!(C_Dxd, Qh.R, H')
+    HQHmat = _matmul!(Smat, C_Dxd', C_Dxd)
     e .= z
     σ² = if HQHmat isa IsometricKroneckerProduct
         @assert length(HQHmat.B) == 1
@@ -195,9 +194,9 @@ function local_diagonal_diffusion(cache)
     @unpack d, q, H, Qh, measurement, m_tmp, tmp = cache
     @unpack local_diffusion = cache
     z = measurement.μ
-    HQH = fast_X_A_Xt!(m_tmp.Σ, Qh, H)
+    HQHR = _matmul!(cache.C_Dxd, Qh.R, H')
     # Q0_11 = diag(HQH)[1]
-    c1 = view(HQH.R, :, 1)
+    c1 = view(HQHR, :, 1)
     Q0_11 = dot(c1, c1)
 
     Σ_ii = @. m_tmp.μ = z^2 / Q0_11

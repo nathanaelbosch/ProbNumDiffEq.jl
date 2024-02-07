@@ -38,11 +38,12 @@ julia> solve(prob, EK0())
 
 # [References](@ref references)
 """
-struct EK0{PT,DT,IT} <: AbstractEK
+struct EK0{PT,DT,IT,RT} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
+    pn_observation_noise::RT
 end
 EK0(;
     order=3,
@@ -50,7 +51,8 @@ EK0(;
     diffusionmodel=DynamicDiffusion(),
     smooth=true,
     initialization=TaylorModeInit(num_derivatives(prior)),
-) = EK0(prior, diffusionmodel, smooth, initialization)
+    pn_obervation_noise=nothing,
+) = EK0(prior, diffusionmodel, smooth, initialization, pn_obervation_noise)
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
@@ -92,11 +94,12 @@ julia> solve(prob, EK1())
 
 # [References](@ref references)
 """
-struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT} <: AbstractEK
+struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
+    pn_observation_noise::RT
 end
 EK1(;
     order=3,
@@ -109,7 +112,8 @@ EK1(;
     diff_type=Val{:forward},
     standardtag=Val{true}(),
     concrete_jac=nothing,
-) where {PT,DT,IT} =
+    pn_observation_noise::RT=nothing,
+) where {PT,DT,IT,RT} =
     EK1{
         _unwrap_val(chunk_size),
         _unwrap_val(autodiff),
@@ -119,11 +123,13 @@ EK1(;
         PT,
         DT,
         IT,
+        RT,
     }(
         prior,
         diffusionmodel,
         smooth,
         initialization,
+        pn_observation_noise,
     )
 
 """

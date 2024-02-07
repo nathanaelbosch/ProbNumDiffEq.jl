@@ -43,6 +43,15 @@ X_A_Xt(A, X) = X * A * X'
 stack(x) = copy(reduce(hcat, x)')
 vecvec2mat(x) = reduce(hcat, x)'
 
+cov2psdmatrix(cov::Nothing; d) = nothing
+cov2psdmatrix(cov::Number; d) = PSDMatrix(sqrt(cov) * Eye(d))
+cov2psdmatrix(cov::UniformScaling; d) = PSDMatrix(sqrt(cov.λ) * Eye(d))
+cov2psdmatrix(cov::Diagonal; d) =
+    (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(sqrt.(cov)))
+cov2psdmatrix(cov::AbstractMatrix; d) =
+    (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(cholesky(cov).U))
+cov2psdmatrix(cov::PSDMatrix; d) = (@assert size(cov, 1) == size(cov, 2) == d; cov)
+
 include("fast_linalg.jl")
 include("kronecker.jl")
 include("covariance_structure.jl")
