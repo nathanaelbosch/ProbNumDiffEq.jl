@@ -40,7 +40,8 @@ true_sol = solve(true_prob, Vern9(), abstol=1e-10, reltol=1e-10)
 
 times = 1:0.5:20
 σ = 1e-1
-odedata = [true_sol(t) .+ σ * randn(length(u0)) for t in times]
+H = [1 0;]
+odedata = [H*true_sol(t) .+ σ * randn() for t in times]
 
 plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
 scatter!(times, stack(odedata)', markersize=2, markerstrokewidth=0.1, color=1, label=["Noisy Data" ""])
@@ -64,7 +65,10 @@ Here we use
 using ProbNumDiffEq.DataLikelihoods
 
 data = (t=times, u=odedata)
-nll = -fenrir_data_loglik(prob, EK1(smooth=true); data, observation_noise_cov=σ^2, adaptive=false, dt=1e-1)
+nll = -fenrir_data_loglik(
+    prob, EK1(smooth=true); 
+    data, observation_noise_cov=σ^2, observation_matrix=H, 
+    adaptive=false, dt=1e-1)
 ```
 This is the negative marginal log-likelihood of the parameter `θ_est`.
 You can use it as any other NLL: Optimize it to compute maximum-likelihood estimates or MAPs, or plug it into MCMC to sample from the posterior.
@@ -86,7 +90,8 @@ function loss(x, _)
     κ² = exp(x[end]) # we also optimize the diffusion parameter of the EK1
     return -fenrir_data_loglik(
         prob, EK1(smooth=true, diffusionmodel=FixedDiffusion(κ², false));
-        data, observation_noise_cov=σ^2, adaptive=false, dt=1e-1
+        data, observation_noise_cov=σ^2, observation_matrix=H,
+        adaptive=false, dt=1e-1
     )
 end
 
