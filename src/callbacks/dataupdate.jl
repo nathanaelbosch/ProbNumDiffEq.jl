@@ -53,7 +53,13 @@ function DataUpdateCallback(
 
         @unpack x, E0, m_tmp, G1 = integ.cache
         H = view(G1, 1:o, :)
-        matmul!(H, observation_matrix, E0)
+        if observation_matrix === I
+            @.. H = E0
+        elseif observation_matrix isa UniformScaling
+            @..  H = observation_matrix.λ * E0
+        else
+            matmul!(H, observation_matrix, E0)
+        end
 
         obs_mean = _matmul!(view(m_tmp.μ, 1:o), H, x.μ)
         obs_mean .-= val
