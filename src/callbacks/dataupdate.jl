@@ -51,9 +51,12 @@ function DataUpdateCallback(
 
         o = length(val)
 
-        x = integ.cache.x
-        H = observation_matrix * integ.cache.E0
-        obs_mean = H * x.μ - val
+        @unpack x, E0, m_tmp, G1 = integ.cache
+        H = view(G1, 1:o, :)
+        matmul!(H, observation_matrix, E0)
+
+        obs_mean = _matmul!(view(m_tmp.μ, 1:o), H, x.μ)
+        obs_mean .-= val
 
         R = if observation_noise_cov isa PSDMatrix
             observation_noise_cov
