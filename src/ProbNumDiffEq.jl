@@ -43,7 +43,6 @@ X_A_Xt(A, X) = X * A * X'
 stack(x) = copy(reduce(hcat, x)')
 vecvec2mat(x) = reduce(hcat, x)'
 
-cov2psdmatrix(cov::Nothing; d) = nothing
 cov2psdmatrix(cov::Number; d) = PSDMatrix(sqrt(cov) * Eye(d))
 cov2psdmatrix(cov::UniformScaling; d) = PSDMatrix(sqrt(cov.λ) * Eye(d))
 cov2psdmatrix(cov::Diagonal; d) =
