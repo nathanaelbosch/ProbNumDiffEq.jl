@@ -33,7 +33,7 @@ function fenrir_data_loglik(
     args...;
     # observation model
     observation_matrix=I,
-    observation_noise_cov::Union{Number,AbstractMatrix},
+    observation_noise_cov::Union{Number,UniformScaling,AbstractMatrix},
     # data
     data::NamedTuple{(:t, :u)},
     kwargs...,
