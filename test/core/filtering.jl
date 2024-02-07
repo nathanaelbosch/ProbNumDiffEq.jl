@@ -298,7 +298,7 @@ end
                     M_cache,
                     O_cache,
                     z_cache;
-                    R=PSDMatrix(R_R)
+                    R=PSDMatrix(R_R),
                 )
                 @test m ≈ x_out.μ
                 @test P ≈ Matrix(x_out.Σ)
@@ -323,7 +323,7 @@ end
                     M_cache,
                     O_cache,
                     z_cache,
-                    R=PSDMatrix(R_R)
+                    R=PSDMatrix(R_R),
                 )
                 @test x_out == x_pred
             end

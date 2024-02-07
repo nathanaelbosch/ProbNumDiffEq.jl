@@ -16,7 +16,6 @@ function DataUpdateCallback(
 
         o = length(val)
 
-
         x = integ.cache.x
         H = observation_matrix * integ.cache.E0
         obs_mean = H * x.μ - val
@@ -36,7 +35,7 @@ function DataUpdateCallback(
         obs_cov = PSDMatrix(qr!([x.Σ.R * H'; R.R]).R)
         obs = Gaussian(obs_mean, obs_cov)
 
-        @unpack x_tmp,K1, C_DxD, C_dxd, C_Dxd, C_d = integ.cache
+        @unpack x_tmp, K1, C_DxD, C_dxd, C_Dxd, C_d = integ.cache
         K1 = view(K1, :, 1:o)
         C_dxd = view(C_dxd, 1:o, 1:o)
         C_Dxd = view(C_Dxd, :, 1:o)

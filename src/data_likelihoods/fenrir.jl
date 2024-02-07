@@ -60,11 +60,11 @@ function fenrir_data_loglik(
         observation_noise_cov
     elseif observation_noise_cov isa Number
         PSDMatrix(sqrt(observation_noise_cov) * Eye(o))
-        elseif observation_noise_cov isa UniformScaling
-            PSDMatrix(sqrt(observation_noise_cov.λ) * Eye(o))
-        else
-            PSDMatrix(cholesky(observation_noise_cov).U)
-        end
+    elseif observation_noise_cov isa UniformScaling
+        PSDMatrix(sqrt(observation_noise_cov.λ) * Eye(o))
+    else
+        PSDMatrix(cholesky(observation_noise_cov).U)
+    end
     LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
 
     return LL

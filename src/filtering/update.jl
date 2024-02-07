@@ -72,7 +72,7 @@ function update!(
     M_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
     C_d::AbstractArray;
-    R::Union{Nothing,PSDMatrix} = nothing,
+    R::Union{Nothing,PSDMatrix}=nothing,
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ

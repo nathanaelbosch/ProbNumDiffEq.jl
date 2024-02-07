@@ -163,8 +163,6 @@ compute_measurement_covariance!(cache) = begin
     fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
 end
 
-
-
 """
     compute_scaled_error_estimate!(integ, cache)
 
