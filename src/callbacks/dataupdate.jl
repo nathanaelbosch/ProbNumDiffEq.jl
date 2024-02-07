@@ -56,7 +56,7 @@ function DataUpdateCallback(
         if observation_matrix === I
             @.. H = E0
         elseif observation_matrix isa UniformScaling
-            @..  H = observation_matrix.λ * E0
+            @.. H = observation_matrix.λ * E0
         else
             matmul!(H, observation_matrix, E0)
         end
