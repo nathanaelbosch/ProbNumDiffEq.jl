@@ -160,24 +160,6 @@ end
         end
 
         @testset "update!" begin
-            # @testset "Array" begin
-            #     K_cache = copy(K)
-            #     K2_cache = copy(K)
-            #     M_cache = zeros(d, d)
-            #     O_cache = zeros(o, o)
-            #     ProbNumDiffEq.update!(
-            #         x_out,
-            #         x_pred,
-            #         measurement,
-            #         H,
-            #         K_cache,
-            #         K2_cache,
-            #         M_cache,
-            #         O_cache,
-            #     )
-            #     @test m ≈ x_out.μ
-            #     @test P ≈ Matrix(x_out.Σ)
-            # end
             @testset "PSDMatrix" begin
                 K_cache = copy(C_Dxd)
                 K2_cache = copy(C_Dxd)
@@ -225,34 +207,126 @@ end
                 )
                 @test x_out == x_pred
             end
-            # @testset "Positive semi-definite measurement cov" begin
-            #     # different measurement matrix to make sure the measurement cov is not posdef
-            #     _H = [rand(o - 1, d); zeros(1, d)]
-            #
-            #     _z_data = zeros(o)
-            #     _z = _H * m_p
-            #     _S = PSDMatrix(P_p_R * _H')
-            #
-            #     K_cache = copy(K)
-            #     K2_cache = copy(K)
-            #     M_cache = zeros(d, d)
-            #     msmnt = Gaussian(measurement.μ, PSDMatrix(_S.R))
-            #     O_cache = zeros(o, o)
-            #     x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
-            #     x_out = copy(x_pred)
-            #
-            #     warnmsg = "Can't compute the update step with cholesky; using qr instead"
-            #     @test_logs (:warn, warnmsg) ProbNumDiffEq.update!(
-            #         x_out,
-            #         x_pred,
-            #         msmnt,
-            #         H,
-            #         K_cache,
-            #         K2_cache,
-            #         M_cache,
-            #         O_cache,
-            #     )
-            # end
+        end
+    end
+end
+
+@testset "UPDATE with observation noise" begin
+    # Setup
+    d = 5
+    m_p = rand(d)
+    P_p_R = Matrix(UpperTriangular(rand(d, d)))
+    P_p = P_p_R'P_p_R
+
+    # Measure
+    o = 1
+    _HB = rand(1, d)
+    H = kron(I(o), _HB)
+    R_R = rand(o, o)
+    R = R_R'R_R
+
+    z_data = zeros(o)
+    z = H * m_p
+    SR = qr([P_p_R * H'; R_R]).R |> Matrix
+    S = Symmetric(SR'SR)
+
+    # UPDATE
+    S_inv = inv(S)
+    K = P_p * H' * S_inv
+    m = m_p + K * (z_data .- z)
+    P = P_p - K * S * K'
+
+    x_pred = Gaussian(m_p, P_p)
+    x_out = copy(x_pred)
+    measurement = Gaussian(z, S)
+
+    C_dxd = zeros(o, o)
+    C_d = zeros(o)
+    C_Dxd = zeros(d, o)
+    C_DxD = zeros(d, d)
+    C_2DxD = zeros(2d, d)
+    C_3DxD = zeros(3d, d)
+
+    _fstr(F) = F ? "Kronecker" : "None"
+    @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
+        if KRONECKER
+            P_p_R = IsometricKroneckerProduct(1, P_p_R)
+            P_p = P_p_R'P_p_R
+
+            H = IsometricKroneckerProduct(1, _HB)
+            R_R = IsometricKroneckerProduct(1, R_R)
+            R = R'R
+
+            SR = IsometricKroneckerProduct(1, SR)
+            S = SR'SR
+
+            x_pred = Gaussian(m_p, P_p)
+            x_out = copy(x_pred)
+            measurement = Gaussian(z, S)
+
+            C_dxd = IsometricKroneckerProduct(1, C_dxd)
+            C_Dxd = IsometricKroneckerProduct(1, C_Dxd)
+            C_DxD = IsometricKroneckerProduct(1, C_DxD)
+            C_2DxD = IsometricKroneckerProduct(1, C_2DxD)
+            C_3DxD = IsometricKroneckerProduct(1, C_3DxD)
+        end
+
+        @testset "update" begin
+            x_out = ProbNumDiffEq.update(x_pred, measurement, H)
+            @test m ≈ x_out.μ
+            @test P ≈ x_out.Σ
+        end
+
+        @testset "update!" begin
+            @testset "PSDMatrix" begin
+                K_cache = copy(C_Dxd)
+                K2_cache = copy(C_Dxd)
+                M_cache = C_DxD
+                S = measurement.Σ
+                msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
+                O_cache = C_dxd
+                z_cache = C_d
+                x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
+                x_out = copy(x_pred)
+                ProbNumDiffEq.update!(
+                    x_out,
+                    x_pred,
+                    msmnt,
+                    H,
+                    K_cache,
+                    K2_cache,
+                    M_cache,
+                    O_cache,
+                    z_cache;
+                    R=PSDMatrix(R_R)
+                )
+                @test m ≈ x_out.μ
+                @test P ≈ Matrix(x_out.Σ)
+            end
+            @testset "Zero predicted covariance" begin
+                K_cache = copy(C_Dxd)
+                K2_cache = copy(C_Dxd)
+                M_cache = C_DxD
+                S = measurement.Σ
+                msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
+                O_cache = C_dxd
+                z_cache = C_d
+                x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(P_p_R)))
+                x_out = copy(x_pred)
+                ProbNumDiffEq.update!(
+                    x_out,
+                    x_pred,
+                    msmnt,
+                    H,
+                    K_cache,
+                    K2_cache,
+                    M_cache,
+                    O_cache,
+                    z_cache,
+                    R=PSDMatrix(R_R)
+                )
+                @test x_out == x_pred
+            end
         end
     end
 end
