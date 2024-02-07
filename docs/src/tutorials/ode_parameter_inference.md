@@ -24,6 +24,8 @@ Let's assume that the true underlying dynamics are given by a FitzHugh-Nagumo mo
 
 ```@example parameterinference
 using ProbNumDiffEq, LinearAlgebra, OrdinaryDiffEq, Plots
+Plots.theme(:default; markersize=2, markerstrokewidth=0.1)
+
 function f(du, u, p, t)
     a, b, c = p
     du[1] = c*(u[1] - u[1]^3/3 + u[2])
@@ -44,7 +46,7 @@ H = [1 0;]
 odedata = [H*true_sol(t) .+ σ * randn() for t in times]
 
 plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
-scatter!(times, stack(odedata)', markersize=2, markerstrokewidth=0.1, color=1, label=["Noisy Data" ""])
+scatter!(times, stack(odedata)',  color=1, label=["Noisy Data" ""])
 ```
 Our goal is then to recover the true parameter `p` (and thus also the true trajectory plotted above) the noisy data.
 
@@ -54,8 +56,9 @@ To do parameter inference - be it maximum-likelihod, maximum a posteriori, or fu
 θ_est = (0.1, 0.1, 2.0)
 prob = remake(true_prob, p=θ_est)
 plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
-scatter!(times, stack(odedata)', markersize=2, markerstrokewidth=0.1, color=1, label=["Noisy Data" ""])
-plot!(solve(prob, EK1(), adaptive=false, dt=1e-1), color=2, label=["Numerical solution for θ_est"])
+scatter!(times, stack(odedata)', color=1, label=["Noisy Data" ""])
+sol = solve(prob, EK1(), adaptive=false, dt=1e-1)
+plot!(sol, color=2, label=["Numerical solution for θ_est"])
 ```
 This quantity can be computed in multiple ways; see 
 [Data Likelihoods](@ref).
@@ -114,7 +117,7 @@ As a final step, let's plot the true solution, the data, and the result of the M
 
 ```@example parameterinference
 plot(true_sol, color=:black, linestyle=:dash, label=["True Solution" ""])
-scatter!(times, stack(odedata)', markersize=2, markerstrokewidth=0.1, color=1, label=["Noisy Data" ""])
+scatter!(times, stack(odedata)', color=1, label=["Noisy Data" ""])
 mle_sol = solve(remake(true_prob, p=p_mle), EK1())
 plot!(mle_sol, color=3, label=["MLE-parameter Solution" ""])
 ```
