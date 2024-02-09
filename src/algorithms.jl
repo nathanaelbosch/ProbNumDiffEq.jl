@@ -3,6 +3,14 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
+function ekargcheck(; diffusionmodel, pn_observation_noise, kwargs...)
+    if (diffusionmodel isa AbstractStaticDiffusion && diffusionmodel.calibrate) &&
+        (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
+        throw(ArgumentError("Calibration of the diffusion model is not supported when using observation noise."))
+    end
+end
+
+
 """
     EK0(; order=3,
           smooth=true,
@@ -44,15 +52,18 @@ struct EK0{PT,DT,IT,RT} <: AbstractEK
     smooth::Bool
     initialization::IT
     pn_observation_noise::RT
+    EK0(; order=3,
+         prior::PT=IWP(order),
+         diffusionmodel::DT=DynamicDiffusion(),
+         smooth=true,
+         initialization::IT=TaylorModeInit(num_derivatives(prior)),
+         pn_observation_noise::RT=nothing,
+    ) where {PT,DT,IT,RT} = begin
+        ekargcheck(; diffusionmodel, pn_observation_noise)
+        new{PT,DT,IT,RT}(
+            prior, diffusionmodel, smooth, initialization, pn_observation_noise)
+    end
 end
-EK0(;
-    order=3,
-    prior=IWP(order),
-    diffusionmodel=DynamicDiffusion(),
-    smooth=true,
-    initialization=TaylorModeInit(num_derivatives(prior)),
-    pn_obervation_noise=nothing,
-) = EK0(prior, diffusionmodel, smooth, initialization, pn_obervation_noise)
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
@@ -100,37 +111,39 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
     smooth::Bool
     initialization::IT
     pn_observation_noise::RT
+    EK1(;
+        order=3,
+        prior::PT=IWP(order),
+        diffusionmodel::DT=DynamicDiffusion(),
+        smooth=true,
+        initialization::IT=TaylorModeInit(num_derivatives(prior)),
+        chunk_size=Val{0}(),
+        autodiff=Val{true}(),
+        diff_type=Val{:forward},
+        standardtag=Val{true}(),
+        concrete_jac=nothing,
+        pn_observation_noise::RT=nothing,
+    ) where {PT,DT,IT,RT} = begin
+        ekargcheck(; diffusionmodel, pn_observation_noise)
+        new{
+            _unwrap_val(chunk_size),
+            _unwrap_val(autodiff),
+            diff_type,
+            _unwrap_val(standardtag),
+            _unwrap_val(concrete_jac),
+            PT,
+            DT,
+            IT,
+            RT,
+        }(
+            prior,
+            diffusionmodel,
+            smooth,
+            initialization,
+            pn_observation_noise,
+        )
+    end
 end
-EK1(;
-    order=3,
-    prior::PT=IWP(order),
-    diffusionmodel::DT=DynamicDiffusion(),
-    smooth=true,
-    initialization::IT=TaylorModeInit(num_derivatives(prior)),
-    chunk_size=Val{0}(),
-    autodiff=Val{true}(),
-    diff_type=Val{:forward},
-    standardtag=Val{true}(),
-    concrete_jac=nothing,
-    pn_observation_noise::RT=nothing,
-) where {PT,DT,IT,RT} =
-    EK1{
-        _unwrap_val(chunk_size),
-        _unwrap_val(autodiff),
-        diff_type,
-        _unwrap_val(standardtag),
-        _unwrap_val(concrete_jac),
-        PT,
-        DT,
-        IT,
-        RT,
-    }(
-        prior,
-        diffusionmodel,
-        smooth,
-        initialization,
-        pn_observation_noise,
-    )
 
 """
     ExpEK(; L, order=3, kwargs...)
