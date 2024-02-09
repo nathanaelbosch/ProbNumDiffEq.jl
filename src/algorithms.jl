@@ -5,14 +5,22 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
 function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
     if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
-        (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
-        throw(ArgumentError("Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually."))
+       (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
+        throw(
+            ArgumentError(
+                "Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually.",
+            ),
+        )
     end
-    if (diffusionmodel isa FixedMVDiffusion || diffusionmodel isa DynamicMVDiffusion) && alg == EK1
-        throw(ArgumentError("The `EK1` algorithm does not support multivariate diffusion models. Use `EK0` instead, or use a scalar diffusion model."))
+    if (diffusionmodel isa FixedMVDiffusion || diffusionmodel isa DynamicMVDiffusion) &&
+       alg == EK1
+        throw(
+            ArgumentError(
+                "The `EK1` algorithm does not support multivariate diffusion models. Use `EK0` instead, or use a scalar diffusion model.",
+            ),
+        )
     end
 end
-
 
 """
     EK0(; order=3,
@@ -56,11 +64,11 @@ struct EK0{PT,DT,IT,RT} <: AbstractEK
     initialization::IT
     pn_observation_noise::RT
     EK0(; order=3,
-         prior::PT=IWP(order),
-         diffusionmodel::DT=DynamicDiffusion(),
-         smooth=true,
-         initialization::IT=TaylorModeInit(num_derivatives(prior)),
-         pn_observation_noise::RT=nothing,
+        prior::PT=IWP(order),
+        diffusionmodel::DT=DynamicDiffusion(),
+        smooth=true,
+        initialization::IT=TaylorModeInit(num_derivatives(prior)),
+        pn_observation_noise::RT=nothing,
     ) where {PT,DT,IT,RT} = begin
         ekargcheck(EK0; diffusionmodel, pn_observation_noise)
         new{PT,DT,IT,RT}(

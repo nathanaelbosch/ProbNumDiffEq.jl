@@ -151,9 +151,10 @@ end
 function update!(
     x_out::SRGaussian{T,<:IsometricKroneckerProduct},
     x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
-    measurement::Gaussian{<:AbstractVector,
-                          <:Union{<:PSDMatrix{T,<:IsometricKroneckerProduct},
-                                  <:IsometricKroneckerProduct}},
+    measurement::Gaussian{
+        <:AbstractVector,
+        <:Union{<:PSDMatrix{T,<:IsometricKroneckerProduct},<:IsometricKroneckerProduct},
+    },
     H::IsometricKroneckerProduct,
     K1_cache::IsometricKroneckerProduct,
     K2_cache::IsometricKroneckerProduct,
@@ -169,7 +170,7 @@ function update!(
     _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
     _measurement = Gaussian(
         reshape_no_alloc(measurement.μ, 1, d),
-        measurement.Σ isa PSDMatrix ? PSDMatrix(measurement.Σ.R.B) : measurement.Σ.B
+        measurement.Σ isa PSDMatrix ? PSDMatrix(measurement.Σ.R.B) : measurement.Σ.B,
     )
     _H = H.B
     _K1_cache = K1_cache.B
