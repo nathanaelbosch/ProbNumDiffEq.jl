@@ -3,10 +3,13 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
-function ekargcheck(; diffusionmodel, pn_observation_noise, kwargs...)
-    if (diffusionmodel isa AbstractStaticDiffusion && diffusionmodel.calibrate) &&
+function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
+    if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
         (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
         throw(ArgumentError("Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually."))
+    end
+    if (diffusionmodel isa FixedMVDiffusion || diffusionmodel isa DynamicMVDiffusion) && alg == EK1
+        throw(ArgumentError("The `EK1` algorithm does not support multivariate diffusion models. Use `EK0` instead, or use a scalar diffusion model."))
     end
 end
 
@@ -59,7 +62,7 @@ struct EK0{PT,DT,IT,RT} <: AbstractEK
          initialization::IT=TaylorModeInit(num_derivatives(prior)),
          pn_observation_noise::RT=nothing,
     ) where {PT,DT,IT,RT} = begin
-        ekargcheck(; diffusionmodel, pn_observation_noise)
+        ekargcheck(EK0; diffusionmodel, pn_observation_noise)
         new{PT,DT,IT,RT}(
             prior, diffusionmodel, smooth, initialization, pn_observation_noise)
     end
@@ -124,7 +127,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
         concrete_jac=nothing,
         pn_observation_noise::RT=nothing,
     ) where {PT,DT,IT,RT} = begin
-        ekargcheck(; diffusionmodel, pn_observation_noise)
+        ekargcheck(EK1; diffusionmodel, pn_observation_noise)
         new{
             _unwrap_val(chunk_size),
             _unwrap_val(autodiff),
