@@ -64,15 +64,7 @@ function DataUpdateCallback(
         obs_mean = _matmul!(view(m_tmp.μ, 1:o), H, x.μ)
         obs_mean .-= val
 
-        R = if observation_noise_cov isa PSDMatrix
-            observation_noise_cov
-        elseif observation_noise_cov isa Number
-            PSDMatrix(sqrt(observation_noise_cov) * Eye(o))
-        elseif observation_noise_cov isa UniformScaling
-            PSDMatrix(sqrt(observation_noise_cov.λ) * Eye(o))
-        else
-            PSDMatrix(cholesky(observation_noise_cov).U)
-        end
+        R = cov2psdmatrix(observation_noise_cov; d=o)
 
         # _A = x.Σ.R * H'
         # obs_cov = _A'_A + R

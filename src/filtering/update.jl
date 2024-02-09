@@ -122,7 +122,16 @@ function update!(
     fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
 
     if !isnothing(R)
-        x_out.Σ.R .= triangularize!([x_out.Σ.R; R.R * K']; cachemat=M_cache)
+        # M = Matrix(x_out.Σ) + K * Matrix(R) * K'
+        _matmul!(M_cache, x_out.Σ.R', x_out.Σ.R)
+        _matmul!(K1_cache, K, R.R')
+        _matmul!(M_cache, K1_cache, K1_cache', 1, 1)
+        chol = cholesky!(Symmetric(M_cache), check=false)
+        if issuccess(chol)
+            copy!(x_out.Σ.R, chol.U)
+        else
+            x_out.Σ.R .= triangularize!([x_out.Σ.R; K1_cache']; cachemat=M_cache)
+        end
     end
 
     return x_out, loglikelihood
@@ -141,7 +150,10 @@ end
 function update!(
     x_out::SRGaussian{T,<:IsometricKroneckerProduct},
     x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
-    measurement::SRGaussian{T,<:IsometricKroneckerProduct},
+    measurement::Gaussian{
+        <:AbstractVector,
+        <:Union{<:PSDMatrix{T,<:IsometricKroneckerProduct},<:IsometricKroneckerProduct},
+    },
     H::IsometricKroneckerProduct,
     K1_cache::IsometricKroneckerProduct,
     K2_cache::IsometricKroneckerProduct,
@@ -156,7 +168,9 @@ function update!(
     _x_out = Gaussian(reshape_no_alloc(x_out.μ, Q, d), PSDMatrix(x_out.Σ.R.B))
     _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
     _measurement = Gaussian(
-        reshape_no_alloc(measurement.μ, 1, d), PSDMatrix(measurement.Σ.R.B))
+        reshape_no_alloc(measurement.μ, 1, d),
+        measurement.Σ isa PSDMatrix ? PSDMatrix(measurement.Σ.R.B) : measurement.Σ.B,
+    )
     _H = H.B
     _K1_cache = K1_cache.B
     _K2_cache = K2_cache.B
@@ -180,7 +194,7 @@ function update!(
 end
 
 # Short-hand with cache
-function update!(x_out, x, measurement, H; R=nothing, cache)
+function update!(x_out, x, measurement, H; cache, R=nothing)
     @unpack K1, m_tmp, C_DxD, C_dxd, C_Dxd, C_d = cache
     K2 = C_Dxd
     return update!(x_out, x, measurement, H, K1, K2, C_DxD, C_dxd, C_d; R)

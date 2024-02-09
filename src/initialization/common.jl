@@ -128,7 +128,8 @@ function init_condition_on!(
     m_tmp.μ .-= data
 
     # measurement cov
-    fast_X_A_Xt!(m_tmp.Σ, x.Σ, H)
+    _matmul!(C_Dxd, x.Σ.R, H')
+    _matmul!(m_tmp.Σ, C_Dxd', C_Dxd)
     copy!(x_tmp, x)
     update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
 end

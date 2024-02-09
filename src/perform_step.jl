@@ -114,7 +114,8 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     compute_measurement_covariance!(cache)
 
     # Update state and save the ODE solution value
-    x_filt, loglikelihood = update!(x_filt, x_pred, cache.measurement, cache.H; cache)
+    x_filt, loglikelihood = update!(
+        x_filt, x_pred, cache.measurement, cache.H; cache, R=cache.R)
     write_into_solution!(
         integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
 
@@ -159,8 +160,11 @@ function evaluate_ode!(integ, x_pred, t)
 end
 
 compute_measurement_covariance!(cache) = begin
-    @assert isnothing(cache.R)
-    fast_X_A_Xt!(cache.measurement.Σ, cache.x_pred.Σ, cache.H)
+    _matmul!(cache.C_Dxd, cache.x_pred.Σ.R, cache.H')
+    _matmul!(cache.measurement.Σ, cache.C_Dxd', cache.C_Dxd)
+    if !isnothing(cache.R)
+        cache.measurement.Σ .+= _matmul!(cache.C_dxd, cache.R.R', cache.R.R)
+    end
 end
 
 """
@@ -216,7 +220,7 @@ To save allocations, the function modifies the given `cache` and writes into
 function estimate_errors!(cache::AbstractODEFilterCache)
     @unpack local_diffusion, Qh, H, d = cache
 
-    R = cache.measurement.Σ.R
+    R = cache.C_Dxd
 
     if local_diffusion isa Diagonal
         _QR = cache.C_DxD .= Qh.R .* sqrt.(local_diffusion.diag)'

@@ -3,6 +3,26 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
+function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
+    if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
+       (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
+        throw(
+            ArgumentError(
+                "Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually.",
+            ),
+        )
+    end
+    if (
+        (diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate) ||
+        diffusionmodel isa DynamicMVDiffusion) && alg == EK1
+        throw(
+            ArgumentError(
+                "The `EK1` algorithm does not support automatic calibration of multivariate diffusion models. Either use the `EK0` instead, or use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`.",
+            ),
+        )
+    end
+end
+
 """
     EK0(; order=3,
           smooth=true,
@@ -38,19 +58,24 @@ julia> solve(prob, EK0())
 
 # [References](@ref references)
 """
-struct EK0{PT,DT,IT} <: AbstractEK
+struct EK0{PT,DT,IT,RT} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
+    pn_observation_noise::RT
+    EK0(; order=3,
+        prior::PT=IWP(order),
+        diffusionmodel::DT=DynamicDiffusion(),
+        smooth=true,
+        initialization::IT=TaylorModeInit(num_derivatives(prior)),
+        pn_observation_noise::RT=nothing,
+    ) where {PT,DT,IT,RT} = begin
+        ekargcheck(EK0; diffusionmodel, pn_observation_noise)
+        new{PT,DT,IT,RT}(
+            prior, diffusionmodel, smooth, initialization, pn_observation_noise)
+    end
 end
-EK0(;
-    order=3,
-    prior=IWP(order),
-    diffusionmodel=DynamicDiffusion(),
-    smooth=true,
-    initialization=TaylorModeInit(num_derivatives(prior)),
-) = EK0(prior, diffusionmodel, smooth, initialization)
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
@@ -92,39 +117,45 @@ julia> solve(prob, EK1())
 
 # [References](@ref references)
 """
-struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT} <: AbstractEK
+struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
+    pn_observation_noise::RT
+    EK1(;
+        order=3,
+        prior::PT=IWP(order),
+        diffusionmodel::DT=DynamicDiffusion(),
+        smooth=true,
+        initialization::IT=TaylorModeInit(num_derivatives(prior)),
+        chunk_size=Val{0}(),
+        autodiff=Val{true}(),
+        diff_type=Val{:forward},
+        standardtag=Val{true}(),
+        concrete_jac=nothing,
+        pn_observation_noise::RT=nothing,
+    ) where {PT,DT,IT,RT} = begin
+        ekargcheck(EK1; diffusionmodel, pn_observation_noise)
+        new{
+            _unwrap_val(chunk_size),
+            _unwrap_val(autodiff),
+            diff_type,
+            _unwrap_val(standardtag),
+            _unwrap_val(concrete_jac),
+            PT,
+            DT,
+            IT,
+            RT,
+        }(
+            prior,
+            diffusionmodel,
+            smooth,
+            initialization,
+            pn_observation_noise,
+        )
+    end
 end
-EK1(;
-    order=3,
-    prior::PT=IWP(order),
-    diffusionmodel::DT=DynamicDiffusion(),
-    smooth=true,
-    initialization::IT=TaylorModeInit(num_derivatives(prior)),
-    chunk_size=Val{0}(),
-    autodiff=Val{true}(),
-    diff_type=Val{:forward},
-    standardtag=Val{true}(),
-    concrete_jac=nothing,
-) where {PT,DT,IT} =
-    EK1{
-        _unwrap_val(chunk_size),
-        _unwrap_val(autodiff),
-        diff_type,
-        _unwrap_val(standardtag),
-        _unwrap_val(concrete_jac),
-        PT,
-        DT,
-        IT,
-    }(
-        prior,
-        diffusionmodel,
-        smooth,
-        initialization,
-    )
 
 """
     ExpEK(; L, order=3, kwargs...)
