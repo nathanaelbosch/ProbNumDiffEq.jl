@@ -6,7 +6,7 @@ abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 function ekargcheck(; diffusionmodel, pn_observation_noise, kwargs...)
     if (diffusionmodel isa AbstractStaticDiffusion && diffusionmodel.calibrate) &&
         (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
-        throw(ArgumentError("Calibration of the diffusion model is not supported when using observation noise."))
+        throw(ArgumentError("Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually."))
     end
 end
 
