@@ -69,13 +69,12 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
 
     v, S = measurement.μ, measurement.Σ
     e = m_tmp.μ
-    _S = S
     e .= v
-    diffusion_t = if _S isa IsometricKroneckerProduct
-        @assert length(_S.B) == 1
-        dot(v, e) / d / _S.B[1]
+    diffusion_t = if S isa IsometricKroneckerProduct
+        @assert length(S.B) == 1
+        dot(v, e) / d / S.B[1]
     else
-        S_chol = cholesky!(_S)
+        S_chol = cholesky!(S)
         ldiv!(S_chol, e)
         dot(v, e) / d
     end
@@ -123,12 +122,12 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
     @unpack d, q, measurement, local_diffusion = integ.cache
 
     v, S = measurement.μ, measurement.Σ
-    # S_11 = diag(S)[1]
+    # @assert diag(S) |> unique |> length == 1
     S_11 = S[1, 1]
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
-    Σ_out = kron(Σ, I(q + 1))
+    Σ_out = kron(Σ, I(q + 1)) # -> Different for each dimension; same for each derivative
 
     if integ.success_iter == 0
         # @assert length(diffusions) == 0
@@ -162,13 +161,13 @@ function local_scalar_diffusion(cache)
     z = measurement.μ
     e, HQH = m_tmp.μ, m_tmp.Σ
     _matmul!(C_Dxd, Qh.R, H')
-    HQHmat = _matmul!(Smat, C_Dxd', C_Dxd)
+    _matmul!(HQH, C_Dxd', C_Dxd)
     e .= z
-    σ² = if HQHmat isa IsometricKroneckerProduct
-        @assert length(HQHmat.B) == 1
-        dot(z, e) / d / HQHmat.B[1]
+    σ² = if HQH isa IsometricKroneckerProduct
+        @assert length(HQH.B) == 1
+        dot(z, e) / d / HQH.B[1]
     else
-        C = cholesky!(HQHmat)
+        C = cholesky!(HQH)
         ldiv!(C, e)
         dot(z, e) / d
     end
@@ -194,16 +193,17 @@ function local_diagonal_diffusion(cache)
     @unpack d, q, H, Qh, measurement, m_tmp, tmp = cache
     @unpack local_diffusion = cache
     z = measurement.μ
-    HQHR = _matmul!(cache.C_Dxd, Qh.R, H')
-    # Q0_11 = diag(HQH)[1]
-    c1 = view(HQHR, :, 1)
+    # HQH = H * unfactorize(Qh) * H'
+    # @assert HQH |> diag |> unique |> length == 1
+    # c1 = view(_matmul!(cache.C_Dxd, Qh.R, H'), :, 1)
+    c1 = mul!(view(cache.C_Dxd, :, 1:1), Qh.R, view(H, 1:1, :)')
     Q0_11 = dot(c1, c1)
 
     Σ_ii = @. m_tmp.μ = z^2 / Q0_11
-    # Σ_ii .= max.(Σ_ii, eps(eltype(Σ_ii)))
     Σ = Diagonal(Σ_ii)
 
     # local_diffusion = kron(Σ, I(q+1))
+    # -> Different for each dimension; same for each derivative
     for i in 1:d
         for j in (i-1)*(q+1)+1:i*(q+1)
             local_diffusion[j, j] = Σ[i, i]
