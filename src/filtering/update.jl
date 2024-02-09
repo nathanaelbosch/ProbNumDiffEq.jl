@@ -130,7 +130,6 @@ function update!(
         if issuccess(chol)
             copy!(x_out.Σ.R, chol.U)
         else
-            @warn "Cholesky factorization failed. Using triangularize! instead."
             x_out.Σ.R .= triangularize!([x_out.Σ.R; K1_cache']; cachemat=M_cache)
         end
     end

@@ -48,7 +48,7 @@ cov2psdmatrix(cov::UniformScaling; d) = PSDMatrix(sqrt(cov.λ) * Eye(d))
 cov2psdmatrix(cov::Diagonal; d) =
     (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(sqrt.(cov)))
 cov2psdmatrix(cov::AbstractMatrix; d) =
-    (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(cholesky(cov).U))
+    (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(Matrix(cholesky(cov).U)))
 cov2psdmatrix(cov::PSDMatrix; d) = (@assert size(cov, 1) == size(cov, 2) == d; cov)
 
 include("fast_linalg.jl")
