@@ -119,7 +119,8 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
 
         H = cache.E0 * PI
         measurement.μ .= H * x_pred.μ .- u
-        fast_X_A_Xt!(measurement.Σ, x_pred.Σ, H)
+        _matmul!(cache.C_Dxd, cache.x_pred.Σ.R, cache.H')
+        _matmul!(cache.measurement.Σ, cache.C_Dxd', cache.C_Dxd)
 
         update!(x_filt, x_pred, measurement, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
         push!(filts, copy(x_filt))
