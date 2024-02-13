@@ -166,6 +166,13 @@ function local_scalar_diffusion(cache)
     σ² = if HQH isa IsometricKroneckerProduct
         @assert length(HQH.B) == 1
         dot(z, e) / d / HQH.B[1]
+    elseif HQH isa BlockDiagonal
+        @assert length(HQH.blocks) == d
+        @assert length(HQH.blocks[1]) == 1
+        for i in eachindex(e)
+            e[i] /= HQH.blocks[i][1]
+        end
+        dot(z, e) / d
     else
         C = cholesky!(HQH)
         ldiv!(C, e)

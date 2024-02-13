@@ -193,6 +193,51 @@ function update!(
     return x_out, loglikelihood
 end
 
+
+function update!(
+    x_out::SRGaussian{T,<:BlockDiagonal},
+    x_pred::SRGaussian{T,<:BlockDiagonal},
+    measurement::Gaussian{
+        <:AbstractVector,
+        <:Union{<:PSDMatrix{T,<:BlockDiagonal},<:BlockDiagonal},
+    },
+    H::BlockDiagonal,
+    K1_cache::BlockDiagonal,
+    K2_cache::BlockDiagonal,
+    M_cache::BlockDiagonal,
+    C_dxd::BlockDiagonal,
+    C_d::AbstractVector;
+    R::Union{Nothing,PSDMatrix{T,<:BlockDiagonal}}=nothing,
+) where {T}
+    d = length(blocks(x_out.Σ.R))
+    q = size(blocks(x_out.Σ.R)[1], 1) - 1
+
+    ll = zero(eltype(x_out.μ))
+    for i in eachindex(blocks(x_out.Σ.R))
+        _, _ll = update!(
+            Gaussian(view(x_out.μ, (i-1)*(q+1)+1:i*(q+1)),
+                PSDMatrix(x_out.Σ.R.blocks[i])),
+            Gaussian(view(x_pred.μ, (i-1)*(q+1)+1:i*(q+1)),
+                PSDMatrix(x_pred.Σ.R.blocks[i])),
+            Gaussian(view(measurement.μ, i:i),
+                if measurement.Σ isa PSDMatrix
+                    PSDMatrix(measurement.Σ.R.blocks[i])
+                else
+                    measurement.Σ.blocks[i]
+                end),
+            H.blocks[i],
+            K1_cache.blocks[i],
+            K2_cache.blocks[i],
+            M_cache.blocks[i],
+            C_dxd.blocks[i],
+            view(C_d, i:i);
+            R,
+        )
+        ll += _ll
+    end
+    return x_out, ll
+end
+
 # Short-hand with cache
 function update!(x_out, x, measurement, H; cache, R=nothing)
     @unpack K1, m_tmp, C_DxD, C_dxd, C_Dxd, C_d = cache

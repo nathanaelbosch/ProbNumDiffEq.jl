@@ -26,6 +26,30 @@ _matmul!(
 end
 
 _matmul!(
+    C::BlockDiagonal{T},
+    A::BlockDiagonal{T},
+    B::Adjoint{T, <:BlockDiagonal{T}},
+) where {T<:LinearAlgebra.BlasFloat} = begin
+    @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds _matmul!(C.blocks[i], A.blocks[i], adjoint(B.parent.blocks[i]))
+    end
+    return C
+end
+
+_matmul!(
+    C::BlockDiagonal{T},
+    A::Adjoint{T, <:BlockDiagonal{T}},
+    B::BlockDiagonal{T},
+) where {T<:LinearAlgebra.BlasFloat} = begin
+    @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds _matmul!(C.blocks[i], adjoint(A.parent.blocks[i]), B.blocks[i])
+    end
+    return C
+end
+
+_matmul!(
     C::AbstractVector{T},
     A::BlockDiagonal{T},
     B::AbstractVector{T},
@@ -42,7 +66,14 @@ _matmul!(
     return C
 end
 
-function LinearAlgebra.cholesky!(B::BlockDiagonal)
-    C = BlockDiagonal(map(b -> parent(UpperTriangular(cholesky!(b).U)), blocks(B)))
-    return Cholesky(C, 'U', 0)
+function BlockDiagonals.isequal_blocksizes(B1::BlockDiagonal, B2::BlockDiagonal)
+    @assert length(B1.blocks) == length(B2.blocks)
+    for i in eachindex(B1.blocks)
+        if size(B1.blocks[i]) != size(B2.blocks[i])
+            return false
+        end
+    end
+    return true
 end
+
+LinearAlgebra.adjoint(B::BlockDiagonal) = Adjoint(B)
