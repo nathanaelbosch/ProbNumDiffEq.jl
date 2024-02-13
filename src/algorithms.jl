@@ -23,6 +23,28 @@ function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
     end
 end
 
+function covariance_structure(alg)
+    if alg isa EK0
+        if alg.prior isa IWP
+            if (alg.diffusionmodel isa DynamicDiffusion ||
+                alg.diffusionmodel isa FixedDiffusion)
+                return IsometricKroneckerCovariance
+            else
+                return BlockDiagonalCovariance
+            end
+        else
+            # This is not great as other priors can be Kronecker too; TODO
+            return DenseCovariance
+        end
+    elseif alg isa DiagonalEK1
+        return BlockDiagonalCovariance
+    elseif alg isa EK1
+        return DenseCovariance
+    else
+        throw(ArgumentError("Unknown algorithm type $alg"))
+    end
+end
+
 """
     EK0(; order=3,
           smooth=true,

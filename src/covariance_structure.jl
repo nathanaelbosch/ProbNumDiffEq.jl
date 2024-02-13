@@ -12,23 +12,6 @@ struct BlockDiagonalCovariance{T} <: CovarianceStructure{T}
     q::Int64
 end
 
-function get_covariance_structure(alg; elType, d, q)
-    if (
-        alg isa EK0 &&
-        !(
-            alg.diffusionmodel isa DynamicMVDiffusion ||
-            alg.diffusionmodel isa FixedMVDiffusion
-        ) &&
-        alg.prior isa IWP
-    )
-        return IsometricKroneckerCovariance{elType}(d, q)
-    elseif alg isa DiagonalEK1
-        return BlockDiagonalCovariance{elType}(d, q)
-    else
-        return DenseCovariance{elType}(d, q)
-    end
-end
-
 factorized_zeros(C::IsometricKroneckerCovariance{T}, sizes...) where {T} = begin
     for s in sizes
         @assert s % C.d == 0
