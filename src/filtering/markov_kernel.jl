@@ -113,7 +113,7 @@ function marginalize_cov!(
 ) where {T,S}
     _Σ_out = PSDMatrix(Σ_out.R.B)
     _Σ_curr = PSDMatrix(Σ_curr.R.B)
-    _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
+    _K = AffineNormalKernel(K.A.B, nothing, PSDMatrix(K.C.R.B))
     _D = size(_Σ_out, 1)
     _C_DxD = C_DxD.B
     _C_3DxD = C_3DxD.B
@@ -131,10 +131,10 @@ function marginalize_cov!(
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
 ) where {T,S}
-    for i in eachindex(blocks(Σ_out.R))
+    @inbounds @simd ivdep for i in eachindex(blocks(Σ_out.R))
         _Σ_out = PSDMatrix(Σ_out.R.blocks[i])
         _Σ_curr = PSDMatrix(Σ_curr.R.blocks[i])
-        _K = AffineNormalKernel(K.A.blocks[i], K.b, PSDMatrix(K.C.R.blocks[i]))
+        _K = AffineNormalKernel(K.A.blocks[i], nothing, PSDMatrix(K.C.R.blocks[i]))
         _C_DxD = C_DxD.blocks[i]
         _C_3DxD = C_3DxD.blocks[i]
         marginalize_cov!(_Σ_out, _Σ_curr, _K; C_DxD=_C_DxD, C_3DxD=_C_3DxD)
@@ -288,7 +288,7 @@ function compute_backward_kernel!(
 }
     d = length(blocks(xpred.Σ.R))
     q = size(blocks(xpred.Σ.R)[1], 1) - 1
-    for i in eachindex(blocks(xpred.Σ.R))
+    @inbounds @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
         _Kout = AffineNormalKernel(
             Kout.A.blocks[i],
             view(Kout.b, (i-1)*(q+1)+1:i*(q+1)),
