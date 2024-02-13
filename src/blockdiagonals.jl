@@ -1,3 +1,5 @@
+Base.view(::BlockDiagonal, idxs...) =
+    throw(MethodError("BlockDiagonal does not support views"))
 
 _matmul!(
     C::BlockDiagonal{T},
