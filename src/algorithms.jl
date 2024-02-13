@@ -157,6 +157,47 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
     end
 end
 
+struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
+    prior::PT
+    diffusionmodel::DT
+    smooth::Bool
+    initialization::IT
+    pn_observation_noise::RT
+    DiagonalEK1(;
+        order=3,
+        prior::PT=IWP(order),
+        diffusionmodel::DT=DynamicDiffusion(),
+        smooth=true,
+        initialization::IT=TaylorModeInit(num_derivatives(prior)),
+        chunk_size=Val{0}(),
+        autodiff=Val{true}(),
+        diff_type=Val{:forward},
+        standardtag=Val{true}(),
+        concrete_jac=nothing,
+        pn_observation_noise::RT=nothing,
+    ) where {PT,DT,IT,RT} = begin
+        ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise)
+        new{
+            _unwrap_val(chunk_size),
+            _unwrap_val(autodiff),
+            diff_type,
+            _unwrap_val(standardtag),
+            _unwrap_val(concrete_jac),
+            PT,
+            DT,
+            IT,
+            RT,
+        }(
+            prior,
+            diffusionmodel,
+            smooth,
+            initialization,
+            pn_observation_noise,
+        )
+    end
+end
+
+
 """
     ExpEK(; L, order=3, kwargs...)
 
@@ -236,7 +277,7 @@ function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,D
     )
 end
 
-function DiffEqBase.prepare_alg(alg::EK1{0}, u0::AbstractArray{T}, p, prob) where {T}
+function DiffEqBase.prepare_alg(alg::Union{EK1{0},DiagonalEK1{0}}, u0::AbstractArray{T}, p, prob) where {T}
     # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
     # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
     # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which

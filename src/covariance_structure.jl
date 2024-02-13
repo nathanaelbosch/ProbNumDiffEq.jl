@@ -22,6 +22,8 @@ function get_covariance_structure(alg; elType, d, q)
         alg.prior isa IWP
     )
         return IsometricKroneckerCovariance{elType}(d, q)
+    elseif alg isa DiagonalEK1
+        return BlockDiagonalCovariance{elType}(d, q)
     else
         return DenseCovariance{elType}(d, q)
     end

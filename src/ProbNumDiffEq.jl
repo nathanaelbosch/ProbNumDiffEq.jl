@@ -74,7 +74,7 @@ include("initialization/common.jl")
 export TaylorModeInit, ClassicSolverInit, SimpleInit, ForwardDiffInit
 
 include("algorithms.jl")
-export EK0, EK1
+export EK0, EK1, DiagonalEK1
 export ExpEK, RosenbrockExpEK
 
 include("alg_utils.jl")
