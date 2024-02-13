@@ -56,6 +56,7 @@ include("fast_linalg.jl")
 include("kronecker.jl")
 include("blockdiagonals.jl")
 include("covariance_structure.jl")
+export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 

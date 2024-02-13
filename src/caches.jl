@@ -103,7 +103,7 @@ function OrdinaryDiffEq.alg_cache(
     # uElType = eltype(u_vec)
     uElType = uBottomEltypeNoUnits
 
-    FAC = covariance_structure(alg){uElType}(d, q)
+    FAC = alg.covariance_factorization{uElType}(d, q)
     if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
         throw(
             ArgumentError(

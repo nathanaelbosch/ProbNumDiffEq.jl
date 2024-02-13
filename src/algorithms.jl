@@ -23,11 +23,10 @@ function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
     end
 end
 
-function covariance_structure(alg)
-    if alg isa EK0
-        if alg.prior isa IWP
-            if (alg.diffusionmodel isa DynamicDiffusion ||
-                alg.diffusionmodel isa FixedDiffusion)
+function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:AbstractEK}
+    if Alg <: EK0
+        if prior isa IWP
+            if (diffusionmodel isa DynamicDiffusion || diffusionmodel isa FixedDiffusion)
                 return IsometricKroneckerCovariance
             else
                 return BlockDiagonalCovariance
@@ -36,14 +35,15 @@ function covariance_structure(alg)
             # This is not great as other priors can be Kronecker too; TODO
             return DenseCovariance
         end
-    elseif alg isa DiagonalEK1
+    elseif Alg <: DiagonalEK1
         return BlockDiagonalCovariance
-    elseif alg isa EK1
+    elseif Alg <: EK1
         return DenseCovariance
     else
-        throw(ArgumentError("Unknown algorithm type $alg"))
+        throw(ArgumentError("Unknown algorithm type $Alg"))
     end
 end
+covariance_structure(alg) = covariance_structure(typeof(alg), alg.prior, alg.diffusionmodel)
 
 """
     EK0(; order=3,
@@ -80,22 +80,24 @@ julia> solve(prob, EK0())
 
 # [References](@ref references)
 """
-struct EK0{PT,DT,IT,RT} <: AbstractEK
+struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
     pn_observation_noise::RT
+    covariance_factorization::CF
     EK0(; order=3,
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         pn_observation_noise::RT=nothing,
-    ) where {PT,DT,IT,RT} = begin
+        covariance_factorization::CF=covariance_structure(EK0, prior, diffusionmodel),
+    ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(EK0; diffusionmodel, pn_observation_noise)
-        new{PT,DT,IT,RT}(
-            prior, diffusionmodel, smooth, initialization, pn_observation_noise)
+        new{PT,DT,IT,RT,CF}(
+            prior, diffusionmodel, smooth, initialization, pn_observation_noise, covariance_factorization)
     end
 end
 
@@ -139,12 +141,13 @@ julia> solve(prob, EK1())
 
 # [References](@ref references)
 """
-struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
+struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
     pn_observation_noise::RT
+    covariance_factorization::CF
     EK1(;
         order=3,
         prior::PT=IWP(order),
@@ -157,7 +160,8 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
         standardtag=Val{true}(),
         concrete_jac=nothing,
         pn_observation_noise::RT=nothing,
-    ) where {PT,DT,IT,RT} = begin
+        covariance_factorization::CF=covariance_structure(EK1, prior, diffusionmodel),
+    ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(EK1; diffusionmodel, pn_observation_noise)
         new{
             _unwrap_val(chunk_size),
@@ -169,22 +173,25 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
             DT,
             IT,
             RT,
+            CF,
         }(
             prior,
             diffusionmodel,
             smooth,
             initialization,
             pn_observation_noise,
+            covariance_factorization,
         )
     end
 end
 
-struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
+struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
     pn_observation_noise::RT
+    covariance_factorization::CF
     DiagonalEK1(;
         order=3,
         prior::PT=IWP(order),
@@ -197,7 +204,8 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
         standardtag=Val{true}(),
         concrete_jac=nothing,
         pn_observation_noise::RT=nothing,
-    ) where {PT,DT,IT,RT} = begin
+        covariance_factorization::CF=covariance_structure(DiagonalEK1, prior, diffusionmodel),
+    ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise)
         new{
             _unwrap_val(chunk_size),
@@ -209,12 +217,14 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
             DT,
             IT,
             RT,
+            CF,
         }(
             prior,
             diffusionmodel,
             smooth,
             initialization,
             pn_observation_noise,
+            covariance_factorization,
         )
     end
 end
