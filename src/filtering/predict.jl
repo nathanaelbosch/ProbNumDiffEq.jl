@@ -135,4 +135,5 @@ function predict_cov!(
             diffusion,
         )
     end
+    return Σ_out
 end
