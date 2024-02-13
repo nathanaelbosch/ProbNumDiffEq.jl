@@ -77,7 +77,15 @@ function predict_cov!(
 
     _matmul!(view(R, 1:D, 1:D), Σ_curr.R, Ah')
     if !isone(diffusion)
-        _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
+        if diffusion isa Number
+            _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
+        elseif diffusion isa Diagonal{<:Number, <:FillArrays.Fill}
+            _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion.diag.value))
+        elseif diffusion isa Diagonal{<:Number, <:Vector}
+            _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion, I(q+1)))
+        else
+            error()
+        end
     else
         @.. R[D+1:2D, 1:D] = Qh.R
     end

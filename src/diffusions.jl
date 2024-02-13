@@ -6,8 +6,23 @@ isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
-apply_diffusion(Q::PSDMatrix, diffusion::Diagonal) = X_A_Xt(Q, sqrt.(diffusion))
-apply_diffusion(Q::PSDMatrix, diffusion::Number) = PSDMatrix(Q.R * sqrt.(diffusion))
+apply_diffusion(Q::PSDMatrix{T, <:Matrix}, diffusion::Diagonal) where {T} = begin
+    d = size(diffusion, 1)
+    q = size(Q, 1) ÷ d - 1
+    return PSDMatrix(Q.R * sqrt.(kron(diffusion, I(q+1))))
+end
+apply_diffusion(
+    Q::PSDMatrix{T, <:IsometricKroneckerProduct},
+    diffusion::Diagonal{T, <:FillArrays.Fill},
+) where {T} = begin
+    PSDMatrix(Q.R * sqrt.(diffusion.diag.value))
+end
+apply_diffusion(Q::PSDMatrix{T, <:BlockDiagonal}, diffusion::Diagonal) where {T} = begin
+    PSDMatrix(BlockDiagonal([
+        Q.R.blocks[i] * sqrt.(diffusion.diag[i]) for i in eachindex(Q.R.blocks)
+    ]))
+end
+
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
 
@@ -20,7 +35,7 @@ Time-varying, isotropic diffusion, which is quasi-maximum-likelihood-estimated a
 particular also when solving stiff systems.
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
-initial_diffusion(::DynamicDiffusion, d, q, Eltype) = one(Eltype)
+initial_diffusion(::DynamicDiffusion, d, q, Eltype) = one(Eltype) * Eye(d)
 estimate_local_diffusion(::DynamicDiffusion, integ) = local_scalar_diffusion(integ.cache)
 
 """
@@ -39,8 +54,7 @@ separately.
 * [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
-initial_diffusion(::DynamicMVDiffusion, d, q, Eltype) =
-    kron(Diagonal(ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
+initial_diffusion(::DynamicMVDiffusion, d, q, Eltype) = Diagonal(ones(Eltype, d))
 estimate_local_diffusion(::DynamicMVDiffusion, integ) =
     local_diagonal_diffusion(integ.cache)
 
@@ -61,7 +75,7 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
     calibrate::Bool = true
 end
 initial_diffusion(diffusionmodel::FixedDiffusion, d, q, Eltype) =
-    diffusionmodel.initial_diffusion * one(Eltype)
+    diffusionmodel.initial_diffusion * one(Eltype) * Eye(d)
 estimate_local_diffusion(::FixedDiffusion, integ) = local_scalar_diffusion(integ.cache)
 function estimate_global_diffusion(::FixedDiffusion, integ)
     @unpack d, measurement, m_tmp, Smat = integ.cache
@@ -115,7 +129,7 @@ end
 function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
     initdiff = diffusionmodel.initial_diffusion
     @assert initdiff isa Number || length(initdiff) == d
-    return kron(Diagonal(initdiff .* ones(Eltype, d)), Diagonal(ones(Eltype, q + 1)))
+    return Diagonal(initdiff .* ones(Eltype, d))
 end
 estimate_local_diffusion(::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ.cache)
 function estimate_global_diffusion(::FixedMVDiffusion, integ)
@@ -178,7 +192,8 @@ function local_scalar_diffusion(cache)
         ldiv!(C, e)
         dot(z, e) / d
     end
-    return σ²
+    cache.local_diffusion = σ² * Eye(d)
+    return cache.local_diffusion
 end
 
 """
