@@ -82,7 +82,9 @@ function predict_cov!(
         elseif diffusion isa Diagonal{<:Number, <:FillArrays.Fill}
             _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion.diag.value))
         elseif diffusion isa Diagonal{<:Number, <:Vector}
-            _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion, I(q+1)))
+            d = size(diffusion, 1)
+            q = size(Qh, 1) ÷ d - 1
+            _matmul!(view(R, D+1:2D, 1:D), Qh.R, kron(sqrt.(diffusion), I(q+1)))
         else
             error()
         end

@@ -218,18 +218,14 @@ function local_diagonal_diffusion(cache)
     # HQH = H * unfactorize(Qh) * H'
     # @assert HQH |> diag |> unique |> length == 1
     # c1 = view(_matmul!(cache.C_Dxd, Qh.R, H'), :, 1)
-    c1 = mul!(view(cache.C_Dxd, :, 1:1), Qh.R, view(H, 1:1, :)')
-    Q0_11 = dot(c1, c1)
-
-    Σ_ii = @. m_tmp.μ = z^2 / Q0_11
-    Σ = Diagonal(Σ_ii)
-
-    # local_diffusion = kron(Σ, I(q+1))
-    # -> Different for each dimension; same for each derivative
-    for i in 1:d
-        for j in (i-1)*(q+1)+1:i*(q+1)
-            local_diffusion[j, j] = Σ[i, i]
-        end
+    Q0_11 = if Qh.R isa BlockDiagonal
+        c1 = mul!(view(cache.C_Dxd.blocks[1], :, 1:1), Qh.R.blocks[1], view(H.blocks[1], 1:1, :)')
+        dot(c1, c1)
+    else
+        c1 = mul!(view(cache.C_Dxd, :, 1:1), Qh.R, view(H, 1:1, :)')
+        dot(c1, c1)
     end
+
+    @. local_diffusion.diag = z^2 / Q0_11
     return local_diffusion
 end

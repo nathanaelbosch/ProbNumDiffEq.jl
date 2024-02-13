@@ -226,7 +226,13 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         _Q = apply_diffusion(Qh, local_diffusion)
         _matmul!(R, _Q.R, H')
         error_estimate = view(cache.tmp, 1:d)
-        sum!(abs2, error_estimate', view(R, :, 1:d))
+        if R isa BlockDiagonal
+            for i in eachindex(R.blocks)
+                error_estimate[i] = sum(abs2, R.blocks[i])
+            end
+        else
+            sum!(abs2, error_estimate', view(R, :, 1:d))
+        end
         error_estimate .= sqrt.(error_estimate)
         return error_estimate
     elseif local_diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
