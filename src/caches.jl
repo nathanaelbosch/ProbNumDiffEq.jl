@@ -189,6 +189,8 @@ function OrdinaryDiffEq.alg_cache(
                 else
                     factorized_similar(FAC, D, d)
                 end
+            elseif FAC isa BlockDiagonalCovariance
+                factorized_similar(FAC, D, d)
             else
                 similar(Matrix{uElType}, D, _d)
             end,

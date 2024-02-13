@@ -28,6 +28,7 @@ using ExponentialUtilities
 using Octavian
 using FastGaussQuadrature
 import Kronecker
+using BlockDiagonals
 using ArrayAllocators
 using FiniteHorizonGramians
 using FillArrays
@@ -53,6 +54,7 @@ cov2psdmatrix(cov::PSDMatrix; d) = (@assert size(cov, 1) == size(cov, 2) == d; c
 
 include("fast_linalg.jl")
 include("kronecker.jl")
+include("blockdiagonals.jl")
 include("covariance_structure.jl")
 
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end

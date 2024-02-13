@@ -8,6 +8,11 @@ function init_preconditioner(C::DenseCovariance{elType}) where {elType}
     PI = kron(I(C.d), Diagonal(ones(elType, C.q + 1)))
     return P, PI
 end
+function init_preconditioner(C::BlockDiagonalCovariance{elType}) where {elType}
+    P = BlockDiagonal([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
+    PI = BlockDiagonal([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
+    return P, PI
+end
 
 function make_preconditioners!(cache, dt)
     @unpack P, PI, d, q = cache
@@ -41,6 +46,17 @@ end
     return P
 end
 
+@fastmath @inbounds function make_preconditioner!(P::BlockDiagonal, h, d, q)
+    val = factorial(q) / h^(q + 1 / 2)
+    @simd ivdep for j in 0:q
+        for M in P.blocks
+            M.diag[j+1] = val
+        end
+        val /= (q - j) / h
+    end
+    return P
+end
+
 @fastmath @inbounds function make_preconditioner_inv!(PI::Diagonal, h, d, q)
     val = h^(q + 1 / 2) / factorial(q)
     for j in 0:q
@@ -58,6 +74,18 @@ end
     val = h^(q + 1 / 2) / factorial(q)
     @simd ivdep for j in 0:q
         PI.B.diag[j+1] = val
+        val *= (q - j) / h
+    end
+    return PI
+end
+
+@fastmath @inbounds function make_preconditioner_inv!(
+    PI::BlockDiagonal, h, d, q)
+    val = h^(q + 1 / 2) / factorial(q)
+    @simd ivdep for j in 0:q
+        for M in PI.blocks
+            M.diag[j+1] = val
+        end
         val *= (q - j) / h
     end
     return PI

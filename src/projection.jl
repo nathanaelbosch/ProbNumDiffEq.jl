@@ -30,6 +30,17 @@ function projection(C::IsometricKroneckerCovariance{elType}) where {elType}
     return Proj
 end
 
+function projection(C::BlockDiagonalCovariance{elType}) where {elType}
+    Proj(deriv) = begin
+        e_i = zeros(elType, C.q + 1, 1)
+        if deriv <= C.q
+            e_i[deriv+1] = 1
+        end
+        return BlockDiagonal([e_i' for _ in 1:C.d])
+    end
+    return Proj
+end
+
 function solution_space_projection(C::CovarianceStructure, is_secondorder_ode)
     Proj = projection(C)
     if is_secondorder_ode
