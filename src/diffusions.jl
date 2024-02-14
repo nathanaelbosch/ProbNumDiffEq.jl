@@ -237,14 +237,24 @@ function local_diagonal_diffusion(cache)
     # HQH = H * unfactorize(Qh) * H'
     # @assert HQH |> diag |> unique |> length == 1
     # c1 = view(_matmul!(cache.C_Dxd, Qh.R, H'), :, 1)
-    Q0_11 = if Qh.R isa BlockDiagonal
-        c1 = mul!(view(cache.C_Dxd.blocks[1], :, 1:1), Qh.R.blocks[1], view(H.blocks[1], 1:1, :)')
-        dot(c1, c1)
-    else
-        c1 = mul!(view(cache.C_Dxd, :, 1:1), Qh.R, view(H, 1:1, :)')
-        dot(c1, c1)
-    end
+    # Q_11 = dot(c1, c1)
 
-    @. local_diffusion.diag = z^2 / Q0_11
+    @assert Qh.R isa BlockDiagonal
+    for i in 1:d
+        c1 = _matmul!(
+            view(cache.C_Dxd.blocks[i], :, 1:1),
+            Qh.R.blocks[i],
+            view(H.blocks[i], 1:1, :)',
+        )
+        tmp[i] = dot(c1, c1)
+    end
+    Q_11 = tmp
+
+    # To double-check:
+    HQH = H * unfactorize(Qh) * H'
+    @assert Q_11 ≈ diag(HQH)
+
+    @. local_diffusion.diag = z^2 / Q_11
+
     return local_diffusion
 end
