@@ -251,7 +251,7 @@ function local_diagonal_diffusion(cache)
         end
         tmp
     else
-        error("This is not yet implemented efficiently; TODO")
+        @warn "This is not yet implemented efficiently; TODO"
         diag(H * unfactorize(Qh) * H')
     end
 

@@ -82,7 +82,7 @@ function predict_cov!(
         elseif diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
             _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion.diag.value))
         else
-            error("This is not yet implemented efficiently; TODO")
+            @warn "This is not yet implemented efficiently; TODO"
             d = size(diffusion, 1)
             q = D ÷ d - 1
             _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(kron(Eye(d)*diffusion, Eye(q + 1))))

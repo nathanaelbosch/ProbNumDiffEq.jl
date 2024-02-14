@@ -3,7 +3,7 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
-function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
+function ekargcheck(alg; diffusionmodel, pn_observation_noise, covariance_factorization, kwargs...)
     if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
        (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
         throw(
@@ -27,6 +27,13 @@ function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
         )
         end
     end
+    if diffusionmodel isa DynamicMVDiffusion && covariance_factorization == BlockDiagonalCovariance
+        throw(
+            ArgumentError(
+                "Currenty the `DynamicMVDiffusion` does not work properly with the `BlockDiagonalCovariance`. Use `DenseCovariance` instead, or change the diffusionmodel to a scalar one and use `DynamicDiffusion`.",
+            ),
+        )
+    end
 end
 
 function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:AbstractEK}
@@ -38,6 +45,7 @@ function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:Ab
                 return BlockDiagonalCovariance
             end
         else
+            error()
             # This is not great as other priors can be Kronecker too; TODO
             return DenseCovariance
         end
@@ -168,7 +176,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         pn_observation_noise::RT=nothing,
         covariance_factorization::CF=covariance_structure(EK1, prior, diffusionmodel),
     ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(EK1; diffusionmodel, pn_observation_noise)
+        ekargcheck(EK1; diffusionmodel, pn_observation_noise, covariance_factorization)
         new{
             _unwrap_val(chunk_size),
             _unwrap_val(autodiff),
@@ -212,7 +220,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         pn_observation_noise::RT=nothing,
         covariance_factorization::CF=covariance_structure(DiagonalEK1, prior, diffusionmodel),
     ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise)
+        ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise, covariance_factorization)
         new{
             _unwrap_val(chunk_size),
             _unwrap_val(autodiff),
