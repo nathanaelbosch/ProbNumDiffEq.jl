@@ -78,4 +78,11 @@ function BlockDiagonals.isequal_blocksizes(B1::BlockDiagonal, B2::BlockDiagonal)
     return true
 end
 
+LinearAlgebra.rmul!(B::BlockDiagonal, n::Number) = @simd ivdep for i in eachindex(B.blocks)
+    rmul!(B.blocks[i], n)
+end
 LinearAlgebra.adjoint(B::BlockDiagonal) = Adjoint(B)
+Base.:*(A::Adjoint{T, <:BlockDiagonal}, B::BlockDiagonal) where {T} = begin
+    @assert length(A.parent.blocks) == length(B.blocks)
+    return BlockDiagonal([A.parent.blocks[i]' * B.blocks[i] for i in eachindex(B.blocks)])
+end
