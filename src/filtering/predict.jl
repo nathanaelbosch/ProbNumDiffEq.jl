@@ -66,7 +66,7 @@ function predict_cov!(
     Qh::PSDMatrix,
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
-    diffusion=1,
+    diffusion::Union{Number, Diagonal},
 )
     if iszero(diffusion)
         fast_X_A_Xt!(Σ_out, Σ_curr, Ah)
@@ -81,10 +81,6 @@ function predict_cov!(
             _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
         elseif diffusion isa Diagonal{<:Number, <:FillArrays.Fill}
             _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion.diag.value))
-        elseif diffusion isa Diagonal{<:Number, <:Vector}
-            d = size(diffusion, 1)
-            q = size(Qh, 1) ÷ d - 1
-            _matmul!(view(R, D+1:2D, 1:D), Qh.R, kron(sqrt.(diffusion), I(q+1)))
         else
             error()
         end
@@ -111,7 +107,7 @@ function predict_cov!(
     Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
     C_DxD::IsometricKroneckerProduct,
     C_2DxD::IsometricKroneckerProduct,
-    diffusion=1,
+    diffusion::Diagonal,
 ) where {T,S}
     _Σ_out = PSDMatrix(Σ_out.R.B)
     _Σ_curr = PSDMatrix(Σ_curr.R.B)
@@ -132,7 +128,7 @@ function predict_cov!(
     Qh::PSDMatrix{S,<:BlockDiagonal},
     C_DxD::BlockDiagonal,
     C_2DxD::BlockDiagonal,
-    diffusion=1,
+    diffusion::Diagonal,
 ) where {T,S}
     for i in eachindex(blocks(Σ_out.R))
         predict_cov!(
@@ -142,7 +138,7 @@ function predict_cov!(
             PSDMatrix(Qh.R.blocks[i]),
             C_DxD.blocks[i],
             C_2DxD.blocks[i],
-            diffusion,
+            diffusion.diag[i],
         )
     end
     return Σ_out
