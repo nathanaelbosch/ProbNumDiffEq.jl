@@ -7,6 +7,7 @@ using FiniteHorizonGramians
 using Statistics
 using Plots
 using SimpleUnPack
+using FillArrays
 
 h = 0.1
 σ = 0.1
@@ -122,7 +123,7 @@ end
 
     @testset "Test vanilla (ie. non-preconditioned)" begin
         Ah, Qh = PNDE.discretize(prior, h)
-        Qh = PNDE.apply_diffusion(Qh, σ^2)
+        Qh = PNDE.apply_diffusion(Qh, σ^2*Eye(d))
 
         @test AH_22_IBM ≈ Ah
         @test QH_22_IBM ≈ Matrix(Qh)
@@ -130,7 +131,7 @@ end
 
     @testset "Test with preconditioning" begin
         A, Q = PNDE.preconditioned_discretize(prior)
-        Qh = PNDE.apply_diffusion(Q, σ^2)
+        Qh = PNDE.apply_diffusion(Q, σ^2*Eye(d))
 
         @test AH_22_PRE ≈ Matrix(A)
         @test QH_22_PRE ≈ Matrix(Qh)
@@ -141,7 +142,7 @@ end
             PNDE.DenseCovariance{Float64}(d, q), prior, h)
 
         @test AH_22_PRE ≈ A
-        @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, σ^2))
+        @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, σ^2*Eye(d)))
 
         cache = (
             d=d,
@@ -156,7 +157,7 @@ end
 
         make_transition_matrices!(cache, prior, h)
         @test AH_22_IBM ≈ cache.Ah
-        @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, σ^2))
+        @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, σ^2*Eye(d)))
     end
 end
 

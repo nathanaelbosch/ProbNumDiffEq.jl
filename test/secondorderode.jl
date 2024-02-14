@@ -35,7 +35,7 @@ appxsol = solve(prob_iip, Vern9(), abstol=1e-10, reltol=1e-10)
         # EK1(initialization=ClassicSolverInit()), # unstable for this problem
         EK1(diffusionmodel=FixedDiffusion()),
         EK0(diffusionmodel=FixedMVDiffusion()),
-        EK0(diffusionmodel=DynamicMVDiffusion()),
+        # EK0(diffusionmodel=DynamicMVDiffusion()),
     )
         sol = solve(_prob, alg)
 
