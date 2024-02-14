@@ -239,22 +239,28 @@ function local_diagonal_diffusion(cache)
     # c1 = view(_matmul!(cache.C_Dxd, Qh.R, H'), :, 1)
     # Q_11 = dot(c1, c1)
 
-    @assert Qh.R isa BlockDiagonal
-    for i in 1:d
-        c1 = _matmul!(
-            view(cache.C_Dxd.blocks[i], :, 1:1),
-            Qh.R.blocks[i],
-            view(H.blocks[i], 1:1, :)',
-        )
-        tmp[i] = dot(c1, c1)
+    # @assert
+    Q_11 = if Qh.R isa BlockDiagonal
+        for i in 1:d
+            c1 = _matmul!(
+                view(cache.C_Dxd.blocks[i], :, 1:1),
+                Qh.R.blocks[i],
+                view(H.blocks[i], 1:1, :)',
+            )
+            tmp[i] = dot(c1, c1)
+        end
+        tmp
+    else
+        error("This is not yet implemented efficiently; TODO")
+        diag(H * unfactorize(Qh) * H')
     end
-    Q_11 = tmp
 
     # To double-check:
     HQH = H * unfactorize(Qh) * H'
     @assert Q_11 ≈ diag(HQH)
+    # Also if the solver is a EK0 and not a DiagonalEK1:
+    # @assert Q_11 |> unique |> length == 1
 
     @. local_diffusion.diag = z^2 / Q_11
-
     return local_diffusion
 end
