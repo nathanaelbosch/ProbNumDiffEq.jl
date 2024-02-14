@@ -226,7 +226,7 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         _Q = apply_diffusion(Qh, local_diffusion)
         _matmul!(R, _Q.R, H')
         error_estimate = view(cache.tmp, 1:d)
-        if R isa BlockDiagonal
+        if R isa MFBD
             for i in eachindex(R.blocks)
                 error_estimate[i] = sum(abs2, R.blocks[i])
             end
@@ -247,7 +247,7 @@ function estimate_errors!(cache::AbstractODEFilterCache)
         error_estimate = view(cache.tmp, 1:d)
         if R isa IsometricKroneckerProduct
             error_estimate .= sum(abs2, R.B)
-        elseif R isa BlockDiagonal
+        elseif R isa MFBD
             for i in eachindex(blocks(R))
                 error_estimate[i] = sum(abs2, R.blocks[i])
             end

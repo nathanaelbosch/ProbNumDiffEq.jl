@@ -129,12 +129,12 @@ end
 
 # BlockDiagonal version
 function predict_cov!(
-    Σ_out::PSDMatrix{T,<:BlockDiagonal},
-    Σ_curr::PSDMatrix{T,<:BlockDiagonal},
-    Ah::BlockDiagonal,
-    Qh::PSDMatrix{S,<:BlockDiagonal},
-    C_DxD::BlockDiagonal,
-    C_2DxD::BlockDiagonal,
+    Σ_out::PSDMatrix{T,<:MFBD},
+    Σ_curr::PSDMatrix{T,<:MFBD},
+    Ah::MFBD,
+    Qh::PSDMatrix{S,<:MFBD},
+    C_DxD::MFBD,
+    C_2DxD::MFBD,
     diffusion::Diagonal,
 ) where {T,S}
     for i in eachindex(blocks(Σ_out.R))

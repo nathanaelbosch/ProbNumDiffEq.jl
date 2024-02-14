@@ -17,9 +17,9 @@ apply_diffusion(
 ) where {T} = begin
     PSDMatrix(Q.R * sqrt.(diffusion.diag.value))
 end
-apply_diffusion(Q::PSDMatrix{T,<:BlockDiagonal}, diffusion::Diagonal) where {T} = begin
+apply_diffusion(Q::PSDMatrix{T,<:MFBD}, diffusion::Diagonal) where {T} = begin
     PSDMatrix(
-        BlockDiagonal([
+        MFBD([
             Q.R.blocks[i] * sqrt.(diffusion.diag[i]) for i in eachindex(Q.R.blocks)
         ]),
     )
@@ -28,7 +28,7 @@ end
 apply_diffusion!(Q::PSDMatrix, diffusion::Diagonal{T,<:FillArrays.Fill}) where {T} =
     rmul!(Q.R, sqrt.(diffusion.diag.value))
 apply_diffusion!(
-    Q::PSDMatrix{T,<:BlockDiagonal},
+    Q::PSDMatrix{T,<:MFBD},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} =
     @simd ivdep for i in eachindex(blocks(Q.R))
@@ -105,7 +105,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     diffusion_t = if S isa IsometricKroneckerProduct
         @assert length(S.B) == 1
         dot(v, e) / d / S.B[1]
-    elseif S isa BlockDiagonal
+    elseif S isa MFBD
         @assert length(S.blocks) == d
         @assert length(S.blocks[1]) == 1
         @simd ivdep for i in eachindex(e)
@@ -204,7 +204,7 @@ function local_scalar_diffusion(cache)
     σ² = if HQH isa IsometricKroneckerProduct
         @assert length(HQH.B) == 1
         dot(z, e) / d / HQH.B[1]
-    elseif HQH isa BlockDiagonal
+    elseif HQH isa MFBD
         @assert length(HQH.blocks) == d
         @assert length(HQH.blocks[1]) == 1
         for i in eachindex(e)
@@ -245,7 +245,7 @@ function local_diagonal_diffusion(cache)
     # Q_11 = dot(c1, c1)
 
     # @assert
-    Q_11 = if Qh.R isa BlockDiagonal
+    Q_11 = if Qh.R isa MFBD
         for i in 1:d
             c1 = _matmul!(
                 view(cache.C_Dxd.blocks[i], :, 1:1),

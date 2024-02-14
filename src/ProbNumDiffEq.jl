@@ -28,7 +28,6 @@ using ExponentialUtilities
 using Octavian
 using FastGaussQuadrature
 import Kronecker
-using BlockDiagonals
 using ArrayAllocators
 using FiniteHorizonGramians
 using FillArrays

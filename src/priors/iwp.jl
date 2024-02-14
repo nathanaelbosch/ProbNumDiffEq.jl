@@ -169,7 +169,7 @@ function initialize_transition_matrices(FAC::DenseCovariance, p::IWP, dt)
     Ah, Qh = copy(A), copy(Q)
     return A, Q, Ah, Qh, P, PI
 end
-function initialize_transition_matrices(FAC::BlockDiagonalCovariance, p::IWP, dt)
+function initialize_transition_matrices(FAC::CovarianceStructure, p::IWP, dt)
     A, Q = preconditioned_discretize(p)
     A = to_factorized_matrix(FAC, A)
     Q = to_factorized_matrix(FAC, Q)

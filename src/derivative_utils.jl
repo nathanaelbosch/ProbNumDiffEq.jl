@@ -18,7 +18,7 @@ function calc_H!(H, integ, cache)
         OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
 
         @unpack C_dxd = cache
-        if C_dxd isa BlockDiagonal
+        if C_dxd isa MFBD
             @simd ivdep for i in eachindex(blocks(C_dxd))
                 @assert length(C_dxd.blocks[i]) == 1
                 C_dxd.blocks[i][1] = ddu[i, i]

@@ -116,7 +116,7 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
         pn_observation_noise::RT=nothing,
         covariance_factorization::CF=covariance_structure(EK0, prior, diffusionmodel),
     ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(EK0; diffusionmodel, pn_observation_noise)
+        ekargcheck(EK0; diffusionmodel, pn_observation_noise, covariance_factorization)
         new{PT,DT,IT,RT,CF}(
             prior, diffusionmodel, smooth, initialization, pn_observation_noise,
             covariance_factorization)

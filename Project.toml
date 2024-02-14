@@ -5,7 +5,6 @@ version = "0.15.0"
 
 [deps]
 ArrayAllocators = "c9d4266f-a5cb-439d-837c-c97b191379f5"
-BlockDiagonals = "0a1fb500-61f7-11e9-3c65-f5ef3456f9f0"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"

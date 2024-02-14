@@ -34,19 +34,19 @@ factorized_zeros(C::BlockDiagonalCovariance{T}, sizes...) where {T} = begin
     for s in sizes
         @assert s % C.d == 0
     end
-    return BlockDiagonal([Array{T}(calloc, (s ÷ C.d for s in sizes)...) for _ in 1:C.d])
+    return MFBD([Array{T}(calloc, (s ÷ C.d for s in sizes)...) for _ in 1:C.d])
 end
 factorized_similar(C::BlockDiagonalCovariance{T}, size1, size2) where {T} = begin
     for s in (size1, size2)
         @assert s % C.d == 0
     end
-    return BlockDiagonal([similar(Matrix{T}, size1 ÷ C.d, size2 ÷ C.d) for _ in 1:C.d])
+    return MFBD([similar(Matrix{T}, size1 ÷ C.d, size2 ÷ C.d) for _ in 1:C.d])
 end
 
 to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
 to_factorized_matrix(::IsometricKroneckerCovariance, M::IsometricKroneckerProduct) = M
 to_factorized_matrix(C::BlockDiagonalCovariance, M::IsometricKroneckerProduct) =
-    BlockDiagonal([M.B for _ in 1:C.d])
+    MFBD([M.B for _ in 1:C.d])
 
 for FT in [:DenseCovariance, :IsometricKroneckerCovariance, :BlockDiagonalCovariance]
     @eval to_factorized_matrix(FAC::$FT, M::PSDMatrix) =

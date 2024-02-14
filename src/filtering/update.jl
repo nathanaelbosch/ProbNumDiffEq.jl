@@ -194,19 +194,19 @@ function update!(
 end
 
 function update!(
-    x_out::SRGaussian{T,<:BlockDiagonal},
-    x_pred::SRGaussian{T,<:BlockDiagonal},
+    x_out::SRGaussian{T,<:MFBD},
+    x_pred::SRGaussian{T,<:MFBD},
     measurement::Gaussian{
         <:AbstractVector,
-        <:Union{<:PSDMatrix{T,<:BlockDiagonal},<:BlockDiagonal},
+        <:Union{<:PSDMatrix{T,<:MFBD},<:MFBD},
     },
-    H::BlockDiagonal,
-    K1_cache::BlockDiagonal,
-    K2_cache::BlockDiagonal,
-    M_cache::BlockDiagonal,
-    C_dxd::BlockDiagonal,
+    H::MFBD,
+    K1_cache::MFBD,
+    K2_cache::MFBD,
+    M_cache::MFBD,
+    C_dxd::MFBD,
     C_d::AbstractVector;
-    R::Union{Nothing,PSDMatrix{T,<:BlockDiagonal}}=nothing,
+    R::Union{Nothing,PSDMatrix{T,<:MFBD}}=nothing,
 ) where {T}
     d = length(blocks(x_out.Σ.R))
     q = size(blocks(x_out.Σ.R)[1], 1) - 1
