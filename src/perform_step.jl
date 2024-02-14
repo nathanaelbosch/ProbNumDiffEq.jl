@@ -124,7 +124,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
-        cache.global_diffusion = estimate_global_diffusion(cache.diffusionmodel, integ)
+        estimate_global_diffusion(cache.diffusionmodel, integ)
     end
 
     # Advance the state
