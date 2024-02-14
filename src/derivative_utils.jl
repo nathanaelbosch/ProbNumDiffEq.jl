@@ -18,9 +18,13 @@ function calc_H!(H, integ, cache)
         OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
 
         @unpack C_dxd = cache
-        @simd ivdep for i in eachindex(blocks(C_dxd))
-            @assert length(C_dxd.blocks[i]) == 1
-            C_dxd.blocks[i][1] = ddu[i, i]
+        if C_dxd isa BlockDiagonal
+            @simd ivdep for i in eachindex(blocks(C_dxd))
+                @assert length(C_dxd.blocks[i]) == 1
+                C_dxd.blocks[i][1] = ddu[i, i]
+            end
+        else
+            C_dxd .= Diagonal(ddu)
         end
         _matmul!(H, C_dxd, cache.SolProj, -1.0, 1.0)
     else
