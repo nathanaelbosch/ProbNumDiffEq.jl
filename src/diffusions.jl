@@ -23,6 +23,19 @@ apply_diffusion(Q::PSDMatrix{T, <:BlockDiagonal}, diffusion::Diagonal) where {T}
     ]))
 end
 
+apply_diffusion!(Q::PSDMatrix, diffusion::Diagonal{T, <:FillArrays.Fill}) where {T} =
+    rmul!(Q.R, sqrt.(diffusion.diag.value))
+apply_diffusion!(
+    Q::PSDMatrix{T,<:BlockDiagonal},
+    diffusion::Diagonal{T,<:Vector},
+) where {T} =
+    @simd ivdep for i in eachindex(blocks(Q.R))
+        rmul!(blocks(Q.R)[i], diffusion.diag[i])
+    end
+
+apply_diffusion!(out::PSDMatrix, Q::PSDMatrix, diffusion::Diagonal{T,<:FillArrays.Fill}) where {T} =
+    rmul!(Q.R, sqrt.(diffusion.diag.value))
+
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
 

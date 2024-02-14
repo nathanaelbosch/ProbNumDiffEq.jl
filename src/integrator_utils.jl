@@ -47,13 +47,12 @@ function calibrate_solution!(integ, mle_diffusion)
     set_diffusions!(integ.sol, mle_diffusion * integ.cache.default_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
-    @assert mle_diffusion isa Number || mle_diffusion isa Diagonal
-    sqrt_diff = mle_diffusion isa Number ? sqrt(mle_diffusion) : sqrt.(mle_diffusion)
+    @assert mle_diffusion isa Diagonal
     @simd ivdep for C in integ.sol.x_filt.Σ
-        rmul!(C.R, sqrt_diff)
+        apply_diffusion!(C, mle_diffusion)
     end
     @simd ivdep for C in integ.sol.backward_kernels.C
-        rmul!(C.R, sqrt_diff)
+        apply_diffusion!(C, mle_diffusion)
     end
 
     # Re-write into the solution estimates
@@ -70,13 +69,17 @@ Set the contents of `solution.diffusions` to the provided `diffusion`, overwriti
 diffusion estimates that are in there. Typically, `diffusion` is either a global quasi-MLE
 or the specified initial diffusion value if no calibration is desired.
 """
-function set_diffusions!(solution::AbstractProbODESolution, diffusion::Number)
-    solution.diffusions .= diffusion
-    return nothing
-end
-function set_diffusions!(solution::AbstractProbODESolution, diffusion::Diagonal)
-    @simd ivdep for d in solution.diffusions
-        copy!(d, diffusion)
+function set_diffusions!(solution::AbstractProbODESolution, diffusion)
+    if diffusion isa Diagonal{<:Number, <:FillArrays.Fill}
+        @simd ivdep for i in eachindex(solution.diffusions)
+            solution.diffusions[i] = copy(diffusion)
+        end
+    elseif diffusion isa Diagonal{<:Number, <:Vector}
+        @simd ivdep for d in solution.diffusions
+            copy!(d, diffusion)
+        end
+    else
+        throw(ArgumentError("unexpected diffusion type $(typeof(diffusion))"))
     end
     return nothing
 end
