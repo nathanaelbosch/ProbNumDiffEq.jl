@@ -37,7 +37,7 @@ apply_diffusion!(out::PSDMatrix, Q::PSDMatrix, diffusion::Diagonal{T,<:FillArray
     rmul!(Q.R, sqrt.(diffusion.diag.value))
 
 
-estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = NaN
+estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = error()
 
 """
     DynamicDiffusion()
@@ -163,18 +163,15 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
 
     Σ_ii = v .^ 2 ./ S_11
     Σ = Diagonal(Σ_ii)
-    Σ_out = kron(Σ, I(q + 1)) # -> Different for each dimension; same for each derivative
+    Σ_out = Σ
 
     if integ.success_iter == 0
-        # @assert length(diffusions) == 0
-        return Σ_out
+        integ.cache.global_diffusion .= Σ_out
+        return integ.cache.global_diffusion
     else
-        # @assert length(diffusions) == integ.success_iter
         diffusion_prev = integ.cache.global_diffusion
-        diffusion =
-            @. diffusion_prev =
-                diffusion_prev + (Σ_out - diffusion_prev) / integ.success_iter
-        return diffusion
+        @.. diffusion_prev = diffusion_prev + (Σ_out - diffusion_prev) / integ.success_iter
+        return integ.cache.global_diffusion
     end
 end
 
