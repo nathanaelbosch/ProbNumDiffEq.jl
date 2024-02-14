@@ -108,18 +108,6 @@ _matmul!(
 end
 
 _matmul!(
-    C::MFBD{T},
-    A::MFBD{T},
-    B::Adjoint{T,<:MFBD{T}},
-) where {T<:LinearAlgebra.BlasFloat} = begin
-    @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
-    @simd ivdep for i in eachindex(blocks(C))
-        @inbounds _matmul!(C.blocks[i], A.blocks[i], adjoint(B.parent.blocks[i]))
-    end
-    return C
-end
-
-_matmul!(
     C::AbstractVector{T},
     A::MFBD{T},
     B::AbstractVector{T},
