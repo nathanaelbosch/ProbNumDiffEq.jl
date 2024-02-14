@@ -100,8 +100,15 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     diffusion_t = if S isa IsometricKroneckerProduct
         @assert length(S.B) == 1
         dot(v, e) / d / S.B[1]
+    elseif S isa BlockDiagonal
+        @assert length(S.blocks) == d
+        @assert length(S.blocks[1]) == 1
+        @simd ivdep for i in eachindex(e)
+            @inbounds e[i] /= S.blocks[i][1]
+        end
+        dot(v, e) / d
     else
-        S_chol = cholesky!(S)
+        S_chol = cholesky!(copy!(Smat, S))
         ldiv!(S_chol, e)
         dot(v, e) / d
     end
@@ -109,14 +116,16 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     if integ.success_iter == 0
         # @assert length(sol_diffusions) == 0
         global_diffusion = diffusion_t
-        return global_diffusion
+        integ.cache.global_diffusion = global_diffusion * Eye(d)
+        return integ.cache.global_diffusion
     else
         # @assert length(sol_diffusions) == integ.success_iter
-        diffusion_prev = integ.cache.global_diffusion
+        diffusion_prev = integ.cache.global_diffusion.diag.value
         global_diffusion =
             diffusion_prev + (diffusion_t - diffusion_prev) / integ.success_iter
         # @info "compute diffusion" diffusion_prev global_diffusion
-        return global_diffusion
+        integ.cache.global_diffusion = global_diffusion * Eye(d)
+        return integ.cache.global_diffusion
     end
 end
 
