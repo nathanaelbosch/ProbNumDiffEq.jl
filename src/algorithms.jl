@@ -12,14 +12,20 @@ function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
             ),
         )
     end
-    if (
-        (diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate) ||
-        diffusionmodel isa DynamicMVDiffusion) && alg == EK1
+    if alg == EK1
+        if diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate
         throw(
             ArgumentError(
-                "The `EK1` algorithm does not support automatic calibration of multivariate diffusion models. Either use the `EK0` instead, or use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`.",
+                "The `EK1` algorithm does not support automatic global calibration of multivariate diffusion models. Either use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`. Or use a different solve, like `EK0` or `DiagonalEK1`.",
             ),
         )
+        elseif diffusionmodel isa DynamicMVDiffusion
+        throw(
+            ArgumentError(
+                    "The `EK1` algorithm does not support automatic calibration of local multivariate diffusion models. Either use a scalar diffusion model, or use a different solve, like `EK0` or `DiagonalEK1`.",
+            ),
+        )
+        end
     end
 end
 
