@@ -3,7 +3,13 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
-function ekargcheck(alg; diffusionmodel, pn_observation_noise, covariance_factorization, kwargs...)
+function ekargcheck(
+    alg;
+    diffusionmodel,
+    pn_observation_noise,
+    covariance_factorization,
+    kwargs...,
+)
     if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
        (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
         throw(
@@ -14,20 +20,21 @@ function ekargcheck(alg; diffusionmodel, pn_observation_noise, covariance_factor
     end
     if alg == EK1
         if diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate
-        throw(
-            ArgumentError(
-                "The `EK1` algorithm does not support automatic global calibration of multivariate diffusion models. Either use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`. Or use a different solve, like `EK0` or `DiagonalEK1`.",
-            ),
-        )
+            throw(
+                ArgumentError(
+                    "The `EK1` algorithm does not support automatic global calibration of multivariate diffusion models. Either use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`. Or use a different solve, like `EK0` or `DiagonalEK1`.",
+                ),
+            )
         elseif diffusionmodel isa DynamicMVDiffusion
-        throw(
-            ArgumentError(
+            throw(
+                ArgumentError(
                     "The `EK1` algorithm does not support automatic calibration of local multivariate diffusion models. Either use a scalar diffusion model, or use a different solve, like `EK0` or `DiagonalEK1`.",
-            ),
-        )
+                ),
+            )
         end
     end
-    if diffusionmodel isa DynamicMVDiffusion && covariance_factorization == BlockDiagonalCovariance
+    if diffusionmodel isa DynamicMVDiffusion &&
+       covariance_factorization == BlockDiagonalCovariance
         throw(
             ArgumentError(
                 "Currenty the `DynamicMVDiffusion` does not work properly with the `BlockDiagonalCovariance`. Use `DenseCovariance` instead, or change the diffusionmodel to a scalar one and use `DynamicDiffusion`.",
@@ -111,7 +118,8 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
     ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(EK0; diffusionmodel, pn_observation_noise)
         new{PT,DT,IT,RT,CF}(
-            prior, diffusionmodel, smooth, initialization, pn_observation_noise, covariance_factorization)
+            prior, diffusionmodel, smooth, initialization, pn_observation_noise,
+            covariance_factorization)
     end
 end
 
@@ -218,7 +226,11 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         standardtag=Val{true}(),
         concrete_jac=nothing,
         pn_observation_noise::RT=nothing,
-        covariance_factorization::CF=covariance_structure(DiagonalEK1, prior, diffusionmodel),
+        covariance_factorization::CF=covariance_structure(
+            DiagonalEK1,
+            prior,
+            diffusionmodel,
+        ),
     ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise, covariance_factorization)
         new{
@@ -242,7 +254,6 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         )
     end
 end
-
 
 """
     ExpEK(; L, order=3, kwargs...)
@@ -323,7 +334,12 @@ function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,D
     )
 end
 
-function DiffEqBase.prepare_alg(alg::Union{EK1{0},DiagonalEK1{0}}, u0::AbstractArray{T}, p, prob) where {T}
+function DiffEqBase.prepare_alg(
+    alg::Union{EK1{0},DiagonalEK1{0}},
+    u0::AbstractArray{T},
+    p,
+    prob,
+) where {T}
     # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
     # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
     # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which

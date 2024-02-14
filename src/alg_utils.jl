@@ -13,9 +13,13 @@ OrdinaryDiffEq.isfsal(::AbstractEK) = false
 
 for ALG in [:EK1, :DiagonalEK1]
     @eval OrdinaryDiffEq._alg_autodiff(::$ALG{CS,AD}) where {CS,AD} = Val{AD}()
-    @eval OrdinaryDiffEq.alg_difftype(::$ALG{CS,AD,DiffType}) where {CS,AD,DiffType} = DiffType
-    @eval OrdinaryDiffEq.standardtag(::$ALG{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} = ST
-    @eval OrdinaryDiffEq.concrete_jac(::$ALG{CS,AD,DiffType,ST,CJ}) where {CS,AD,DiffType,ST,CJ} = CJ
+    @eval OrdinaryDiffEq.alg_difftype(::$ALG{CS,AD,DiffType}) where {CS,AD,DiffType} =
+        DiffType
+    @eval OrdinaryDiffEq.standardtag(::$ALG{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} =
+        ST
+    @eval OrdinaryDiffEq.concrete_jac(
+        ::$ALG{CS,AD,DiffType,ST,CJ},
+    ) where {CS,AD,DiffType,ST,CJ} = CJ
     @eval OrdinaryDiffEq.get_chunksize(::$ALG{CS}) where {CS} = Val(CS)
     @eval OrdinaryDiffEq.isimplicit(::$ALG) = true
 end

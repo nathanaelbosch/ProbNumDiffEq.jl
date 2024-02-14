@@ -222,7 +222,7 @@ function estimate_errors!(cache::AbstractODEFilterCache)
 
     R = cache.C_Dxd
 
-    if local_diffusion isa Diagonal{<:Number, <:Vector}
+    if local_diffusion isa Diagonal{<:Number,<:Vector}
         _Q = apply_diffusion(Qh, local_diffusion)
         _matmul!(R, _Q.R, H')
         error_estimate = view(cache.tmp, 1:d)

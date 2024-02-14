@@ -193,7 +193,6 @@ function update!(
     return x_out, loglikelihood
 end
 
-
 function update!(
     x_out::SRGaussian{T,<:BlockDiagonal},
     x_pred::SRGaussian{T,<:BlockDiagonal},

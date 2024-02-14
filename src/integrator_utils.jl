@@ -70,11 +70,11 @@ diffusion estimates that are in there. Typically, `diffusion` is either a global
 or the specified initial diffusion value if no calibration is desired.
 """
 function set_diffusions!(solution::AbstractProbODESolution, diffusion)
-    if diffusion isa Diagonal{<:Number, <:FillArrays.Fill}
+    if diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
         @simd ivdep for i in eachindex(solution.diffusions)
             solution.diffusions[i] = copy(diffusion)
         end
-    elseif diffusion isa Diagonal{<:Number, <:Vector}
+    elseif diffusion isa Diagonal{<:Number,<:Vector}
         @simd ivdep for d in solution.diffusions
             copy!(d, diffusion)
         end

@@ -30,7 +30,7 @@ end
 _matmul!(
     C::BlockDiagonal{T},
     A::BlockDiagonal{T},
-    B::Adjoint{T, <:BlockDiagonal{T}},
+    B::Adjoint{T,<:BlockDiagonal{T}},
 ) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
     @simd ivdep for i in eachindex(blocks(C))
@@ -41,7 +41,7 @@ end
 
 _matmul!(
     C::BlockDiagonal{T},
-    A::Adjoint{T, <:BlockDiagonal{T}},
+    A::Adjoint{T,<:BlockDiagonal{T}},
     B::BlockDiagonal{T},
 ) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
@@ -82,7 +82,7 @@ LinearAlgebra.rmul!(B::BlockDiagonal, n::Number) = @simd ivdep for i in eachinde
     rmul!(B.blocks[i], n)
 end
 LinearAlgebra.adjoint(B::BlockDiagonal) = Adjoint(B)
-Base.:*(A::Adjoint{T, <:BlockDiagonal}, B::BlockDiagonal) where {T} = begin
+Base.:*(A::Adjoint{T,<:BlockDiagonal}, B::BlockDiagonal) where {T} = begin
     @assert length(A.parent.blocks) == length(B.blocks)
     return BlockDiagonal([A.parent.blocks[i]' * B.blocks[i] for i in eachindex(B.blocks)])
 end

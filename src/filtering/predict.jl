@@ -66,7 +66,7 @@ function predict_cov!(
     Qh::PSDMatrix,
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
-    diffusion::Union{Number, Diagonal},
+    diffusion::Union{Number,Diagonal},
 )
     if iszero(diffusion)
         fast_X_A_Xt!(Σ_out, Σ_curr, Ah)
@@ -85,7 +85,11 @@ function predict_cov!(
             @warn "This is not yet implemented efficiently; TODO"
             d = size(diffusion, 1)
             q = D ÷ d - 1
-            _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(kron(Eye(d)*diffusion, Eye(q + 1))))
+            _matmul!(
+                view(R, D+1:2D, 1:D),
+                Qh.R,
+                sqrt.(kron(Eye(d) * diffusion, Eye(q + 1))),
+            )
         end
     else
         @.. R[D+1:2D, 1:D] = Qh.R

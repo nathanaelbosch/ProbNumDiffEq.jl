@@ -6,24 +6,26 @@ isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
-apply_diffusion(Q::PSDMatrix{T, <:Matrix}, diffusion::Diagonal) where {T} = begin
+apply_diffusion(Q::PSDMatrix{T,<:Matrix}, diffusion::Diagonal) where {T} = begin
     d = size(diffusion, 1)
     q = size(Q, 1) ÷ d - 1
-    return PSDMatrix(Q.R * sqrt.(kron(diffusion, I(q+1))))
+    return PSDMatrix(Q.R * sqrt.(kron(diffusion, I(q + 1))))
 end
 apply_diffusion(
-    Q::PSDMatrix{T, <:IsometricKroneckerProduct},
-    diffusion::Diagonal{T, <:FillArrays.Fill},
+    Q::PSDMatrix{T,<:IsometricKroneckerProduct},
+    diffusion::Diagonal{T,<:FillArrays.Fill},
 ) where {T} = begin
     PSDMatrix(Q.R * sqrt.(diffusion.diag.value))
 end
-apply_diffusion(Q::PSDMatrix{T, <:BlockDiagonal}, diffusion::Diagonal) where {T} = begin
-    PSDMatrix(BlockDiagonal([
-        Q.R.blocks[i] * sqrt.(diffusion.diag[i]) for i in eachindex(Q.R.blocks)
-    ]))
+apply_diffusion(Q::PSDMatrix{T,<:BlockDiagonal}, diffusion::Diagonal) where {T} = begin
+    PSDMatrix(
+        BlockDiagonal([
+            Q.R.blocks[i] * sqrt.(diffusion.diag[i]) for i in eachindex(Q.R.blocks)
+        ]),
+    )
 end
 
-apply_diffusion!(Q::PSDMatrix, diffusion::Diagonal{T, <:FillArrays.Fill}) where {T} =
+apply_diffusion!(Q::PSDMatrix, diffusion::Diagonal{T,<:FillArrays.Fill}) where {T} =
     rmul!(Q.R, sqrt.(diffusion.diag.value))
 apply_diffusion!(
     Q::PSDMatrix{T,<:BlockDiagonal},
@@ -33,9 +35,12 @@ apply_diffusion!(
         rmul!(blocks(Q.R)[i], diffusion.diag[i])
     end
 
-apply_diffusion!(out::PSDMatrix, Q::PSDMatrix, diffusion::Diagonal{T,<:FillArrays.Fill}) where {T} =
+apply_diffusion!(
+    out::PSDMatrix,
+    Q::PSDMatrix,
+    diffusion::Diagonal{T,<:FillArrays.Fill},
+) where {T} =
     rmul!(Q.R, sqrt.(diffusion.diag.value))
-
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = error()
 

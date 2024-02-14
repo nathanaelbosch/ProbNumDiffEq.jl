@@ -292,24 +292,24 @@ function compute_backward_kernel!(
         _Kout = AffineNormalKernel(
             Kout.A.blocks[i],
             view(Kout.b, (i-1)*(q+1)+1:i*(q+1)),
-            PSDMatrix(Kout.C.R.blocks[i])
+            PSDMatrix(Kout.C.R.blocks[i]),
         )
         _xpred = Gaussian(
             view(xpred.μ, (i-1)*(q+1)+1:i*(q+1)),
-            PSDMatrix(xpred.Σ.R.blocks[i])
+            PSDMatrix(xpred.Σ.R.blocks[i]),
         )
         _x = Gaussian(
             view(x.μ, (i-1)*(q+1)+1:i*(q+1)),
-            PSDMatrix(x.Σ.R.blocks[i])
+            PSDMatrix(x.Σ.R.blocks[i]),
         )
         _K = AffineNormalKernel(
             K.A.blocks[i],
             ismissing(K.b) ? missing : view(K.b, (i-1)*(q+1)+1:i*(q+1)),
-            PSDMatrix(K.C.R.blocks[i])
+            PSDMatrix(K.C.R.blocks[i]),
         )
         _C_DxD = C_DxD.blocks[i]
         compute_backward_kernel!(
-            _Kout, _xpred, _x, _K, C_DxD=_C_DxD, diffusion=diffusion
+            _Kout, _xpred, _x, _K, C_DxD=_C_DxD, diffusion=diffusion,
         )
     end
     return Kout
