@@ -37,11 +37,13 @@ d1, d2 = 2, 3
         return Matrix(M)
     end
 
-    for _mul! in (:mul!, :_matmul!)
-        @test @eval tttm($_mul!(C, A, B)) ≈ $_mul!(CM, AM, BM)
-        @test @eval tttm($_mul!(C, A', B)) ≈ $_mul!(CM, AM', BM)
-        @test @eval tttm($_mul!(C, A, B')) ≈ $_mul!(CM, AM, BM')
-    end
+    @test tttm(mul!(C, A, B)) ≈ mul!(CM, AM, BM)
+    @test tttm(mul!(C, A', B)) ≈ mul!(CM, AM', BM)
+    @test tttm(mul!(C, A, B')) ≈ mul!(CM, AM, BM')
+    @test tttm(_matmul!(C, A, B)) ≈ _matmul!(CM, AM, BM)
+    @test tttm(_matmul!(C, A', B)) ≈ _matmul!(CM, AM', BM)
+    @test tttm(_matmul!(C, A, B')) ≈ _matmul!(CM, AM, BM')
+
     @test tttm(A * B) ≈ AM * BM
     @test tttm(A' * B) ≈ AM' * BM
     @test tttm(A * B') ≈ AM * BM'
