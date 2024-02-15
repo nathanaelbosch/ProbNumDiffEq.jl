@@ -246,3 +246,14 @@ LinearAlgebra.rmul!(B::BlockDiag, n::Number) = begin
     end
     return B
 end
+
+copy!(A::BlockDiag, B::Diagonal) = begin
+    @assert size(A) == size(B)
+    i = 1
+    for Ai in blocks(A)
+        d = LinearAlgebra.checksquare(Ai)
+        @views copy!(Ai, Diagonal(B.diag[i:i+d-1]))
+        i += d
+    end
+    return A
+end

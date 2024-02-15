@@ -54,4 +54,6 @@ d1, d2 = 2, 3
     @test tttm(rmul!(copy(A), a)) ≈ a * AM
 
     @test_throws ErrorException view(A, 1:2, 1:2)
+
+    tttm(copy!(A, Diagonal(A)))
 end
