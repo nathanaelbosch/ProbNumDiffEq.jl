@@ -52,7 +52,6 @@ function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:Ab
                 return BlockDiagonalCovariance
             end
         else
-            error()
             # This is not great as other priors can be Kronecker too; TODO
             return DenseCovariance
         end
