@@ -57,6 +57,28 @@ copy!(B::BlockDiag, A::BlockDiag) = begin
     end
     return B
 end
+similar(B::BlockDiag) = BlockDiag(similar.(blocks(B)))
+zero(B::BlockDiag) = BlockDiag(zero.(blocks(B)))
+
+# Mul with Scalar or UniformScaling
+Base.:*(a::Number, M::BlockDiag) = BlockDiag([a * B for B in blocks(M)])
+Base.:*(M::BlockDiag, a::Number) = BlockDiag([B * a for B in blocks(M)])
+Base.:*(U::UniformScaling, M::BlockDiag) = BlockDiag([U * B for B in blocks(M)])
+Base.:*(M::BlockDiag, U::UniformScaling) = BlockDiag([B * U for B in blocks(M)])
+
+# Mul between BockDiag's
+Base.:*(A::BlockDiag, B::BlockDiag) = begin
+    @assert length(A.blocks) == length(B.blocks)
+    return BlockDiag([Ai * Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
+end
+Base.:*(A::Adjoint{T,<:BlockDiag}, B::BlockDiag) where {T} = begin
+    @assert length(A.parent.blocks) == length(B.blocks)
+    return BlockDiag([Ai' * Bi for (Ai, Bi) in zip(blocks(A.parent), blocks(B))])
+end
+Base.:*(A::BlockDiag, B::Adjoint{T,<:BlockDiag}) where {T} = begin
+    @assert length(A.blocks) == length(B.parent.blocks)
+    return BlockDiag([Ai * Bi' for (Ai, Bi) in zip(blocks(A), blocks(B.parent))])
+end
 
 # Standard LinearAlgebra.mul!
 mul!(C::BlockDiag, A::BlockDiag, B::BlockDiag) = begin
@@ -156,21 +178,9 @@ _matmul!(
     return C
 end
 
-LinearAlgebra.rmul!(B::BlockDiag, n::Number) = @simd ivdep for i in eachindex(B.blocks)
-    rmul!(B.blocks[i], n)
+LinearAlgebra.rmul!(B::BlockDiag, n::Number) = begin
+    @simd ivdep for i in eachindex(B.blocks)
+        rmul!(B.blocks[i], n)
+    end
+    return B
 end
-LinearAlgebra.adjoint(B::BlockDiag) = Adjoint(B)
-
-Base.:*(A::BlockDiag, B::BlockDiag) = begin
-    @assert length(A.blocks) == length(B.blocks)
-    return BlockDiag([blocks(A)[i] * blocks(B)[i] for i in eachindex(B.blocks)])
-end
-Base.:*(A::Adjoint{T,<:BlockDiag}, B::BlockDiag) where {T} = begin
-    @assert length(A.parent.blocks) == length(B.blocks)
-    return BlockDiag([A.parent.blocks[i]' * B.blocks[i] for i in eachindex(B.blocks)])
-end
-Base.:*(A::BlockDiag, B::Adjoint{T,<:BlockDiag}) where {T} = begin
-    @assert length(A.blocks) == length(B.parent.blocks)
-    return BlockDiag([A.blocks[i] * B.parent.blocks[i]' for i in eachindex(B.parent.blocks)])
-end
-Base.:*(A::UniformScaling, B::BlockDiag) = BlockDiag([A * blocks(B)[i] for i in eachindex(B.blocks)])

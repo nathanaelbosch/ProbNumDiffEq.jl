@@ -1,7 +1,7 @@
 module BlockDiagonalsExt
 
 import ProbNumDiffEq: ProbNumDiffEqBlockDiagonal, blocks
-using BlockDiagonals
+import BlockDiagonals: BlockDiagonal
 
 BlockDiagonal(M::ProbNumDiffEqBlockDiagonal) = BlockDiagonal(blocks(M))
 
