@@ -9,8 +9,8 @@ function init_preconditioner(C::DenseCovariance{elType}) where {elType}
     return P, PI
 end
 function init_preconditioner(C::BlockDiagonalCovariance{elType}) where {elType}
-    P = MFBD([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
-    PI = MFBD([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
+    P = BlockDiag([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
+    PI = BlockDiag([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
     return P, PI
 end
 
@@ -46,7 +46,7 @@ end
     return P
 end
 
-@fastmath @inbounds function make_preconditioner!(P::MFBD, h, d, q)
+@fastmath @inbounds function make_preconditioner!(P::BlockDiag, h, d, q)
     val = factorial(q) / h^(q + 1 / 2)
     @simd ivdep for j in 0:q
         for M in P.blocks
@@ -80,7 +80,7 @@ end
 end
 
 @fastmath @inbounds function make_preconditioner_inv!(
-    PI::MFBD, h, d, q)
+    PI::BlockDiag, h, d, q)
     val = h^(q + 1 / 2) / factorial(q)
     @simd ivdep for j in 0:q
         for M in PI.blocks

@@ -3,23 +3,24 @@ BlockDiagonals.jl didn't cut it, so we're rolling our own.
 
 TODO: Add a way to convert to a `BlockDiagonal`.
 """
-struct MinimalAndFastBlockDiagonal{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
+struct ProbNumDiffEqBlockDiagonal{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}
-    function MinimalAndFastBlockDiagonal{T,V}(
+    function ProbNumDiffEqBlockDiagonal{T,V}(
         blocks::Vector{V},
     ) where {T,V<:AbstractMatrix{T}}
         return new{T,V}(blocks)
     end
 end
-function MinimalAndFastBlockDiagonal(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
-    return MinimalAndFastBlockDiagonal{T,V}(blocks)
+function ProbNumDiffEqBlockDiagonal(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
+    return ProbNumDiffEqBlockDiagonal{T,V}(blocks)
 end
-const MFBD = MinimalAndFastBlockDiagonal
-blocks(B::MFBD) = B.blocks
-nblocks(B::MFBD) = length(B.blocks)
-size(B::MFBD) = (sum(size.(blocks(B), 1)), sum(size.(blocks(B), 2)))
+const BlockDiag = ProbNumDiffEqBlockDiagonal
 
-function _block_indices(B::MFBD, i::Integer, j::Integer)
+blocks(B::BlockDiag) = B.blocks
+nblocks(B::BlockDiag) = length(B.blocks)
+size(B::BlockDiag) = (sum(size.(blocks(B), 1)), sum(size.(blocks(B), 2)))
+
+function _block_indices(B::BlockDiag, i::Integer, j::Integer)
     all((0, 0) .< (i, j) .<= size(B)) || throw(BoundsError(B, (i, j)))
     # find the on-diagonal block `p` in column `j`
     p = 0
@@ -36,7 +37,7 @@ function _block_indices(B::MFBD, i::Integer, j::Integer)
     return p, i, j
 end
 Base.@propagate_inbounds function Base.getindex(
-    B::MFBD{T},
+    B::BlockDiag{T},
     i::Integer,
     j::Integer,
 ) where {T}
@@ -45,11 +46,11 @@ Base.@propagate_inbounds function Base.getindex(
     @inbounds return p > 0 ? blocks(B)[p][i, end+j] : zero(T)
 end
 
-Base.view(::MFBD, idxs...) =
-    throw(ErrorException("`MinimalAndFastBlockDiagonal` does not support views!"))
+Base.view(::BlockDiag, idxs...) =
+    throw(ErrorException("`BlockDiag` does not support views!"))
 
-copy(B::MFBD) = MFBD(copy.(blocks(B)))
-copy!(B::MFBD, A::MFBD) = begin
+copy(B::BlockDiag) = BlockDiag(copy.(blocks(B)))
+copy!(B::BlockDiag, A::BlockDiag) = begin
     @assert length(A.blocks) == length(B.blocks)
     @simd ivdep for i in eachindex(blocks(B))
         copy!(B.blocks[i], A.blocks[i])
@@ -58,28 +59,28 @@ copy!(B::MFBD, A::MFBD) = begin
 end
 
 # Standard LinearAlgebra.mul!
-mul!(C::MFBD, A::MFBD, B::MFBD) = begin
+mul!(C::BlockDiag, A::BlockDiag, B::BlockDiag) = begin
     @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
     @simd ivdep for i in eachindex(blocks(C))
         @inbounds mul!(C.blocks[i], A.blocks[i], B.blocks[i])
     end
     return C
 end
-mul!(C::MFBD, A::MFBD, B::MFBD, alpha::Number, beta::Number) = begin
+mul!(C::BlockDiag, A::BlockDiag, B::BlockDiag, alpha::Number, beta::Number) = begin
     @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
     @simd ivdep for i in eachindex(blocks(C))
         @inbounds mul!(C.blocks[i], A.blocks[i], B.blocks[i], alpha, beta)
     end
     return C
 end
-mul!(C::MFBD, A::Adjoint{<:Number,<:MFBD}, B::MFBD) = begin
+mul!(C::BlockDiag, A::Adjoint{<:Number,<:BlockDiag}, B::BlockDiag) = begin
     @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
     @simd ivdep for i in eachindex(blocks(C))
         @inbounds mul!(C.blocks[i], adjoint(A.parent.blocks[i]), B.blocks[i])
     end
     return C
 end
-mul!(C::MFBD, A::MFBD, B::Adjoint{<:Number,<:MFBD}) = begin
+mul!(C::BlockDiag, A::BlockDiag, B::Adjoint{<:Number,<:BlockDiag}) = begin
     @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
     @simd ivdep for i in eachindex(blocks(C))
         @inbounds mul!(C.blocks[i], A.blocks[i], adjoint(B.parent.blocks[i]))
@@ -89,9 +90,9 @@ end
 
 # Our fast _matmul!
 _matmul!(
-    C::MFBD{T},
-    A::MFBD{T},
-    B::MFBD{T},
+    C::BlockDiag{T},
+    A::BlockDiag{T},
+    B::BlockDiag{T},
 ) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
     @simd ivdep for i in eachindex(blocks(C))
@@ -101,9 +102,9 @@ _matmul!(
 end
 
 _matmul!(
-    C::MFBD{T},
-    A::MFBD{T},
-    B::MFBD{T},
+    C::BlockDiag{T},
+    A::BlockDiag{T},
+    B::BlockDiag{T},
     alpha::Number,
     beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} = begin
@@ -115,9 +116,9 @@ _matmul!(
 end
 
 _matmul!(
-    C::MFBD{T},
-    A::MFBD{T},
-    B::Adjoint{T,<:MFBD{T}},
+    C::BlockDiag{T},
+    A::BlockDiag{T},
+    B::Adjoint{T,<:BlockDiag{T}},
 ) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
     @simd ivdep for i in eachindex(blocks(C))
@@ -127,9 +128,9 @@ _matmul!(
 end
 
 _matmul!(
-    C::MFBD{T},
-    A::Adjoint{T,<:MFBD{T}},
-    B::MFBD{T},
+    C::BlockDiag{T},
+    A::Adjoint{T,<:BlockDiag{T}},
+    B::BlockDiag{T},
 ) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
     @simd ivdep for i in eachindex(blocks(C))
@@ -140,7 +141,7 @@ end
 
 _matmul!(
     C::AbstractVector{T},
-    A::MFBD{T},
+    A::BlockDiag{T},
     B::AbstractVector{T},
 ) where {T<:LinearAlgebra.BlasFloat} = begin
     @assert size(A, 2) == length(B)
@@ -155,21 +156,21 @@ _matmul!(
     return C
 end
 
-LinearAlgebra.rmul!(B::MFBD, n::Number) = @simd ivdep for i in eachindex(B.blocks)
+LinearAlgebra.rmul!(B::BlockDiag, n::Number) = @simd ivdep for i in eachindex(B.blocks)
     rmul!(B.blocks[i], n)
 end
-LinearAlgebra.adjoint(B::MFBD) = Adjoint(B)
+LinearAlgebra.adjoint(B::BlockDiag) = Adjoint(B)
 
-Base.:*(A::MFBD, B::MFBD) = begin
+Base.:*(A::BlockDiag, B::BlockDiag) = begin
     @assert length(A.blocks) == length(B.blocks)
-    return MFBD([blocks(A)[i] * blocks(B)[i] for i in eachindex(B.blocks)])
+    return BlockDiag([blocks(A)[i] * blocks(B)[i] for i in eachindex(B.blocks)])
 end
-Base.:*(A::Adjoint{T,<:MFBD}, B::MFBD) where {T} = begin
+Base.:*(A::Adjoint{T,<:BlockDiag}, B::BlockDiag) where {T} = begin
     @assert length(A.parent.blocks) == length(B.blocks)
-    return MFBD([A.parent.blocks[i]' * B.blocks[i] for i in eachindex(B.blocks)])
+    return BlockDiag([A.parent.blocks[i]' * B.blocks[i] for i in eachindex(B.blocks)])
 end
-Base.:*(A::MFBD, B::Adjoint{T,<:MFBD}) where {T} = begin
+Base.:*(A::BlockDiag, B::Adjoint{T,<:BlockDiag}) where {T} = begin
     @assert length(A.blocks) == length(B.parent.blocks)
-    return MFBD([A.blocks[i] * B.parent.blocks[i]' for i in eachindex(B.parent.blocks)])
+    return BlockDiag([A.blocks[i] * B.parent.blocks[i]' for i in eachindex(B.parent.blocks)])
 end
-Base.:*(A::UniformScaling, B::MFBD) = MFBD([A * blocks(B)[i] for i in eachindex(B.blocks)])
+Base.:*(A::UniformScaling, B::BlockDiag) = BlockDiag([A * blocks(B)[i] for i in eachindex(B.blocks)])
