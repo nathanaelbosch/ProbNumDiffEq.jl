@@ -224,11 +224,11 @@ function compute_backward_kernel!(
     end
     _matmul!(view(Λ.R, 1:D, 1:D), x.Σ.R, C_DxD)
     # Λ.R[D+1:2D, 1:D] = (G * Q.R')'
-    if !isone(diffusion)
+    if isone(diffusion)
+        _matmul!(view(Λ.R, D+1:2D, 1:D), Q.R, G')
+    else
         apply_diffusion!(PSDMatrix(C_DxD), Q, diffusion)
         _matmul!(view(Λ.R, D+1:2D, 1:D), C_DxD, G')
-    else
-        _matmul!(view(Λ.R, D+1:2D, 1:D), Q.R, G')
     end
 
     return Kout
