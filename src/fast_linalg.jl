@@ -30,7 +30,7 @@ _matmul!(
 _matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, b::Number) = @.. C = A * b
 _matmul!(C::AbstractVecOrMat, a::Number, B::AbstractVecOrMat) = @.. C = a * B
 # Matrix matrix products with diagonal matrices
-const MSR{T} = Union{SubArray{T},Matrix{T},Base.ReshapedArray{T}}
+const MSR{T} = Union{Matrix{T},SubArray{T},Base.ReshapedArray{T}}
 _matmul!(C::MSR, A::MSR, B::Diagonal) =
     @.. C = A * B.diag'
 _matmul!(C::MSR, A::Diagonal, B::MSR) =
