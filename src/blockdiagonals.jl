@@ -57,6 +57,37 @@ copy!(B::MFBD, A::MFBD) = begin
     return B
 end
 
+# Standard LinearAlgebra.mul!
+mul!(C::MFBD, A::MFBD, B::MFBD) = begin
+    @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds mul!(C.blocks[i], A.blocks[i], B.blocks[i])
+    end
+    return C
+end
+mul!(C::MFBD, A::MFBD, B::MFBD, alpha::Number, beta::Number) = begin
+    @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds mul!(C.blocks[i], A.blocks[i], B.blocks[i], alpha, beta)
+    end
+    return C
+end
+mul!(C::MFBD, A::Adjoint{<:Number,<:MFBD}, B::MFBD) = begin
+    @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds mul!(C.blocks[i], adjoint(A.parent.blocks[i]), B.blocks[i])
+    end
+    return C
+end
+mul!(C::MFBD, A::MFBD, B::Adjoint{<:Number,<:MFBD}) = begin
+    @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds mul!(C.blocks[i], A.blocks[i], adjoint(B.parent.blocks[i]))
+    end
+    return C
+end
+
+# Our fast _matmul!
 _matmul!(
     C::MFBD{T},
     A::MFBD{T},

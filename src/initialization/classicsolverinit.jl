@@ -90,7 +90,7 @@ end
 function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
     # @unpack Ah, Qh = cache
-    @unpack x, x_pred, x_filt, measurement = cache
+    @unpack x, x_pred, x_filt, measurement, x_tmp = cache
     @unpack K1, C_Dxd, C_DxD, C_dxd, C_3DxD, C_d = cache
     @unpack backward_kernel = cache
 
@@ -98,7 +98,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     make_preconditioners!(cache, dt)
     @unpack P, PI = cache
 
-    _gaussian_mul!(x, P, x)
+    _gaussian_mul!(x, P, copy!(x_tmp, x))
 
     preds = []
     filts = [copy(x)]

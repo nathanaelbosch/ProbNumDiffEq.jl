@@ -30,26 +30,21 @@ _matmul!(
 _matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, b::Number) = @.. C = A * b
 _matmul!(C::AbstractVecOrMat, a::Number, B::AbstractVecOrMat) = @.. C = a * B
 # Matrix matrix products with diagonal matrices
-_matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (@.. C = A * B.diag')
-_matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (@.. C = A.diag * B)
-_matmul!(C::AbstractMatrix, A::Diagonal, B::Diagonal) = @.. C = A * B
+const MSR{T} = Union{SubArray{T},Matrix{T},Base.ReshapedArray{T}}
+_matmul!(C::MSR, A::MSR, B::Diagonal) =
+    @.. C = A * B.diag'
+_matmul!(C::MSR, A::Diagonal, B::MSR) =
+    (@.. C = A.diag * B)
+_matmul!(C::MSR, A::Diagonal, B::Diagonal) =
+    (@.. C = A * B)
+_matmul!(C::MSR{T}, A::MSR{T}, B::Diagonal{T}) where {T<:LinearAlgebra.BlasFloat} =
+    (@.. C = A * B.diag')
+_matmul!(C::MSR{T}, A::Diagonal{T}, B::MSR{T}) where {T<:LinearAlgebra.BlasFloat} =
+    (@.. C = A.diag * B)
+_matmul!(C::MSR{T}, A::Diagonal{T}, B::Diagonal{T}) where {T<:LinearAlgebra.BlasFloat} =
+    (@.. C = A * B)
 _matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::AbstractMatrix{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
-_matmul!(
-    C::AbstractMatrix{T},
+    C::Matrix{T},
     A::LowerTriangular{T},
     B::UpperTriangular{T},
 ) where {T<:LinearAlgebra.BlasFloat} = mul!(C, A, B)

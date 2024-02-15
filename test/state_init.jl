@@ -64,7 +64,7 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
             prob,
             EK0(order=2, initialization=ClassicSolverInit(init_on_ddu=false)),
         )
-        @test_broken init(
+        @test_nowarn init(
             prob,
             EK0(order=2, initialization=ClassicSolverInit(init_on_ddu=true)),
         )
