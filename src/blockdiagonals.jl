@@ -18,7 +18,7 @@ const BlockDiag = ProbNumDiffEqBlockDiagonal
 
 blocks(B::BlockDiag) = B.blocks
 nblocks(B::BlockDiag) = length(B.blocks)
-size(B::BlockDiag) = (sum(size.(blocks(B), 1)), sum(size.(blocks(B), 2)))
+size(B::BlockDiag) = mapreduce(size, ((a, b), (c, d)) -> (a + c, b + d), blocks(B))
 
 function _block_indices(B::BlockDiag, i::Integer, j::Integer)
     all((0, 0) .< (i, j) .<= size(B)) || throw(BoundsError(B, (i, j)))
