@@ -7,7 +7,6 @@ version = "0.15.0"
 ArrayAllocators = "c9d4266f-a5cb-439d-837c-c97b191379f5"
 DiffEqBase = "2b5f629d-d688-5b77-993f-72d75c75574e"
 DiffEqCallbacks = "459566f4-90b8-5000-8ac3-15dfb0a30def"
-DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
 DocStringExtensions = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
 ExponentialUtilities = "d4d017d3-3776-5f7e-afef-a10c40355c18"
 FastBroadcast = "7034ab61-46d4-4ed7-9d0f-46aef9175898"
@@ -39,10 +38,12 @@ TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 
 [weakdeps]
+BlockDiagonals = "0a1fb500-61f7-11e9-3c65-f5ef3456f9f0"
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
 [extensions]
+BlockDiagonalsExt = "BlockDiagonals"
 DiffEqDevToolsExt = "DiffEqDevTools"
 RecipesBaseExt = "RecipesBase"
 
