@@ -6,41 +6,67 @@ isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
-apply_diffusion(Q::PSDMatrix{T,<:Matrix}, diffusion::Diagonal) where {T} = begin
+# TODO Add a proper length description somewhere that exaplains better what this "diffusion"
+# object is and how it is handled in this package.
+apply_diffusion(
+    Q::PSDMatrix{<:Number,<:IsometricKroneckerProduct},
+    diffusion::Number
+) = PSDMatrix(Q.R * sqrt.(diffusion))
+
+apply_diffusion(
+    Q::PSDMatrix{T,<:IsometricKroneckerProduct},
+    diffusion::Diagonal{T,<:FillArrays.Fill}
+) where {T} = apply_diffusion(Q, diffusion.diag.value)
+
+apply_diffusion(
+    Q::PSDMatrix{T,<:Matrix},
+    diffusion::Diagonal
+) where {T} = begin
+    # @warn "This should ideally not be called; TODO"
     d = size(diffusion, 1)
     q = size(Q, 1) ÷ d - 1
     return PSDMatrix(Q.R * sqrt.(kron(diffusion, I(q + 1))))
 end
-apply_diffusion(
-    Q::PSDMatrix{T,<:IsometricKroneckerProduct},
-    diffusion::Diagonal{T,<:FillArrays.Fill},
-) where {T} = begin
-    PSDMatrix(Q.R * sqrt.(diffusion.diag.value))
-end
-apply_diffusion(Q::PSDMatrix{T,<:MFBD}, diffusion::Diagonal) where {T} = begin
-    PSDMatrix(
-        MFBD([
-            Q.R.blocks[i] * sqrt.(diffusion.diag[i]) for i in eachindex(Q.R.blocks)
-        ]),
-    )
-end
 
-apply_diffusion!(Q::PSDMatrix, diffusion::Diagonal{T,<:FillArrays.Fill}) where {T} =
-    rmul!(Q.R, sqrt.(diffusion.diag.value))
+apply_diffusion(
+    Q::PSDMatrix{T,<:MFBD}, diffusion::Diagonal
+) where {T} = PSDMatrix(
+    MFBD([blocks(Q.R)[i] * sqrt.(diffusion.diag[i]) for i in eachindex(blocks(Q.R))]))
+
+apply_diffusion!(
+    Q::PSDMatrix,
+    diffusion::Diagonal{T,<:FillArrays.Fill}
+) where {T} = rmul!(Q.R, sqrt.(diffusion.diag.value))
 apply_diffusion!(
     Q::PSDMatrix{T,<:MFBD},
     diffusion::Diagonal{T,<:Vector},
-) where {T} =
+) where {T} = begin
     @simd ivdep for i in eachindex(blocks(Q.R))
         rmul!(blocks(Q.R)[i], diffusion.diag[i])
     end
+end
 
 apply_diffusion!(
     out::PSDMatrix,
     Q::PSDMatrix,
-    diffusion::Diagonal{T,<:FillArrays.Fill},
-) where {T} =
-    rmul!(Q.R, sqrt.(diffusion.diag.value))
+    diffusion::Number
+) = _matmul!(out.R, Q.R, sqrt.(diffusion))
+apply_diffusion!(
+    out::PSDMatrix,
+    Q::PSDMatrix,
+    diffusion::Diagonal{<:Number,<:FillArrays.Fill},
+) = apply_diffusion!(out, Q, diffusion.diag.value)
+apply_diffusion!(
+    out::PSDMatrix,
+    Q::PSDMatrix,
+    diffusion::Diagonal
+) = begin
+    @warn "This is not yet implemented efficiently; TODO"
+    d = size(diffusion, 1)
+    D = size(Q, 1)
+    q = D ÷ d - 1
+    _matmul!(out.R, Q.R, sqrt.(kron(Eye(d) * diffusion, Eye(q + 1))))
+end
 
 estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) = error()
 

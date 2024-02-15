@@ -223,7 +223,7 @@ function compute_backward_kernel!(
     _matmul!(view(Λ.R, 1:D, 1:D), x.Σ.R, C_DxD)
     # Λ.R[D+1:2D, 1:D] = (G * Q.R')'
     if !isone(diffusion)
-        _matmul!(C_DxD, Q.R, sqrt.(diffusion))
+        apply_diffusion!(PSDMatrix(C_DxD), Q, diffusion)
         _matmul!(view(Λ.R, D+1:2D, 1:D), C_DxD, G')
     else
         _matmul!(view(Λ.R, D+1:2D, 1:D), Q.R, G')
@@ -238,7 +238,7 @@ function compute_backward_kernel!(
     x::SRGaussian{T,<:IsometricKroneckerProduct},
     K::KT2;
     C_DxD::AbstractMatrix,
-    diffusion=1,
+    diffusion::Union{Number,Diagonal}=1,
 ) where {
     T,
     KT1<:AffineNormalKernel{
@@ -261,9 +261,12 @@ function compute_backward_kernel!(
     _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))
     _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, Q, d), PSDMatrix(K.C.R.B))
     _C_DxD = C_DxD.B
+    _diffusion =
+        diffusion isa Number ? diffusion :
+        diffusion isa IsometricKroneckerProduct ? diffusion.B : diffusion
 
     return compute_backward_kernel!(
-        _Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
+        _Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=_diffusion)
 end
 
 function compute_backward_kernel!(
@@ -272,7 +275,7 @@ function compute_backward_kernel!(
     x::SRGaussian{T,<:MFBD},
     K::KT2;
     C_DxD::AbstractMatrix,
-    diffusion=1,
+    diffusion::Union{Number,Diagonal}=1,
 ) where {
     T,
     KT1<:AffineNormalKernel{
@@ -308,8 +311,9 @@ function compute_backward_kernel!(
             PSDMatrix(K.C.R.blocks[i]),
         )
         _C_DxD = C_DxD.blocks[i]
+        _diffusion = diffusion isa Number ? diffusion : diffusion[i]
         compute_backward_kernel!(
-            _Kout, _xpred, _x, _K, C_DxD=_C_DxD, diffusion=diffusion,
+            _Kout, _xpred, _x, _K, C_DxD=_C_DxD, diffusion=_diffusion
         )
     end
     return Kout
