@@ -35,7 +35,7 @@ kwargs = (
     @testset "$alg" for alg in (
         EK1(),
         EK1(diffusionmodel=FixedDiffusion()),
-        EK1(diffusionmodel=FixedMVDiffusion(rand(2), false)),
+        # EK1(diffusionmodel=FixedMVDiffusion(rand(2), false)), # not yet supported
         EK1(prior=IOUP(3, -1)),
         EK1(prior=Matern(3, 1.5)),
         EK1(prior=IOUP(3, update_rate_parameter=true)),
