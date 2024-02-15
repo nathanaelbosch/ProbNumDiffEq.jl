@@ -46,7 +46,7 @@ end
 to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
 to_factorized_matrix(::IsometricKroneckerCovariance, M::IsometricKroneckerProduct) = M
 to_factorized_matrix(C::BlockDiagonalCovariance, M::IsometricKroneckerProduct) =
-    MFBD([M.B for _ in 1:C.d])
+    MFBD([copy(M.B) for _ in 1:C.d])
 
 for FT in [:DenseCovariance, :IsometricKroneckerCovariance, :BlockDiagonalCovariance]
     @eval to_factorized_matrix(FAC::$FT, M::PSDMatrix) =

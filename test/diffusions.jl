@@ -44,7 +44,7 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
         @test appxsol.errors[:final] < 1e-5
     end
 
-    @test_skip @testset "Time-Varying Diagonal Diffusion" begin
+    @testset "Time-Varying Diagonal Diffusion" begin
         sol = solve(
             prob,
             EK0(diffusionmodel=DynamicMVDiffusion(), smooth=false),

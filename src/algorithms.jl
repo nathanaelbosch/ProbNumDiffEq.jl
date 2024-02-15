@@ -33,14 +33,6 @@ function ekargcheck(
             )
         end
     end
-    if diffusionmodel isa DynamicMVDiffusion &&
-       covariance_factorization == BlockDiagonalCovariance
-        throw(
-            ArgumentError(
-                "Currenty the `DynamicMVDiffusion` does not work properly with the `BlockDiagonalCovariance`. Use `DenseCovariance` instead, or change the diffusionmodel to a scalar one and use `DynamicDiffusion`.",
-            ),
-        )
-    end
 end
 
 function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:AbstractEK}
