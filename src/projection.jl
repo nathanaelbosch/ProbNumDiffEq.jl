@@ -60,7 +60,11 @@ function solution_space_projection(C::IsometricKroneckerCovariance, is_secondord
 end
 function solution_space_projection(C::BlockDiagonalCovariance, is_secondorder_ode)
     Proj = projection(C)
-    error("No idea!")
+    if is_secondorder_ode
+        error("Not yet implemented!")
+    else
+        return Proj(0)
+    end
 end
 
 struct KroneckerSecondOrderODESolutionProjector{T,FAC,M,M2} <: AbstractMatrix{T}
