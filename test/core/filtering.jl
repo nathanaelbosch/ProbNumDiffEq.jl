@@ -8,6 +8,7 @@ using LinearAlgebra
 import ProbNumDiffEq: IsometricKroneckerProduct, BlockDiag
 import ProbNumDiffEq as PNDE
 import BlockDiagonals
+using FillArrays
 
 @testset "PREDICT" begin
     # Setup
@@ -36,7 +37,6 @@ import BlockDiagonals
         PNDE.BlockDiagonalCovariance,
         PNDE.IsometricKroneckerCovariance,
     )
-
         FAC = _FAC{Float64}(d, q)
 
         P_R = PNDE.to_factorized_matrix(FAC, _P_R)
@@ -70,7 +70,10 @@ import BlockDiagonals
         @testset "predict! with PSDMatrix and diffusion" begin
             for diffusion in (rand(), rand() * Eye(d), rand() * I(d), Diagonal(rand(d)))
                 if _FAC == PNDE.IsometricKroneckerCovariance &&
-                    !(diffusion isa Number || diffusion isa Diagonal{<:Number,<:FillArrays.Fill})
+                   !(
+                    diffusion isa Number ||
+                    diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
+                )
                     continue
                 end
                 _diffusions = diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
@@ -363,14 +366,14 @@ end
     D = d * (q + 1)
 
     m, m_s = rand(D), rand(D)
-    _P_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q+1, q+1))))
-    _P_s_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q+1, q+1))))
+    _P_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q + 1, q + 1))))
+    _P_s_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q + 1, q + 1))))
     _P, _P_s = _P_R'_P_R, _P_s_R'_P_s_R
     PM, P_sM = Matrix(_P), Matrix(_P_s)
 
     _A = IsometricKroneckerProduct(d, rand(q + 1, q + 1))
     AM = Matrix(_A)
-    _Q_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q+1, q+1))+I))
+    _Q_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q + 1, q + 1)) + I))
     _Q = _Q_R'_Q_R
     _Q_SR = PSDMatrix(_Q_R)
 
@@ -469,6 +472,32 @@ end
                 @test K2.A == K_backward.A
                 @test K2.b == K_backward.b
                 @test K2.C == K_backward.C
+            end
+
+            @testset "smooth via backward kernels with diffusion $diffusion" for diffusion in
+                                                                                 (
+                rand(), rand() * Eye(d), rand() * I(d), Diagonal(rand(d)),
+            )
+                if _FAC == PNDE.IsometricKroneckerCovariance &&
+                   !(
+                    diffusion isa Number ||
+                    diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
+                )
+                    continue
+                end
+                _diffusions =
+                    diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
+                QM_diff = Matrix(BlockDiagonal([σ² * _Q.B for σ² in _diffusions]))
+
+                ProbNumDiffEq.compute_backward_kernel!(
+                    K_backward, x_next_pred, x_curr, K_forward; C_DxD, diffusion)
+
+                G = Matrix(x_curr.Σ) * Matrix(A)' * inv(Matrix(x_next_pred.Σ))
+                b = x_curr.μ - G * x_next_pred.μ
+                Λ = (I - G * AM) * Matrix(x_curr.Σ) * (I - G * AM)' + G * QM_diff * G'
+                @test K_backward.A ≈ G
+                @test K_backward.b ≈ b
+                @test Matrix(K_backward.C) ≈ Λ
             end
         end
     end

@@ -312,7 +312,7 @@ function compute_backward_kernel!(
             PSDMatrix(K.C.R.blocks[i]),
         )
         _C_DxD = C_DxD.blocks[i]
-        _diffusion = diffusion isa Number ? diffusion : diffusion[i]
+        _diffusion = diffusion isa Number ? diffusion : diffusion.diag[i]
         compute_backward_kernel!(
             _Kout, _xpred, _x, _K, C_DxD=_C_DxD, diffusion=_diffusion
         )
