@@ -153,6 +153,17 @@ _matmul!(
     return A
 end
 
+_matmul!(A::IKP, b::Number, C::IKP) = begin
+    check_matmul_sizes(A, C)
+    _matmul!(A.B, b, C.B)
+    return A
+end
+_matmul!(A::IKP, B::IKP, c::Number) = begin
+    check_matmul_sizes(A, B)
+    _matmul!(A.B, B.B, c)
+    return A
+end
+
 """
 Allocation-free reshape
 Found here: https://discourse.julialang.org/t/convert-array-into-matrix-in-place/55624/5
