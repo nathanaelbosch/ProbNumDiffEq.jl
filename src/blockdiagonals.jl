@@ -101,13 +101,14 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::BlockDiag, alpha::Number, beta::Number) = begin
-        @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
-        @simd ivdep for i in eachindex(blocks(C))
-            @inbounds mul!(C.blocks[i], A.blocks[i], B.blocks[i], alpha, beta)
+    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::BlockDiag, alpha::Number, beta::Number) =
+        begin
+            @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
+            @simd ivdep for i in eachindex(blocks(C))
+                @inbounds mul!(C.blocks[i], A.blocks[i], B.blocks[i], alpha, beta)
+            end
+            return C
         end
-        return C
-    end
     (_mul! == :_matmul!) && @eval $_mul!(
         C::BlockDiag{T},
         A::BlockDiag{T},

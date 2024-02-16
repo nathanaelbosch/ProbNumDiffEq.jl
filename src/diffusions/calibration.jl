@@ -56,7 +56,8 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
         diffusion_increment
     else
         current_mle_diffusion = integ.cache.global_diffusion.diag.value
-        current_mle_diffusion + (diffusion_increment - current_mle_diffusion) / integ.success_iter
+        current_mle_diffusion +
+        (diffusion_increment - current_mle_diffusion) / integ.success_iter
     end
 
     integ.cache.global_diffusion = new_mle_diffusion * Eye(d)
@@ -88,7 +89,7 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
     v, S = measurement.μ, measurement.Σ
     # @assert diag(S) |> unique |> length == 1
     diffusion_increment = let
-        @.. C_d = v ^ 2 / S[1, 1]
+        @.. C_d = v^2 / S[1, 1]
         Diagonal(C_d)
     end
 
@@ -96,7 +97,8 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
         diffusion_increment
     else
         current_mle_diffusion = integ.cache.global_diffusion
-        @.. current_mle_diffusion + (diffusion_increment - current_mle_diffusion) / integ.success_iter
+        @.. current_mle_diffusion +
+            (diffusion_increment - current_mle_diffusion) / integ.success_iter
     end
 
     copy!(integ.cache.global_diffusion, new_mle_diffusion)

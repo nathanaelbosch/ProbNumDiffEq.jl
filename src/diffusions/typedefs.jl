@@ -59,7 +59,7 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
 end
 initial_diffusion(diffusionmodel::FixedDiffusion, d, q, Eltype) =
     diffusionmodel.initial_diffusion * one(Eltype) * Eye(d)
-estimate_local_diffusion(::FixedDiffusion, integ) = local_scalar_diffusion(integ.cache)o
+estimate_local_diffusion(::FixedDiffusion, integ) = local_scalar_diffusion(integ.cache)
 
 """
     FixedMVDiffusion(; initial_diffusion=1.0, calibrate=true)
@@ -91,7 +91,11 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
         @assert size(initdiff) == (d, d)
         return initdiff
     else
-        throw(ArgumentError("Invalid `initial_diffusion`. The `FixedMVDiffusion` assumes a dxd diagonal diffusion model. So, pass either a Number, a Vector of length d, or a `Diagonal`."))
+        throw(
+            ArgumentError(
+                "Invalid `initial_diffusion`. The `FixedMVDiffusion` assumes a dxd diagonal diffusion model. So, pass either a Number, a Vector of length d, or a `Diagonal`.",
+            ),
+        )
     end
 end
 estimate_local_diffusion(::FixedMVDiffusion, integ) = local_diagonal_diffusion(integ.cache)

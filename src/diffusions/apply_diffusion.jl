@@ -10,7 +10,7 @@ apply_diffusion(
 ) = PSDMatrix(Q.R * sqrt.(diffusion))
 apply_diffusion(
     Q::PSDMatrix,
-    diffusion::Diagonal{T,<:FillArrays.Fill}
+    diffusion::Diagonal{T,<:FillArrays.Fill},
 ) where {T} = apply_diffusion(Q, diffusion.diag.value)
 apply_diffusion(
     Q::PSDMatrix{T,<:BlockDiag},
@@ -34,7 +34,7 @@ Apply the diffusion to the PSD transition noise covariance `Q` in place and retu
 apply_diffusion!
 apply_diffusion!(
     Q::PSDMatrix,
-    diffusion::Diagonal{T,<:FillArrays.Fill}
+    diffusion::Diagonal{T,<:FillArrays.Fill},
 ) where {T} = begin
     rmul!(Q.R, sqrt.(diffusion.diag.value))
     return Q
@@ -58,7 +58,7 @@ apply_diffusion!
 apply_diffusion!(
     out::PSDMatrix,
     Q::PSDMatrix,
-    diffusion::Number
+    diffusion::Number,
 ) = begin
     _matmul!(out.R, Q.R, sqrt.(diffusion))
     return out

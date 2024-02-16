@@ -183,14 +183,14 @@ function OrdinaryDiffEq.alg_cache(
     _d = is_secondorder_ode ? 2d : d
     pu_tmp = if is_secondorder_ode
         Gaussian(similar(Array{uElType}, 2d),
-                 PSDMatrix(
-                     if FAC isa IsometricKroneckerCovariance
-                         Kronecker.kronecker(similar(Matrix{uElType}, D ÷ d, _d ÷ d), I(d))
-                     elseif FAC isa BlockDiagonalCovariance
-                         error("I have no idea")
-                     else
-                         similar(Matrix{uElType}, D, _d)
-                     end))
+            PSDMatrix(
+                if FAC isa IsometricKroneckerCovariance
+                    Kronecker.kronecker(similar(Matrix{uElType}, D ÷ d, _d ÷ d), I(d))
+                elseif FAC isa BlockDiagonalCovariance
+                    error("I have no idea")
+                else
+                    similar(Matrix{uElType}, D, _d)
+                end))
     else
         Gaussian(similar(Array{uElType}, d), PSDMatrix(factorized_similar(FAC, D, d)))
     end
