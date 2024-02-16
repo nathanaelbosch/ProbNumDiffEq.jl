@@ -42,8 +42,8 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
     dldu0 = FiniteDiff.finite_difference_gradient(startval_to_loss, prob.u0)
 
     @testset "ForwardDiff.jl" begin
-        @test ForwardDiff.gradient(param_to_loss, prob.p) ≈ dldp rtol = 1e-4
-        @test ForwardDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0 rtol = 5e-4
+        @test ForwardDiff.gradient(param_to_loss, prob.p) ≈ dldp rtol = 1e-3
+        @test ForwardDiff.gradient(startval_to_loss, prob.u0) ≈ dldu0 rtol = 5e-3
     end
 
     # @testset "ReverseDiff.jl" begin

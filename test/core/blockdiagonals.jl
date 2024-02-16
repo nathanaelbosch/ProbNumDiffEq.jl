@@ -5,6 +5,7 @@ using BlockDiagonals
 using Test
 
 d1, d2 = 2, 3
+D = d1 * d2
 @testset "T=$T" for T in (Float64, BigFloat)
     A = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
     B = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
@@ -54,6 +55,13 @@ d1, d2 = 2, 3
     @test tttm(A * (a * I)) ≈ AM * a
     @test tttm((a * I) * A) ≈ a * AM
     @test tttm(rmul!(copy(A), a)) ≈ a * AM
+
+    @test tttm((a * I(D)) * A) ≈ a * AM
+    @test tttm(A * (a * I(D))) ≈ AM * a
+    @test tttm(mul!(_A, A, a * I(D))) ≈ a * AM
+    @test tttm(mul!(_A, a * I(D), A)) ≈ a * AM
+    @test tttm(_matmul!(_A, A, a * I(D))) ≈ a * AM
+    @test tttm(_matmul!(_A, a * I(D), A)) ≈ a * AM
 
     @test_throws ErrorException view(A, 1:2, 1:2)
 
