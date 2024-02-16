@@ -218,45 +218,22 @@ To save allocations, the function modifies the given `cache` and writes into
 `cache.C_Dxd` during some computations.
 """
 function estimate_errors!(cache::AbstractODEFilterCache)
-    @unpack local_diffusion, Qh, H, d, q = cache
+    @unpack local_diffusion, Qh, H, C_d, C_Dxd, C_DxD = cache
+    _Q = apply_diffusion!(PSDMatrix(C_DxD), Qh, local_diffusion)
+    _HQH = PSDMatrix(_matmul!(C_Dxd, _Q.R, H'))
+    error_estimate = diag!(C_d, _HQH)
+    @.. error_estimate = sqrt(error_estimate)
+    return error_estimate
+end
 
-    R = cache.C_Dxd
-
-    if local_diffusion isa Diagonal{<:Number,<:Vector}
-        _Q = apply_diffusion(Qh, local_diffusion)
-        _matmul!(R, _Q.R, H')
-        error_estimate = view(cache.tmp, 1:d)
-        if R isa BlockDiag
-            for i in eachindex(R.blocks)
-                error_estimate[i] = sum(abs2, R.blocks[i])
-            end
-        else
-            sum!(abs2, error_estimate', view(R, :, 1:d))
-        end
-        error_estimate .= sqrt.(error_estimate)
-        return error_estimate
-    elseif local_diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
-        _matmul!(R, Qh.R, H')
-
-        # error_estimate = diag(PSDMatrix(R))
-        # error_estimate .*= local_diffusion
-        # error_estimate .= sqrt.(error_estimate)
-        # error_estimate = view(error_estimate, 1:d)
-
-        # faster:
-        error_estimate = view(cache.tmp, 1:d)
-        if R isa IsometricKroneckerProduct
-            error_estimate .= sum(abs2, R.B)
-        elseif R isa BlockDiag
-            for i in eachindex(blocks(R))
-                error_estimate[i] = sum(abs2, R.blocks[i])
-            end
-        else
-            sum!(abs2, error_estimate', view(R, :, 1:d))
-        end
-        error_estimate .*= local_diffusion.diag.value
-        error_estimate .= sqrt.(error_estimate)
-
-        return error_estimate
+diag!(v::AbstractVector, M::PSDMatrix) = (sum!(abs2, v', M.R); v)
+diag!(v::AbstractVector, M::PSDMatrix{<:Number,<:IsometricKroneckerProduct}) =
+    v .= sum(abs2, M.R.B)
+diag!(v::AbstractVector, M::PSDMatrix{<:Number,<:BlockDiag}) = begin
+    @assert length(v) == nblocks(M.R)
+    @assert size(blocks(M.R)[1], 2) == 1 # assumes all of them have the same shape
+    @simd ivdep for i in eachindex(blocks(M.R))
+        v[i] = sum(abs2, blocks(M.R)[i])
     end
+    return v
 end
