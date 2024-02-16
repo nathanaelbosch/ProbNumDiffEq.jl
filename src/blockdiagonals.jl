@@ -272,7 +272,6 @@ for _mul! in (:mul!, :_matmul!)
     end
 end
 
-
 Base.isequal(A::BlockDiag, B::BlockDiag) =
     length(A.blocks) == length(B.blocks) && all(map(isequal, A.blocks, B.blocks))
 ==(A::BlockDiag, B::BlockDiag) =
