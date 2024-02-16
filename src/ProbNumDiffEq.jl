@@ -67,7 +67,9 @@ include("priors/ltisde.jl")
 include("priors/ioup.jl")
 include("priors/matern.jl")
 export IWP, IOUP, Matern
-include("diffusions.jl")
+include("diffusions/typedefs.jl")
+include("diffusions/apply_diffusion.jl")
+include("diffusions/calibration.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 
 include("initialization/common.jl")
