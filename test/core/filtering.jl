@@ -5,53 +5,52 @@ Check the correctness of the filtering implementations vs. basic readable math c
 using Test
 using ProbNumDiffEq
 using LinearAlgebra
-import ProbNumDiffEq: IsometricKroneckerProduct
+import ProbNumDiffEq: IsometricKroneckerProduct, BlockDiag
 import ProbNumDiffEq as PNDE
+import BlockDiagonals
 
 @testset "PREDICT" begin
     # Setup
-    d = 5
-    m = rand(d)
-    P_R = Matrix(UpperTriangular(rand(d, d)))
-    P = P_R'P_R
+    d = 2
+    q = 2
+    D = d * (q + 1)
+    m = rand(D)
 
-    A = rand(d, d)
-    Q_R = Matrix(UpperTriangular(rand(d, d)))
-    Q = Q_R'Q_R
+    _P_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q + 1, q + 1))))
+    _P = _P_R'_P_R
+    PM = Matrix(_P)
+
+    _A = IsometricKroneckerProduct(d, rand(q + 1, q + 1))
+    AM = Matrix(_A)
+
+    _Q_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q + 1, q + 1))))
+    _Q = _Q_R'_Q_R
+    QM = Matrix(_Q)
 
     # PREDICT
-    m_p = A * m
-    P_p = A * P * A' + Q
+    m_p = AM * m
+    P_p = AM * PM * AM' + QM
 
-    x_curr = Gaussian(m, P)
-    x_out = copy(x_curr)
+    @testset "Factorization: $_FAC" for _FAC in (
+        PNDE.DenseCovariance,
+        PNDE.BlockDiagonalCovariance,
+        PNDE.IsometricKroneckerCovariance,
+    )
 
-    C_DxD = zeros(d, d)
-    C_2DxD = zeros(2d, d)
-    C_3DxD = zeros(3d, d)
+        FAC = _FAC{Float64}(d, q)
 
-    _fstr(F) = F ? "Kronecker" : "None"
-    @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
-        if KRONECKER
-            K = 2
-            m = kron(ones(K), m)
-            P_R = IsometricKroneckerProduct(K, P_R)
-            P = P_R'P_R
+        P_R = PNDE.to_factorized_matrix(FAC, _P_R)
+        P = P_R'P_R
+        A = PNDE.to_factorized_matrix(FAC, _A)
+        Q_R = PNDE.to_factorized_matrix(FAC, _Q_R)
+        Q = Q_R'Q_R
 
-            A = IsometricKroneckerProduct(K, A)
-            Q_R = IsometricKroneckerProduct(K, Q_R)
-            Q = Q_R'Q_R
+        x_curr = Gaussian(m, P)
+        x_out = copy(x_curr)
 
-            m_p = A * m
-            P_p = A * P * A' + Q
-
-            x_curr = Gaussian(m, P)
-            x_out = copy(x_curr)
-
-            C_DxD = IsometricKroneckerProduct(K, C_DxD)
-            C_2DxD = IsometricKroneckerProduct(K, C_2DxD)
-            C_3DxD = IsometricKroneckerProduct(K, C_3DxD)
-        end
+        C_DxD = PNDE.factorized_zeros(FAC, D, D)
+        C_2DxD = PNDE.factorized_zeros(FAC, 2D, D)
+        C_3DxD = PNDE.factorized_zeros(FAC, 3D, D)
 
         @testset "predict" begin
             x_out = ProbNumDiffEq.predict(x_curr, A, Q)
@@ -68,6 +67,25 @@ import ProbNumDiffEq as PNDE
             @test P_p ≈ Matrix(x_out.Σ)
         end
 
+        @testset "predict! with PSDMatrix and diffusion" begin
+            for diffusion in (rand(), rand() * Eye(d), rand() * I(d), Diagonal(rand(d)))
+                if _FAC == PNDE.IsometricKroneckerCovariance &&
+                    !(diffusion isa Number || diffusion isa Diagonal{<:Number,<:FillArrays.Fill})
+                    continue
+                end
+                _diffusions = diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
+
+                QM_diff = Matrix(BlockDiagonal([σ² * _Q.B for σ² in _diffusions]))
+                P_p_diff = AM * PM * AM' + QM_diff
+
+                x_curr = Gaussian(m, PSDMatrix(P_R))
+                x_out = copy(x_curr)
+                Q_SR = PSDMatrix(Q_R)
+                ProbNumDiffEq.predict!(x_out, x_curr, A, Q_SR, C_DxD, C_2DxD, diffusion)
+                @test P_p_diff ≈ Matrix(x_out.Σ)
+            end
+        end
+
         @testset "predict! with zero diffusion" begin
             x_curr = Gaussian(m, PSDMatrix(P_R))
             x_out = copy(x_curr)
@@ -81,8 +99,10 @@ import ProbNumDiffEq as PNDE
             x_curr = Gaussian(m, PSDMatrix(P_R))
             x_out = copy(x_curr)
             # marginalize! needs tall square-roots:
-            Q_SR = if KRONECKER
+            Q_SR = if Q_R isa IsometricKroneckerProduct
                 PSDMatrix(IsometricKroneckerProduct(Q_R.ldim, [Q_R.B; zero(Q_R.B)]))
+            elseif Q_R isa BlockDiag
+                PSDMatrix(BlockDiag([[B; zero(B)] for B in Q_R.blocks]))
             else
                 PSDMatrix([Q_R; zero(Q_R)])
             end
