@@ -178,7 +178,8 @@ function OrdinaryDiffEq.alg_cache(
 
     # Caches
     du = is_secondorder_ode ? similar(u.x[2]) : similar(u)
-    ddu = !isnothing(f.jac_prototype) ?
+    ddu =
+        !isnothing(f.jac_prototype) ?
         f.jac_prototype : zeros(uElType, length(u), length(u))
     _d = is_secondorder_ode ? 2d : d
     pu_tmp = if is_secondorder_ode

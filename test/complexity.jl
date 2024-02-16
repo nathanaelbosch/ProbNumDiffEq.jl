@@ -7,8 +7,8 @@ using Test, SafeTestsets
 
 @testset "Scaling with ODE dimension" begin
     f(du, u, p, t) = mul!(du, -0.9I, u)
-    jac(J, u, p, t) = @simd ivdep for i in 1:size(J,1)
-        J[i,i] = -0.9
+    jac(J, u, p, t) = @simd ivdep for i in 1:size(J, 1)
+        J[i, i] = -0.9
     end
     tspan = (0.0, 1.0)
     prob = ODEProblem(f, ones(1), tspan)
@@ -19,7 +19,7 @@ using Test, SafeTestsets
         _prob = remake(
             prob,
             u0=ones(d),
-            f=ODEFunction(f; jac=jac, jac_prototype=Diagonal(ones(d)))
+            f=ODEFunction(f; jac=jac, jac_prototype=Diagonal(ones(d))),
         )
         tmin = Inf
         for _ in 1:NUMRUNS
@@ -33,7 +33,7 @@ using Test, SafeTestsets
     @testset "Order 1 + perfect init + no smoothing" begin
         f(d, Alg) = time_dim(
             d, Alg(smooth=false, order=1, initialization=ClassicSolverInit());
-            dense=false, save_everystep=false
+            dense=false, save_everystep=false,
         )
 
         dims_ek0 = 2 .^ (8:15)

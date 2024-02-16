@@ -46,12 +46,22 @@ _matmul!(C::MSR{T}, A::Diagonal{T}, B::Diagonal{T}) where {T<:LinearAlgebra.Blas
 
 _matmul!(C::MSR, A::MSR, B::Diagonal, alpha::Number, beta::Number) =
     @.. C = A * B.diag' * alpha + C * beta
-_matmul!(C::MSR{T}, A::MSR{T}, B::Diagonal{T}, alpha::Number, beta::Number
+_matmul!(
+    C::MSR{T},
+    A::MSR{T},
+    B::Diagonal{T},
+    alpha::Number,
+    beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} =
     @.. C = A * B.diag' * alpha + C * beta
 _matmul!(C::MSR, A::Diagonal, B::MSR, alpha::Number, beta::Number) =
     (@.. C = A.diag * B * alpha + C * beta)
-_matmul!(C::MSR{T}, A::Diagonal{T}, B::MSR{T}, alpha::Number, beta::Number
+_matmul!(
+    C::MSR{T},
+    A::Diagonal{T},
+    B::MSR{T},
+    alpha::Number,
+    beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} =
     (@.. C = A.diag * B * alpha + C * beta)
 
