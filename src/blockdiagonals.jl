@@ -1,7 +1,7 @@
 """
-BlockDiagonals.jl didn't cut it, so we're rolling our own.
+    ProbNumDiffEqBlockDiagonal(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
 
-TODO: Add a way to convert to a `BlockDiagonal`.
+A very minimal but fast re-implementation of `BlockDiagonals.Blockdiagonal`.
 """
 struct ProbNumDiffEqBlockDiagonal{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}
