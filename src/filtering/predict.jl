@@ -80,21 +80,6 @@ function predict_cov!(
         @.. R[D+1:2D, 1:D] = Qh.R
     else
         apply_diffusion!(PSDMatrix(view(R, D+1:2D, 1:D)), Qh, diffusion)
-
-        # if diffusion isa Number
-        #     _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt(diffusion))
-        # elseif diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
-        #     _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion.diag.value))
-        # else
-        #     @warn "This is not yet implemented efficiently; TODO"
-        #     d = size(diffusion, 1)
-        #     q = D ÷ d - 1
-        #     _matmul!(
-        #         view(R, D+1:2D, 1:D),
-        #         Qh.R,
-        #         sqrt.(kron(Eye(d) * diffusion, Eye(q + 1))),
-        #     )
-        # end
     end
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
