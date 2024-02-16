@@ -38,17 +38,21 @@ using Test, SafeTestsets
 
         dims_ek0 = 2 .^ (8:15)
         times_ek0 = [f(d, EK0) for d in dims_ek0]
-        dims_ek1 = 2 .^ (2:6)
-        times_ek1 = [f(d, EK1) for d in dims_ek1]
-
         lr_ek0 = linregress(log.(dims_ek0), log.(times_ek0))
-        @test_skip slope(lr_ek0)[1] ≈ 1 atol = 0.1
+        slope(lr_ek0)[1] # should be 1
         @test 0.5 < slope(lr_ek0)[1] < 1.3
 
+        dims_ek1 = 2 .^ (3:6)
+        times_ek1 = [f(d, EK1) for d in dims_ek1]
         lr_ek1 = linregress(log.(dims_ek1), log.(times_ek1))
-        @test_skip slope(lr_ek1)[1] ≈ 2 atol = 0.2
-        # This is what we would actually expect, not sure what's going wrong:
-        @test_skip slope(lr_ek1)[1] ≈ 3 atol = 0.1
+        slope(lr_ek1)[1] # shoudl be 3
+        @test 2.5 < slope(lr_ek1)[1] < 3.5
+
+        dims_dek1 = 2 .^ (4:10)
+        times_dek1 = [f(d, DiagonalEK1) for d in dims_dek1]
+        lr_dek1 = linregress(log.(dims_dek1), log.(times_dek1))
+        slope(lr_dek1)[1] # should be 1
+        @test 0.5 < slope(lr_dek1)[1] < 1.3
     end
 
     @testset "Order 3 + Taylor-init + no smoothing" begin
@@ -56,17 +60,21 @@ using Test, SafeTestsets
 
         dims_ek0 = 2 .^ (8:15)
         times_ek0 = [f(d, EK0) for d in dims_ek0]
-        dims_ek1 = 2 .^ (2:5)
-        times_ek1 = [f(d, EK1) for d in dims_ek1]
-
         lr_ek0 = linregress(log.(dims_ek0), log.(times_ek0))
-        @test_skip slope(lr_ek0)[1] ≈ 1 atol = 0.1
+        slope(lr_ek0)[1] # should be 1
         @test 0.5 < slope(lr_ek0)[1] < 1.3
 
+        dims_ek1 = 2 .^ (3:6)
+        times_ek1 = [f(d, EK1) for d in dims_ek1]
         lr_ek1 = linregress(log.(dims_ek1), log.(times_ek1))
-        @test_skip slope(lr_ek1)[1] ≈ 2 atol = 0.5
-        # This is what we would actually expect, not sure what's going wrong:
-        @test_skip slope(lr_ek1)[1] ≈ 3 atol = 0.1
+        slope(lr_ek1)[1] # should be 3
+        @test 2.5 < slope(lr_ek1)[1] < 3.5
+
+        dims_dek1 = 2 .^ (4:10)
+        times_dek1 = [f(d, DiagonalEK1) for d in dims_dek1]
+        lr_dek1 = linregress(log.(dims_dek1), log.(times_dek1))
+        slope(lr_dek1)[1] # should be 1
+        @test 0.5 < slope(lr_dek1)[1] < 1.3
     end
 
     @testset "Order 3 with smoothing and everyting" begin
@@ -74,15 +82,20 @@ using Test, SafeTestsets
 
         dims_ek0 = 2 .^ (8:13)
         times_ek0 = [f(d, EK0) for d in dims_ek0]
-        dims_ek1 = 2 .^ (1:4)
-        times_ek1 = [f(d, EK1) for d in dims_ek1]
-
         lr_ek0 = linregress(log.(dims_ek0), log.(times_ek0))
+        slope(lr_ek0)[1] # should be 1
         @test 0.5 < slope(lr_ek0)[1] < 1.3
 
+        dims_ek1 = 2 .^ (3:6)
+        times_ek1 = [f(d, EK1) for d in dims_ek1]
         lr_ek1 = linregress(log.(dims_ek1), log.(times_ek1))
-        @test_skip slope(lr_ek1)[1] ≈ 2 atol = 0.2
-        # This is what we would actually expect, not sure what's going wrong:
-        @test_skip slope(lr_ek1)[1] ≈ 3 atol = 0.1
+        slope(lr_ek1)[1] # should be 3
+        @test 2.5 < slope(lr_ek1)[1] < 3.5
+
+        dims_dek1 = 2 .^ (4:10)
+        times_dek1 = [f(d, DiagonalEK1) for d in dims_dek1]
+        lr_dek1 = linregress(log.(dims_dek1), log.(times_dek1))
+        slope(lr_dek1)[1] # should be 1
+        @test 0.5 < slope(lr_dek1)[1] < 1.3
     end
 end
