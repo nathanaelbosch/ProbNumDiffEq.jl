@@ -9,6 +9,7 @@ import ProbNumDiffEq: IsometricKroneckerProduct, BlockDiag
 import ProbNumDiffEq as PNDE
 using BlockDiagonals
 using FillArrays
+import ProbNumDiffEq.GaussianDistributions: logpdf
 
 @testset "PREDICT" begin
     # Setup
@@ -140,6 +141,8 @@ end
     _S = _SR'_SR
     SM = Matrix(_S)
 
+    LL = logpdf(Gaussian(z, SM), z_data)
+
     # UPDATE
     KM = P_p_M * HM' / SM
     m = m_p + KM * (z_data .- z)
@@ -198,7 +201,7 @@ end
                 z_cache = C_d
                 x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
                 x_out = copy(x_pred)
-                ProbNumDiffEq.update!(
+                _, ll = ProbNumDiffEq.update!(
                     x_out,
                     x_pred,
                     msmnt,
@@ -211,6 +214,7 @@ end
                 )
                 @test m ≈ x_out.μ
                 @test P ≈ Matrix(x_out.Σ)
+                @test ll ≈ LL
             end
             @testset "Zero predicted covariance" begin
                 K_cache = copy(C_Dxd)
@@ -257,6 +261,8 @@ end
     z = H * m_p
     SR = qr([P_p_R * H'; R_R]).R |> Matrix
     S = Symmetric(SR'SR)
+
+    LL = logpdf(Gaussian(z, S), z_data)
 
     # UPDATE
     S_inv = inv(S)
@@ -316,7 +322,7 @@ end
                 z_cache = C_d
                 x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
                 x_out = copy(x_pred)
-                ProbNumDiffEq.update!(
+                _, ll = ProbNumDiffEq.update!(
                     x_out,
                     x_pred,
                     msmnt,
@@ -330,6 +336,7 @@ end
                 )
                 @test m ≈ x_out.μ
                 @test P ≈ Matrix(x_out.Σ)
+                @test ll ≈ LL
             end
             @testset "Zero predicted covariance" begin
                 K_cache = copy(C_Dxd)
