@@ -118,60 +118,65 @@ end
 @testset "UPDATE" begin
     # Setup
     d = 5
+    o = 1
+
     m_p = rand(d)
-    P_p_R = Matrix(UpperTriangular(rand(d, d)))
-    P_p = P_p_R'P_p_R
+    _P_p_R = IsometricKroneckerProduct(o, Matrix(UpperTriangular(rand(d, d))))
+    _P_p = _P_p_R'_P_p_R
+    P_p_M = Matrix(_P_p)
 
     # Measure
-    o = 1
     _HB = rand(1, d)
-    H = kron(I(o), _HB)
+    _H = IsometricKroneckerProduct(o, _HB)
+    HM = Matrix(_H)
     R = zeros(o, o)
 
     z_data = zeros(o)
-    z = H * m_p
-    SR = P_p_R * H'
-    S = Symmetric(SR'SR)
+    z = _H * m_p
+    _SR = _P_p_R * _H'
+    _S = _SR'_SR
+    SM = Matrix(_S)
 
     # UPDATE
-    S_inv = inv(S)
-    K = P_p * H' * S_inv
-    m = m_p + K * (z_data .- z)
-    P = P_p - K * S * K'
+    KM = P_p_M * HM' / SM
+    m = m_p + KM * (z_data .- z)
+    P = P_p_M - KM * SM * KM'
 
-    x_pred = Gaussian(m_p, P_p)
-    x_out = copy(x_pred)
-    measurement = Gaussian(z, S)
+    _R_R = rand(o, o)
+    _R = _R_R'_R_R
+    _SR_noisy = qr([_P_p_R * _H'; _R_R]).R |> Matrix
+    _S_noisy = _SR_noisy'_SR_noisy
+    SM_noisy = Matrix(_S_noisy)
 
-    C_dxd = zeros(o, o)
-    C_d = zeros(o)
-    C_Dxd = zeros(d, o)
-    C_DxD = zeros(d, d)
-    C_2DxD = zeros(2d, d)
-    C_3DxD = zeros(3d, d)
+    KM_noisy = P_p_M * HM' / SM_noisy
+    m_noisy = m_p + KM_noisy * (z_data .- z)
+    P_noisy = P_p_M - KM_noisy * SM_noisy * KM_noisy'
 
-    _fstr(F) = F ? "Kronecker" : "None"
-    @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
-        if KRONECKER
-            P_p_R = IsometricKroneckerProduct(1, P_p_R)
-            P_p = P_p_R'P_p_R
+    @testset "Factorization: $_FAC" for _FAC in (
+        PNDE.DenseCovariance,
+        PNDE.BlockDiagonalCovariance,
+        PNDE.IsometricKroneckerCovariance,
+    )
+        FAC = _FAC{Float64}(o, d)
 
-            H = IsometricKroneckerProduct(1, _HB)
-            R = zeros(o, o)
+        C_dxd = PNDE.factorized_zeros(FAC, o, o)
+        C_d = zeros(o)
+        C_Dxd = PNDE.factorized_zeros(FAC, d, o)
+        C_DxD = PNDE.factorized_zeros(FAC, d, d)
+        C_2DxD = PNDE.factorized_zeros(FAC, 2d, d)
+        C_3DxD = PNDE.factorized_zeros(FAC, 3d, d)
 
-            SR = IsometricKroneckerProduct(1, SR)
-            S = SR'SR
+        P_p_R = PNDE.to_factorized_matrix(FAC, _P_p_R)
+        P_p = P_p_R'P_p_R
 
-            x_pred = Gaussian(m_p, P_p)
-            x_out = copy(x_pred)
-            measurement = Gaussian(z, S)
+        H = PNDE.to_factorized_matrix(FAC, _H)
 
-            C_dxd = IsometricKroneckerProduct(1, C_dxd)
-            C_Dxd = IsometricKroneckerProduct(1, C_Dxd)
-            C_DxD = IsometricKroneckerProduct(1, C_DxD)
-            C_2DxD = IsometricKroneckerProduct(1, C_2DxD)
-            C_3DxD = IsometricKroneckerProduct(1, C_3DxD)
-        end
+        SR = PNDE.to_factorized_matrix(FAC, _SR)
+        S = SR'SR
+
+        x_pred = Gaussian(m_p, P_p)
+        x_out = copy(x_pred)
+        measurement = Gaussian(z, S)
 
         @testset "update" begin
             x_out = ProbNumDiffEq.update(x_pred, measurement, H)
@@ -354,57 +359,63 @@ end
 @testset "SMOOTH" begin
     # Setup
     d = 5
-    m, m_s = rand(d), rand(d)
-    P_R, P_s_R = Matrix(UpperTriangular(rand(d, d))), Matrix(UpperTriangular(rand(d, d)))
-    P, P_s = P_R'P_R, P_s_R'P_s_R
+    q = 2
+    D = d * (q + 1)
 
-    A = rand(d, d)
-    Q_R = Matrix(UpperTriangular(rand(d, d))) + I
-    Q = Q_R'Q_R
-    Q_SR = PSDMatrix(Q_R)
+    m, m_s = rand(D), rand(D)
+    _P_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q+1, q+1))))
+    _P_s_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q+1, q+1))))
+    _P, _P_s = _P_R'_P_R, _P_s_R'_P_s_R
+    PM, P_sM = Matrix(_P), Matrix(_P_s)
+
+    _A = IsometricKroneckerProduct(d, rand(q + 1, q + 1))
+    AM = Matrix(_A)
+    _Q_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q+1, q+1))+I))
+    _Q = _Q_R'_Q_R
+    _Q_SR = PSDMatrix(_Q_R)
 
     # PREDICT first
-    m_p = A * m
-    P_p_R = qr([P_R * A'; Q_R]).R |> Matrix
-    P_p = A * P * A' + Q
-    @assert P_p ≈ P_p_R'P_p_R
+    m_p = AM * m
+    _P_p_R = IsometricKroneckerProduct(d, qr([_P_R.B * _A.B'; _Q_R.B]).R |> Matrix)
+    _P_p = _A * _P * _A' + _Q
+    @assert _P_p ≈ _P_p_R'_P_p_R
+    P_pM = Matrix(_P_p)
 
     # SMOOTH
-    G = P * A' * inv(P_p)
+    G = _P * _A' * inv(_P_p) |> Matrix
     m_smoothed = m + G * (m_s - m_p)
-    P_smoothed = P + G * (P_s - P_p) * G'
+    P_smoothed = PM + G * (P_sM - P_pM) * G'
 
-    x_curr = Gaussian(m, P)
-    x_next = Gaussian(m_s, P_s)
     x_smoothed = Gaussian(m_smoothed, P_smoothed)
 
-    _fstr(F) = F ? "Kronecker" : "None"
-    @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
-        K = 2
-        if KRONECKER
-            P_R = IsometricKroneckerProduct(K, P_R)
-            P = P_R'P_R
+    @testset "Factorization: $_FAC" for _FAC in (
+        PNDE.DenseCovariance,
+        PNDE.BlockDiagonalCovariance,
+        PNDE.IsometricKroneckerCovariance,
+    )
+        FAC = _FAC{Float64}(d, q)
 
-            P_s_R = IsometricKroneckerProduct(K, P_s_R)
-            P_s = P_s_R'P_s_R
+        P_R = PNDE.to_factorized_matrix(FAC, _P_R)
+        P = P_R'P_R
+        P_s_R = PNDE.to_factorized_matrix(FAC, _P_s_R)
+        P_s = P_s_R'P_s_R
+        P_p_R = PNDE.to_factorized_matrix(FAC, _P_p_R)
+        P_p = P_p_R'P_p_R
 
-            P_p_R = IsometricKroneckerProduct(K, P_p_R)
-            P_p = P_p_R'P_p_R
+        x_curr = Gaussian(m, P)
+        x_next = Gaussian(m_s, P_s)
 
-            m, m_s, m_p = kron(ones(K), m), kron(ones(K), m_s), kron(ones(K), m_p)
+        A = PNDE.to_factorized_matrix(FAC, _A)
+        Q_R = PNDE.to_factorized_matrix(FAC, _Q_R)
+        Q = Q_R'Q_R
+        Q_SR = PSDMatrix(Q_R)
 
-            A = IsometricKroneckerProduct(K, A)
-            Q_R = IsometricKroneckerProduct(K, Q_R)
-            Q = Q_R'Q_R
-            Q_SR = PSDMatrix(Q_R)
+        x_curr = Gaussian(m, P)
+        x_next = Gaussian(m_s, P_s)
 
-            x_curr = Gaussian(m, P)
-            x_next = Gaussian(m_s, P_s)
-
-            m_smoothed = kron(ones(K), m_smoothed)
-            P_smoothed = IsometricKroneckerProduct(K, P_smoothed)
-            x_smoothed = Gaussian(m_smoothed, P_smoothed)
-        end
+        C_DxD = PNDE.factorized_zeros(FAC, D, D)
+        C_2DxD = PNDE.factorized_zeros(FAC, 2D, D)
+        C_3DxD = PNDE.factorized_zeros(FAC, 3D, D)
 
         @testset "smooth" begin
             x_out, _ = ProbNumDiffEq.smooth(x_curr, x_next, A, Q)
@@ -421,22 +432,12 @@ end
         @testset "smooth via backward kernels" begin
             K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
             K_backward = ProbNumDiffEq.AffineNormalKernel(
-                copy(A), copy(m_p),
-                if KRONECKER
-                    PSDMatrix(IsometricKroneckerProduct(K, zeros(2d, d)))
-                else
-                    PSDMatrix(zeros(2d, d))
-                end)
+                copy(A), copy(m_p), PSDMatrix(copy(C_2DxD)))
 
             x_curr = Gaussian(m, PSDMatrix(P_R)) |> copy
             x_next_pred = Gaussian(m_p, PSDMatrix(P_p_R)) |> copy
             x_next_smoothed = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
 
-            C_DxD = if KRONECKER
-                IsometricKroneckerProduct(K, zeros(d, d))
-            else
-                zeros(d, d)
-            end
             ProbNumDiffEq.compute_backward_kernel!(
                 K_backward, x_next_pred, x_curr, K_forward; C_DxD)
 
@@ -447,11 +448,6 @@ end
             @test K_backward.b ≈ b
             @test Matrix(K_backward.C) ≈ Λ
 
-            C_3DxD = if KRONECKER
-                IsometricKroneckerProduct(K, zeros(3d, d))
-            else
-                zeros(3d, d)
-            end
             ProbNumDiffEq.marginalize_mean!(x_curr.μ, x_next_smoothed.μ, K_backward)
             ProbNumDiffEq.marginalize_cov!(
                 x_curr.Σ,

@@ -216,6 +216,8 @@ LinearAlgebra.rmul!(B::BlockDiag, n::Number) = begin
     return B
 end
 
+LinearAlgebra.inv(A::BlockDiag) = BlockDiag(inv.(blocks(A)))
+
 copy!(A::BlockDiag, B::Diagonal) = begin
     @assert size(A) == size(B)
     i = 1
