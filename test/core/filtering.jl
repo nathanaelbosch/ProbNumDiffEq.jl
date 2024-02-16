@@ -7,7 +7,7 @@ using ProbNumDiffEq
 using LinearAlgebra
 import ProbNumDiffEq: IsometricKroneckerProduct, BlockDiag
 import ProbNumDiffEq as PNDE
-import BlockDiagonals
+using BlockDiagonals
 using FillArrays
 
 @testset "PREDICT" begin
