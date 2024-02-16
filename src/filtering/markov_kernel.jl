@@ -111,10 +111,9 @@ function marginalize_cov!(
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
 ) where {T,S}
-    @assert ismissing(K.b) || isnothing(K.b)
     _Σ_out = PSDMatrix(Σ_out.R.B)
     _Σ_curr = PSDMatrix(Σ_curr.R.B)
-    _K = AffineNormalKernel(K.A.B, nothing, PSDMatrix(K.C.R.B))
+    _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
     _D = size(_Σ_out, 1)
     _C_DxD = C_DxD.B
     _C_3DxD = C_3DxD.B
@@ -132,11 +131,10 @@ function marginalize_cov!(
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
 ) where {T,S}
-    @assert ismissing(K.b) || isnothing(K.b)
-    @inbounds @simd ivdep for i in eachindex(blocks(Σ_out.R))
+    @simd ivdep for i in eachindex(blocks(Σ_out.R))
         _Σ_out = PSDMatrix(Σ_out.R.blocks[i])
         _Σ_curr = PSDMatrix(Σ_curr.R.blocks[i])
-        _K = AffineNormalKernel(K.A.blocks[i], nothing, PSDMatrix(K.C.R.blocks[i]))
+        _K = AffineNormalKernel(K.A.blocks[i], K.b, PSDMatrix(K.C.R.blocks[i]))
         _C_DxD = C_DxD.blocks[i]
         _C_3DxD = C_3DxD.blocks[i]
         marginalize_cov!(_Σ_out, _Σ_curr, _K; C_DxD=_C_DxD, C_3DxD=_C_3DxD)
