@@ -140,7 +140,7 @@ function predict_cov!(
     C_2DxD::BlockDiag,
     diffusion::Union{Number,Diagonal},
 ) where {T,S}
-    for i in eachindex(blocks(Σ_out.R))
+    @simd ivdep for i in eachindex(blocks(Σ_out.R))
         predict_cov!(
             PSDMatrix(Σ_out.R.blocks[i]),
             PSDMatrix(Σ_curr.R.blocks[i]),

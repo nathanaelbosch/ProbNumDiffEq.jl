@@ -293,7 +293,8 @@ function compute_backward_kernel!(
 }
     d = length(blocks(xpred.Σ.R))
     q = size(blocks(xpred.Σ.R)[1], 1) - 1
-    @inbounds @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
+
+    @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
         _Kout = AffineNormalKernel(
             Kout.A.blocks[i],
             view(Kout.b, (i-1)*(q+1)+1:i*(q+1)),
