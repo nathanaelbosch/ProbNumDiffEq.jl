@@ -28,6 +28,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Priors" begin
                 include("core/priors.jl")
             end
+            @timedsafetestset "Diffusions" begin
+                include("core/diffusions.jl")
+            end
             @timedsafetestset "Preconditioning" begin
                 include("core/preconditioning.jl")
             end
