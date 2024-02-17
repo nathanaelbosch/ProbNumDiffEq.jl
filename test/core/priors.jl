@@ -165,7 +165,7 @@ end
             make_transition_matrices!(cache, prior, h)
             @test AH_22_IBM ≈ cache.Ah
 
-            for Γ in (σ^2, σ^2 * Eye(d))
+            for Γ in (σ^2, σ^2 * Eye(d), σ^2 * I(d))
                 @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, Γ))
             end
             if FAC != PNDE.IsometricKroneckerCovariance
