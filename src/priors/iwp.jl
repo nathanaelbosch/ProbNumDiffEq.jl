@@ -158,8 +158,8 @@ end
 function initialize_transition_matrices(FAC::IsometricKroneckerCovariance, p::IWP, dt)
     A, Q = preconditioned_discretize(p)
     P, PI = initialize_preconditioner(FAC, p, dt)
-    Ah = PI * A * P
-    Qh = PSDMatrix(Q.R * PI)
+    Ah = copy(A)
+    Qh = copy(Q)
     return A, Q, Ah, Qh, P, PI
 end
 function initialize_transition_matrices(FAC::DenseCovariance, p::IWP, dt)
@@ -174,8 +174,8 @@ function initialize_transition_matrices(FAC::BlockDiagonalCovariance, p::IWP, dt
     A = to_factorized_matrix(FAC, A)
     Q = to_factorized_matrix(FAC, Q)
     P, PI = initialize_preconditioner(FAC, p, dt)
-    Ah = PI * A * P
-    Qh = PSDMatrix(Q.R * PI)
+    Ah = copy(A)
+    Qh = copy(Q)
     return A, Q, Ah, Qh, P, PI
 end
 

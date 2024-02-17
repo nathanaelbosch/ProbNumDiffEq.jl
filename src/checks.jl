@@ -16,7 +16,7 @@ function check_densesmooth(integ)
         error("To use `dense=true` you need to set `smooth=true`!")
     end
     if !integ.opts.save_everystep && integ.alg.smooth
-        error("If you do not save all values, you do not need to smooth!")
+        error("If you set `save_everystep=false` also set `smooth=false` in the alg!")
     end
 end
 function check_saveiter(integ)

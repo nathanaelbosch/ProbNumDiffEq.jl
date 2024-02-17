@@ -13,7 +13,8 @@ function calc_H!(H, integ, cache)
     elseif integ.alg isa DiagonalEK1
         calc_H_EK0!(H, integ, cache)
         OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
-        _matmul!(H, Diagonal(ddu), cache.SolProj, -1.0, 1.0)
+        ddu_diag = Diagonal(ddu)
+        _matmul!(H, ddu_diag, cache.SolProj, -1.0, 1.0)
     else
         error("Unknown algorithm")
     end

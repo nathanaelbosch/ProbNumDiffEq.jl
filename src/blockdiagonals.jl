@@ -254,7 +254,9 @@ end
 for _mul! in (:mul!, :_matmul!)
     @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Diagonal) = begin
         local i = 1
-        map(zip(blocks(C), blocks(A))) do (Ci, Ai)
+        @assert nblocks(C) == nblocks(A)
+        for j in eachindex(blocks(C))
+            Ci, Ai = blocks(C)[j], blocks(A)[j]
             d = size(Ai, 2)
             $_mul!(Ci, Ai, Diagonal(view(B.diag, i:(i+d-1))))
             i += d
@@ -263,7 +265,9 @@ for _mul! in (:mul!, :_matmul!)
     end
     @eval $_mul!(C::BlockDiag, A::Diagonal, B::BlockDiag) = begin
         local i = 1
-        map(zip(blocks(C), blocks(B))) do (Ci, Bi)
+        @assert nblocks(C) == nblocks(B)
+        for j in eachindex(blocks(C))
+            Ci, Bi = blocks(C)[j], blocks(B)[j]
             d = size(Bi, 1)
             $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi)
             i += d
@@ -272,7 +276,9 @@ for _mul! in (:mul!, :_matmul!)
     end
     @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Diagonal, alpha::Number, beta::Number) = begin
         local i = 1
-        map(zip(blocks(C), blocks(A))) do (Ci, Ai)
+        @assert nblocks(C) == nblocks(A)
+        for j in eachindex(blocks(C))
+            Ci, Ai = blocks(C)[j], blocks(A)[j]
             d = size(Ai, 2)
             $_mul!(Ci, Ai, Diagonal(view(B.diag, i:(i+d-1))), alpha, beta)
             i += d
@@ -280,10 +286,12 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
     @eval $_mul!(C::BlockDiag, A::Diagonal, B::BlockDiag, alpha::Number, beta::Number) = begin
-        local i = 1
-        map(zip(blocks(C), blocks(B))) do (Ci, Bi)
+        i = 1
+        @assert nblocks(C) == nblocks(B)
+        for j in eachindex(blocks(C))
+            Ci, Bi = blocks(C)[j], blocks(B)[j]
             d = size(Bi, 1)
-            $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi, alpha, beta)
+            @inbounds $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi, alpha, beta)
             i += d
         end
         return C

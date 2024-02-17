@@ -50,6 +50,7 @@ function DataUpdateCallback(
         val = values[idx]
 
         o = length(val)
+        d = integ.cache.d
 
         @unpack x, E0, m_tmp, G1 = integ.cache
         M = observation_matrix
@@ -67,12 +68,16 @@ function DataUpdateCallback(
 
         obs = Gaussian(obs_mean, obs_cov)
 
-        @unpack x_tmp, K1, C_DxD, C_dxd, C_Dxd, C_d = integ.cache
-        K1 = K1 * M'
-        C_dxd = M * C_dxd * M'
-        C_Dxd = C_Dxd * M'
-        C_d = M * C_d
-        _x = copy!(x_tmp, x)
+        _cache = if o != d
+            if !(integ.alg isa EK1)
+                error("Partial observations only work with the EK1 right now")
+            end
+            make_obssized_cache(integ.cache; o)
+        else
+            integ.cache
+        end
+        @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
+        _x = copy!(integ.cache.x_tmp, x)
         _, ll = update!(x, _x, obs, H, K1, C_Dxd, C_DxD, C_dxd, C_d; R=R)
 
         if !isnothing(loglikelihood)
@@ -91,4 +96,25 @@ make_obscov_sqrt(
 ) =
     IsometricKroneckerProduct(PR.ldim, make_obscov_sqrt(PR.B, H.B, RR.B))
 make_obscov_sqrt(PR::BlockDiag, H::BlockDiag, RR::BlockDiag) =
-    BlockDiag([make_obscov_sqrt(blocks(PR)[i], blocks(H)[i], blocks(RR)[i]) for i in eachindex(blocks(PR))])
+    BlockDiag([
+        make_obscov_sqrt(blocks(PR)[i], blocks(H)[i], blocks(RR)[i]) for
+        i in eachindex(blocks(PR))
+    ])
+
+function make_obssized_cache(cache; o)
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
+    return make_obssized_cache(K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp; o)
+end
+function make_obssized_cache(
+    K1::M, C_DxD::M, C_dxd::M, C_Dxd::M, C_d::V, m_tmp::G, x_tmp; o,
+) where {M<:Matrix,V<:Vector,G<:Gaussian}
+    return (
+        K1=view(K1, :, 1:o),
+        C_dxd=view(C_dxd, 1:o, 1:o),
+        C_Dxd=view(C_Dxd, :, 1:o),
+        C_d=view(C_d, 1:o),
+        C_DxD=C_DxD,
+        m_tmp=Gaussian(view(m_tmp.μ, 1:o), view(m_tmp.Σ, 1:o, 1:o)),
+        x_tmp=x_tmp,
+    )
+end

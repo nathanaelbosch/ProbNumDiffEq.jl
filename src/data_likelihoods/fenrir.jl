@@ -75,17 +75,14 @@ function fit_pnsolution_to_data!(
     LL = zero(eltype(sol.prob.p))
 
     o = length(data.u[1])
-    @unpack x_tmp, C_dxd, C_d, K1, C_Dxd, C_DxD, m_tmp = cache
-    _cache = (
-        x_tmp=x_tmp,
-        C_DxD=C_DxD,
-        C_Dxd=C_Dxd * proj',
-        C_dxd=proj * C_dxd * proj',
-        C_d=proj * C_d,
-        K1=K1 * proj',
-        K2=C_Dxd * proj',
-        m_tmp=proj * m_tmp,
-    )
+    d = cache.d
+    @unpack x_tmp, m_tmp = cache
+    _cache = if o != d
+        make_obssized_cache(cache; o)
+    else
+        cache
+    end
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
 
     x_posterior = copy(sol.x_filt) # the object to be filled
     state2data_projmat = proj * cache.SolProj
