@@ -170,14 +170,8 @@ function local_diagonal_diffusion(cache)
         tmp
     else
         @warn "This is not yet implemented efficiently; TODO"
-        diag(H * unfactorize(Qh) * H')
+        diag(X_A_Xt(Qh, H))
     end
-
-    # To double-check:
-    HQH = H * unfactorize(Qh) * H'
-    @assert Q_11 ≈ diag(HQH)
-    # Also if the solver is a EK0 and not a DiagonalEK1:
-    # @assert Q_11 |> unique |> length == 1
 
     @. local_diffusion.diag = z^2 / Q_11
     return local_diffusion
