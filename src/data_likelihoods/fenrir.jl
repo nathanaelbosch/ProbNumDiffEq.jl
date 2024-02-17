@@ -57,6 +57,7 @@ function fenrir_data_loglik(
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
     o = length(data.u[1])
     R = cov2psdmatrix(observation_noise_cov; d=o)
+    R = to_factorized_matrix(integ.cache.covariance_factorization, R)
     LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
 
     return LL
@@ -78,12 +79,12 @@ function fit_pnsolution_to_data!(
     _cache = (
         x_tmp=x_tmp,
         C_DxD=C_DxD,
-        C_Dxd=view(C_Dxd, :, 1:o),
-        C_dxd=view(C_dxd, 1:o, 1:o),
-        C_d=view(C_d, 1:o),
-        K1=view(K1, :, 1:o),
-        K2=view(C_Dxd, :, 1:o),
-        m_tmp=Gaussian(view(m_tmp.μ, 1:o), view(m_tmp.Σ, 1:o, 1:o)),
+        C_Dxd=C_Dxd * proj',
+        C_dxd=proj * C_dxd * proj',
+        C_d=proj * C_d,
+        K1=K1 * proj',
+        K2=C_Dxd * proj',
+        m_tmp=proj * m_tmp,
     )
 
     x_posterior = copy(sol.x_filt) # the object to be filled
@@ -136,9 +137,7 @@ function measure_and_update!(x, u, H, R::PSDMatrix, cache)
     z, S = cache.m_tmp
     _matmul!(z, H, x.μ)
     z .-= u
-    _matmul!(cache.C_Dxd, x.Σ.R, H')
-    _matmul!(S, cache.C_Dxd', cache.C_Dxd)
-    S .+= _matmul!(cache.C_dxd, R.R', R.R)
+    S = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
     msmnt = Gaussian(z, S)
 
     return update!(x, copy!(cache.x_tmp, x), msmnt, H; R=R, cache)

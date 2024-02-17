@@ -52,30 +52,26 @@ function DataUpdateCallback(
         o = length(val)
 
         @unpack x, E0, m_tmp, G1 = integ.cache
-        H = view(G1, 1:o, :)
-        if observation_matrix === I
-            @.. H = E0
-        elseif observation_matrix isa UniformScaling
-            @.. H = observation_matrix.λ * E0
-        else
-            matmul!(H, observation_matrix, E0)
-        end
+        M = observation_matrix
+        H = M * E0
 
         obs_mean = _matmul!(view(m_tmp.μ, 1:o), H, x.μ)
         obs_mean .-= val
 
         R = cov2psdmatrix(observation_noise_cov; d=o)
+        R = to_factorized_matrix(integ.cache.covariance_factorization, R)
 
         # _A = x.Σ.R * H'
         # obs_cov = _A'_A + R
-        obs_cov = PSDMatrix(qr!([x.Σ.R * H'; R.R]).R)
+        obs_cov = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
+
         obs = Gaussian(obs_mean, obs_cov)
 
         @unpack x_tmp, K1, C_DxD, C_dxd, C_Dxd, C_d = integ.cache
-        K1 = view(K1, :, 1:o)
-        C_dxd = view(C_dxd, 1:o, 1:o)
-        C_Dxd = view(C_Dxd, :, 1:o)
-        C_d = view(C_d, 1:o)
+        K1 = K1 * M'
+        C_dxd = M * C_dxd * M'
+        C_Dxd = C_Dxd * M'
+        C_d = M * C_d
         _x = copy!(x_tmp, x)
         _, ll = update!(x, _x, obs, H, K1, C_Dxd, C_DxD, C_dxd, C_d; R=R)
 
@@ -85,3 +81,14 @@ function DataUpdateCallback(
     end
     return PresetTimeCallback(data.t, affect!; save_positions, kwargs...)
 end
+
+make_obscov_sqrt(PR::AbstractMatrix, H::AbstractMatrix, RR::AbstractMatrix) =
+    qr!([PR * H'; RR]).R
+make_obscov_sqrt(
+    PR::IsometricKroneckerProduct,
+    H::IsometricKroneckerProduct,
+    RR::IsometricKroneckerProduct,
+) =
+    IsometricKroneckerProduct(PR.ldim, make_obscov_sqrt(PR.B, H.B, RR.B))
+make_obscov_sqrt(PR::BlockDiag, H::BlockDiag, RR::BlockDiag) =
+    BlockDiag([make_obscov_sqrt(blocks(PR)[i], blocks(H)[i], blocks(RR)[i]) for i in eachindex(blocks(PR))])

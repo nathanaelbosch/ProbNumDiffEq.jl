@@ -270,7 +270,26 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
+    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Diagonal, alpha::Number, beta::Number) = begin
+        local i = 1
+        map(zip(blocks(C), blocks(A))) do (Ci, Ai)
+            d = size(Ai, 2)
+            $_mul!(Ci, Ai, Diagonal(view(B.diag, i:(i+d-1))), alpha, beta)
+            i += d
+        end
+        return C
+    end
+    @eval $_mul!(C::BlockDiag, A::Diagonal, B::BlockDiag, alpha::Number, beta::Number) = begin
+        local i = 1
+        map(zip(blocks(C), blocks(B))) do (Ci, Bi)
+            d = size(Bi, 1)
+            $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi, alpha, beta)
+            i += d
+        end
+        return C
+    end
 end
+
 
 Base.isequal(A::BlockDiag, B::BlockDiag) =
     length(A.blocks) == length(B.blocks) && all(map(isequal, A.blocks, B.blocks))

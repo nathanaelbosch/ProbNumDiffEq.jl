@@ -47,6 +47,15 @@ to_factorized_matrix(::DenseCovariance, M::AbstractMatrix) = Matrix(M)
 to_factorized_matrix(::IsometricKroneckerCovariance, M::IsometricKroneckerProduct) = M
 to_factorized_matrix(C::BlockDiagonalCovariance, M::IsometricKroneckerProduct) =
     BlockDiag([copy(M.B) for _ in 1:C.d])
+to_factorized_matrix(C::BlockDiagonalCovariance, M::Diagonal) =
+    copy!(factorized_similar(C, size(M)...), M)
+to_factorized_matrix(
+    C::IsometricKroneckerCovariance, M::Diagonal{<:Number, <:FillArrays.Fill}) = begin
+        out = factorized_similar(C, size(M)...)
+        @assert length(out.B) == 1
+        out.B .= M.diag.value
+        out
+    end
 
 for FT in [:DenseCovariance, :IsometricKroneckerCovariance, :BlockDiagonalCovariance]
     @eval to_factorized_matrix(FAC::$FT, M::PSDMatrix) =

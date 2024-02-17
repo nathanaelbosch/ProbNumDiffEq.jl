@@ -46,6 +46,8 @@ vecvec2mat(x) = reduce(hcat, x)'
 
 cov2psdmatrix(cov::Number; d) = PSDMatrix(sqrt(cov) * Eye(d))
 cov2psdmatrix(cov::UniformScaling; d) = PSDMatrix(sqrt(cov.λ) * Eye(d))
+cov2psdmatrix(cov::Diagonal{<:Number,<:FillArrays.Fill}; d) =
+    (@assert size(cov, 1) == size(cov, 2) == d; cov2psdmatrix(cov.diag.value; d))
 cov2psdmatrix(cov::Diagonal; d) =
     (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(sqrt.(cov)))
 cov2psdmatrix(cov::AbstractMatrix; d) =

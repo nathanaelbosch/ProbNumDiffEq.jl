@@ -33,23 +33,25 @@ kwargs = (
 )
 @testset "Compare data likelihoods" begin
     @testset "$alg" for alg in (
+        # EK0
+        EK0(),
+        EK0(diffusionmodel=FixedDiffusion()),
+        EK0(prior=IOUP(3, -1)),
+        EK0(prior=Matern(3, 1.5)),
+        # EK1
         EK1(),
         EK1(diffusionmodel=FixedDiffusion()),
         # EK1(diffusionmodel=FixedMVDiffusion(rand(2), false)), # not yet supported
         EK1(prior=IOUP(3, -1)),
         EK1(prior=Matern(3, 1.5)),
         EK1(prior=IOUP(3, update_rate_parameter=true)),
+        # DiagonalEK1
+        DiagonalEK1(),
+        DiagonalEK1(diffusionmodel=FixedDiffusion()),
+        DiagonalEK1(diffusionmodel=FixedMVDiffusion(rand(2), false)),
     )
         compare_data_likelihoods(alg; kwargs...)
     end
-end
-
-@testset "EK0 is not (yet) supported" begin
-    for ll in (PNDE.dalton_data_loglik, PNDE.filtering_data_loglik)
-        @test_broken ll(prob, EK0(smooth=false); kwargs...)
-    end
-    @test_broken PNDE.fenrir_data_loglik(
-        prob, EK0(smooth=true); kwargs...)
 end
 
 @testset "Partial observations" begin
@@ -63,6 +65,14 @@ end
         adaptive=false, dt=DT,
         dense=false,
     )
+    @test_broken compare_data_likelihoods(
+        DiagonalEK1();
+        observation_matrix=H,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
 end
 
 @testset "Observation noise types: $(typeof(Σ))" for Σ in (
@@ -70,15 +80,24 @@ end
     σ^2 * I,
     σ^2 * I(2),
     σ^2 * Eye(2),
+    Diagonal([σ^2 0; 0 2σ^2]),
     [σ^2 0; 0 2σ^2],
     (A = randn(2, 2); A'A),
     (PSDMatrix(randn(2, 2))),
 )
-    compare_data_likelihoods(
-        EK1();
-        observation_noise_cov=Σ,
-        data=data,
-        adaptive=false, dt=DT,
-        dense=false,
-    )
+    @testset "$alg" for alg in (EK0(), DiagonalEK1(), EK1())
+        if alg isa EK0 && !(Σ isa Number || Σ isa UniformScaling || Σ isa Diagonal{<:Number,<:FillArrays.Fill})
+            continue
+        end
+        if alg isa DiagonalEK1 && !(Σ isa Number || Σ isa UniformScaling || Σ isa Diagonal)
+            continue
+        end
+        compare_data_likelihoods(
+            alg;
+            observation_noise_cov=Σ,
+            data=data,
+            adaptive=false, dt=DT,
+            dense=false,
+        )
+    end
 end
