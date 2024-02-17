@@ -16,7 +16,7 @@ using Reexport
 import SciMLBase
 import SciMLBase: interpret_vars, getsyms, remake
 using OrdinaryDiffEq
-using SpecialMatrices, ToeplitzMatrices
+using ToeplitzMatrices
 using FastBroadcast
 using StaticArrayInterface
 using FunctionWrappersWrappers
@@ -25,9 +25,7 @@ using TaylorSeries, TaylorIntegration
 using SimpleUnPack
 using RecursiveArrayTools
 using ForwardDiff
-using ExponentialUtilities
 using Octavian
-using FastGaussQuadrature
 import Kronecker
 using ArrayAllocators
 using FiniteHorizonGramians
