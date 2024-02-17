@@ -60,7 +60,7 @@ function matrix_fraction_decomposition(
 )
     d = size(drift, 1)
     M = [drift dispersion*dispersion'; zero(drift) -drift']
-    Mexp = exponential!(dt * M)
+    Mexp = exp(dt * M)
     A = Mexp[1:d, 1:d]
     Q = Mexp[1:d, d+1:end] * A'
     return A, Q
