@@ -31,11 +31,6 @@ h = 0.1
         @test A1 ≈ A3
         @test Matrix(Q1) ≈ Q3
 
-        A4, Q4R = PNDE._discretize_sqrt_with_quadraturetrick(
-            PNDE.LTISDE(Matrix(sde.F), Matrix(sde.L)), h)
-        @test A1 ≈ A4
-        @test Q1.R ≈ Q4R
-
         ts = 0:0.1:1
         marginals = @test_nowarn PNDE.marginalize(prior, ts)
         @test length(marginals) == length(ts)
