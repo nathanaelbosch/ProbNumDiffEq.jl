@@ -12,15 +12,8 @@ function calc_H!(H, integ, cache)
         _matmul!(H, _ddu, cache.SolProj, -1.0, 1.0)
     elseif integ.alg isa DiagonalEK1
         calc_H_EK0!(H, integ, cache)
-        # @assert integ.u == @view x_pred.μ[1:(q+1):end]
-        # ddu_full = Matrix(ddu)
-        # @info "ddu" ddu_full
-        # error()
         OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
-
-        @unpack C_dxd = cache
-        copy!(C_dxd, Diagonal(ddu))
-        _matmul!(H, C_dxd, cache.SolProj, -1.0, 1.0)
+        _matmul!(H, Diagonal(ddu), cache.SolProj, -1.0, 1.0)
     else
         error("Unknown algorithm")
     end
