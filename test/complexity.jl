@@ -40,7 +40,7 @@ using Test, SafeTestsets
         times_ek0 = [f(d, EK0) for d in dims_ek0]
         lr_ek0 = linregress(log.(dims_ek0), log.(times_ek0))
         slope(lr_ek0)[1] # should be 1
-        @test slope(lr_ek0)[1] ≈ 1 atol=1
+        @test slope(lr_ek0)[1] ≈ 1 atol = 1
 
         dims_ek1 = 2 .^ (3:6)
         times_ek1 = [f(d, EK1) for d in dims_ek1]
