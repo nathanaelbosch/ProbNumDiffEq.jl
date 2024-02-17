@@ -230,7 +230,7 @@ function update!(
             M_cache.blocks[i],
             C_dxd.blocks[i],
             view(C_d, i:i);
-            R=isnothing(R) ? nothing : PSDMatrix(blocks(R.R)[i])
+            R=isnothing(R) ? nothing : PSDMatrix(blocks(R.R)[i]),
         )
         ll += _ll
     end

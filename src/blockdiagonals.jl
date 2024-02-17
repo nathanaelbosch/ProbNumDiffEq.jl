@@ -274,30 +274,31 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Diagonal, alpha::Number, beta::Number) = begin
-        local i = 1
-        @assert nblocks(C) == nblocks(A)
-        for j in eachindex(blocks(C))
-            Ci, Ai = blocks(C)[j], blocks(A)[j]
-            d = size(Ai, 2)
-            $_mul!(Ci, Ai, Diagonal(view(B.diag, i:(i+d-1))), alpha, beta)
-            i += d
+    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Diagonal, alpha::Number, beta::Number) =
+        begin
+            local i = 1
+            @assert nblocks(C) == nblocks(A)
+            for j in eachindex(blocks(C))
+                Ci, Ai = blocks(C)[j], blocks(A)[j]
+                d = size(Ai, 2)
+                $_mul!(Ci, Ai, Diagonal(view(B.diag, i:(i+d-1))), alpha, beta)
+                i += d
+            end
+            return C
         end
-        return C
-    end
-    @eval $_mul!(C::BlockDiag, A::Diagonal, B::BlockDiag, alpha::Number, beta::Number) = begin
-        i = 1
-        @assert nblocks(C) == nblocks(B)
-        for j in eachindex(blocks(C))
-            Ci, Bi = blocks(C)[j], blocks(B)[j]
-            d = size(Bi, 1)
-            @inbounds $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi, alpha, beta)
-            i += d
+    @eval $_mul!(C::BlockDiag, A::Diagonal, B::BlockDiag, alpha::Number, beta::Number) =
+        begin
+            i = 1
+            @assert nblocks(C) == nblocks(B)
+            for j in eachindex(blocks(C))
+                Ci, Bi = blocks(C)[j], blocks(B)[j]
+                d = size(Bi, 1)
+                @inbounds $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi, alpha, beta)
+                i += d
+            end
+            return C
         end
-        return C
-    end
 end
-
 
 Base.isequal(A::BlockDiag, B::BlockDiag) =
     length(A.blocks) == length(B.blocks) && all(map(isequal, A.blocks, B.blocks))

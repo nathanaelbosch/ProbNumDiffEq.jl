@@ -99,4 +99,5 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
     end
 end
 estimate_local_diffusion(::FixedMVDiffusion, integ) =
-    integ.alg isa EK0 ? local_diagonal_diffusion(integ.cache) : local_scalar_diffusion(integ.cache)
+    integ.alg isa EK0 ? local_diagonal_diffusion(integ.cache) :
+    local_scalar_diffusion(integ.cache)

@@ -86,7 +86,10 @@ end
     (PSDMatrix(randn(2, 2))),
 )
     @testset "$alg" for alg in (EK0(), DiagonalEK1(), EK1())
-        if alg isa EK0 && !(Σ isa Number || Σ isa UniformScaling || Σ isa Diagonal{<:Number,<:FillArrays.Fill})
+        if alg isa EK0 && !(
+            Σ isa Number || Σ isa UniformScaling ||
+            Σ isa Diagonal{<:Number,<:FillArrays.Fill}
+        )
             continue
         end
         if alg isa DiagonalEK1 && !(Σ isa Number || Σ isa UniformScaling || Σ isa Diagonal)
