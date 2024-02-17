@@ -9,8 +9,10 @@ function init_preconditioner(C::DenseCovariance{elType}) where {elType}
     return P, PI
 end
 function init_preconditioner(C::BlockDiagonalCovariance{elType}) where {elType}
-    P = BlockDiag([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
-    PI = BlockDiag([Diagonal(ones(elType, C.q + 1)) for _ in 1:C.d])
+    B = Diagonal(ones(elType, C.q + 1))
+    P = BlockDiag([B for _ in 1:C.d])
+    BI = Diagonal(ones(elType, C.q + 1))
+    PI = BlockDiag([BI for _ in 1:C.d])
     return P, PI
 end
 
@@ -36,26 +38,10 @@ end
     end
     return P
 end
-
-@fastmath @inbounds function make_preconditioner!(P::IsometricKroneckerProduct, h, d, q)
-    val = factorial(q) / h^(q + 1 / 2)
-    @simd ivdep for j in 0:q
-        P.B.diag[j+1] = val
-        val /= (q - j) / h
-    end
-    return P
-end
-
-@fastmath @inbounds function make_preconditioner!(P::BlockDiag, h, d, q)
-    val = factorial(q) / h^(q + 1 / 2)
-    @simd ivdep for j in 0:q
-        for M in P.blocks
-            M.diag[j+1] = val
-        end
-        val /= (q - j) / h
-    end
-    return P
-end
+make_preconditioner!(P::IsometricKroneckerProduct, h, d, q) =
+    (make_preconditioner!(P.B, h, 1, q); P)
+make_preconditioner!(P::BlockDiag, h, d, q) =
+    (make_preconditioner!(blocks(P)[1], h, 1, q); P)
 
 @fastmath @inbounds function make_preconditioner_inv!(PI::Diagonal, h, d, q)
     val = h^(q + 1 / 2) / factorial(q)
@@ -68,25 +54,7 @@ end
     end
     return PI
 end
-
-@fastmath @inbounds function make_preconditioner_inv!(
-    PI::IsometricKroneckerProduct, h, d, q)
-    val = h^(q + 1 / 2) / factorial(q)
-    @simd ivdep for j in 0:q
-        PI.B.diag[j+1] = val
-        val *= (q - j) / h
-    end
-    return PI
-end
-
-@fastmath @inbounds function make_preconditioner_inv!(
-    PI::BlockDiag, h, d, q)
-    val = h^(q + 1 / 2) / factorial(q)
-    @simd ivdep for j in 0:q
-        for M in PI.blocks
-            M.diag[j+1] = val
-        end
-        val *= (q - j) / h
-    end
-    return PI
-end
+make_preconditioner_inv!(PI::IsometricKroneckerProduct, h, d, q) =
+    (make_preconditioner_inv!(PI.B, h, 1, q); PI)
+make_preconditioner_inv!(PI::BlockDiag, h, d, q) =
+    (make_preconditioner_inv!(blocks(PI)[1], h, 1, q); PI)
