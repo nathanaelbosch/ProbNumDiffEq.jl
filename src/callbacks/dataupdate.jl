@@ -68,14 +68,10 @@ function DataUpdateCallback(
 
         obs = Gaussian(obs_mean, obs_cov)
 
-        _cache = if o != d
-            if !(integ.alg isa EK1)
-                error("Partial observations only work with the EK1 right now")
-            end
-            make_obssized_cache(integ.cache; o)
-        else
-            integ.cache
+        if o != d && !(integ.alg isa EK1)
+            error("Partial observations only work with the EK1 right now")
         end
+        _cache = make_obssized_cache(integ.cache; o)
         @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
         _x = copy!(integ.cache.x_tmp, x)
         _, ll = update!(x, _x, obs, H, K1, C_Dxd, C_DxD, C_dxd, C_d; R=R)
@@ -102,12 +98,14 @@ make_obscov_sqrt(PR::BlockDiag, H::BlockDiag, RR::BlockDiag) =
     ])
 
 function make_obssized_cache(cache; o)
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
-    return make_obssized_cache(K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp; o)
+    if o == cache.d
+        return cache
+    else
+        return make_obssized_cache(cache.covariance_factorization, cache; o)
+    end
 end
-function make_obssized_cache(
-    K1::M, C_DxD::M, C_dxd::M, C_Dxd::M, C_d::V, m_tmp::G, x_tmp; o,
-) where {M<:Matrix,V<:Vector,G<:Gaussian}
+function make_obssized_cache(::DenseCovariance, cache; o)
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
     return (
         K1=view(K1, :, 1:o),
         C_dxd=view(C_dxd, 1:o, 1:o),

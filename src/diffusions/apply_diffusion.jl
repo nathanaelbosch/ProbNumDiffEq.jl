@@ -3,7 +3,6 @@
 
 Apply the diffusion to the PSD transition noise covariance `Q`, return the result.
 """
-apply_diffusion
 apply_diffusion(
     Q::PSDMatrix,
     diffusion::Number,
@@ -31,7 +30,6 @@ end
 
 Apply the diffusion to the PSD transition noise covariance `Q` in place and return the result.
 """
-apply_diffusion!
 apply_diffusion!(
     Q::PSDMatrix,
     diffusion::Diagonal{T,<:FillArrays.Fill},
@@ -54,7 +52,6 @@ end
 
 Apply the diffusion to the PSD transition noise covariance `Q` and store the result in `out`.
 """
-apply_diffusion!
 apply_diffusion!(
     out::PSDMatrix,
     Q::PSDMatrix,

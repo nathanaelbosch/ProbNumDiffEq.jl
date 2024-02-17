@@ -77,11 +77,7 @@ function fit_pnsolution_to_data!(
     o = length(data.u[1])
     d = cache.d
     @unpack x_tmp, m_tmp = cache
-    _cache = if o != d
-        make_obssized_cache(cache; o)
-    else
-        cache
-    end
+    _cache = make_obssized_cache(cache; o)
     @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
 
     x_posterior = copy(sol.x_filt) # the object to be filled
