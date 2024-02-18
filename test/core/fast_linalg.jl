@@ -3,7 +3,6 @@ import ProbNumDiffEq: _matmul!
 using LinearAlgebra
 using Test
 
-
 @testset "T=$T" for T in (Float64, BigFloat)
     A = rand(T, 2, 3)
     B = rand(T, 3, 4)
@@ -29,7 +28,7 @@ using Test
     @test _matmul!(CD, D1, D2) == _matmul!(CD, D1, D2)
 
     # Triangulars
-    ASQ, BSQ, CSQ = rand(T, 2, 2), rand(T, 2,2), rand(T,2,2)
+    ASQ, BSQ, CSQ = rand(T, 2, 2), rand(T, 2, 2), rand(T, 2, 2)
     ALT, AUT = LowerTriangular(ASQ), UpperTriangular(ASQ)
     BLT, BUT = LowerTriangular(BSQ), UpperTriangular(BSQ)
     @test _matmul!(CSQ, ALT, BSQ) == mul!(CSQ, ALT, BSQ)

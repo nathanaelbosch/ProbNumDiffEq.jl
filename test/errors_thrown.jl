@@ -56,5 +56,5 @@ end
 
     # Multivariate diffusion with non-diagonal diffusion model
     @test_throws ArgumentError solve(
-        prob, EK0(diffusionmodel=FixedMVDiffusion(initial_diffusion=rand(2,2))))
+        prob, EK0(diffusionmodel=FixedMVDiffusion(initial_diffusion=rand(2, 2))))
 end
