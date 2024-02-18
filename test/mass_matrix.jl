@@ -93,4 +93,6 @@ end
 
     sol = solve(prob, DiagonalEK1(order=3))
     @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
+
+    @test_throws ArgumentError solve(prob, EK0())
 end

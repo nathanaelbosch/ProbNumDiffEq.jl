@@ -55,7 +55,6 @@ function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:Ab
         throw(ArgumentError("Unknown algorithm type $Alg"))
     end
 end
-covariance_structure(alg) = covariance_structure(typeof(alg), alg.prior, alg.diffusionmodel)
 
 """
     EK0(; order=3,

@@ -22,6 +22,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "BlockDiagonals" begin
                 include("core/blockdiagonals.jl")
             end
+            @timedsafetestset "FastLinalg (`_matmul!`)" begin
+                include("core/fast_linalg.jl")
+            end
             @timedsafetestset "Filtering" begin
                 include("core/filtering.jl")
             end
