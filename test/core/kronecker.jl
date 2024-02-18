@@ -82,7 +82,6 @@ q = 2
     @test _matmul!(_K1, K1, α) == α * K1
     @test _matmul!(_K1, α, K1) == α * K1
 
-
     # In-place Matrix-Matrix Multiplication
     β = -0.5
     @test mul!(K3, K1, K2) ≈ mul!(M3, M1, M2)
