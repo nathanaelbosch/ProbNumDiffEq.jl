@@ -79,8 +79,8 @@ q = 2
     _K1 = copy(K1)
     @test mul!(_K1, α, K1) == α * K1
     @test mul!(_K1, K1, α) == α * K1
-    @test _matmul!(_K1, K1, α) == α * K1
-    @test _matmul!(_K1, α, K1) == α * K1
+    @test PNDE._matmul!(_K1, K1, α) == α * K1
+    @test PNDE._matmul!(_K1, α, K1) == α * K1
 
     # In-place Matrix-Matrix Multiplication
     β = -0.5
