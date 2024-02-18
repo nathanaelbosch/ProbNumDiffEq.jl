@@ -11,6 +11,8 @@ D = d1 * d2
     A = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
     B = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
     C = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
+    alpha = rand(T)
+    beta = rand(T)
 
     AM, BM, CM = @test_nowarn Matrix.((A, B, C))
 
@@ -46,23 +48,29 @@ D = d1 * d2
     @test tttm(_matmul!(C, A', B)) ≈ _matmul!(CM, AM', BM)
     @test tttm(_matmul!(C, A, B')) ≈ _matmul!(CM, AM, BM')
 
+    @test tttm(mul!(C, A, B, alpha, beta)) ≈ mul!(CM, AM, BM, alpha, beta)
+    @test tttm(_matmul!(C, A, B, alpha, beta)) ≈ _matmul!(CM, AM, BM, alpha, beta)
+
     @test tttm(A * B) ≈ AM * BM
     @test tttm(A' * B) ≈ AM' * BM
     @test tttm(A * B') ≈ AM * BM'
 
-    a = rand()
-    @test tttm(A * a) ≈ AM * a
-    @test tttm(a * A) ≈ a * AM
-    @test tttm(A * (a * I)) ≈ AM * a
-    @test tttm((a * I) * A) ≈ a * AM
-    @test tttm(rmul!(copy(A), a)) ≈ a * AM
+    @test tttm(A * alpha) ≈ AM * alpha
+    @test tttm(alpha * A) ≈ alpha * AM
+    @test tttm(A * (alpha * I)) ≈ AM * alpha
+    @test tttm((alpha * I) * A) ≈ alpha * AM
+    @test tttm(rmul!(copy(A), alpha)) ≈ alpha * AM
+    @test tttm(mul!(_A, alpha, A)) ≈ alpha * AM
+    @test tttm(mul!(_A, A, alpha)) ≈ alpha * AM
+    @test tttm(_matmul!(_A, alpha, A)) ≈ alpha * AM
+    @test tttm(_matmul!(_A, A, alpha)) ≈ alpha * AM
 
-    @test tttm((a * I(D)) * A) ≈ a * AM
-    @test tttm(A * (a * I(D))) ≈ AM * a
-    @test tttm(mul!(_A, A, a * I(D))) ≈ a * AM
-    @test tttm(mul!(_A, a * I(D), A)) ≈ a * AM
-    @test tttm(_matmul!(_A, A, a * I(D))) ≈ a * AM
-    @test tttm(_matmul!(_A, a * I(D), A)) ≈ a * AM
+    @test tttm((alpha * I(D)) * A) ≈ alpha * AM
+    @test tttm(A * (alpha * I(D))) ≈ AM * alpha
+    @test tttm(mul!(_A, A, alpha * I(D))) ≈ alpha * AM
+    @test tttm(mul!(_A, alpha * I(D), A)) ≈ alpha * AM
+    @test tttm(_matmul!(_A, A, alpha * I(D))) ≈ alpha * AM
+    @test tttm(_matmul!(_A, alpha * I(D), A)) ≈ alpha * AM
 
     @test_throws ErrorException view(A, 1:2, 1:2)
 
@@ -70,8 +78,6 @@ D = d1 * d2
 
     @test tttm(A + A) ≈ AM + AM
     @test tttm(A - A) ≈ AM - AM
-
-    @test tttm(_matmul!(_A, a * I(D), A)) ≈ a * AM
 
     _A = copy(A)
     @test tttm(PNDE.add!(_A, A)) == AM + AM
