@@ -33,25 +33,27 @@ function ekargcheck(
             )
         end
     end
-    if covariance_factorization == IsometricKroneckerCovariance && !(
-        pn_observation_noise isa Number
-        || pn_observation_noise isa UniformScaling
-        || pn_observation_noise isa Diagonal{<:Number,<:FillArrays.Fill})
-        throw(
-            ArgumentError(
-                "The supplied `pn_observation_noise` is not compatible with the chosen `IsometricKroneckerCovariance` factorization. Try one of `BlockDiagonalCovariance` or `DenseCovariance` instead!",
-            ),
-        )
-    end
-    if covariance_factorization == BlockDiagonalCovariance && !(
-        pn_observation_noise isa Number
-        || pn_observation_noise isa UniformScaling
-        || pn_observation_noise isa Diagonal)
-        throw(
-            ArgumentError(
-                "The supplied `pn_observation_noise` is not compatible with the chosen `BlockDiagonalCovariance` factorization. Try `DenseCovariance` instead!",
-            ),
-        )
+    if !(isnothing(pn_observation_noise) || ismissing(pn_observation_noise))
+        if covariance_factorization == IsometricKroneckerCovariance && !(
+            pn_observation_noise isa Number
+            || pn_observation_noise isa UniformScaling
+            || pn_observation_noise isa Diagonal{<:Number,<:FillArrays.Fill})
+            throw(
+                ArgumentError(
+                    "The supplied `pn_observation_noise` is not compatible with the chosen `IsometricKroneckerCovariance` factorization. Try one of `BlockDiagonalCovariance` or `DenseCovariance` instead!",
+                ),
+            )
+        end
+        if covariance_factorization == BlockDiagonalCovariance && !(
+            pn_observation_noise isa Number
+            || pn_observation_noise isa UniformScaling
+            || pn_observation_noise isa Diagonal)
+            throw(
+                ArgumentError(
+                    "The supplied `pn_observation_noise` is not compatible with the chosen `BlockDiagonalCovariance` factorization. Try `DenseCovariance` instead!",
+                ),
+            )
+        end
     end
 end
 
