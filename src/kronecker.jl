@@ -159,6 +159,16 @@ _matmul!(
     return A
 end
 
+mul!(A::IKP, b::Number, C::IKP) = begin
+    check_matmul_sizes(A, C)
+    mul!(A.B, b, C.B)
+    return A
+end
+mul!(A::IKP, B::IKP, c::Number) = begin
+    check_matmul_sizes(A, B)
+    mul!(A.B, B.B, c)
+    return A
+end
 _matmul!(A::IKP, b::Number, C::IKP) = begin
     check_matmul_sizes(A, C)
     _matmul!(A.B, b, C.B)

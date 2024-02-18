@@ -76,6 +76,12 @@ q = 2
     @test α * K1 isa PNDE.IsometricKroneckerProduct
     @test K1 * α ≈ α * M1
     @test K1 * α isa PNDE.IsometricKroneckerProduct
+    _K1 = copy(K1)
+    @test mul!(_K1, α, K1) == α * K1
+    @test mul!(_K1, K1, α) == α * K1
+    @test _matmul!(_K1, K1, α) == α * K1
+    @test _matmul!(_K1, α, K1) == α * K1
+
 
     # In-place Matrix-Matrix Multiplication
     β = -0.5
