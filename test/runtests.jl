@@ -129,6 +129,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Data Likelihoods" begin
                 include("data_likelihoods.jl")
             end
+            @timedsafetestset "Observation noise" begin
+                include("observation_noise.jl")
+            end
         end
     end
 

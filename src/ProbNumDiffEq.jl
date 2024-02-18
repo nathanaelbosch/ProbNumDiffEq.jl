@@ -52,6 +52,14 @@ cov2psdmatrix(cov::AbstractMatrix; d) =
     (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(Matrix(cholesky(cov).U)))
 cov2psdmatrix(cov::PSDMatrix; d) = (@assert size(cov, 1) == size(cov, 2) == d; cov)
 
+"""
+    add!(out, toadd)
+
+Add `toadd` to `out` in-place.
+"""
+add!
+add!(out, toadd) = (out .+= toadd)
+
 include("fast_linalg.jl")
 include("kronecker.jl")
 include("blockdiagonals.jl")

@@ -163,7 +163,7 @@ compute_measurement_covariance!(cache) = begin
     _matmul!(cache.C_Dxd, cache.x_pred.Σ.R, cache.H')
     _matmul!(cache.measurement.Σ, cache.C_Dxd', cache.C_Dxd)
     if !isnothing(cache.R)
-        cache.measurement.Σ .+= _matmul!(cache.C_dxd, cache.R.R', cache.R.R)
+        add!(cache.measurement.Σ, _matmul!(cache.C_dxd, cache.R.R', cache.R.R))
     end
 end
 

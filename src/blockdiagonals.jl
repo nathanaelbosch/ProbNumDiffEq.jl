@@ -57,6 +57,24 @@ end
 similar(B::BlockDiag) = BlockDiag(similar.(blocks(B)))
 zero(B::BlockDiag) = BlockDiag(zero.(blocks(B)))
 
+# Sums of BlockDiag
+Base.:+(A::BlockDiag, B::BlockDiag) = begin
+    @assert nblocks(A) == nblocks(B)
+    return BlockDiag([Ai + Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
+end
+Base.:-(A::BlockDiag, B::BlockDiag) = begin
+    @assert nblocks(A) == nblocks(B)
+    return BlockDiag([Ai - Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
+end
+
+add!(out::BlockDiag, toadd::BlockDiag) = begin
+    @assert nblocks(out) == nblocks(toadd)
+    @simd ivdep for i in eachindex(blocks(out))
+        add!(blocks(out)[i], blocks(toadd)[i])
+    end
+    return out
+end
+
 # Mul with Scalar or UniformScaling
 Base.:*(a::Number, M::BlockDiag) = BlockDiag([a * B for B in blocks(M)])
 Base.:*(M::BlockDiag, a::Number) = BlockDiag([B * a for B in blocks(M)])

@@ -1,4 +1,5 @@
 using ProbNumDiffEq
+import ProbNumDiffEq as PNDE
 import ProbNumDiffEq: BlockDiag, _matmul!
 using LinearAlgebra
 using BlockDiagonals
@@ -65,5 +66,13 @@ D = d1 * d2
 
     @test_throws ErrorException view(A, 1:2, 1:2)
 
-    tttm(copy!(A, Diagonal(A)))
+    tttm(copy!(copy(A), Diagonal(A)))
+
+    @test tttm(A + A) ≈ AM + AM
+    @test tttm(A - A) ≈ AM - AM
+
+    @test tttm(_matmul!(_A, a * I(D), A)) ≈ a * AM
+
+    _A = copy(A)
+    @test tttm(PNDE.add!(_A, A)) == AM + AM
 end
