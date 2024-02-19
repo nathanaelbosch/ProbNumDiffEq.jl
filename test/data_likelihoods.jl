@@ -36,12 +36,14 @@ kwargs = (
         # EK0
         EK0(),
         EK0(diffusionmodel=FixedDiffusion()),
+        EK0(diffusionmodel=FixedMVDiffusion(rand(2), false)),
+        EK0(diffusionmodel=DynamicMVDiffusion()),
         EK0(prior=IOUP(3, -1)),
         EK0(prior=Matern(3, 1.5)),
         # EK1
         EK1(),
         EK1(diffusionmodel=FixedDiffusion()),
-        # EK1(diffusionmodel=FixedMVDiffusion(rand(2), false)), # not yet supported
+        EK1(diffusionmodel=FixedMVDiffusion(rand(2), false)),
         EK1(prior=IOUP(3, -1)),
         EK1(prior=Matern(3, 1.5)),
         EK1(prior=IOUP(3, update_rate_parameter=true)),
