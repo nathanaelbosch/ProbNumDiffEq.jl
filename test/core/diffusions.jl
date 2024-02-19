@@ -13,44 +13,42 @@ T = Float64
     FixedDiffusion(),
     FixedDiffusion(calibrate=false),
     FixedMVDiffusion(),
-    FixedMVDiffusion(; initial_diffusion=rand(2)),
-    FixedMVDiffusion(; initial_diffusion=Diagonal(rand(2))),
-    FixedMVDiffusion(; initial_diffusion=Diagonal(rand(2)), calibrate=false),
+    FixedMVDiffusion(; initial_diffusion=rand(d)),
+    FixedMVDiffusion(; initial_diffusion=Diagonal(rand(d))),
+    FixedMVDiffusion(; initial_diffusion=Diagonal(rand(d)), calibrate=false),
 )
 
     # Test the initial diffusion
-    diff = PNDE.initial_diffusion(diffusionmodel, d, q, T)
-    @assert size(diff) == (d, d)
-    @assert diff isa Diagonal
+    diffusion = PNDE.initial_diffusion(diffusionmodel, d, q, T)
+    @assert size(diffusion) == (d, d)
+    @assert diffusion isa Diagonal
     if !(diffusionmodel isa FixedMVDiffusion || diffusionmodel isa DynamicMVDiffusion)
-        @assert diff isa Diagonal{T,<:Fill}
+        @assert diffusion isa Diagonal{T,<:Fill}
     end
 
     # Test applying the diffusion
     _, Q = PNDE.discretize(PNDE.IWP{T}(d, q), 0.1)
     Qmat = PSDMatrix(Matrix(Q.R))
-    _diff = rand() * diff
+    _diffusion = rand() * diffusion
     @testset "$FAC" for FAC in (
         PNDE.DenseCovariance{T}(d, q),
         PNDE.BlockDiagonalCovariance{T}(d, q),
         PNDE.IsometricKroneckerCovariance{T}(d, q),
     )
-        if diff isa Diagonal{T,<:Vector} && FAC isa PNDE.IsometricKroneckerCovariance
+        if diffusion isa Diagonal{T,<:Vector} && FAC isa PNDE.IsometricKroneckerCovariance
             continue
         end
 
         _Q = PNDE.to_factorized_matrix(FAC, Q)
-        Qdiff = @test_nowarn PNDE.apply_diffusion(_Q, _diff)
-        Qmatdiff = @test_nowarn PNDE.apply_diffusion(Qmat, _diff)
+        Qdiff = @test_nowarn PNDE.apply_diffusion(_Q, _diffusion)
+        Qmatdiff = @test_nowarn PNDE.apply_diffusion(Qmat, _diffusion)
         @test Qdiff == Qmatdiff
 
-        if !(diff isa Diagonal{T,<:Vector} && FAC isa PNDE.DenseCovariance)
-            Qdiff = @test_nowarn PNDE.apply_diffusion!(copy(_Q), _diff)
-            @test Qdiff == Qmatdiff
+        Qdiff = @test_nowarn PNDE.apply_diffusion!(copy(_Q), _diffusion)
+        @test Qdiff == Qmatdiff
 
-            Qdiff = @test_nowarn PNDE.apply_diffusion!(copy(_Q), _Q, _diff)
-            @test Qdiff == Qmatdiff
-        end
+        Qdiff = @test_nowarn PNDE.apply_diffusion!(copy(_Q), _Q, _diffusion)
+        @test Qdiff == Qmatdiff
     end
 
     @testset "Calibration" begin

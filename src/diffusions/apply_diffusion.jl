@@ -22,7 +22,7 @@ apply_diffusion(
 ) where {T} = begin
     d = size(diffusion, 1)
     q = size(Q, 1) ÷ d - 1
-    return PSDMatrix(Q.R * sqrt.(kron(diffusion, I(q + 1))))
+    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(diffusion, Eye(q + 1))))
 end
 
 """
@@ -44,6 +44,18 @@ apply_diffusion!(
     @simd ivdep for i in eachindex(blocks(Q.R))
         rmul!(blocks(Q.R)[i], sqrt(diffusion.diag[i]))
     end
+    return Q
+end
+apply_diffusion!(
+    Q::PSDMatrix,
+    diffusion::Diagonal,
+) = begin
+    # @warn "This is not yet implemented efficiently; TODO"
+    d = size(diffusion, 1)
+    D = size(Q, 1)
+    q = D ÷ d - 1
+    # _matmul!(Q.R, Q.R, Kronecker.kronecker(sqrt.(diffusion), Eye(q + 1)))
+    _matmul!(Q.R, Q.R, kron(sqrt.(diffusion), Eye(q + 1)))
     return Q
 end
 
@@ -80,10 +92,11 @@ apply_diffusion!(
     Q::PSDMatrix,
     diffusion::Diagonal,
 ) = begin
-    @warn "This is not yet implemented efficiently; TODO"
+    # @warn "This is not yet implemented efficiently; TODO"
     d = size(diffusion, 1)
     D = size(Q, 1)
     q = D ÷ d - 1
-    _matmul!(out.R, Q.R, sqrt.(kron(diffusion, Eye(q + 1))))
+    # _matmul!(out.R, Q.R, Kronecker.kronecker(sqrt.(diffusion), Eye(q + 1)))
+    _matmul!(out.R, Q.R, kron(sqrt.(diffusion), Eye(q + 1)))
     return out
 end
