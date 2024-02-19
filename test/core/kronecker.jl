@@ -14,11 +14,16 @@ q = 2
     K2 = PNDE.IsometricKroneckerProduct(d, R2)
     M2 = Matrix(K2)
 
+    function tttm(M) # quick type test and to matrix
+        @test M isa PNDE.IsometricKroneckerProduct
+        return Matrix(M)
+    end
+
     # Matrix-Matrix Operations
-    @test K1 * K2 ≈ M1 * M2
-    @test K1 * K2 isa PNDE.IsometricKroneckerProduct
-    @test K1 + K2 ≈ M1 + M2
-    @test K1 + K2 isa PNDE.IsometricKroneckerProduct
+    @test tttm(K1 * K2) ≈ M1 * M2
+    @test tttm(K1 + K2) ≈ M1 + M2
+
+    @test tttm(PNDE.add!(copy(K1), K2)) ≈ M1 + M2
 
     # DimensionMismatch
     X = PNDE.IsometricKroneckerProduct(d, rand(T, 1, 1))
@@ -31,29 +36,21 @@ q = 2
     R4 = rand(T, q + 1)
     K4 = PNDE.IsometricKroneckerProduct(d, R4)
     M4 = Matrix(K4)
-    @test K1 * K4 ≈ M1 * M4
+    @test tttm(K1 * K4) ≈ M1 * M4
     @test_throws DimensionMismatch K1 + K4
 
     # UniformScaling
-    @test I + K1 ≈ I + M1
-    @test I + K1 isa PNDE.IsometricKroneckerProduct
-    @test K1 + I ≈ M1 + I
-    @test K1 + I isa PNDE.IsometricKroneckerProduct
-    @test I - K1 ≈ I - M1
-    @test I - K1 isa PNDE.IsometricKroneckerProduct
-    @test K1 - I ≈ M1 - I
-    @test K1 - I isa PNDE.IsometricKroneckerProduct
+    @test tttm(I + K1) ≈ I + M1
+    @test tttm(K1 + I) ≈ M1 + I
+    @test tttm(I - K1) ≈ I - M1
+    @test tttm(K1 - I) ≈ M1 - I
 
     # Other LinearAlgebra
-    @test K1' ≈ M1'
-    @test K1' isa PNDE.IsometricKroneckerProduct
-    @test inv(K1) ≈ inv(M1)
-    @test inv(K1) isa PNDE.IsometricKroneckerProduct
+    @test tttm(K1') ≈ M1'
+    @test tttm(inv(K1)) ≈ inv(M1)
     @test det(K1) ≈ det(M1)
-    @test K1 / K2 ≈ M1 / M2
-    @test K1 / K2 isa PNDE.IsometricKroneckerProduct
-    @test K1 \ K2 ≈ M1 \ M2
-    @test K1 \ K2 isa PNDE.IsometricKroneckerProduct
+    @test tttm(K1 / K2) ≈ M1 / M2
+    @test tttm(K1 \ K2) ≈ M1 \ M2
 
     # Base
     K3 = PNDE.IsometricKroneckerProduct(d, copy(R2))
@@ -72,10 +69,8 @@ q = 2
 
     # Matrix-Scalar
     α = 2.0
-    @test α * K1 ≈ α * M1
-    @test α * K1 isa PNDE.IsometricKroneckerProduct
-    @test K1 * α ≈ α * M1
-    @test K1 * α isa PNDE.IsometricKroneckerProduct
+    @test tttm(α * K1) ≈ α * M1
+    @test tttm(K1 * α) ≈ α * M1
     _K1 = copy(K1)
     @test mul!(_K1, α, K1) == α * K1
     @test mul!(_K1, K1, α) == α * K1
