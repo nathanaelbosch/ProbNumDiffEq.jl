@@ -107,6 +107,7 @@ Base.:+(K::IKP, U::UniformScaling) = IsometricKroneckerProduct(K.ldim, U + K.B)
 add!(out::IsometricKroneckerProduct, toadd::IsometricKroneckerProduct) = begin
     @assert out.ldim == toadd.ldim
     add!(out.B, toadd.B)
+    return out
 end
 
 Base.:-(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.ldim, U - K.B)

@@ -81,4 +81,5 @@ D = d1 * d2
 
     _A = copy(A)
     @test tttm(PNDE.add!(_A, A)) == AM + AM
+    @test Matrix(_A) == AM + AM
 end

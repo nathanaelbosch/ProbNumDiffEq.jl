@@ -14,6 +14,15 @@ q = 2
     K2 = PNDE.IsometricKroneckerProduct(d, R2)
     M2 = Matrix(K2)
 
+    # Base
+    K3 = PNDE.IsometricKroneckerProduct(d, copy(R2))
+    M3 = Matrix(K3)
+    @test similar(K1) isa PNDE.IsometricKroneckerProduct
+    @test copy(K1) isa PNDE.IsometricKroneckerProduct
+    @test copy!(K3, K1) isa PNDE.IsometricKroneckerProduct
+    @test K3 == K1
+    @test size(K1) == size(M1)
+
     function tttm(M) # quick type test and to matrix
         @test M isa PNDE.IsometricKroneckerProduct
         return Matrix(M)
@@ -23,7 +32,9 @@ q = 2
     @test tttm(K1 * K2) ≈ M1 * M2
     @test tttm(K1 + K2) ≈ M1 + M2
 
-    @test tttm(PNDE.add!(copy(K1), K2)) ≈ M1 + M2
+    _K1 = copy(K1)
+    @test tttm(PNDE.add!(_K1, K2)) ≈ M1 + M2
+    @test _K1 ≈ M1 + M2
 
     # DimensionMismatch
     X = PNDE.IsometricKroneckerProduct(d, rand(T, 1, 1))
@@ -51,15 +62,6 @@ q = 2
     @test det(K1) ≈ det(M1)
     @test tttm(K1 / K2) ≈ M1 / M2
     @test tttm(K1 \ K2) ≈ M1 \ M2
-
-    # Base
-    K3 = PNDE.IsometricKroneckerProduct(d, copy(R2))
-    M3 = Matrix(K3)
-    @test similar(K1) isa PNDE.IsometricKroneckerProduct
-    @test copy(K1) isa PNDE.IsometricKroneckerProduct
-    @test copy!(K3, K1) isa PNDE.IsometricKroneckerProduct
-    @test K3 == K1
-    @test size(K1) == size(M1)
 
     # Base
     @test one(K1) isa PNDE.IsometricKroneckerProduct
