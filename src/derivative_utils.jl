@@ -8,7 +8,15 @@ function calc_H!(H, integ, cache)
         calc_H_EK0!(H, integ, cache)
         # @assert integ.u == @view x_pred.μ[1:(q+1):end]
         OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
-        ProbNumDiffEq._matmul!(H, view(ddu, 1:d, :), cache.SolProj, -1.0, 1.0)
+        _ddu = size(ddu, 2) != d ? view(ddu, 1:d, :) : ddu
+        _matmul!(H, _ddu, cache.SolProj, -1.0, 1.0)
+    elseif integ.alg isa DiagonalEK1
+        calc_H_EK0!(H, integ, cache)
+        OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
+        ddu_diag = Diagonal(ddu)
+        _matmul!(H, ddu_diag, cache.SolProj, -1.0, 1.0)
+    else
+        error("Unknown algorithm")
     end
     return nothing
 end

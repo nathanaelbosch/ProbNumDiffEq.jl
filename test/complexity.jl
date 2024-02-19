@@ -7,98 +7,86 @@ using Test, SafeTestsets
 
 @testset "Scaling with ODE dimension" begin
     f(du, u, p, t) = mul!(du, -0.9I, u)
+    jac(J, u, p, t) = @simd ivdep for i in 1:size(J, 1)
+        J[i, i] = -0.9
+    end
     tspan = (0.0, 1.0)
     prob = ODEProblem(f, ones(1), tspan)
 
     NUMRUNS = 20
 
-    @testset "Order 1 + perfect init + no smoothing" begin
-        time_dim(d; Alg) = begin
-            _prob = remake(prob, u0=ones(d))
-            tmin = Inf
-            for _ in 1:NUMRUNS
-                integ = init(_prob,
-                    Alg(
-                        smooth=false,
-                        order=1,
-                        initialization=ClassicSolverInit(),
-                    ),
-                    dense=false, save_everystep=false,
-                    adaptive=false, dt=1e-2,
-                )
-                t = @elapsed solve!(integ)
-                tmin = min(tmin, t)
-            end
-            return tmin
+    _timer(d, alg; kwargs...) = begin
+        _prob = remake(
+            prob,
+            u0=ones(d),
+            f=ODEFunction(f; jac=jac, jac_prototype=Diagonal(ones(d))),
+        )
+        tmin = Inf
+        for _ in 1:NUMRUNS
+            integ = init(_prob, alg; adaptive=false, dt=1e-2, kwargs...)
+            t = @elapsed solve!(integ)
+            tmin = min(tmin, t)
         end
+        return tmin
+    end
+
+    @testset "Order 1 + perfect init + no smoothing" begin
+        t(d, Alg) = _timer(
+            d, Alg(smooth=false, order=1, initialization=ClassicSolverInit());
+            dense=false, save_everystep=false,
+        )
 
         dims_ek0 = 2 .^ (8:15)
-        times_ek0 = [time_dim(d; Alg=EK0) for d in dims_ek0]
-        dims_ek1 = 2 .^ (2:6)
-        times_ek1 = [time_dim(d; Alg=EK1) for d in dims_ek1]
-
+        times_ek0 = [t(d, EK0) for d in dims_ek0]
         lr_ek0 = linregress(log.(dims_ek0), log.(times_ek0))
-        @test_skip slope(lr_ek0)[1] ≈ 1 atol = 0.1
-        @test 0.5 < slope(lr_ek0)[1] < 1.3
+        @test slope(lr_ek0)[1] ≈ 1 atol = 1
 
+        dims_ek1 = 2 .^ (3:6)
+        times_ek1 = [t(d, EK1) for d in dims_ek1]
         lr_ek1 = linregress(log.(dims_ek1), log.(times_ek1))
-        @test_skip slope(lr_ek1)[1] ≈ 2 atol = 0.2
-        # This is what we would actually expect, not sure what's going wrong:
-        @test_skip slope(lr_ek1)[1] ≈ 3 atol = 0.1
+        @test slope(lr_ek1)[1] ≈ 3 atol = 1
+
+        dims_dek1 = 2 .^ (4:10)
+        times_dek1 = [t(d, DiagonalEK1) for d in dims_dek1]
+        lr_dek1 = linregress(log.(dims_dek1), log.(times_dek1))
+        @test slope(lr_dek1)[1] ≈ 1 atol = 1
     end
 
     @testset "Order 3 + Taylor-init + no smoothing" begin
-        time_dim(d; Alg) = begin
-            _prob = remake(prob, u0=ones(d))
-            tmin = Inf
-            for _ in 1:NUMRUNS
-                integ = init(_prob, Alg(smooth=false),
-                    dense=false, save_everystep=false,
-                    adaptive=false, dt=1e-2)
-                t = @elapsed solve!(integ)
-                tmin = min(tmin, t)
-            end
-            return tmin
-        end
+        t(d, Alg) = _timer(d, Alg(smooth=false); dense=false, save_everystep=false)
 
         dims_ek0 = 2 .^ (8:15)
-        times_ek0 = [time_dim(d; Alg=EK0) for d in dims_ek0]
-        dims_ek1 = 2 .^ (2:5)
-        times_ek1 = [time_dim(d; Alg=EK1) for d in dims_ek1]
-
+        times_ek0 = [t(d, EK0) for d in dims_ek0]
         lr_ek0 = linregress(log.(dims_ek0), log.(times_ek0))
-        @test_skip slope(lr_ek0)[1] ≈ 1 atol = 0.1
-        @test 0.5 < slope(lr_ek0)[1] < 1.3
+        @test slope(lr_ek0)[1] ≈ 1 atol = 1
 
+        dims_ek1 = 2 .^ (3:6)
+        times_ek1 = [t(d, EK1) for d in dims_ek1]
         lr_ek1 = linregress(log.(dims_ek1), log.(times_ek1))
-        @test_skip slope(lr_ek1)[1] ≈ 2 atol = 0.5
-        # This is what we would actually expect, not sure what's going wrong:
-        @test_skip slope(lr_ek1)[1] ≈ 3 atol = 0.1
+        @test slope(lr_ek1)[1] ≈ 3 atol = 1
+
+        dims_dek1 = 2 .^ (4:10)
+        times_dek1 = [t(d, DiagonalEK1) for d in dims_dek1]
+        lr_dek1 = linregress(log.(dims_dek1), log.(times_dek1))
+        @test slope(lr_dek1)[1] ≈ 1 atol = 1
     end
 
     @testset "Order 3 with smoothing and everyting" begin
-        time_dim(d; Alg) = begin
-            _prob = remake(prob, u0=ones(d))
-            tmin = Inf
-            for _ in 1:NUMRUNS
-                integ = init(_prob, Alg(), adaptive=false, dt=1e-2)
-                t = @elapsed solve!(integ)
-                tmin = min(tmin, t)
-            end
-            return tmin
-        end
+        t(d, Alg) = _timer(d, Alg())
 
         dims_ek0 = 2 .^ (8:13)
-        times_ek0 = [time_dim(d; Alg=EK0) for d in dims_ek0]
-        dims_ek1 = 2 .^ (1:4)
-        times_ek1 = [time_dim(d; Alg=EK1) for d in dims_ek1]
-
+        times_ek0 = [t(d, EK0) for d in dims_ek0]
         lr_ek0 = linregress(log.(dims_ek0), log.(times_ek0))
-        @test 0.5 < slope(lr_ek0)[1] < 1.3
+        @test slope(lr_ek0)[1] ≈ 1 atol = 1
 
+        dims_ek1 = 2 .^ (3:6)
+        times_ek1 = [t(d, EK1) for d in dims_ek1]
         lr_ek1 = linregress(log.(dims_ek1), log.(times_ek1))
-        @test_skip slope(lr_ek1)[1] ≈ 2 atol = 0.2
-        # This is what we would actually expect, not sure what's going wrong:
-        @test_skip slope(lr_ek1)[1] ≈ 3 atol = 0.1
+        @test slope(lr_ek1)[1] ≈ 3 atol = 1
+
+        dims_dek1 = 2 .^ (4:10)
+        times_dek1 = [t(d, DiagonalEK1) for d in dims_dek1]
+        lr_dek1 = linregress(log.(dims_dek1), log.(times_dek1))
+        @test slope(lr_dek1)[1] ≈ 1 atol = 1
     end
 end

@@ -5,7 +5,7 @@ mutable struct EKCache{
     RType,CFacType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,
     AType,QType,
     FType,LType,FHGMethodType,FHGCacheType,
-    HType,vecType,matType,bkType,diffusionType,diffModelType,measModType,measType,
+    HType,vecType,dduType,matType,bkType,diffusionType,diffModelType,measModType,measType,
     puType,llType,dtType,rateType,UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
@@ -49,7 +49,7 @@ mutable struct EKCache{
     pu_tmp::puType
     H::HType
     du::duType
-    ddu::matType
+    ddu::dduType
     K1::matType
     G1::matType
     Smat::HType
@@ -103,7 +103,7 @@ function OrdinaryDiffEq.alg_cache(
     # uElType = eltype(u_vec)
     uElType = uBottomEltypeNoUnits
 
-    FAC = get_covariance_structure(alg; elType=uElType, d, q)
+    FAC = alg.covariance_factorization{uElType}(d, q)
     if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
         throw(
             ArgumentError(
@@ -165,7 +165,7 @@ function OrdinaryDiffEq.alg_cache(
     # Diffusion Model
     diffmodel = alg.diffusionmodel
     initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
-    copy!(x0.Σ, apply_diffusion(x0.Σ, initdiff))
+    apply_diffusion!(x0.Σ, initdiff)
 
     # Measurement model related things
     R =
@@ -178,22 +178,23 @@ function OrdinaryDiffEq.alg_cache(
 
     # Caches
     du = is_secondorder_ode ? similar(u.x[2]) : similar(u)
-    ddu = factorized_similar(FAC, length(u), length(u))
+    ddu =
+        !isnothing(f.jac_prototype) ?
+        f.jac_prototype : zeros(uElType, length(u), length(u))
     _d = is_secondorder_ode ? 2d : d
-    pu_tmp = Gaussian(
-        similar(Array{uElType}, _d),
-        PSDMatrix(
-            if FAC isa IsometricKroneckerCovariance
-                if is_secondorder_ode
+    pu_tmp = if is_secondorder_ode
+        Gaussian(similar(Array{uElType}, 2d),
+            PSDMatrix(
+                if FAC isa IsometricKroneckerCovariance
                     Kronecker.kronecker(similar(Matrix{uElType}, D ÷ d, _d ÷ d), I(d))
+                elseif FAC isa BlockDiagonalCovariance
+                    error("I have no idea")
                 else
-                    factorized_similar(FAC, D, d)
-                end
-            else
-                similar(Matrix{uElType}, D, _d)
-            end,
-        ),
-    )
+                    similar(Matrix{uElType}, D, _d)
+                end))
+    else
+        Gaussian(similar(Array{uElType}, d), PSDMatrix(factorized_similar(FAC, D, d)))
+    end
 
     K = factorized_similar(FAC, D, d)
     G = factorized_similar(FAC, D, D)
@@ -240,7 +241,7 @@ function OrdinaryDiffEq.alg_cache(
         typeof(R),typeof(FAC),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),
         typeof(F),typeof(L),typeof(FHG_method),typeof(FHG_cache),
-        typeof(H),typeof(C_d),matType,
+        typeof(H),typeof(C_d),typeof(ddu),matType,
         typeof(backward_kernel),typeof(initdiff),
         typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),

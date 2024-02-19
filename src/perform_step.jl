@@ -124,7 +124,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
 
     # Update the global diffusion MLE (if applicable)
     if !isdynamic(cache.diffusionmodel)
-        cache.global_diffusion = estimate_global_diffusion(cache.diffusionmodel, integ)
+        estimate_global_diffusion(cache.diffusionmodel, integ)
     end
 
     # Advance the state
@@ -163,7 +163,7 @@ compute_measurement_covariance!(cache) = begin
     _matmul!(cache.C_Dxd, cache.x_pred.Σ.R, cache.H')
     _matmul!(cache.measurement.Σ, cache.C_Dxd', cache.C_Dxd)
     if !isnothing(cache.R)
-        cache.measurement.Σ .+= _matmul!(cache.C_dxd, cache.R.R', cache.R.R)
+        add!(cache.measurement.Σ, _matmul!(cache.C_dxd, cache.R.R', cache.R.R))
     end
 end
 
@@ -218,35 +218,22 @@ To save allocations, the function modifies the given `cache` and writes into
 `cache.C_Dxd` during some computations.
 """
 function estimate_errors!(cache::AbstractODEFilterCache)
-    @unpack local_diffusion, Qh, H, d = cache
+    @unpack local_diffusion, Qh, H, C_d, C_Dxd, C_DxD = cache
+    _Q = apply_diffusion!(PSDMatrix(C_DxD), Qh, local_diffusion)
+    _HQH = PSDMatrix(_matmul!(C_Dxd, _Q.R, H'))
+    error_estimate = diag!(C_d, _HQH)
+    @.. error_estimate = sqrt(error_estimate)
+    return error_estimate
+end
 
-    R = cache.C_Dxd
-
-    if local_diffusion isa Diagonal
-        _QR = cache.C_DxD .= Qh.R .* sqrt.(local_diffusion.diag)'
-        _matmul!(R, _QR, H')
-        error_estimate = view(cache.tmp, 1:d)
-        sum!(abs2, error_estimate', view(R, :, 1:d))
-        error_estimate .= sqrt.(error_estimate)
-        return error_estimate
-    elseif local_diffusion isa Number
-        _matmul!(R, Qh.R, H')
-
-        # error_estimate = diag(PSDMatrix(R))
-        # error_estimate .*= local_diffusion
-        # error_estimate .= sqrt.(error_estimate)
-        # error_estimate = view(error_estimate, 1:d)
-
-        # faster:
-        error_estimate = view(cache.tmp, 1:d)
-        if R isa IsometricKroneckerProduct
-            error_estimate .= sum(abs2, R.B)
-        else
-            sum!(abs2, error_estimate', view(R, :, 1:d))
-        end
-        error_estimate .*= local_diffusion
-        error_estimate .= sqrt.(error_estimate)
-
-        return error_estimate
+diag!(v::AbstractVector, M::PSDMatrix) = (sum!(abs2, v', M.R); v)
+diag!(v::AbstractVector, M::PSDMatrix{<:Number,<:IsometricKroneckerProduct}) =
+    v .= sum(abs2, M.R.B)
+diag!(v::AbstractVector, M::PSDMatrix{<:Number,<:BlockDiag}) = begin
+    @assert length(v) == nblocks(M.R)
+    @assert size(blocks(M.R)[1], 2) == 1 # assumes all of them have the same shape
+    @simd ivdep for i in eachindex(blocks(M.R))
+        v[i] = sum(abs2, blocks(M.R)[i])
     end
+    return v
 end

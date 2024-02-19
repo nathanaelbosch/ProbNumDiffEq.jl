@@ -57,6 +57,7 @@ function fenrir_data_loglik(
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
     o = length(data.u[1])
     R = cov2psdmatrix(observation_noise_cov; d=o)
+    R = to_factorized_matrix(integ.cache.covariance_factorization, R)
     LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
 
     return LL
@@ -74,17 +75,10 @@ function fit_pnsolution_to_data!(
     LL = zero(eltype(sol.prob.p))
 
     o = length(data.u[1])
-    @unpack x_tmp, C_dxd, C_d, K1, C_Dxd, C_DxD, m_tmp = cache
-    _cache = (
-        x_tmp=x_tmp,
-        C_DxD=C_DxD,
-        C_Dxd=view(C_Dxd, :, 1:o),
-        C_dxd=view(C_dxd, 1:o, 1:o),
-        C_d=view(C_d, 1:o),
-        K1=view(K1, :, 1:o),
-        K2=view(C_Dxd, :, 1:o),
-        m_tmp=Gaussian(view(m_tmp.μ, 1:o), view(m_tmp.Σ, 1:o, 1:o)),
-    )
+    d = cache.d
+    @unpack x_tmp, m_tmp = cache
+    _cache = make_obssized_cache(cache; o)
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
 
     x_posterior = copy(sol.x_filt) # the object to be filled
     state2data_projmat = proj * cache.SolProj
@@ -136,9 +130,7 @@ function measure_and_update!(x, u, H, R::PSDMatrix, cache)
     z, S = cache.m_tmp
     _matmul!(z, H, x.μ)
     z .-= u
-    _matmul!(cache.C_Dxd, x.Σ.R, H')
-    _matmul!(S, cache.C_Dxd', cache.C_Dxd)
-    S .+= _matmul!(cache.C_dxd, R.R', R.R)
+    S = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
     msmnt = Gaussian(z, S)
 
     return update!(x, copy!(cache.x_tmp, x), msmnt, H; R=R, cache)

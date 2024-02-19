@@ -19,11 +19,20 @@ const GROUP = get(ENV, "GROUP", "All")
 @testset "ProbNumDiffEq" begin
     if GROUP == "All" || GROUP == "Core"
         @timedtestset "Core" begin
+            @timedsafetestset "BlockDiagonals" begin
+                include("core/blockdiagonals.jl")
+            end
+            @timedsafetestset "FastLinalg (`_matmul!`)" begin
+                include("core/fast_linalg.jl")
+            end
             @timedsafetestset "Filtering" begin
                 include("core/filtering.jl")
             end
             @timedsafetestset "Priors" begin
                 include("core/priors.jl")
+            end
+            @timedsafetestset "Diffusions" begin
+                include("core/diffusions.jl")
             end
             @timedsafetestset "Preconditioning" begin
                 include("core/preconditioning.jl")
@@ -119,6 +128,9 @@ const GROUP = get(ENV, "GROUP", "All")
             end
             @timedsafetestset "Data Likelihoods" begin
                 include("data_likelihoods.jl")
+            end
+            @timedsafetestset "Observation noise" begin
+                include("observation_noise.jl")
             end
         end
     end

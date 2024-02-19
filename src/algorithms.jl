@@ -3,7 +3,13 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
 
-function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
+function ekargcheck(
+    alg;
+    diffusionmodel,
+    pn_observation_noise,
+    covariance_factorization,
+    kwargs...,
+)
     if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
        (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
         throw(
@@ -12,14 +18,63 @@ function ekargcheck(alg; diffusionmodel, pn_observation_noise, kwargs...)
             ),
         )
     end
-    if (
-        (diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate) ||
-        diffusionmodel isa DynamicMVDiffusion) && alg == EK1
-        throw(
-            ArgumentError(
-                "The `EK1` algorithm does not support automatic calibration of multivariate diffusion models. Either use the `EK0` instead, or use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`.",
-            ),
-        )
+    if alg == EK1
+        if diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate
+            throw(
+                ArgumentError(
+                    "The `EK1` algorithm does not support automatic global calibration of multivariate diffusion models. Either use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`. Or use a different solve, like `EK0` or `DiagonalEK1`.",
+                ),
+            )
+        elseif diffusionmodel isa DynamicMVDiffusion
+            throw(
+                ArgumentError(
+                    "The `EK1` algorithm does not support automatic calibration of local multivariate diffusion models. Either use a scalar diffusion model, or use a different solve, like `EK0` or `DiagonalEK1`.",
+                ),
+            )
+        end
+    end
+    if !(isnothing(pn_observation_noise) || ismissing(pn_observation_noise))
+        if covariance_factorization == IsometricKroneckerCovariance && !(
+            pn_observation_noise isa Number
+            || pn_observation_noise isa UniformScaling
+            || pn_observation_noise isa Diagonal{<:Number,<:FillArrays.Fill})
+            throw(
+                ArgumentError(
+                    "The supplied `pn_observation_noise` is not compatible with the chosen `IsometricKroneckerCovariance` factorization. Try one of `BlockDiagonalCovariance` or `DenseCovariance` instead!",
+                ),
+            )
+        end
+        if covariance_factorization == BlockDiagonalCovariance && !(
+            pn_observation_noise isa Number
+            || pn_observation_noise isa UniformScaling
+            || pn_observation_noise isa Diagonal)
+            throw(
+                ArgumentError(
+                    "The supplied `pn_observation_noise` is not compatible with the chosen `BlockDiagonalCovariance` factorization. Try `DenseCovariance` instead!",
+                ),
+            )
+        end
+    end
+end
+
+function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:AbstractEK}
+    if Alg <: EK0
+        if prior isa IWP
+            if (diffusionmodel isa DynamicDiffusion || diffusionmodel isa FixedDiffusion)
+                return IsometricKroneckerCovariance
+            else
+                return BlockDiagonalCovariance
+            end
+        else
+            # This is not great as other priors can be Kronecker too; TODO
+            return DenseCovariance
+        end
+    elseif Alg <: DiagonalEK1
+        return BlockDiagonalCovariance
+    elseif Alg <: EK1
+        return DenseCovariance
+    else
+        throw(ArgumentError("Unknown algorithm type $Alg"))
     end
 end
 
@@ -58,22 +113,25 @@ julia> solve(prob, EK0())
 
 # [References](@ref references)
 """
-struct EK0{PT,DT,IT,RT} <: AbstractEK
+struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
     pn_observation_noise::RT
+    covariance_factorization::CF
     EK0(; order=3,
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         pn_observation_noise::RT=nothing,
-    ) where {PT,DT,IT,RT} = begin
-        ekargcheck(EK0; diffusionmodel, pn_observation_noise)
-        new{PT,DT,IT,RT}(
-            prior, diffusionmodel, smooth, initialization, pn_observation_noise)
+        covariance_factorization::CF=covariance_structure(EK0, prior, diffusionmodel),
+    ) where {PT,DT,IT,RT,CF} = begin
+        ekargcheck(EK0; diffusionmodel, pn_observation_noise, covariance_factorization)
+        new{PT,DT,IT,RT,CF}(
+            prior, diffusionmodel, smooth, initialization, pn_observation_noise,
+            covariance_factorization)
     end
 end
 
@@ -117,12 +175,13 @@ julia> solve(prob, EK1())
 
 # [References](@ref references)
 """
-struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
+struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
     initialization::IT
     pn_observation_noise::RT
+    covariance_factorization::CF
     EK1(;
         order=3,
         prior::PT=IWP(order),
@@ -135,8 +194,9 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
         standardtag=Val{true}(),
         concrete_jac=nothing,
         pn_observation_noise::RT=nothing,
-    ) where {PT,DT,IT,RT} = begin
-        ekargcheck(EK1; diffusionmodel, pn_observation_noise)
+        covariance_factorization::CF=covariance_structure(EK1, prior, diffusionmodel),
+    ) where {PT,DT,IT,RT,CF} = begin
+        ekargcheck(EK1; diffusionmodel, pn_observation_noise, covariance_factorization)
         new{
             _unwrap_val(chunk_size),
             _unwrap_val(autodiff),
@@ -147,12 +207,62 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT} <: AbstractEK
             DT,
             IT,
             RT,
+            CF,
         }(
             prior,
             diffusionmodel,
             smooth,
             initialization,
             pn_observation_noise,
+            covariance_factorization,
+        )
+    end
+end
+
+struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
+    prior::PT
+    diffusionmodel::DT
+    smooth::Bool
+    initialization::IT
+    pn_observation_noise::RT
+    covariance_factorization::CF
+    DiagonalEK1(;
+        order=3,
+        prior::PT=IWP(order),
+        diffusionmodel::DT=DynamicDiffusion(),
+        smooth=true,
+        initialization::IT=TaylorModeInit(num_derivatives(prior)),
+        chunk_size=Val{0}(),
+        autodiff=Val{true}(),
+        diff_type=Val{:forward},
+        standardtag=Val{true}(),
+        concrete_jac=nothing,
+        pn_observation_noise::RT=nothing,
+        covariance_factorization::CF=covariance_structure(
+            DiagonalEK1,
+            prior,
+            diffusionmodel,
+        ),
+    ) where {PT,DT,IT,RT,CF} = begin
+        ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise, covariance_factorization)
+        new{
+            _unwrap_val(chunk_size),
+            _unwrap_val(autodiff),
+            diff_type,
+            _unwrap_val(standardtag),
+            _unwrap_val(concrete_jac),
+            PT,
+            DT,
+            IT,
+            RT,
+            CF,
+        }(
+            prior,
+            diffusionmodel,
+            smooth,
+            initialization,
+            pn_observation_noise,
+            covariance_factorization,
         )
     end
 end
@@ -236,7 +346,12 @@ function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,D
     )
 end
 
-function DiffEqBase.prepare_alg(alg::EK1{0}, u0::AbstractArray{T}, p, prob) where {T}
+function DiffEqBase.prepare_alg(
+    alg::Union{EK1{0},DiagonalEK1{0}},
+    u0::AbstractArray{T},
+    p,
+    prob,
+) where {T}
     # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
     # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
     # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which

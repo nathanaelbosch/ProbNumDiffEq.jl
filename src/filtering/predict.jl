@@ -66,7 +66,7 @@ function predict_cov!(
     Qh::PSDMatrix,
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
-    diffusion=1,
+    diffusion::Union{Number,Diagonal},
 )
     if iszero(diffusion)
         fast_X_A_Xt!(Σ_out, Σ_curr, Ah)
@@ -76,10 +76,10 @@ function predict_cov!(
     D = size(Qh, 1)
 
     _matmul!(view(R, 1:D, 1:D), Σ_curr.R, Ah')
-    if !isone(diffusion)
-        _matmul!(view(R, D+1:2D, 1:D), Qh.R, sqrt.(diffusion))
-    else
+    if isone(diffusion)
         @.. R[D+1:2D, 1:D] = Qh.R
+    else
+        apply_diffusion!(PSDMatrix(view(R, D+1:2D, 1:D)), Qh, diffusion)
     end
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
@@ -101,7 +101,7 @@ function predict_cov!(
     Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
     C_DxD::IsometricKroneckerProduct,
     C_2DxD::IsometricKroneckerProduct,
-    diffusion=1,
+    diffusion::Union{Number,Diagonal},
 ) where {T,S}
     _Σ_out = PSDMatrix(Σ_out.R.B)
     _Σ_curr = PSDMatrix(Σ_curr.R.B)
@@ -109,7 +109,33 @@ function predict_cov!(
     _Qh = PSDMatrix(Qh.R.B)
     _C_DxD = C_DxD.B
     _C_2DxD = C_2DxD.B
-    _diffusion = diffusion isa IsometricKroneckerProduct ? diffusion.B : diffusion
+    _diffusion =
+        diffusion isa Number ? diffusion :
+        diffusion isa IsometricKroneckerProduct ? diffusion.B : diffusion
 
     return predict_cov!(_Σ_out, _Σ_curr, _Ah, _Qh, _C_DxD, _C_2DxD, _diffusion)
+end
+
+# BlockDiagonal version
+function predict_cov!(
+    Σ_out::PSDMatrix{T,<:BlockDiag},
+    Σ_curr::PSDMatrix{T,<:BlockDiag},
+    Ah::BlockDiag,
+    Qh::PSDMatrix{S,<:BlockDiag},
+    C_DxD::BlockDiag,
+    C_2DxD::BlockDiag,
+    diffusion::Union{Number,Diagonal},
+) where {T,S}
+    @simd ivdep for i in eachindex(blocks(Σ_out.R))
+        predict_cov!(
+            PSDMatrix(Σ_out.R.blocks[i]),
+            PSDMatrix(Σ_curr.R.blocks[i]),
+            Ah.blocks[i],
+            PSDMatrix(Qh.R.blocks[i]),
+            C_DxD.blocks[i],
+            C_2DxD.blocks[i],
+            diffusion isa Number ? diffusion : diffusion.diag[i],
+        )
+    end
+    return Σ_out
 end

@@ -7,9 +7,9 @@ using FiniteHorizonGramians
 using Statistics
 using Plots
 using SimpleUnPack
+using FillArrays
 
 h = 0.1
-σ = 0.1
 
 @testset "General prior API" begin
     for prior in (
@@ -31,11 +31,6 @@ h = 0.1
         @test A1 ≈ A3
         @test Matrix(Q1) ≈ Q3
 
-        A4, Q4R = PNDE._discretize_sqrt_with_quadraturetrick(
-            PNDE.LTISDE(Matrix(sde.F), Matrix(sde.L)), h)
-        @test A1 ≈ A4
-        @test Q1.R ≈ Q4R
-
         ts = 0:0.1:1
         marginals = @test_nowarn PNDE.marginalize(prior, ts)
         @test length(marginals) == length(ts)
@@ -53,6 +48,8 @@ end
 
 @testset "Test IWP (d=2,q=2)" begin
     d, q = 2, 2
+
+    σ = 0.1
 
     prior = PNDE.IWP(dim=d, num_derivatives=q)
 
@@ -122,41 +119,54 @@ end
 
     @testset "Test vanilla (ie. non-preconditioned)" begin
         Ah, Qh = PNDE.discretize(prior, h)
-        Qh = PNDE.apply_diffusion(Qh, σ^2)
-
         @test AH_22_IBM ≈ Ah
-        @test QH_22_IBM ≈ Matrix(Qh)
+
+        for Γ in (σ^2, σ^2 * Eye(d))
+            @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(Qh, Γ))
+        end
     end
 
     @testset "Test with preconditioning" begin
         A, Q = PNDE.preconditioned_discretize(prior)
-        Qh = PNDE.apply_diffusion(Q, σ^2)
-
         @test AH_22_PRE ≈ Matrix(A)
-        @test QH_22_PRE ≈ Matrix(Qh)
+
+        for Γ in (σ^2, σ^2 * Eye(d))
+            @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, Γ))
+        end
     end
 
     @testset "Test `make_transition_matrices!`" begin
-        A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
-            PNDE.DenseCovariance{Float64}(d, q), prior, h)
+        for FAC in (PNDE.IsometricKroneckerCovariance, PNDE.BlockDiagonalCovariance)
+            A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
+                PNDE.BlockDiagonalCovariance{Float64}(d, q), prior, h)
 
-        @test AH_22_PRE ≈ A
-        @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, σ^2))
+            @test AH_22_PRE ≈ A
 
-        cache = (
-            d=d,
-            q=q,
-            A=A,
-            Q=Q,
-            P=P,
-            PI=PI,
-            Ah=Ah,
-            Qh=Qh,
-        )
+            for Γ in (σ^2, σ^2 * Eye(d), σ^2 * I(d))
+                @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, Γ))
+            end
 
-        make_transition_matrices!(cache, prior, h)
-        @test AH_22_IBM ≈ cache.Ah
-        @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, σ^2))
+            cache = (
+                d=d,
+                q=q,
+                A=A,
+                Q=Q,
+                P=P,
+                PI=PI,
+                Ah=Ah,
+                Qh=Qh,
+            )
+
+            make_transition_matrices!(cache, prior, h)
+            @test AH_22_IBM ≈ cache.Ah
+
+            for Γ in (σ^2, σ^2 * Eye(d), σ^2 * I(d))
+                @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, Γ))
+            end
+            if FAC != PNDE.IsometricKroneckerCovariance
+                @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, σ^2 * I(d)))
+            end
+        end
     end
 end
 

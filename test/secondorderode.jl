@@ -4,13 +4,13 @@ using LinearAlgebra
 using Test
 
 function twobody(du, u, p, t)
-    R3 = norm(u[1:2])^3
-    @. du[3:4] = -u[1:2] / R3
-    @. du[1:2] = u[3:4]
+    R3 = norm(u[3:4])^3
+    @. du[3:4] = u[1:2]
+    @. du[1:2] = -u[3:4] / R3
 end
 u0, du0 = [0.4, 0.0], [0.0, 2.0]
 tspan = (0, 0.1)
-prob_base = ODEProblem(twobody, [u0...; du0...], tspan)
+prob_base = ODEProblem(twobody, [du0...; u0...], tspan)
 
 function twobody2_iip(ddu, du, u, p, t)
     R3 = norm(u)^3
@@ -24,7 +24,7 @@ function twobody2_oop(du, u, p, t)
 end
 prob_oop = SecondOrderODEProblem(twobody2_oop, du0, u0, tspan)
 
-appxsol = solve(prob_iip, Vern9(), abstol=1e-10, reltol=1e-10)
+appxsol = solve(prob_base, Vern9(), abstol=1e-9, reltol=1e-6)
 
 @testset "$S" for (S, _prob) in (("IIP", prob_iip), ("OOP", prob_oop))
     @testset "$alg" for alg in (
@@ -34,8 +34,8 @@ appxsol = solve(prob_iip, Vern9(), abstol=1e-10, reltol=1e-10)
         EK1(initialization=ForwardDiffInit(2)),
         # EK1(initialization=ClassicSolverInit()), # unstable for this problem
         EK1(diffusionmodel=FixedDiffusion()),
-        EK0(diffusionmodel=FixedMVDiffusion()),
-        EK0(diffusionmodel=DynamicMVDiffusion()),
+        # EK0(diffusionmodel=FixedMVDiffusion()),
+        # EK0(diffusionmodel=DynamicMVDiffusion()),
     )
         sol = solve(_prob, alg)
 

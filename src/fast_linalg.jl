@@ -13,46 +13,34 @@ _matmul!(C, A, B)
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
 # Use Octavian.jl's matrix-matrix products whenever applicable
+const MSR{T} = Union{Matrix{T},SubArray{T},Base.ReshapedArray{T},Adjoint{T,<:Matrix}}
 _matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::AbstractMatrix{T},
+    C::MSR{T},
+    A::MSR{T},
+    B::MSR{T},
     alpha::Number,
     beta::Number,
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B, alpha, beta)
 _matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::AbstractMatrix{T},
+    C::MSR{T},
+    A::MSR{T},
+    B::MSR{T},
 ) where {T<:LinearAlgebra.BlasFloat} = matmul!(C, A, B)
 # Some exceptions where we'd rather broadcast with FastBroadcast.jl:
 # Matrix-scalar products
 _matmul!(C::AbstractVecOrMat, A::AbstractVecOrMat, b::Number) = @.. C = A * b
 _matmul!(C::AbstractVecOrMat, a::Number, B::AbstractVecOrMat) = @.. C = a * B
 # Matrix matrix products with diagonal matrices
-_matmul!(C::AbstractMatrix, A::AbstractMatrix, B::Diagonal) = (@.. C = A * B.diag')
-_matmul!(C::AbstractMatrix, A::Diagonal, B::AbstractMatrix) = (@.. C = A.diag * B)
-_matmul!(C::AbstractMatrix, A::Diagonal, B::Diagonal) = @.. C = A * B
-_matmul!(
-    C::AbstractMatrix{T},
-    A::AbstractMatrix{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A * B.diag')
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::AbstractMatrix{T},
-) where {T<:LinearAlgebra.BlasFloat} = (@.. C = A.diag * B)
-_matmul!(
-    C::AbstractMatrix{T},
-    A::Diagonal{T},
-    B::Diagonal{T},
-) where {T<:LinearAlgebra.BlasFloat} = @.. C = A * B
-_matmul!(
-    C::AbstractMatrix{T},
-    A::LowerTriangular{T},
-    B::UpperTriangular{T},
-) where {T<:LinearAlgebra.BlasFloat} = mul!(C, A, B)
+_matmul!(C::MSR, A::MSR, B::Diagonal) =
+    @.. C = A * B.diag'
+_matmul!(C::MSR, A::Diagonal, B::MSR) =
+    (@.. C = A.diag * B)
+_matmul!(C::MSR, A::Diagonal, B::Diagonal) =
+    (@.. C = A * B)
+_matmul!(C::MSR, A::MSR, B::Diagonal, alpha::Number, beta::Number) =
+    @.. C = A * B.diag' * alpha + C * beta
+_matmul!(C::MSR, A::Diagonal, B::MSR, alpha::Number, beta::Number) =
+    (@.. C = A.diag * B * alpha + C * beta)
 
 """
     getupperright!(A)

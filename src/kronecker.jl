@@ -62,6 +62,7 @@ end
 Base.:*(K::IKP, a::Number) = IsometricKroneckerProduct(K.ldim, K.B * a)
 Base.:*(a::Number, K::IKP) = IsometricKroneckerProduct(K.ldim, a * K.B)
 LinearAlgebra.adjoint(A::IKP) = IsometricKroneckerProduct(A.ldim, A.B')
+LinearAlgebra.rmul!(A::IKP, b::Number) = IsometricKroneckerProduct(A.ldim, rmul!(A.B, b))
 
 function check_same_size(A::IKP, B::IKP)
     if A.ldim != B.ldim || size(A.B) != size(B.B)
@@ -102,6 +103,13 @@ Base.:+(A::IKP, B::IKP) = begin
 end
 Base.:+(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.ldim, U + K.B)
 Base.:+(K::IKP, U::UniformScaling) = IsometricKroneckerProduct(K.ldim, U + K.B)
+
+add!(out::IsometricKroneckerProduct, toadd::IsometricKroneckerProduct) = begin
+    @assert out.ldim == toadd.ldim
+    add!(out.B, toadd.B)
+    return out
+end
+
 Base.:-(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.ldim, U - K.B)
 LinearAlgebra.inv(K::IKP) = IsometricKroneckerProduct(K.ldim, inv(K.B))
 Base.:/(A::IKP, B::IKP) = begin
@@ -149,6 +157,27 @@ _matmul!(
 ) where {T<:LinearAlgebra.BlasFloat} = begin
     check_matmul_sizes(A, B, C)
     _matmul!(A.B, B.B, C.B, alpha, beta)
+    return A
+end
+
+mul!(A::IKP, b::Number, C::IKP) = begin
+    check_matmul_sizes(A, C)
+    mul!(A.B, b, C.B)
+    return A
+end
+mul!(A::IKP, B::IKP, c::Number) = begin
+    check_matmul_sizes(A, B)
+    mul!(A.B, B.B, c)
+    return A
+end
+_matmul!(A::IKP, b::Number, C::IKP) = begin
+    check_matmul_sizes(A, C)
+    _matmul!(A.B, b, C.B)
+    return A
+end
+_matmul!(A::IKP, B::IKP, c::Number) = begin
+    check_matmul_sizes(A, B)
+    _matmul!(A.B, B.B, c)
     return A
 end
 

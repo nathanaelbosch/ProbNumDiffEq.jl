@@ -1,5 +1,6 @@
 [deps]
 Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+BlockDiagonals = "0a1fb500-61f7-11e9-3c65-f5ef3456f9f0"
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
 FillArrays = "1a297f60-69ca-5386-bcde-b61e274b549b"
 FiniteDiff = "6a86dc24-6348-571c-b903-95158fe2bd41"
@@ -24,4 +25,3 @@ TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [compat]
 Aqua = "0.8.2"
-DiffEqDevTools = "2.44.1"

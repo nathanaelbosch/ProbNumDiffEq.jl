@@ -2,7 +2,8 @@ __precompile__()
 
 module ProbNumDiffEq
 
-import Base: copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length
+import Base:
+    copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length, zero
 
 using LinearAlgebra
 import LinearAlgebra: mul!
@@ -15,7 +16,7 @@ using Reexport
 import SciMLBase
 import SciMLBase: interpret_vars, getsyms, remake
 using OrdinaryDiffEq
-using SpecialMatrices, ToeplitzMatrices
+using ToeplitzMatrices
 using FastBroadcast
 using StaticArrayInterface
 using FunctionWrappersWrappers
@@ -24,9 +25,7 @@ using TaylorSeries, TaylorIntegration
 using SimpleUnPack
 using RecursiveArrayTools
 using ForwardDiff
-using ExponentialUtilities
 using Octavian
-using FastGaussQuadrature
 import Kronecker
 using ArrayAllocators
 using FiniteHorizonGramians
@@ -45,15 +44,27 @@ vecvec2mat(x) = reduce(hcat, x)'
 
 cov2psdmatrix(cov::Number; d) = PSDMatrix(sqrt(cov) * Eye(d))
 cov2psdmatrix(cov::UniformScaling; d) = PSDMatrix(sqrt(cov.λ) * Eye(d))
+cov2psdmatrix(cov::Diagonal{<:Number,<:FillArrays.Fill}; d) =
+    (@assert size(cov, 1) == size(cov, 2) == d; cov2psdmatrix(cov.diag.value; d))
 cov2psdmatrix(cov::Diagonal; d) =
     (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(sqrt.(cov)))
 cov2psdmatrix(cov::AbstractMatrix; d) =
     (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(Matrix(cholesky(cov).U)))
 cov2psdmatrix(cov::PSDMatrix; d) = (@assert size(cov, 1) == size(cov, 2) == d; cov)
 
+"""
+    add!(out, toadd)
+
+Add `toadd` to `out` in-place.
+"""
+add!
+add!(out, toadd) = (out .+= toadd)
+
 include("fast_linalg.jl")
 include("kronecker.jl")
+include("blockdiagonals.jl")
 include("covariance_structure.jl")
+export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 
@@ -65,14 +76,16 @@ include("priors/ltisde.jl")
 include("priors/ioup.jl")
 include("priors/matern.jl")
 export IWP, IOUP, Matern
-include("diffusions.jl")
+include("diffusions/typedefs.jl")
+include("diffusions/apply_diffusion.jl")
+include("diffusions/calibration.jl")
 export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 
 include("initialization/common.jl")
 export TaylorModeInit, ClassicSolverInit, SimpleInit, ForwardDiffInit
 
 include("algorithms.jl")
-export EK0, EK1
+export EK0, EK1, DiagonalEK1
 export ExpEK, RosenbrockExpEK
 
 include("alg_utils.jl")

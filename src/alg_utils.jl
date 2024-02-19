@@ -4,19 +4,25 @@
 ############################################################################################
 
 OrdinaryDiffEq._alg_autodiff(::AbstractEK) = Val{true}()
-OrdinaryDiffEq._alg_autodiff(::EK1{CS,AD}) where {CS,AD} = Val{AD}()
-OrdinaryDiffEq.alg_difftype(::EK1{CS,AD,DiffType}) where {CS,AD,DiffType} = DiffType
 OrdinaryDiffEq.standardtag(::AbstractEK) = false
-OrdinaryDiffEq.standardtag(::EK1{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} = ST
 OrdinaryDiffEq.concrete_jac(::AbstractEK) = nothing
-OrdinaryDiffEq.concrete_jac(::EK1{CS,AD,DiffType,ST,CJ}) where {CS,AD,DiffType,ST,CJ} = CJ
 
 @inline DiffEqBase.get_tmp_cache(integ, alg::AbstractEK, cache::AbstractODEFilterCache) =
     (cache.tmp, cache.atmp)
-OrdinaryDiffEq.get_chunksize(::EK1{CS}) where {CS} = Val(CS)
 OrdinaryDiffEq.isfsal(::AbstractEK) = false
 
-OrdinaryDiffEq.isimplicit(::EK1) = true
+for ALG in [:EK1, :DiagonalEK1]
+    @eval OrdinaryDiffEq._alg_autodiff(::$ALG{CS,AD}) where {CS,AD} = Val{AD}()
+    @eval OrdinaryDiffEq.alg_difftype(::$ALG{CS,AD,DiffType}) where {CS,AD,DiffType} =
+        DiffType
+    @eval OrdinaryDiffEq.standardtag(::$ALG{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} =
+        ST
+    @eval OrdinaryDiffEq.concrete_jac(
+        ::$ALG{CS,AD,DiffType,ST,CJ},
+    ) where {CS,AD,DiffType,ST,CJ} = CJ
+    @eval OrdinaryDiffEq.get_chunksize(::$ALG{CS}) where {CS} = Val(CS)
+    @eval OrdinaryDiffEq.isimplicit(::$ALG) = true
+end
 
 ############################################
 # Step size control
