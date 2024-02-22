@@ -52,6 +52,30 @@ IOUP(num_derivatives; update_rate_parameter) = begin
     IOUP(num_derivatives, missing; update_rate_parameter)
 end
 
+initial_distribution(p::IOUP{T}) where {T} = begin
+    d, q = dim(p), num_derivatives(p)
+    D = d * (q + 1)
+    if q > 0
+        initial_variance = 1e-8 * ones(T, q + 1)
+        μ0 = zeros(T, D)
+        Σ0 = PSDMatrix(
+            IsometricKroneckerProduct(d, diagm(sqrt.(initial_variance))),
+        )
+        return Gaussian(μ0, Σ0)
+    else
+        sde = to_sde(p)
+        μ0 = zeros(T, D)
+        Σ0 = PSDMatrix(
+            IsometricKroneckerProduct(
+                d,
+                Matrix(plyapc(sde.F.B, sde.L.B)'),
+            ),
+        )
+        return Gaussian(μ0, Σ0)
+    end
+end
+
+
 remake(
     p::IOUP{T};
     elType=T,

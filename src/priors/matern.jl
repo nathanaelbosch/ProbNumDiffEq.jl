@@ -47,6 +47,12 @@ Matern(; dim, num_derivatives, lengthscale) =
     Matern{typeof(1.0)}(; dim, num_derivatives, lengthscale)
 Matern(num_derivatives, lengthscale) =
     Matern(; dim=1, num_derivatives, lengthscale)
+Matern(nu::Rational, lengthscale) =
+    Matern(; dim=1, nu, lengthscale)
+Matern(; dim, nu::Rational, lengthscale) = begin
+    @assert nu.den == 2 "The Matern process is only defined for half integers nu = p/2"
+    Matern{typeof(1.0)}(;dim, num_derivatives=Int(floor(nu)), lengthscale)
+end
 
 remake(
     p::Matern{T};
@@ -70,7 +76,7 @@ function to_sde(p::Matern)
     l = p.lengthscale
     @assert l isa Number
 
-    ν = q - 1 / 2
+    ν = q + 1 / 2
     λ = sqrt(2ν) / l
 
     F_breve = diagm(1 => ones(q))
