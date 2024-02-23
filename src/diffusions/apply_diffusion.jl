@@ -22,7 +22,7 @@ apply_diffusion(
 ) where {T} = begin
     d = size(diffusion, 1)
     q = size(Q, 1) ÷ d - 1
-    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(diffusion, Eye(q + 1))))
+    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(Eye(q+1), diffusion)))
 end
 
 """
@@ -55,7 +55,7 @@ apply_diffusion!(
     D = size(Q, 1)
     q = D ÷ d - 1
     # _matmul!(Q.R, Q.R, Kronecker.kronecker(sqrt.(diffusion), Eye(q + 1)))
-    _matmul!(Q.R, Q.R, kron(sqrt.(diffusion), Eye(q + 1)))
+    _matmul!(Q.R, Q.R, kron(Eye(q + 1), sqrt.(diffusion)))
     return Q
 end
 
@@ -97,6 +97,6 @@ apply_diffusion!(
     D = size(Q, 1)
     q = D ÷ d - 1
     # _matmul!(out.R, Q.R, Kronecker.kronecker(sqrt.(diffusion), Eye(q + 1)))
-    _matmul!(out.R, Q.R, kron(sqrt.(diffusion), Eye(q + 1)))
+    _matmul!(out.R, Q.R, kron(Eye(q + 1), sqrt.(diffusion)))
     return out
 end
