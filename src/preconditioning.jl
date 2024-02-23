@@ -4,8 +4,8 @@ function init_preconditioner(C::IsometricKroneckerCovariance{elType}) where {elT
     return P, PI
 end
 function init_preconditioner(C::DenseCovariance{elType}) where {elType}
-    P = kron(I(C.d), Diagonal(ones(elType, C.q + 1)))
-    PI = kron(I(C.d), Diagonal(ones(elType, C.q + 1)))
+    P = kron(Diagonal(ones(elType, C.q + 1)), Eye(C.d))
+    PI = kron(Diagonal(ones(elType, C.q + 1)), Eye(C.d))
     return P, PI
 end
 function init_preconditioner(C::BlockDiagonalCovariance{elType}) where {elType}
@@ -27,12 +27,11 @@ function make_preconditioners!(P, PI, d, q, dt)
     return nothing
 end
 
-@fastmath @inbounds function make_preconditioner!(P::Diagonal, h, d, q)
+@fastmath function make_preconditioner!(P::Diagonal, h, d, q)
     val = factorial(q) / h^(q + 1 / 2)
     for j in 0:q
-        @simd ivdep for i in 0:d-1
-            # P[j+i*(q+1)+1, j+i*(q+1)+1] = val
-            P.diag[j+i*(q+1)+1] = val
+        @simd ivdep for i in 1:d
+            P.diag[j*d+i] = val
         end
         val /= (q - j) / h
     end
@@ -46,9 +45,8 @@ make_preconditioner!(P::BlockDiag, h, d, q) =
 @fastmath @inbounds function make_preconditioner_inv!(PI::Diagonal, h, d, q)
     val = h^(q + 1 / 2) / factorial(q)
     for j in 0:q
-        @simd ivdep for i in 0:d-1
-            # PI[j+i*(q+1)+1, j+i*(q+1)+1] = val
-            PI.diag[j+i*(q+1)+1] = val
+        @simd ivdep for i in 1:d
+            PI.diag[j*d+i] = val
         end
         val *= (q - j) / h
     end

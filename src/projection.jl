@@ -5,13 +5,11 @@ function projection(
 ) where {elType}
     D = d * (q + 1)
     Proj(deriv) = begin
-        P = zeros(elType, d, D)
+        e_i = zeros(elType, q + 1, 1)
         if deriv <= q
-            @simd ivdep for i in deriv*d+1:D+1:d*D
-                @inbounds P[i] = 1
-            end
+            e_i[deriv+1] = 1
         end
-        return P
+        return kron(e_i', Eye(d))
     end
     return Proj
 end

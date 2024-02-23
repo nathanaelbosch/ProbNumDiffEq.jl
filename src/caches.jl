@@ -119,7 +119,7 @@ function OrdinaryDiffEq.alg_cache(
     Proj = projection(FAC)
     E0, E1, E2 = Proj(0), Proj(1), Proj(2)
     @assert f isa SciMLBase.AbstractODEFunction
-    SolProj = solution_space_projection(FAC, is_secondorder_ode)
+    SolProj = is_secondorder_ode ? [E1; E0] : copy(E0)
 
     # Prior dynamics
     if !(dim(alg.prior) == 1 || dim(alg.prior) == d)
@@ -182,19 +182,10 @@ function OrdinaryDiffEq.alg_cache(
         !isnothing(f.jac_prototype) ?
         f.jac_prototype : zeros(uElType, length(u), length(u))
     _d = is_secondorder_ode ? 2d : d
-    pu_tmp = if is_secondorder_ode
-        Gaussian(similar(Array{uElType}, 2d),
-            PSDMatrix(
-                if FAC isa IsometricKroneckerCovariance
-                    Kronecker.kronecker(similar(Matrix{uElType}, D ÷ d, _d ÷ d), I(d))
-                elseif FAC isa BlockDiagonalCovariance
-                    error("I have no idea")
-                else
-                    similar(Matrix{uElType}, D, _d)
-                end))
-    else
-        Gaussian(similar(Array{uElType}, d), PSDMatrix(factorized_similar(FAC, D, d)))
-    end
+    pu_tmp = Gaussian(
+        similar(Array{uElType}, _d),
+        PSDMatrix(factorized_similar(FAC, D, _d))
+    )
 
     K = factorized_similar(FAC, D, d)
     G = factorized_similar(FAC, D, D)

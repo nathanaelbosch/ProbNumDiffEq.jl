@@ -12,8 +12,8 @@ function (m::StandardODEMeasurementModel{true})(z, x, p, t)
     d = length(z)
     D = length(x)
     q = D ÷ d - 1
-    E0_x = @view x[1:(q+1):end]
-    E1_x = @view x[2:(q+1):end]
+    E0_x = @view x[1:d]
+    E1_x = @view x[d+1:2d]
     m.f(z, E0_x, p, t)
     mul!(z, m.f.mass_matrix, E1_x, 1, -1)
     return z
@@ -38,9 +38,9 @@ function (m::SecondOrderODEMeasurementModel{true})(z, x, p, t)
     d = length(z)
     D = length(x)
     q = D ÷ d - 1
-    E0_x = @view x[1:(q+1):end]
-    E1_x = @view x[2:(q+1):end]
-    E2_x = @view x[3:(q+1):end]
+    E0_x = @view x[1:d]
+    E1_x = @view x[d+1:2d]
+    E2_x = @view x[2d+1:3d]
 
     m.f1(z, E1_x, E0_x, p, t)
 
