@@ -307,3 +307,12 @@ Base.isequal(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
     length(A.blocks) == length(B.blocks) && all(map(isequal, A.blocks, B.blocks))
 ==(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
     length(A.blocks) == length(B.blocks) && all(map(==, A.blocks, B.blocks))
+
+function Base.vcat(M1::BlocksOfDiagonals, M2::BlocksOfDiagonals)
+    @assert nblocks(M1) == nblocks(M2)
+    return BlocksOfDiagonals([vcat(B1, B2) for (B1, B2) in zip(blocks(M1), blocks(M2))])
+end
+function Base.hcat(M1::BlocksOfDiagonals, M2::BlocksOfDiagonals)
+    @assert nblocks(M1) == nblocks(M2)
+    return BlocksOfDiagonals([hcat(B1, B2) for (B1, B2) in zip(blocks(M1), blocks(M2))])
+end

@@ -106,4 +106,8 @@ D = d1 * d2
     @test mul!(x, A, v, alpha, beta) == mul!(x, AM, v, alpha, beta)
     @test _matmul!(x, A, v) == _matmul!(x, AM, v)
     @test _matmul!(x, A, v, alpha, beta) == _matmul!(x, AM, v, alpha, beta)
+
+    @test tttm([A; B]) == [AM; BM]
+    @test tttm([A B]) == [AM BM]
+    @test_broken [A B; B A] isa PNDE.BlocksOfDiagonals
 end
