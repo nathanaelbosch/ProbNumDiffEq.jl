@@ -118,7 +118,7 @@ q = 2
 
     @test PNDE._matmul!(copy(A'), copy(A'), K1') ≈ PNDE._matmul!(copy(A'), A', M1')
     @test PNDE._matmul!(copy(A'), copy(A'), K1', α, β) ≈
-        PNDE._matmul!(copy(A'), A', M1', α, β)
+          PNDE._matmul!(copy(A'), A', M1', α, β)
 
     # But it always works if all matrices are actual adjoints
     @test PNDE._matmul!(copy(A)', A', K1') ≈ PNDE._matmul!(copy(A'), A', M1')

@@ -184,7 +184,7 @@ function OrdinaryDiffEq.alg_cache(
     _d = is_secondorder_ode ? 2d : d
     pu_tmp = Gaussian(
         similar(Array{uElType}, _d),
-        PSDMatrix(factorized_similar(FAC, D, _d))
+        PSDMatrix(factorized_similar(FAC, D, _d)),
     )
 
     K = factorized_similar(FAC, D, d)

@@ -38,4 +38,3 @@ function projection(C::BlockDiagonalCovariance{elType}) where {elType}
     end
     return Proj
 end
-
