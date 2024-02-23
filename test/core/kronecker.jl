@@ -126,8 +126,13 @@ q = 2
 
     # Div!
     @test K1 \ v ≈ M1 \ v
+    _K = PNDE.IsometricKroneckerProduct(d, rand(2, 3))
+    _v = rand(2d)
+    @test _K \ _v ≈ Matrix(_K) \ _v
+
 
     @test tttm([K1; K2]) == [M1; M2]
     @test tttm([K1 K2]) == [M1 M2]
     @test_broken [K1 K2; K2 K1] isa PNDE.IsometricKroneckerProduct
+
 end
