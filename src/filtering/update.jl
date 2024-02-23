@@ -165,10 +165,10 @@ function update!(
     D = length(x_out.μ)  # full_state_dim
     d = H.rdim           # ode_dimension_dim
     Q = D ÷ d            # n_derivatives_dim
-    _x_out = Gaussian(reshape_no_alloc(x_out.μ, Q, d), PSDMatrix(x_out.Σ.R.B))
-    _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
+    _x_out = Gaussian(reshape_no_alloc(x_out.μ, d, Q)', PSDMatrix(x_out.Σ.R.B))
+    _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, d, Q)', PSDMatrix(x_pred.Σ.R.B))
     _measurement = Gaussian(
-        reshape_no_alloc(measurement.μ, 1, d),
+        reshape_no_alloc(measurement.μ, d, 1)',
         measurement.Σ isa PSDMatrix ? PSDMatrix(measurement.Σ.R.B) : measurement.Σ.B,
     )
     _H = H.B
