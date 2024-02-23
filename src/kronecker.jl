@@ -196,30 +196,30 @@ function _prepare_inputs_for_vectrick(A, x, v)
     a, b = size(M)
     V = reshape_no_alloc(transpose(v), (length(v) ÷ b, b)) |> transpose
     X = reshape_no_alloc(transpose(x), (length(x) ÷ a, a)) |> transpose
-    return X, V
+    return A.B, X, V
 end
 
 function mul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    X, V = _prepare_inputs_for_vectrick(A, x, v)
-    mul!(X, A.B, V)
+    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
+    mul!(X, N, V)
     return x
 end
 function mul_vectrick!(
     x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    X, V = _prepare_inputs_for_vectrick(A, x, v)
-    mul!(X, A.B, V, alpha, beta)
+    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
+    mul!(X, N, V, alpha, beta)
     return x
 end
 
 function _matmul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    X, V = _prepare_inputs_for_vectrick(A, x, v)
-    _matmul!(X, A.B, V)
+    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
+    _matmul!(X, N, V)
     return x
 end
 function _matmul_vectrick!(
     x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    X, V = _prepare_inputs_for_vectrick(A, x, v)
-    _matmul!(X, A.B, V, alpha, beta)
+    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
+    _matmul!(X, N, V, alpha, beta)
     return x
 end
 
