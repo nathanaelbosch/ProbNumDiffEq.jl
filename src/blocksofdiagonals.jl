@@ -8,11 +8,12 @@ struct BlocksOfDiagonals{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     function BlocksOfDiagonals{T,V}(
         blocks::Vector{V},
     ) where {T,V<:AbstractMatrix{T}}
+        @assert all(map(b -> size(b) == size(blocks[1]), blocks))
         return new{T,V}(blocks)
     end
 end
 function BlocksOfDiagonals(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
-    return BlocksOfDiagonal{T,V}(blocks)
+    return BlocksOfDiagonals{T,V}(blocks)
 end
 
 blocks(B::BlocksOfDiagonals) = B.blocks
@@ -26,18 +27,17 @@ Base.@propagate_inbounds function Base.getindex(
 ) where {T}
     all((0, 0) .< (i, j) .<= size(B)) || throw(BoundsError(B, (i, j)))
 
-    p = 1
-    Si, Sj = size(blocks(B)[p])
-    while p <= nblocks(B)
-        if i <= Si && j <= Sj
-            return blocks(B)[p][i, j]
-        elseif (i <= Si && j > Sj) || (j <= Sj && i > Si)
-            return zero(T)
-        else
-            i -= Si
-            j -= Sj
-            p += 1
-        end
+    d = nblocks(B)
+
+    block_idx_i = (i - 1) ÷ d + 1
+    block_idx_j = (j - 1) ÷ d + 1
+
+    inside_block_idx_i, inside_block_idx_j = (i - 1) % d + 1, (j - 1) % d + 1
+
+    if inside_block_idx_i != inside_block_idx_j
+        return zero(T)
+    else
+        return blocks(B)[inside_block_idx_i][block_idx_i, block_idx_j]
     end
     error("This shouldn't happen")
 end
@@ -197,12 +197,10 @@ for _mul! in (:mul!, :_matmul!)
     ) = begin
         @assert size(A, 2) == length(B)
         @assert length(C) == size(A, 1)
-        ic, ib = 1, 1
+        D = nblocks(A)
+        d1, d2 = size(A.blocks[1])
         for i in eachindex(blocks(A))
-            d1, d2 = size(A.blocks[i])
-            @inbounds $_mul!(view(C, ic:(ic+d1-1)), A.blocks[i], view(B, ib:(ib+d2-1)))
-            ic += d1
-            ib += d2
+            @inbounds $_mul!(view(C, i:D:D*d1), A.blocks[i], view(B, i:D:D*d2))
         end
         return C
     end
@@ -213,12 +211,10 @@ for _mul! in (:mul!, :_matmul!)
     ) where {T<:LinearAlgebra.BlasFloat} = begin
         @assert size(A, 2) == length(B)
         @assert length(C) == size(A, 1)
-        ic, ib = 1, 1
+        D = nblocks(A)
+        d1, d2 = size(A.blocks[1])
         for i in eachindex(blocks(A))
-            d1, d2 = size(A.blocks[i])
-            @inbounds $_mul!(view(C, ic:(ic+d1-1)), A.blocks[i], view(B, ib:(ib+d2-1)))
-            ic += d1
-            ib += d2
+            @inbounds $_mul!(view(C, i:D:D*d1), A.blocks[i], view(B, i:D:D*d2))
         end
         return C
     end
@@ -235,80 +231,73 @@ LinearAlgebra.inv(A::BlocksOfDiagonals) = BlocksOfDiagonals(inv.(blocks(A)))
 
 copy!(A::BlocksOfDiagonals, B::Diagonal) = begin
     @assert size(A) == size(B)
-    i = 1
-    for Ai in blocks(A)
-        d = LinearAlgebra.checksquare(Ai)
-        @views copy!(Ai, Diagonal(B.diag[i:i+d-1]))
-        i += d
+    D = nblocks(A)
+    LinearAlgebra.checksquare(blocks(A)[1])
+    for i in eachindex(blocks(A))
+        @views copy!(blocks(A)[i], Diagonal(B.diag[i:D:end]))
     end
     return A
 end
 
 Base.:*(D::Diagonal, A::BlocksOfDiagonals) = begin
     @assert size(D, 2) == size(A, 1)
-    local i = 1
-    outblocks = map(blocks(A)) do Ai
+    local S = nblocks(A)
+    outblocks = map(enumerate(blocks(A))) do (i, Ai)
         d = size(Ai, 1)
-        outi = Diagonal(view(D.diag, i:(i+d-1))) * Ai
-        i += d
+        outi = Diagonal(view(D.diag, i:S:S*d)) * Ai
         outi
     end
     return BlocksOfDiagonals(outblocks)
 end
 Base.:*(A::BlocksOfDiagonals, D::Diagonal) = begin
-    local i = 1
-    outblocks = map(blocks(A)) do Ai
+    local S = nblocks(A)
+    outblocks = map(enumerate(blocks(A))) do (i, Ai)
         d = size(Ai, 2)
-        outi = Ai * Diagonal(view(D.diag, i:(i+d-1)))
-        i += d
+        outi = Ai * Diagonal(view(D.diag, i:S:S*d))
         outi
     end
     return BlocksOfDiagonals(outblocks)
 end
 for _mul! in (:mul!, :_matmul!)
     @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Diagonal) = begin
-        local i = 1
         @assert nblocks(C) == nblocks(A)
-        for j in eachindex(blocks(C))
-            Ci, Ai = blocks(C)[j], blocks(A)[j]
+        D = nblocks(A)
+        for i in eachindex(blocks(C))
+            Ci, Ai = blocks(C)[i], blocks(A)[i]
             d = size(Ai, 2)
-            $_mul!(Ci, Ai, Diagonal(view(B.diag, i:(i+d-1))))
-            i += d
+            $_mul!(Ci, Ai, Diagonal(view(B.diag, i:D:D*d)))
         end
         return C
     end
     @eval $_mul!(C::BlocksOfDiagonals, A::Diagonal, B::BlocksOfDiagonals) = begin
-        local i = 1
         @assert nblocks(C) == nblocks(B)
-        for j in eachindex(blocks(C))
-            Ci, Bi = blocks(C)[j], blocks(B)[j]
+        D = nblocks(B)
+        for i in eachindex(blocks(C))
+            Ci, Bi = blocks(C)[i], blocks(B)[i]
             d = size(Bi, 1)
-            $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi)
-            i += d
+            $_mul!(Ci, Diagonal(view(A.diag, i:D:D*d)), Bi)
         end
         return C
     end
     @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Diagonal, alpha::Number, beta::Number) =
         begin
-            local i = 1
             @assert nblocks(C) == nblocks(A)
-            for j in eachindex(blocks(C))
-                Ci, Ai = blocks(C)[j], blocks(A)[j]
+            D = nblocks(A)
+            for i in eachindex(blocks(C))
+                Ci, Ai = blocks(C)[i], blocks(A)[i]
                 d = size(Ai, 2)
-                $_mul!(Ci, Ai, Diagonal(view(B.diag, i:(i+d-1))), alpha, beta)
-                i += d
+                $_mul!(Ci, Ai, Diagonal(view(B.diag, i:D:D*d)), alpha, beta)
             end
             return C
         end
     @eval $_mul!(C::BlocksOfDiagonals, A::Diagonal, B::BlocksOfDiagonals, alpha::Number, beta::Number) =
         begin
-            i = 1
             @assert nblocks(C) == nblocks(B)
-            for j in eachindex(blocks(C))
-                Ci, Bi = blocks(C)[j], blocks(B)[j]
+            D = nblocks(B)
+            for i in eachindex(blocks(C))
+                Ci, Bi = blocks(C)[i], blocks(B)[i]
                 d = size(Bi, 1)
-                @inbounds $_mul!(Ci, Diagonal(view(A.diag, i:(i+d-1))), Bi, alpha, beta)
-                i += d
+                @inbounds $_mul!(Ci, Diagonal(view(A.diag, i:D:D*d)), Bi, alpha, beta)
             end
             return C
         end
