@@ -148,9 +148,10 @@ For more background information
 * [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 function local_diagonal_diffusion(cache)
-    @unpack d, q, H, Qh, measurement, m_tmp, tmp = cache
+    @unpack d, q, H, Qh, measurement, m_tmp = cache
+    tmp = m_tmp.μ
     @unpack local_diffusion = cache
-    @assert H == cache.E1
+    @assert (H == cache.E1) || (H == cache.E2)
 
     z = measurement.μ
     # HQH = H * unfactorize(Qh) * H'
