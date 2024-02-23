@@ -5,9 +5,8 @@ Check the correctness of the filtering implementations vs. basic readable math c
 using Test
 using ProbNumDiffEq
 using LinearAlgebra
-import ProbNumDiffEq: IsometricKroneckerProduct, BlockDiag
+import ProbNumDiffEq: IsometricKroneckerProduct, BlocksOfDiagonals
 import ProbNumDiffEq as PNDE
-using BlockDiagonals
 using FillArrays
 import ProbNumDiffEq.GaussianDistributions: logpdf
 
@@ -79,7 +78,7 @@ import ProbNumDiffEq.GaussianDistributions: logpdf
                 end
                 _diffusions = diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
 
-                QM_diff = Matrix(BlockDiagonal([σ² * _Q.B for σ² in _diffusions]))
+                QM_diff = Matrix(BlocksOfDiagonals([σ² * _Q.B for σ² in _diffusions]))
                 P_p_diff = AM * PM * AM' + QM_diff
 
                 x_curr = Gaussian(m, PSDMatrix(P_R))
@@ -104,9 +103,9 @@ import ProbNumDiffEq.GaussianDistributions: logpdf
             x_out = copy(x_curr)
             # marginalize! needs tall square-roots:
             Q_SR = if Q_R isa IsometricKroneckerProduct
-                PSDMatrix(IsometricKroneckerProduct(Q_R.ldim, [Q_R.B; zero(Q_R.B)]))
-            elseif Q_R isa BlockDiag
-                PSDMatrix(BlockDiag([[B; zero(B)] for B in Q_R.blocks]))
+                PSDMatrix(IsometricKroneckerProduct(Q_R.rdim, [Q_R.B; zero(Q_R.B)]))
+            elseif Q_R isa BlocksOfDiagonals
+                PSDMatrix(BlocksOfDiagonals([[B; zero(B)] for B in Q_R.blocks]))
             else
                 PSDMatrix([Q_R; zero(Q_R)])
             end
@@ -494,7 +493,7 @@ end
                 end
                 _diffusions =
                     diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
-                QM_diff = Matrix(BlockDiagonal([σ² * _Q.B for σ² in _diffusions]))
+                QM_diff = Matrix(BlocksOfDiagonals([σ² * _Q.B for σ² in _diffusions]))
 
                 ProbNumDiffEq.compute_backward_kernel!(
                     K_backward, x_next_pred, x_curr, K_forward; C_DxD, diffusion)

@@ -19,8 +19,8 @@ const GROUP = get(ENV, "GROUP", "All")
 @testset "ProbNumDiffEq" begin
     if GROUP == "All" || GROUP == "Core"
         @timedtestset "Core" begin
-            @timedsafetestset "BlockDiagonals" begin
-                include("core/blockdiagonals.jl")
+            @timedsafetestset "BlocksOfDiagonals" begin
+                include("core/blocksofdiagonals.jl")
             end
             @timedsafetestset "FastLinalg (`_matmul!`)" begin
                 include("core/fast_linalg.jl")

@@ -90,30 +90,30 @@ function to_sde(p::IOUP)
 
     F_breve = diagm(1 => ones(q))
     # F_breve[end, end] = r
-    F = kron(I(d), F_breve)
-    F[q+1:q+1:end, q+1:q+1:end] = R
+    F = kron(F_breve, Eye(d))
+    F[end-d+1:end, end-d+1:end] = R
 
     L_breve = zeros(q + 1)
     L_breve[end] = 1.0
-    L = kron(I(d), L_breve)
+    L = kron(L_breve, Eye(d))
 
     return LTISDE(F, L)
 end
 
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:AbstractMatrix})
-    q = num_derivatives(prior)
+    d = dim(prior)
     r = prior.rate_parameter
-    F[q+1:q+1:end, q+1:q+1:end] = r
+    F[end-d+1:end, end-d+1:end] = r
 end
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:AbstractVector})
-    q = num_derivatives(prior)
+    d = dim(prior)
     r = prior.rate_parameter
-    F[q+1:q+1:end, q+1:q+1:end] = Diagonal(r)
+    F[end-d+1:end, end-d+1:end] = Diagonal(r)
 end
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Number})
     d, q = dim(prior), num_derivatives(prior)
     r = prior.rate_parameter
-    F[q+1:q+1:end, q+1:q+1:end] = Diagonal(Fill(r, d))
+    F[end-d+1:end, end-d+1:end] = Diagonal(Fill(r, d))
 end
 
 function make_transition_matrices!(cache, prior::IOUP, dt)

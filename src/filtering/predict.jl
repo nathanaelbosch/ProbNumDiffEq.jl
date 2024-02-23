@@ -20,7 +20,7 @@ predict_cov(
     Q::PSDMatrix{T,<:IsometricKroneckerProduct},
 ) where {T} = begin
     P_pred_breve = predict_cov(PSDMatrix(Σ.R.B), A.B, PSDMatrix(Q.R.B))
-    return PSDMatrix(IsometricKroneckerProduct(Σ.R.ldim, P_pred_breve.R))
+    return PSDMatrix(IsometricKroneckerProduct(Σ.R.rdim, P_pred_breve.R))
 end
 
 """
@@ -116,14 +116,14 @@ function predict_cov!(
     return predict_cov!(_Σ_out, _Σ_curr, _Ah, _Qh, _C_DxD, _C_2DxD, _diffusion)
 end
 
-# BlockDiagonal version
+# BlocksOfDiagonalsonal version
 function predict_cov!(
-    Σ_out::PSDMatrix{T,<:BlockDiag},
-    Σ_curr::PSDMatrix{T,<:BlockDiag},
-    Ah::BlockDiag,
-    Qh::PSDMatrix{S,<:BlockDiag},
-    C_DxD::BlockDiag,
-    C_2DxD::BlockDiag,
+    Σ_out::PSDMatrix{T,<:BlocksOfDiagonals},
+    Σ_curr::PSDMatrix{T,<:BlocksOfDiagonals},
+    Ah::BlocksOfDiagonals,
+    Qh::PSDMatrix{S,<:BlocksOfDiagonals},
+    C_DxD::BlocksOfDiagonals,
+    C_2DxD::BlocksOfDiagonals,
     diffusion::Union{Number,Diagonal},
 ) where {T,S}
     @simd ivdep for i in eachindex(blocks(Σ_out.R))

@@ -9,10 +9,14 @@ q = 2
 @testset "$T" for T in (Float64, BigFloat)
     R1 = rand(T, q + 1, q + 1)
     K1 = PNDE.IsometricKroneckerProduct(d, R1)
-    M1 = Matrix(K1)
+    M1 = kron(R1, I(d))
     R2 = rand(T, q + 1, q + 1)
     K2 = PNDE.IsometricKroneckerProduct(d, R2)
-    M2 = Matrix(K2)
+    M2 = kron(R2, I(d))
+
+    # Definition
+    @test Matrix(K1) == M1
+    @test Matrix(K2) == M2
 
     # Base
     K3 = PNDE.IsometricKroneckerProduct(d, copy(R2))
@@ -112,19 +116,21 @@ q = 2
     @test PNDE._matmul!(copy(v), K1, v, α, β) ≈ PNDE._matmul!(copy(v), M1, v, α, β)
     @test PNDE._matmul!(copy(A), K1, A, α, β) ≈ PNDE._matmul!(copy(A), M1, A, α, β)
 
-    if T == Float64
-        # Octavian has issues
-        @test_broken PNDE._matmul!(copy(A'), copy(A'), K1') ≈
-                     PNDE._matmul!(copy(A'), A', M1')
-        @test_broken PNDE._matmul!(copy(A'), copy(A'), K1', α, β) ≈
-                     PNDE._matmul!(copy(A'), A', M1', α, β)
-    else
-        # Uses LinearAlgebra
-        @test PNDE._matmul!(copy(A'), copy(A'), K1') ≈ PNDE._matmul!(copy(A'), A', M1')
-        @test PNDE._matmul!(copy(A'), copy(A'), K1', α, β) ≈
-              PNDE._matmul!(copy(A'), A', M1', α, β)
-    end
+    @test PNDE._matmul!(copy(A'), copy(A'), K1') ≈ PNDE._matmul!(copy(A'), A', M1')
+    @test PNDE._matmul!(copy(A'), copy(A'), K1', α, β) ≈
+          PNDE._matmul!(copy(A'), A', M1', α, β)
+
     # But it always works if all matrices are actual adjoints
     @test PNDE._matmul!(copy(A)', A', K1') ≈ PNDE._matmul!(copy(A'), A', M1')
     @test PNDE._matmul!(copy(A)', A', K1', α, β) ≈ PNDE._matmul!(copy(A'), A', M1', α, β)
+
+    # Div!
+    @test K1 \ v ≈ M1 \ v
+    _K = PNDE.IsometricKroneckerProduct(d, rand(2, 3))
+    _v = rand(2d)
+    @test _K \ _v ≈ Matrix(_K) \ _v
+
+    @test tttm([K1; K2]) == [M1; M2]
+    @test tttm([K1 K2]) == [M1 M2]
+    @test_broken [K1 K2; K2 K1] isa PNDE.IsometricKroneckerProduct
 end

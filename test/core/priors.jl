@@ -53,6 +53,15 @@ end
 
     prior = PNDE.IWP(dim=d, num_derivatives=q)
 
+    PERM = [
+        1 0 0 0 0 0
+        0 0 0 1 0 0
+        0 1 0 0 0 0
+        0 0 0 0 1 0
+        0 0 1 0 0 0
+        0 0 0 0 0 1
+    ]
+
     # true sde parameters
     F = [
         0 1 0 0 0 0
@@ -62,6 +71,7 @@ end
         0 0 0 0 0 1
         0 0 0 0 0 0
     ]
+    F = PERM * F * PERM'
     L = [
         0 0
         0 0
@@ -70,6 +80,7 @@ end
         0 0
         0 1
     ]
+    L = PERM * L
 
     # true transition matrices
     AH_22_IBM = [
@@ -80,6 +91,7 @@ end
         0 0 0 0 1 h
         0 0 0 0 0 1
     ]
+    AH_22_IBM = PERM * AH_22_IBM * PERM'
 
     QH_22_IBM =
         σ^2 .* [
@@ -90,6 +102,7 @@ end
             0 0 0 h^4/8 h^3/3 h^2/2
             0 0 0 h^3/6 h^2/2 h
         ]
+    QH_22_IBM = PERM * QH_22_IBM * PERM'
 
     # true preconditioned transition matrices
     AH_22_PRE = [
@@ -100,6 +113,7 @@ end
         0 0 0 0 1 1
         0 0 0 0 0 1
     ]
+    AH_22_PRE = PERM * AH_22_PRE * PERM'
 
     QH_22_PRE =
         σ^2 * [
@@ -110,6 +124,7 @@ end
             0 0 0 1/4 1/3 1/2
             0 0 0 1/3 1/2 1/1
         ]
+    QH_22_PRE = PERM * QH_22_PRE * PERM'
 
     @testset "Test SDE" begin
         sde = PNDE.to_sde(prior)
@@ -136,14 +151,20 @@ end
     end
 
     @testset "Test `make_transition_matrices!`" begin
-        for FAC in (PNDE.IsometricKroneckerCovariance, PNDE.BlockDiagonalCovariance)
+        for FAC in (
+            PNDE.IsometricKroneckerCovariance,
+            PNDE.BlockDiagonalCovariance,
+        )
             A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
-                PNDE.BlockDiagonalCovariance{Float64}(d, q), prior, h)
+                FAC{Float64}(d, q), prior, h)
 
             @test AH_22_PRE ≈ A
 
-            for Γ in (σ^2, σ^2 * Eye(d), σ^2 * I(d))
+            for Γ in (σ^2, σ^2 * Eye(d))
                 @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, Γ))
+            end
+            if FAC != PNDE.IsometricKroneckerCovariance
+                @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, σ^2 * I(d)))
             end
 
             cache = (
@@ -160,7 +181,7 @@ end
             make_transition_matrices!(cache, prior, h)
             @test AH_22_IBM ≈ cache.Ah
 
-            for Γ in (σ^2, σ^2 * Eye(d), σ^2 * I(d))
+            for Γ in (σ^2, σ^2 * Eye(d))
                 @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, Γ))
             end
             if FAC != PNDE.IsometricKroneckerCovariance
@@ -211,6 +232,15 @@ end
 
     prior = PNDE.IOUP(dim=d, num_derivatives=q, rate_parameter=r)
 
+    PERM = [
+        1 0 0 0 0 0
+        0 0 0 1 0 0
+        0 1 0 0 0 0
+        0 0 0 0 1 0
+        0 0 1 0 0 0
+        0 0 0 0 0 1
+    ]
+
     sde = PNDE.to_sde(prior)
     F = [
         0 1 0 0 0 0
@@ -220,6 +250,7 @@ end
         0 0 0 0 0 1
         0 0 r[2, 1] 0 0 r[2, 2]
     ]
+    F = PERM * F * PERM'
     L = [
         0 0
         0 0
@@ -228,6 +259,7 @@ end
         0 0
         0 1
     ]
+    L = PERM * L
     @test sde.F ≈ F
     @test sde.L ≈ L
 
@@ -250,6 +282,15 @@ end
 
     prior = PNDE.Matern(dim=d, num_derivatives=q, lengthscale=l)
 
+    PERM = [
+        1 0 0 0 0 0
+        0 0 0 1 0 0
+        0 1 0 0 0 0
+        0 0 0 0 1 0
+        0 0 1 0 0 0
+        0 0 0 0 0 1
+    ]
+
     sde = PNDE.to_sde(prior)
     F = [
         0 1 0 0 0 0
@@ -259,6 +300,7 @@ end
         0 0 0 0 0 1
         0 0 0 -a(1)*λ^3 -a(2)*λ^2 -a(3)*λ
     ]
+    F = PERM * F * PERM'
     L = [
         0 0
         0 0
@@ -267,6 +309,7 @@ end
         0 0
         0 1
     ]
+    L = PERM * L
     @test sde.F ≈ F
     @test sde.L ≈ L
 

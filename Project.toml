@@ -35,18 +35,18 @@ TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 ToeplitzMatrices = "c751599d-da0a-543b-9d20-d0a503d91d24"
 
 [weakdeps]
-BlockDiagonals = "0a1fb500-61f7-11e9-3c65-f5ef3456f9f0"
+BlockArrays = "8e7c35d0-a365-5155-bbbb-fb81a777f24e"
 DiffEqDevTools = "f3b72e0c-5b89-59e1-b016-84e28bfd966d"
 RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 
 [extensions]
-BlockDiagonalsExt = "BlockDiagonals"
+BlockArraysExt = "BlockArrays"
 DiffEqDevToolsExt = "DiffEqDevTools"
 RecipesBaseExt = "RecipesBase"
 
 [compat]
 ArrayAllocators = "0.3"
-BlockDiagonals = "0.1"
+BlockArrays = "0.16"
 DiffEqBase = "6.122"
 DiffEqCallbacks = "2.36, 3"
 DiffEqDevTools = "2"

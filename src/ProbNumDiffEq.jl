@@ -62,7 +62,7 @@ add!(out, toadd) = (out .+= toadd)
 
 include("fast_linalg.jl")
 include("kronecker.jl")
-include("blockdiagonals.jl")
+include("blocksofdiagonals.jl")
 include("covariance_structure.jl")
 export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 

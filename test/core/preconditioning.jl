@@ -46,6 +46,8 @@ end
     PD, PID = make_preconditioners(PNDE.DenseCovariance)
     PB, PIB = make_preconditioners(PNDE.BlockDiagonalCovariance)
 
-    @test PK == PD == PB
-    @test PIK == PID == PIB
+    @test PK == PD
+    @test PB == PD
+    @test PIK == PID
+    @test PIB == PID
 end

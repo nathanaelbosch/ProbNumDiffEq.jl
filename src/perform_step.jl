@@ -229,7 +229,7 @@ end
 diag!(v::AbstractVector, M::PSDMatrix) = (sum!(abs2, v', M.R); v)
 diag!(v::AbstractVector, M::PSDMatrix{<:Number,<:IsometricKroneckerProduct}) =
     v .= sum(abs2, M.R.B)
-diag!(v::AbstractVector, M::PSDMatrix{<:Number,<:BlockDiag}) = begin
+diag!(v::AbstractVector, M::PSDMatrix{<:Number,<:BlocksOfDiagonals}) = begin
     @assert length(v) == nblocks(M.R)
     @assert size(blocks(M.R)[1], 2) == 1 # assumes all of them have the same shape
     @simd ivdep for i in eachindex(blocks(M.R))

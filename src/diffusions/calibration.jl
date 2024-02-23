@@ -17,7 +17,7 @@ invquad(v, M::IsometricKroneckerProduct; v_cache, M_cache=nothing) = begin
     @assert length(M.B) == 1
     return dot(v, v_cache) / M.B[1]
 end
-invquad(v, M::BlockDiag; v_cache, M_cache=nothing) = begin
+invquad(v, M::BlocksOfDiagonals; v_cache, M_cache=nothing) = begin
     v_cache .= v
     @assert length(M.blocks) == length(v) == length(v_cache)
     @simd ivdep for i in eachindex(v)
@@ -148,9 +148,10 @@ For more background information
 * [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
 """
 function local_diagonal_diffusion(cache)
-    @unpack d, q, H, Qh, measurement, m_tmp, tmp = cache
+    @unpack d, q, H, Qh, measurement, m_tmp = cache
+    tmp = m_tmp.μ
     @unpack local_diffusion = cache
-    @assert H == cache.E1
+    @assert (H == cache.E1) || (H == cache.E2)
 
     z = measurement.μ
     # HQH = H * unfactorize(Qh) * H'
@@ -158,7 +159,7 @@ function local_diagonal_diffusion(cache)
     # c1 = view(_matmul!(cache.C_Dxd, Qh.R, H'), :, 1)
     # Q_11 = dot(c1, c1)
 
-    Q_11 = if Qh.R isa BlockDiag
+    Q_11 = if Qh.R isa BlocksOfDiagonals
         for i in 1:d
             c1 = _matmul!(
                 view(cache.C_Dxd.blocks[i], :, 1:1),

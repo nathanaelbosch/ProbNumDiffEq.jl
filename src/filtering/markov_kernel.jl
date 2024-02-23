@@ -121,12 +121,12 @@ function marginalize_cov!(
 end
 
 function marginalize_cov!(
-    Σ_out::PSDMatrix{T,<:BlockDiag},
-    Σ_curr::PSDMatrix{T,<:BlockDiag},
+    Σ_out::PSDMatrix{T,<:BlocksOfDiagonals},
+    Σ_curr::PSDMatrix{T,<:BlocksOfDiagonals},
     K::AffineNormalKernel{
         <:AbstractMatrix,
         <:Any,
-        <:PSDMatrix{S,<:BlockDiag},
+        <:PSDMatrix{S,<:BlocksOfDiagonals},
     };
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
@@ -253,13 +253,13 @@ function compute_backward_kernel!(
     },
 }
     D = length(x.μ)  # full_state_dim
-    d = K.A.ldim     # ode_dimension_dim
+    d = K.A.rdim     # ode_dimension_dim
     Q = D ÷ d        # n_derivatives_dim
     _Kout =
-        AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))
-    _x_pred = Gaussian(reshape_no_alloc(xpred.μ, Q, d), PSDMatrix(xpred.Σ.R.B))
-    _x = Gaussian(reshape_no_alloc(x.μ, Q, d), PSDMatrix(x.Σ.R.B))
-    _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, Q, d), PSDMatrix(K.C.R.B))
+        AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, d, Q)', PSDMatrix(Kout.C.R.B))
+    _x_pred = Gaussian(reshape_no_alloc(xpred.μ, d, Q)', PSDMatrix(xpred.Σ.R.B))
+    _x = Gaussian(reshape_no_alloc(x.μ, d, Q)', PSDMatrix(x.Σ.R.B))
+    _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, d, Q)', PSDMatrix(K.C.R.B))
     _C_DxD = C_DxD.B
     _diffusion =
         diffusion isa Number ? diffusion :
@@ -271,44 +271,44 @@ end
 
 function compute_backward_kernel!(
     Kout::KT1,
-    xpred::SRGaussian{T,<:BlockDiag},
-    x::SRGaussian{T,<:BlockDiag},
+    xpred::SRGaussian{T,<:BlocksOfDiagonals},
+    x::SRGaussian{T,<:BlocksOfDiagonals},
     K::KT2;
     C_DxD::AbstractMatrix,
     diffusion::Union{Number,Diagonal}=1,
 ) where {
     T,
     KT1<:AffineNormalKernel{
-        <:BlockDiag,
+        <:BlocksOfDiagonals,
         <:AbstractVector,
-        <:PSDMatrix{T,<:BlockDiag},
+        <:PSDMatrix{T,<:BlocksOfDiagonals},
     },
     KT2<:AffineNormalKernel{
-        <:BlockDiag,
+        <:BlocksOfDiagonals,
         <:Any,
-        <:PSDMatrix{T,<:BlockDiag},
+        <:PSDMatrix{T,<:BlocksOfDiagonals},
     },
 }
     d = length(blocks(xpred.Σ.R))
     q = size(blocks(xpred.Σ.R)[1], 1) - 1
 
-    @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
+    @views @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
         _Kout = AffineNormalKernel(
             Kout.A.blocks[i],
-            view(Kout.b, (i-1)*(q+1)+1:i*(q+1)),
+            Kout.b[i:d:end],
             PSDMatrix(Kout.C.R.blocks[i]),
         )
         _xpred = Gaussian(
-            view(xpred.μ, (i-1)*(q+1)+1:i*(q+1)),
+            xpred.μ[i:d:end],
             PSDMatrix(xpred.Σ.R.blocks[i]),
         )
         _x = Gaussian(
-            view(x.μ, (i-1)*(q+1)+1:i*(q+1)),
+            x.μ[i:d:end],
             PSDMatrix(x.Σ.R.blocks[i]),
         )
         _K = AffineNormalKernel(
             K.A.blocks[i],
-            ismissing(K.b) ? missing : view(K.b, (i-1)*(q+1)+1:i*(q+1)),
+            ismissing(K.b) ? missing : K.b[i:d:end],
             PSDMatrix(K.C.R.blocks[i]),
         )
         _C_DxD = C_DxD.blocks[i]

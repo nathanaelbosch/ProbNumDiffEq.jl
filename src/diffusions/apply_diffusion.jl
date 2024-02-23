@@ -12,17 +12,19 @@ apply_diffusion(
     diffusion::Diagonal{T,<:FillArrays.Fill},
 ) where {T} = apply_diffusion(Q, diffusion.diag.value)
 apply_diffusion(
-    Q::PSDMatrix{T,<:BlockDiag},
+    Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = PSDMatrix(
-    BlockDiag([blocks(Q.R)[i] * sqrt.(diffusion.diag[i]) for i in eachindex(blocks(Q.R))]))
+    BlocksOfDiagonals([
+        blocks(Q.R)[i] * sqrt.(diffusion.diag[i]) for i in eachindex(blocks(Q.R))
+    ]))
 apply_diffusion(
     Q::PSDMatrix{T,<:Matrix},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = begin
     d = size(diffusion, 1)
     q = size(Q, 1) ÷ d - 1
-    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(diffusion, Eye(q + 1))))
+    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(Eye(q + 1), diffusion)))
 end
 
 """
@@ -38,7 +40,7 @@ apply_diffusion!(
     return Q
 end
 apply_diffusion!(
-    Q::PSDMatrix{T,<:BlockDiag},
+    Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = begin
     @simd ivdep for i in eachindex(blocks(Q.R))
@@ -55,7 +57,7 @@ apply_diffusion!(
     D = size(Q, 1)
     q = D ÷ d - 1
     # _matmul!(Q.R, Q.R, Kronecker.kronecker(sqrt.(diffusion), Eye(q + 1)))
-    _matmul!(Q.R, Q.R, kron(sqrt.(diffusion), Eye(q + 1)))
+    _matmul!(Q.R, Q.R, kron(Eye(q + 1), sqrt.(diffusion)))
     return Q
 end
 
@@ -78,8 +80,8 @@ apply_diffusion!(
     diffusion::Diagonal{<:Number,<:FillArrays.Fill},
 ) = apply_diffusion!(out, Q, diffusion.diag.value)
 apply_diffusion!(
-    out::PSDMatrix{T,<:BlockDiag},
-    Q::PSDMatrix{T,<:BlockDiag},
+    out::PSDMatrix{T,<:BlocksOfDiagonals},
+    Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{<:T,<:Vector},
 ) where {T} = begin
     @simd ivdep for i in eachindex(blocks(Q.R))
@@ -97,6 +99,6 @@ apply_diffusion!(
     D = size(Q, 1)
     q = D ÷ d - 1
     # _matmul!(out.R, Q.R, Kronecker.kronecker(sqrt.(diffusion), Eye(q + 1)))
-    _matmul!(out.R, Q.R, kron(sqrt.(diffusion), Eye(q + 1)))
+    _matmul!(out.R, Q.R, kron(Eye(q + 1), sqrt.(diffusion)))
     return out
 end

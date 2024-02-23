@@ -34,8 +34,13 @@ appxsol = solve(prob_base, Vern9(), abstol=1e-9, reltol=1e-6)
         EK1(initialization=ForwardDiffInit(2)),
         # EK1(initialization=ClassicSolverInit()), # unstable for this problem
         EK1(diffusionmodel=FixedDiffusion()),
-        # EK0(diffusionmodel=FixedMVDiffusion()),
-        # EK0(diffusionmodel=DynamicMVDiffusion()),
+        EK0(diffusionmodel=FixedMVDiffusion()),
+        EK0(diffusionmodel=DynamicMVDiffusion()),
+        DiagonalEK1(),
+        EK1(initialization=ForwardDiffInit(2)),
+        DiagonalEK1(diffusionmodel=FixedDiffusion()),
+        DiagonalEK1(diffusionmodel=FixedMVDiffusion()),
+        DiagonalEK1(diffusionmodel=DynamicMVDiffusion()),
     )
         sol = solve(_prob, alg)
 
