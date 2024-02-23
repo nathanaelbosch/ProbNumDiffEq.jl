@@ -59,22 +59,17 @@ end
 @testset "Partial observations" begin
     H = [1 0;]
     data_part = (t=times, u=[H * d for d in obss])
-    compare_data_likelihoods(
-        EK1();
+    _test(alg; H, data_part) = compare_data_likelihoods(
+        alg;
         observation_matrix=H,
         observation_noise_cov=σ^2,
         data=data_part,
         adaptive=false, dt=DT,
         dense=false,
     )
-    @test_broken compare_data_likelihoods(
-        DiagonalEK1();
-        observation_matrix=H,
-        observation_noise_cov=σ^2,
-        data=data_part,
-        adaptive=false, dt=DT,
-        dense=false,
-    )
+
+    _test(EK1(); H, data_part)
+    @test_broken _test(DiagonalEK1(); H, data_part)
 end
 
 @testset "Observation noise types: $(typeof(Σ))" for Σ in (
