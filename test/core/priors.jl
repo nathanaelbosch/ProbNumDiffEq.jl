@@ -143,7 +143,7 @@ end
     @testset "Test `make_transition_matrices!`" begin
         for FAC in (
             PNDE.IsometricKroneckerCovariance,
-            # PNDE.BlockDiagonalCovariance,
+            PNDE.BlockDiagonalCovariance,
             )
             A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
                 FAC{Float64}(d, q), prior, h)
