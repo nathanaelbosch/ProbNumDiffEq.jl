@@ -271,3 +271,12 @@ function Kronecker.ldiv_vec_trick!(x::AbstractVector, A::IKP, v::AbstractVector)
     copyto!(X, A.B \ V)
     return x
 end
+
+function Base.vcat(K1::IKP, K2::IKP)
+    @assert K1.rdim == K2.rdim
+    return IKP(K1.rdim, vcat(K1.B, K2.B))
+end
+function Base.hcat(K1::IKP, K2::IKP)
+    @assert K1.rdim == K2.rdim
+    return IKP(K1.rdim, hcat(K1.B, K2.B))
+end

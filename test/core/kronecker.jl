@@ -126,4 +126,8 @@ q = 2
 
     # Div!
     @test K1 \ v ≈ M1 \ v
+
+    @test tttm([K1; K2]) == [M1; M2]
+    @test tttm([K1 K2]) == [M1 M2]
+    @test_broken [K1 K2; K2 K1] isa PNDE.IsometricKroneckerProduct
 end
