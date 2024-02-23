@@ -7,7 +7,6 @@ using ProbNumDiffEq
 using LinearAlgebra
 import ProbNumDiffEq: IsometricKroneckerProduct, BlocksOfDiagonals
 import ProbNumDiffEq as PNDE
-using BlockDiagonals
 using FillArrays
 import ProbNumDiffEq.GaussianDistributions: logpdf
 
@@ -79,7 +78,7 @@ import ProbNumDiffEq.GaussianDistributions: logpdf
                 end
                 _diffusions = diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
 
-                QM_diff = Matrix(BlockDiagonal([σ² * _Q.B for σ² in _diffusions]))
+                QM_diff = Matrix(BlocksOfDiagonals([σ² * _Q.B for σ² in _diffusions]))
                 P_p_diff = AM * PM * AM' + QM_diff
 
                 x_curr = Gaussian(m, PSDMatrix(P_R))
@@ -494,7 +493,7 @@ end
                 end
                 _diffusions =
                     diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
-                QM_diff = Matrix(BlockDiagonal([σ² * _Q.B for σ² in _diffusions]))
+                QM_diff = Matrix(BlocksOfDiagonals([σ² * _Q.B for σ² in _diffusions]))
 
                 ProbNumDiffEq.compute_backward_kernel!(
                     K_backward, x_next_pred, x_curr, K_forward; C_DxD, diffusion)

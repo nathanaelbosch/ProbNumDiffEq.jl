@@ -47,7 +47,7 @@ end
     PB, PIB = make_preconditioners(PNDE.BlockDiagonalCovariance)
 
     @test PK == PD
-    @test_broken PB == PD
+    @test PB == PD
     @test PIK == PID
-    @test_broken PIB == PID
+    @test PIB == PID
 end
