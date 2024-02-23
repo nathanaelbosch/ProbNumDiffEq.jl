@@ -53,45 +53,55 @@ end
 
     prior = PNDE.IWP(dim=d, num_derivatives=q)
 
-    PERM = [1 0 0 0 0 0
+    PERM = [
+        1 0 0 0 0 0
         0 0 0 1 0 0
         0 1 0 0 0 0
         0 0 0 0 1 0
         0 0 1 0 0 0
-        0 0 0 0 0 1]
+        0 0 0 0 0 1
+    ]
 
     # true sde parameters
-    F = [0 1 0 0 0 0
+    F = [
+        0 1 0 0 0 0
         0 0 1 0 0 0
         0 0 0 0 0 0
         0 0 0 0 1 0
         0 0 0 0 0 1
-        0 0 0 0 0 0]
+        0 0 0 0 0 0
+    ]
     F = PERM * F * PERM'
-    L = [0 0
+    L = [
+        0 0
         0 0
         1 0
         0 0
         0 0
-        0 1]
+        0 1
+    ]
     L = PERM * L
 
     # true transition matrices
-    AH_22_IBM = [1 h h^2/2 0 0 0
+    AH_22_IBM = [
+        1 h h^2/2 0 0 0
         0 1 h 0 0 0
         0 0 1 0 0 0
         0 0 0 1 h h^2/2
         0 0 0 0 1 h
-        0 0 0 0 0 1]
+        0 0 0 0 0 1
+    ]
     AH_22_IBM = PERM * AH_22_IBM * PERM'
 
     QH_22_IBM =
-        σ^2 .* [h^5/20 h^4/8 h^3/6 0 0 0
+        σ^2 .* [
+            h^5/20 h^4/8 h^3/6 0 0 0
             h^4/8 h^3/3 h^2/2 0 0 0
             h^3/6 h^2/2 h 0 0 0
             0 0 0 h^5/20 h^4/8 h^3/6
             0 0 0 h^4/8 h^3/3 h^2/2
-            0 0 0 h^3/6 h^2/2 h]
+            0 0 0 h^3/6 h^2/2 h
+        ]
     QH_22_IBM = PERM * QH_22_IBM * PERM'
 
     # true preconditioned transition matrices
@@ -222,12 +232,14 @@ end
 
     prior = PNDE.IOUP(dim=d, num_derivatives=q, rate_parameter=r)
 
-    PERM = [1 0 0 0 0 0
+    PERM = [
+        1 0 0 0 0 0
         0 0 0 1 0 0
         0 1 0 0 0 0
         0 0 0 0 1 0
         0 0 1 0 0 0
-        0 0 0 0 0 1]
+        0 0 0 0 0 1
+    ]
 
     sde = PNDE.to_sde(prior)
     F = [
@@ -270,12 +282,14 @@ end
 
     prior = PNDE.Matern(dim=d, num_derivatives=q, lengthscale=l)
 
-    PERM = [1 0 0 0 0 0
+    PERM = [
+        1 0 0 0 0 0
         0 0 0 1 0 0
         0 1 0 0 0 0
         0 0 0 0 1 0
         0 0 1 0 0 0
-        0 0 0 0 0 1]
+        0 0 0 0 0 1
+    ]
 
     sde = PNDE.to_sde(prior)
     F = [
