@@ -212,13 +212,13 @@ function update!(
     q = size(blocks(x_out.Σ.R)[1], 1) - 1
 
     ll = zero(eltype(x_out.μ))
-    for i in eachindex(blocks(x_out.Σ.R))
+    @views for i in eachindex(blocks(x_out.Σ.R))
         _, _ll = update!(
-            Gaussian(view(x_out.μ, (i-1)*(q+1)+1:i*(q+1)),
-                PSDMatrix(x_out.Σ.R.blocks[i])),
-            Gaussian(view(x_pred.μ, (i-1)*(q+1)+1:i*(q+1)),
+            Gaussian(x_out.μ[i:d:end],
+                     PSDMatrix(x_out.Σ.R.blocks[i])),
+            Gaussian(x_pred.μ[i:d:end],
                 PSDMatrix(x_pred.Σ.R.blocks[i])),
-            Gaussian(view(measurement.μ, i:i),
+            Gaussian(measurement.μ[i:d:end],
                 if measurement.Σ isa PSDMatrix
                     PSDMatrix(measurement.Σ.R.blocks[i])
                 else

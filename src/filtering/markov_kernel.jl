@@ -292,23 +292,23 @@ function compute_backward_kernel!(
     d = length(blocks(xpred.Σ.R))
     q = size(blocks(xpred.Σ.R)[1], 1) - 1
 
-    @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
+    @views @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
         _Kout = AffineNormalKernel(
             Kout.A.blocks[i],
-            view(Kout.b, (i-1)*(q+1)+1:i*(q+1)),
+            Kout.b[i:d:end],
             PSDMatrix(Kout.C.R.blocks[i]),
         )
         _xpred = Gaussian(
-            view(xpred.μ, (i-1)*(q+1)+1:i*(q+1)),
+            xpred.μ[i:d:end],
             PSDMatrix(xpred.Σ.R.blocks[i]),
         )
         _x = Gaussian(
-            view(x.μ, (i-1)*(q+1)+1:i*(q+1)),
+            x.μ[i:d:end],
             PSDMatrix(x.Σ.R.blocks[i]),
         )
         _K = AffineNormalKernel(
             K.A.blocks[i],
-            ismissing(K.b) ? missing : view(K.b, (i-1)*(q+1)+1:i*(q+1)),
+            ismissing(K.b) ? missing : K.b[i:d:end],
             PSDMatrix(K.C.R.blocks[i]),
         )
         _C_DxD = C_DxD.blocks[i]
