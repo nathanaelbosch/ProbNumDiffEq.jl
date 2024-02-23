@@ -91,8 +91,8 @@ make_obscov_sqrt(
     RR::IsometricKroneckerProduct,
 ) =
     IsometricKroneckerProduct(PR.rdim, make_obscov_sqrt(PR.B, H.B, RR.B))
-make_obscov_sqrt(PR::BlockDiag, H::BlockDiag, RR::BlockDiag) =
-    BlockDiag([
+make_obscov_sqrt(PR::BlocksOfDiagonals, H::BlocksOfDiagonals, RR::BlocksOfDiagonals) =
+    BlocksOfDiagonals([
         make_obscov_sqrt(blocks(PR)[i], blocks(H)[i], blocks(RR)[i]) for
         i in eachindex(blocks(PR))
     ])

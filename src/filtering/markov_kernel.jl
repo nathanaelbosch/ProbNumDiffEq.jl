@@ -121,12 +121,12 @@ function marginalize_cov!(
 end
 
 function marginalize_cov!(
-    Σ_out::PSDMatrix{T,<:BlockDiag},
-    Σ_curr::PSDMatrix{T,<:BlockDiag},
+    Σ_out::PSDMatrix{T,<:BlocksOfDiagonals},
+    Σ_curr::PSDMatrix{T,<:BlocksOfDiagonals},
     K::AffineNormalKernel{
         <:AbstractMatrix,
         <:Any,
-        <:PSDMatrix{S,<:BlockDiag},
+        <:PSDMatrix{S,<:BlocksOfDiagonals},
     };
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
@@ -271,22 +271,22 @@ end
 
 function compute_backward_kernel!(
     Kout::KT1,
-    xpred::SRGaussian{T,<:BlockDiag},
-    x::SRGaussian{T,<:BlockDiag},
+    xpred::SRGaussian{T,<:BlocksOfDiagonals},
+    x::SRGaussian{T,<:BlocksOfDiagonals},
     K::KT2;
     C_DxD::AbstractMatrix,
     diffusion::Union{Number,Diagonal}=1,
 ) where {
     T,
     KT1<:AffineNormalKernel{
-        <:BlockDiag,
+        <:BlocksOfDiagonals,
         <:AbstractVector,
-        <:PSDMatrix{T,<:BlockDiag},
+        <:PSDMatrix{T,<:BlocksOfDiagonals},
     },
     KT2<:AffineNormalKernel{
-        <:BlockDiag,
+        <:BlocksOfDiagonals,
         <:Any,
-        <:PSDMatrix{T,<:BlockDiag},
+        <:PSDMatrix{T,<:BlocksOfDiagonals},
     },
 }
     d = length(blocks(xpred.Σ.R))

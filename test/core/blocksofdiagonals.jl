@@ -1,6 +1,6 @@
 using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
-import ProbNumDiffEq: BlockDiag, _matmul!
+import ProbNumDiffEq: BlocksOfDiagonals, _matmul!
 using LinearAlgebra
 using BlockDiagonals
 using Test
@@ -8,9 +8,9 @@ using Test
 d1, d2 = 2, 3
 D = d1 * d2
 @testset "T=$T" for T in (Float64, BigFloat)
-    A = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
-    B = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
-    C = BlockDiag([randn(T, d1, d1) for _ in 1:d2])
+    A = BlocksOfDiagonals([randn(T, d1, d1) for _ in 1:d2])
+    B = BlocksOfDiagonals([randn(T, d1, d1) for _ in 1:d2])
+    C = BlocksOfDiagonals([randn(T, d1, d1) for _ in 1:d2])
     alpha = rand(T)
     beta = rand(T)
 
@@ -21,23 +21,23 @@ D = d1 * d2
     @test Matrix(BlockDiagonal(C)) == CM
 
     _A = @test_nowarn copy(A)
-    @test _A isa BlockDiag
+    @test _A isa BlocksOfDiagonals
 
     _B = @test_nowarn copy!(_A, B)
     @test _B === _A
     @test _B == B
 
     _A = @test_nowarn similar(A)
-    @test _A isa BlockDiag
+    @test _A isa BlocksOfDiagonals
     @test size(_A) == size(A)
 
     _Z = @test_nowarn zero(A)
-    @test _Z isa BlockDiag
+    @test _Z isa BlocksOfDiagonals
     @test size(_Z) == size(A)
     @test all(_Z .== 0)
 
     function tttm(M) # quick type test and to matrix
-        @test M isa BlockDiag
+        @test M isa BlocksOfDiagonals
         return Matrix(M)
     end
 

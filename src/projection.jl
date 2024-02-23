@@ -34,7 +34,7 @@ function projection(C::BlockDiagonalCovariance{elType}) where {elType}
         if deriv <= C.q
             e_i[deriv+1] = 1
         end
-        return BlockDiag([copy(e_i)' for _ in 1:C.d])
+        return BlocksOfDiagonals([copy(e_i)' for _ in 1:C.d])
     end
     return Proj
 end

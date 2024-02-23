@@ -12,10 +12,10 @@ apply_diffusion(
     diffusion::Diagonal{T,<:FillArrays.Fill},
 ) where {T} = apply_diffusion(Q, diffusion.diag.value)
 apply_diffusion(
-    Q::PSDMatrix{T,<:BlockDiag},
+    Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = PSDMatrix(
-    BlockDiag([blocks(Q.R)[i] * sqrt.(diffusion.diag[i]) for i in eachindex(blocks(Q.R))]))
+    BlocksOfDiagonals([blocks(Q.R)[i] * sqrt.(diffusion.diag[i]) for i in eachindex(blocks(Q.R))]))
 apply_diffusion(
     Q::PSDMatrix{T,<:Matrix},
     diffusion::Diagonal{T,<:Vector},
@@ -38,7 +38,7 @@ apply_diffusion!(
     return Q
 end
 apply_diffusion!(
-    Q::PSDMatrix{T,<:BlockDiag},
+    Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = begin
     @simd ivdep for i in eachindex(blocks(Q.R))
@@ -78,8 +78,8 @@ apply_diffusion!(
     diffusion::Diagonal{<:Number,<:FillArrays.Fill},
 ) = apply_diffusion!(out, Q, diffusion.diag.value)
 apply_diffusion!(
-    out::PSDMatrix{T,<:BlockDiag},
-    Q::PSDMatrix{T,<:BlockDiag},
+    out::PSDMatrix{T,<:BlocksOfDiagonals},
+    Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{<:T,<:Vector},
 ) where {T} = begin
     @simd ivdep for i in eachindex(blocks(Q.R))

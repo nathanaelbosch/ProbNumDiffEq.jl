@@ -10,9 +10,9 @@ function init_preconditioner(C::DenseCovariance{elType}) where {elType}
 end
 function init_preconditioner(C::BlockDiagonalCovariance{elType}) where {elType}
     B = Diagonal(ones(elType, C.q + 1))
-    P = BlockDiag([B for _ in 1:C.d])
+    P = BlocksOfDiagonals([B for _ in 1:C.d])
     BI = Diagonal(ones(elType, C.q + 1))
-    PI = BlockDiag([BI for _ in 1:C.d])
+    PI = BlocksOfDiagonals([BI for _ in 1:C.d])
     return P, PI
 end
 
@@ -39,7 +39,7 @@ end
 end
 make_preconditioner!(P::IsometricKroneckerProduct, h, d, q) =
     (make_preconditioner!(P.B, h, 1, q); P)
-make_preconditioner!(P::BlockDiag, h, d, q) =
+make_preconditioner!(P::BlocksOfDiagonals, h, d, q) =
     (make_preconditioner!(blocks(P)[1], h, 1, q); P)
 
 @fastmath @inbounds function make_preconditioner_inv!(PI::Diagonal, h, d, q)
@@ -54,5 +54,5 @@ make_preconditioner!(P::BlockDiag, h, d, q) =
 end
 make_preconditioner_inv!(PI::IsometricKroneckerProduct, h, d, q) =
     (make_preconditioner_inv!(PI.B, h, 1, q); PI)
-make_preconditioner_inv!(PI::BlockDiag, h, d, q) =
+make_preconditioner_inv!(PI::BlocksOfDiagonals, h, d, q) =
     (make_preconditioner_inv!(blocks(PI)[1], h, 1, q); PI)

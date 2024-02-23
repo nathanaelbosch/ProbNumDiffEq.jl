@@ -1,27 +1,26 @@
 """
-    ProbNumDiffEqBlockDiagonal(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
+    BlocksOfDiagonals(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
 
-A very minimal but fast re-implementation of `BlockDiagonals.Blockdiagonal`.
+TODO
 """
-struct ProbNumDiffEqBlockDiagonal{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
+struct BlocksOfDiagonals{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}
-    function ProbNumDiffEqBlockDiagonal{T,V}(
+    function BlocksOfDiagonals{T,V}(
         blocks::Vector{V},
     ) where {T,V<:AbstractMatrix{T}}
         return new{T,V}(blocks)
     end
 end
-function ProbNumDiffEqBlockDiagonal(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
-    return ProbNumDiffEqBlockDiagonal{T,V}(blocks)
+function BlocksOfDiagonals(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
+    return BlocksOfDiagonal{T,V}(blocks)
 end
-const BlockDiag = ProbNumDiffEqBlockDiagonal
 
-blocks(B::BlockDiag) = B.blocks
-nblocks(B::BlockDiag) = length(B.blocks)
-size(B::BlockDiag) = mapreduce(size, ((a, b), (c, d)) -> (a + c, b + d), blocks(B))
+blocks(B::BlocksOfDiagonals) = B.blocks
+nblocks(B::BlocksOfDiagonals) = length(B.blocks)
+size(B::BlocksOfDiagonals) = mapreduce(size, ((a, b), (c, d)) -> (a + c, b + d), blocks(B))
 
 Base.@propagate_inbounds function Base.getindex(
-    B::BlockDiag{T},
+    B::BlocksOfDiagonals{T},
     i::Integer,
     j::Integer,
 ) where {T}
@@ -43,31 +42,31 @@ Base.@propagate_inbounds function Base.getindex(
     error("This shouldn't happen")
 end
 
-Base.view(::BlockDiag, idxs...) =
-    throw(ErrorException("`BlockDiag` does not support views!"))
+Base.view(::BlocksOfDiagonals, idxs...) =
+    throw(ErrorException("`BlocksOfDiagonals` does not support views!"))
 
-copy(B::BlockDiag) = BlockDiag(copy.(blocks(B)))
-copy!(B::BlockDiag, A::BlockDiag) = begin
+copy(B::BlocksOfDiagonals) = BlocksOfDiagonals(copy.(blocks(B)))
+copy!(B::BlocksOfDiagonals, A::BlocksOfDiagonals) = begin
     @assert length(A.blocks) == length(B.blocks)
     @simd ivdep for i in eachindex(blocks(B))
         copy!(B.blocks[i], A.blocks[i])
     end
     return B
 end
-similar(B::BlockDiag) = BlockDiag(similar.(blocks(B)))
-zero(B::BlockDiag) = BlockDiag(zero.(blocks(B)))
+similar(B::BlocksOfDiagonals) = BlocksOfDiagonals(similar.(blocks(B)))
+zero(B::BlocksOfDiagonals) = BlocksOfDiagonals(zero.(blocks(B)))
 
-# Sums of BlockDiag
-Base.:+(A::BlockDiag, B::BlockDiag) = begin
+# Sums of BlocksOfDiagonals
+Base.:+(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = begin
     @assert nblocks(A) == nblocks(B)
-    return BlockDiag([Ai + Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
+    return BlocksOfDiagonals([Ai + Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
 end
-Base.:-(A::BlockDiag, B::BlockDiag) = begin
+Base.:-(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = begin
     @assert nblocks(A) == nblocks(B)
-    return BlockDiag([Ai - Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
+    return BlocksOfDiagonals([Ai - Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
 end
 
-add!(out::BlockDiag, toadd::BlockDiag) = begin
+add!(out::BlocksOfDiagonals, toadd::BlocksOfDiagonals) = begin
     @assert nblocks(out) == nblocks(toadd)
     @simd ivdep for i in eachindex(blocks(out))
         add!(blocks(out)[i], blocks(toadd)[i])
@@ -76,28 +75,28 @@ add!(out::BlockDiag, toadd::BlockDiag) = begin
 end
 
 # Mul with Scalar or UniformScaling
-Base.:*(a::Number, M::BlockDiag) = BlockDiag([a * B for B in blocks(M)])
-Base.:*(M::BlockDiag, a::Number) = BlockDiag([B * a for B in blocks(M)])
-Base.:*(U::UniformScaling, M::BlockDiag) = BlockDiag([U * B for B in blocks(M)])
-Base.:*(M::BlockDiag, U::UniformScaling) = BlockDiag([B * U for B in blocks(M)])
+Base.:*(a::Number, M::BlocksOfDiagonals) = BlocksOfDiagonals([a * B for B in blocks(M)])
+Base.:*(M::BlocksOfDiagonals, a::Number) = BlocksOfDiagonals([B * a for B in blocks(M)])
+Base.:*(U::UniformScaling, M::BlocksOfDiagonals) = BlocksOfDiagonals([U * B for B in blocks(M)])
+Base.:*(M::BlocksOfDiagonals, U::UniformScaling) = BlocksOfDiagonals([B * U for B in blocks(M)])
 
 # Mul between BockDiag's
-Base.:*(A::BlockDiag, B::BlockDiag) = begin
+Base.:*(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = begin
     @assert length(A.blocks) == length(B.blocks)
-    return BlockDiag([Ai * Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
+    return BlocksOfDiagonals([Ai * Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
 end
-Base.:*(A::Adjoint{T,<:BlockDiag}, B::BlockDiag) where {T} = begin
+Base.:*(A::Adjoint{T,<:BlocksOfDiagonals}, B::BlocksOfDiagonals) where {T} = begin
     @assert length(A.parent.blocks) == length(B.blocks)
-    return BlockDiag([Ai' * Bi for (Ai, Bi) in zip(blocks(A.parent), blocks(B))])
+    return BlocksOfDiagonals([Ai' * Bi for (Ai, Bi) in zip(blocks(A.parent), blocks(B))])
 end
-Base.:*(A::BlockDiag, B::Adjoint{T,<:BlockDiag}) where {T} = begin
+Base.:*(A::BlocksOfDiagonals, B::Adjoint{T,<:BlocksOfDiagonals}) where {T} = begin
     @assert length(A.blocks) == length(B.parent.blocks)
-    return BlockDiag([Ai * Bi' for (Ai, Bi) in zip(blocks(A), blocks(B.parent))])
+    return BlocksOfDiagonals([Ai * Bi' for (Ai, Bi) in zip(blocks(A), blocks(B.parent))])
 end
 
 # Standard LinearAlgebra.mul!
 for _mul! in (:mul!, :_matmul!)
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::BlockDiag) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::BlocksOfDiagonals) = begin
         @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
         @simd ivdep for i in eachindex(blocks(C))
             @inbounds $_mul!(C.blocks[i], A.blocks[i], B.blocks[i])
@@ -105,9 +104,9 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
     (_mul! == :_matmul!) && @eval $_mul!(
-        C::BlockDiag{T},
-        A::BlockDiag{T},
-        B::BlockDiag{T},
+        C::BlocksOfDiagonals{T},
+        A::BlocksOfDiagonals{T},
+        B::BlocksOfDiagonals{T},
     ) where {T<:LinearAlgebra.BlasFloat} = begin
         @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
         @simd ivdep for i in eachindex(blocks(C))
@@ -116,7 +115,7 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::BlockDiag, alpha::Number, beta::Number) =
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::BlocksOfDiagonals, alpha::Number, beta::Number) =
         begin
             @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
             @simd ivdep for i in eachindex(blocks(C))
@@ -125,9 +124,9 @@ for _mul! in (:mul!, :_matmul!)
             return C
         end
     (_mul! == :_matmul!) && @eval $_mul!(
-        C::BlockDiag{T},
-        A::BlockDiag{T},
-        B::BlockDiag{T},
+        C::BlocksOfDiagonals{T},
+        A::BlocksOfDiagonals{T},
+        B::BlocksOfDiagonals{T},
         alpha::Number,
         beta::Number,
     ) where {T<:LinearAlgebra.BlasFloat} = begin
@@ -138,7 +137,7 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlockDiag, A::Adjoint{<:Number,<:BlockDiag}, B::BlockDiag) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::Adjoint{<:Number,<:BlocksOfDiagonals}, B::BlocksOfDiagonals) = begin
         @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
         @simd ivdep for i in eachindex(blocks(C))
             @inbounds $_mul!(C.blocks[i], adjoint(A.parent.blocks[i]), B.blocks[i])
@@ -146,9 +145,9 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
     (_mul! == :_matmul!) && @eval $_mul!(
-        C::BlockDiag{T},
-        A::BlockDiag{T},
-        B::Adjoint{T,<:BlockDiag{T}},
+        C::BlocksOfDiagonals{T},
+        A::BlocksOfDiagonals{T},
+        B::Adjoint{T,<:BlocksOfDiagonals{T}},
     ) where {T<:LinearAlgebra.BlasFloat} = begin
         @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
         @simd ivdep for i in eachindex(blocks(C))
@@ -157,7 +156,7 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Adjoint{<:Number,<:BlockDiag}) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Adjoint{<:Number,<:BlocksOfDiagonals}) = begin
         @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
         @simd ivdep for i in eachindex(blocks(C))
             @inbounds $_mul!(C.blocks[i], A.blocks[i], adjoint(B.parent.blocks[i]))
@@ -165,9 +164,9 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
     (_mul! == :_matmul!) && @eval $_mul!(
-        C::BlockDiag{T},
-        A::Adjoint{T,<:BlockDiag{T}},
-        B::BlockDiag{T},
+        C::BlocksOfDiagonals{T},
+        A::Adjoint{T,<:BlocksOfDiagonals{T}},
+        B::BlocksOfDiagonals{T},
     ) where {T<:LinearAlgebra.BlasFloat} = begin
         @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
         @simd ivdep for i in eachindex(blocks(C))
@@ -176,14 +175,14 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlockDiag, A::Number, B::BlockDiag) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::Number, B::BlocksOfDiagonals) = begin
         @assert length(C.blocks) == length(B.blocks)
         @simd ivdep for i in eachindex(blocks(C))
             @inbounds $_mul!(C.blocks[i], A, B.blocks[i])
         end
         return C
     end
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Number) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Number) = begin
         @assert length(C.blocks) == length(A.blocks)
         @simd ivdep for i in eachindex(blocks(C))
             @inbounds $_mul!(C.blocks[i], A.blocks[i], B)
@@ -193,7 +192,7 @@ for _mul! in (:mul!, :_matmul!)
 
     @eval $_mul!(
         C::AbstractVector,
-        A::BlockDiag,
+        A::BlocksOfDiagonals,
         B::AbstractVector,
     ) = begin
         @assert size(A, 2) == length(B)
@@ -209,7 +208,7 @@ for _mul! in (:mul!, :_matmul!)
     end
     (_mul! == :_matmul!) && @eval $_mul!(
         C::AbstractVector{T},
-        A::BlockDiag{T},
+        A::BlocksOfDiagonals{T},
         B::AbstractVector{T},
     ) where {T<:LinearAlgebra.BlasFloat} = begin
         @assert size(A, 2) == length(B)
@@ -225,16 +224,16 @@ for _mul! in (:mul!, :_matmul!)
     end
 end
 
-LinearAlgebra.rmul!(B::BlockDiag, n::Number) = begin
+LinearAlgebra.rmul!(B::BlocksOfDiagonals, n::Number) = begin
     @simd ivdep for i in eachindex(B.blocks)
         rmul!(B.blocks[i], n)
     end
     return B
 end
 
-LinearAlgebra.inv(A::BlockDiag) = BlockDiag(inv.(blocks(A)))
+LinearAlgebra.inv(A::BlocksOfDiagonals) = BlocksOfDiagonals(inv.(blocks(A)))
 
-copy!(A::BlockDiag, B::Diagonal) = begin
+copy!(A::BlocksOfDiagonals, B::Diagonal) = begin
     @assert size(A) == size(B)
     i = 1
     for Ai in blocks(A)
@@ -245,7 +244,7 @@ copy!(A::BlockDiag, B::Diagonal) = begin
     return A
 end
 
-Base.:*(D::Diagonal, A::BlockDiag) = begin
+Base.:*(D::Diagonal, A::BlocksOfDiagonals) = begin
     @assert size(D, 2) == size(A, 1)
     local i = 1
     outblocks = map(blocks(A)) do Ai
@@ -254,9 +253,9 @@ Base.:*(D::Diagonal, A::BlockDiag) = begin
         i += d
         outi
     end
-    return BlockDiag(outblocks)
+    return BlocksOfDiagonals(outblocks)
 end
-Base.:*(A::BlockDiag, D::Diagonal) = begin
+Base.:*(A::BlocksOfDiagonals, D::Diagonal) = begin
     local i = 1
     outblocks = map(blocks(A)) do Ai
         d = size(Ai, 2)
@@ -264,10 +263,10 @@ Base.:*(A::BlockDiag, D::Diagonal) = begin
         i += d
         outi
     end
-    return BlockDiag(outblocks)
+    return BlocksOfDiagonals(outblocks)
 end
 for _mul! in (:mul!, :_matmul!)
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Diagonal) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Diagonal) = begin
         local i = 1
         @assert nblocks(C) == nblocks(A)
         for j in eachindex(blocks(C))
@@ -278,7 +277,7 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(C::BlockDiag, A::Diagonal, B::BlockDiag) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::Diagonal, B::BlocksOfDiagonals) = begin
         local i = 1
         @assert nblocks(C) == nblocks(B)
         for j in eachindex(blocks(C))
@@ -289,7 +288,7 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(C::BlockDiag, A::BlockDiag, B::Diagonal, alpha::Number, beta::Number) =
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Diagonal, alpha::Number, beta::Number) =
         begin
             local i = 1
             @assert nblocks(C) == nblocks(A)
@@ -301,7 +300,7 @@ for _mul! in (:mul!, :_matmul!)
             end
             return C
         end
-    @eval $_mul!(C::BlockDiag, A::Diagonal, B::BlockDiag, alpha::Number, beta::Number) =
+    @eval $_mul!(C::BlocksOfDiagonals, A::Diagonal, B::BlocksOfDiagonals, alpha::Number, beta::Number) =
         begin
             i = 1
             @assert nblocks(C) == nblocks(B)
@@ -315,7 +314,7 @@ for _mul! in (:mul!, :_matmul!)
         end
 end
 
-Base.isequal(A::BlockDiag, B::BlockDiag) =
+Base.isequal(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
     length(A.blocks) == length(B.blocks) && all(map(isequal, A.blocks, B.blocks))
-==(A::BlockDiag, B::BlockDiag) =
+==(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
     length(A.blocks) == length(B.blocks) && all(map(==, A.blocks, B.blocks))

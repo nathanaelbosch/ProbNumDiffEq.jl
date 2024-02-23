@@ -5,7 +5,7 @@ Check the correctness of the filtering implementations vs. basic readable math c
 using Test
 using ProbNumDiffEq
 using LinearAlgebra
-import ProbNumDiffEq: IsometricKroneckerProduct, BlockDiag
+import ProbNumDiffEq: IsometricKroneckerProduct, BlocksOfDiagonals
 import ProbNumDiffEq as PNDE
 using BlockDiagonals
 using FillArrays
@@ -105,8 +105,8 @@ import ProbNumDiffEq.GaussianDistributions: logpdf
             # marginalize! needs tall square-roots:
             Q_SR = if Q_R isa IsometricKroneckerProduct
                 PSDMatrix(IsometricKroneckerProduct(Q_R.rdim, [Q_R.B; zero(Q_R.B)]))
-            elseif Q_R isa BlockDiag
-                PSDMatrix(BlockDiag([[B; zero(B)] for B in Q_R.blocks]))
+            elseif Q_R isa BlocksOfDiagonals
+                PSDMatrix(BlocksOfDiagonals([[B; zero(B)] for B in Q_R.blocks]))
             else
                 PSDMatrix([Q_R; zero(Q_R)])
             end
