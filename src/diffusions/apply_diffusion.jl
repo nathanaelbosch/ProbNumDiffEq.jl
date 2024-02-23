@@ -15,14 +15,16 @@ apply_diffusion(
     Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = PSDMatrix(
-    BlocksOfDiagonals([blocks(Q.R)[i] * sqrt.(diffusion.diag[i]) for i in eachindex(blocks(Q.R))]))
+    BlocksOfDiagonals([
+        blocks(Q.R)[i] * sqrt.(diffusion.diag[i]) for i in eachindex(blocks(Q.R))
+    ]))
 apply_diffusion(
     Q::PSDMatrix{T,<:Matrix},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = begin
     d = size(diffusion, 1)
     q = size(Q, 1) ÷ d - 1
-    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(Eye(q+1), diffusion)))
+    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(Eye(q + 1), diffusion)))
 end
 
 """

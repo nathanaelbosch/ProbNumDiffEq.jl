@@ -215,7 +215,7 @@ function update!(
     @views for i in eachindex(blocks(x_out.Σ.R))
         _, _ll = update!(
             Gaussian(x_out.μ[i:d:end],
-                     PSDMatrix(x_out.Σ.R.blocks[i])),
+                PSDMatrix(x_out.Σ.R.blocks[i])),
             Gaussian(x_pred.μ[i:d:end],
                 PSDMatrix(x_pred.Σ.R.blocks[i])),
             Gaussian(measurement.μ[i:d:end],

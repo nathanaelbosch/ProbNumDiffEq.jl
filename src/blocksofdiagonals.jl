@@ -77,8 +77,10 @@ end
 # Mul with Scalar or UniformScaling
 Base.:*(a::Number, M::BlocksOfDiagonals) = BlocksOfDiagonals([a * B for B in blocks(M)])
 Base.:*(M::BlocksOfDiagonals, a::Number) = BlocksOfDiagonals([B * a for B in blocks(M)])
-Base.:*(U::UniformScaling, M::BlocksOfDiagonals) = BlocksOfDiagonals([U * B for B in blocks(M)])
-Base.:*(M::BlocksOfDiagonals, U::UniformScaling) = BlocksOfDiagonals([B * U for B in blocks(M)])
+Base.:*(U::UniformScaling, M::BlocksOfDiagonals) =
+    BlocksOfDiagonals([U * B for B in blocks(M)])
+Base.:*(M::BlocksOfDiagonals, U::UniformScaling) =
+    BlocksOfDiagonals([B * U for B in blocks(M)])
 
 # Mul between BockDiag's
 Base.:*(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = begin
@@ -115,7 +117,13 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::BlocksOfDiagonals, alpha::Number, beta::Number) =
+    @eval $_mul!(
+        C::BlocksOfDiagonals,
+        A::BlocksOfDiagonals,
+        B::BlocksOfDiagonals,
+        alpha::Number,
+        beta::Number,
+    ) =
         begin
             @assert length(C.blocks) == length(A.blocks) == length(B.blocks)
             @simd ivdep for i in eachindex(blocks(C))
@@ -137,7 +145,11 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlocksOfDiagonals, A::Adjoint{<:Number,<:BlocksOfDiagonals}, B::BlocksOfDiagonals) = begin
+    @eval $_mul!(
+        C::BlocksOfDiagonals,
+        A::Adjoint{<:Number,<:BlocksOfDiagonals},
+        B::BlocksOfDiagonals,
+    ) = begin
         @assert length(C.blocks) == length(A.parent.blocks) == length(B.blocks)
         @simd ivdep for i in eachindex(blocks(C))
             @inbounds $_mul!(C.blocks[i], adjoint(A.parent.blocks[i]), B.blocks[i])
@@ -156,7 +168,11 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 
-    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Adjoint{<:Number,<:BlocksOfDiagonals}) = begin
+    @eval $_mul!(
+        C::BlocksOfDiagonals,
+        A::BlocksOfDiagonals,
+        B::Adjoint{<:Number,<:BlocksOfDiagonals},
+    ) = begin
         @assert length(C.blocks) == length(A.blocks) == length(B.parent.blocks)
         @simd ivdep for i in eachindex(blocks(C))
             @inbounds $_mul!(C.blocks[i], A.blocks[i], adjoint(B.parent.blocks[i]))
@@ -279,7 +295,13 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Diagonal, alpha::Number, beta::Number) =
+    @eval $_mul!(
+        C::BlocksOfDiagonals,
+        A::BlocksOfDiagonals,
+        B::Diagonal,
+        alpha::Number,
+        beta::Number,
+    ) =
         begin
             @assert nblocks(C) == nblocks(A)
             D = nblocks(A)
@@ -290,7 +312,13 @@ for _mul! in (:mul!, :_matmul!)
             end
             return C
         end
-    @eval $_mul!(C::BlocksOfDiagonals, A::Diagonal, B::BlocksOfDiagonals, alpha::Number, beta::Number) =
+    @eval $_mul!(
+        C::BlocksOfDiagonals,
+        A::Diagonal,
+        B::BlocksOfDiagonals,
+        alpha::Number,
+        beta::Number,
+    ) =
         begin
             @assert nblocks(C) == nblocks(B)
             D = nblocks(B)

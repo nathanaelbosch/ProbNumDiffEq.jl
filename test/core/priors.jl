@@ -54,11 +54,11 @@ end
     prior = PNDE.IWP(dim=d, num_derivatives=q)
 
     PERM = [1 0 0 0 0 0
-            0 0 0 1 0 0
-            0 1 0 0 0 0
-            0 0 0 0 1 0
-            0 0 1 0 0 0
-            0 0 0 0 0 1]
+        0 0 0 1 0 0
+        0 1 0 0 0 0
+        0 0 0 0 1 0
+        0 0 1 0 0 0
+        0 0 0 0 0 1]
 
     # true sde parameters
     F = [0 1 0 0 0 0
@@ -144,7 +144,7 @@ end
         for FAC in (
             PNDE.IsometricKroneckerCovariance,
             PNDE.BlockDiagonalCovariance,
-            )
+        )
             A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
                 FAC{Float64}(d, q), prior, h)
 
