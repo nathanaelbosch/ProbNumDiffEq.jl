@@ -123,4 +123,7 @@ q = 2
     # But it always works if all matrices are actual adjoints
     @test PNDE._matmul!(copy(A)', A', K1') ≈ PNDE._matmul!(copy(A'), A', M1')
     @test PNDE._matmul!(copy(A)', A', K1', α, β) ≈ PNDE._matmul!(copy(A'), A', M1', α, β)
+
+    # Div!
+    @test K1 \ v ≈ M1 \ v
 end

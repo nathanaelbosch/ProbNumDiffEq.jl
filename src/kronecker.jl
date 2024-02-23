@@ -267,11 +267,7 @@ for TC in [:AbstractVector, :AbstractMatrix]
 end
 
 function Kronecker.ldiv_vec_trick!(x::AbstractVector, A::IKP, v::AbstractVector)
-    N = A.B
-    c, d = size(N)
-
-    V = reshape_no_alloc(v, (c, length(v) ÷ c))
-    X = reshape_no_alloc(x, (d, length(x) ÷ d))
-    copyto!(X, N \ V)
+    X, V = _prepare_inputs_for_vectrick(A, x, v)
+    copyto!(X, A.B \ V)
     return x
 end
