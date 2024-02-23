@@ -38,8 +38,8 @@ end
 discretize(F::IsometricKroneckerProduct, L::IsometricKroneckerProduct, dt::Real) = begin
     method = FiniteHorizonGramians.ExpAndGram{eltype(F.B),13}()
     A_breve, QR_breve = FiniteHorizonGramians.exp_and_gram_chol(F.B, L.B, dt, method)
-    A = IsometricKroneckerProduct(F.ldim, A_breve)
-    Q = PSDMatrix(IsometricKroneckerProduct(F.ldim, QR_breve))
+    A = IsometricKroneckerProduct(F.rdim, A_breve)
+    Q = PSDMatrix(IsometricKroneckerProduct(F.rdim, QR_breve))
     return A, Q
 end
 
@@ -48,7 +48,7 @@ function matrix_fraction_decomposition(
     dispersion::IsometricKroneckerProduct,
     dt::Real,
 )
-    d = drift.ldim
+    d = drift.rdim
     A_breve, Q_breve = matrix_fraction_decomposition(drift.B, dispersion.B, dt)
     return IsometricKroneckerProduct(d, A_breve), IsometricKroneckerProduct(d, Q_breve)
 end

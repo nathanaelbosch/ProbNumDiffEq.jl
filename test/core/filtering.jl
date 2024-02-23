@@ -104,7 +104,7 @@ import ProbNumDiffEq.GaussianDistributions: logpdf
             x_out = copy(x_curr)
             # marginalize! needs tall square-roots:
             Q_SR = if Q_R isa IsometricKroneckerProduct
-                PSDMatrix(IsometricKroneckerProduct(Q_R.ldim, [Q_R.B; zero(Q_R.B)]))
+                PSDMatrix(IsometricKroneckerProduct(Q_R.rdim, [Q_R.B; zero(Q_R.B)]))
             elseif Q_R isa BlockDiag
                 PSDMatrix(BlockDiag([[B; zero(B)] for B in Q_R.blocks]))
             else

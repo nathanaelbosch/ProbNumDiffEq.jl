@@ -1,72 +1,73 @@
 copy(K::Kronecker.KroneckerProduct) = Kronecker.KroneckerProduct(copy(K.A), copy(K.B))
 @doc raw"""
-    IsometricKroneckerProduct(left_factor_dim::Int64, right_factor::AbstractMatrix)
+    IsometricKroneckerProduct(left_factor_dim::Int64, left_factor::AbstractMatrix)
 
 Kronecker product of an identity and a generic matrix:
 ```math
 \begin{aligned}
-K = I_d \otimes B
+K = B \otimes I_d
 \end{aligned}
 ```
 
 # Arguments
-- `left_factor_dim::Int64`: Dimension `d` of the left identity kronecker factor.
-- `right_factor::AbstractMatrix`: Right Kronecker factor.
+- `right_factor_dim::Int64`: Dimension `d` of the left identity kronecker factor.
+- `left_factor::AbstractMatrix`: Right Kronecker factor.
 """
-struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
+struct RightIsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
        Kronecker.AbstractKroneckerProduct{T}
-    ldim::Int64
+    rdim::Int64
     B::TB
-    function IsometricKroneckerProduct(
-        left_factor_dim::Int64,
-        right_factor::AbstractMatrix{T},
+    function RightIsometricKroneckerProduct(
+        right_factor_dim::Int64,
+        left_factor::AbstractMatrix{T},
     ) where {T}
-        return new{T,typeof(right_factor)}(left_factor_dim, right_factor)
+        return new{T,typeof(left_factor)}(right_factor_dim, left_factor)
     end
 end
-IsometricKroneckerProduct(ldim::Integer, B::AbstractVector) =
-    IsometricKroneckerProduct(ldim, reshape(B, :, 1))
-IsometricKroneckerProduct(M::AbstractMatrix) = throw(
+RightIsometricKroneckerProduct(rdim::Integer, B::AbstractVector) =
+    RightIsometricKroneckerProduct(rdim, reshape(B, :, 1))
+RightIsometricKroneckerProduct(M::AbstractMatrix) = throw(
     ArgumentError(
-        "Can not create IsometricKroneckerProduct from the provided matrix of type $(typeof(M))",
+        "Can not create RightIsometricKroneckerProduct from the provided matrix of type $(typeof(M))",
     ),
 )
 
+const IsometricKroneckerProduct = RightIsometricKroneckerProduct
 const IKP = IsometricKroneckerProduct
 
-Kronecker.getmatrices(K::IKP) = (I(K.ldim), K.B)
-Kronecker.getallfactors(K::IKP) = (I(K.ldim), K.B)
+Kronecker.getmatrices(K::IKP) = (K.B, Eye(K.rdim))
+Kronecker.getallfactors(K::IKP) = (K.B, Eye(K.rdim))
 
-Base.zero(A::IKP) = IsometricKroneckerProduct(A.ldim, zero(A.B))
-Base.one(A::IKP) = IsometricKroneckerProduct(A.ldim, one(A.B))
+Base.zero(A::IKP) = IsometricKroneckerProduct(A.rdim, zero(A.B))
+Base.one(A::IKP) = IsometricKroneckerProduct(A.rdim, one(A.B))
 copy!(A::IKP, B::IKP) = begin
     check_same_size(A, B)
     copy!(A.B, B.B)
     return A
 end
-copy(A::IKP) = IsometricKroneckerProduct(A.ldim, copy(A.B))
-similar(A::IKP) = IsometricKroneckerProduct(A.ldim, similar(A.B))
-Base.size(K::IKP) = (K.ldim * size(K.B, 1), K.ldim * size(K.B, 2))
+copy(A::IKP) = IsometricKroneckerProduct(A.rdim, copy(A.B))
+similar(A::IKP) = IsometricKroneckerProduct(A.rdim, similar(A.B))
+Base.size(K::IKP) = (K.rdim * size(K.B, 1), K.rdim * size(K.B, 2))
 
 # conversion
 Base.convert(::Type{T}, K::IKP) where {T<:IKP} =
     K isa T ? K : T(K)
 function IKP{T,TB}(K::IKP) where {T,TB}
-    IKP(K.ldim, convert(TB, K.B))
+    IKP(K.rdim, convert(TB, K.B))
 end
 
 function Base.:*(A::IKP, B::IKP)
-    @assert A.ldim == B.ldim
-    return IsometricKroneckerProduct(A.ldim, A.B * B.B)
+    @assert A.rdim == B.rdim
+    return IsometricKroneckerProduct(A.rdim, A.B * B.B)
 end
-Base.:*(K::IKP, a::Number) = IsometricKroneckerProduct(K.ldim, K.B * a)
-Base.:*(a::Number, K::IKP) = IsometricKroneckerProduct(K.ldim, a * K.B)
-LinearAlgebra.adjoint(A::IKP) = IsometricKroneckerProduct(A.ldim, A.B')
-LinearAlgebra.rmul!(A::IKP, b::Number) = IsometricKroneckerProduct(A.ldim, rmul!(A.B, b))
+Base.:*(K::IKP, a::Number) = IsometricKroneckerProduct(K.rdim, K.B * a)
+Base.:*(a::Number, K::IKP) = IsometricKroneckerProduct(K.rdim, a * K.B)
+LinearAlgebra.adjoint(A::IKP) = IsometricKroneckerProduct(A.rdim, A.B')
+LinearAlgebra.rmul!(A::IKP, b::Number) = IsometricKroneckerProduct(A.rdim, rmul!(A.B, b))
 
 function check_same_size(A::IKP, B::IKP)
-    if A.ldim != B.ldim || size(A.B) != size(B.B)
-        Ad, An, Am, Bd, Bn, Bm = A.ldim, size(A)..., B.ldim, size(B)...
+    if A.rdim != B.rdim || size(A.B) != size(B.B)
+        Ad, An, Am, Bd, Bn, Bm = A.rdim, size(A)..., B.rdim, size(B)...
         throw(
             DimensionMismatch("A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm)"),
         )
@@ -74,9 +75,9 @@ function check_same_size(A::IKP, B::IKP)
 end
 function check_matmul_sizes(A::IKP, B::IKP)
     # For A * B
-    Ad, Bd = A.ldim, B.ldim
+    Ad, Bd = A.rdim, B.rdim
     An, Am, Bn, Bm = size(A)..., size(B)...
-    if !(A.ldim == B.ldim) || !(Am == Bn)
+    if !(A.rdim == B.rdim) || !(Am == Bn)
         throw(
             DimensionMismatch(
                 "Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm)",
@@ -86,9 +87,9 @@ function check_matmul_sizes(A::IKP, B::IKP)
 end
 function check_matmul_sizes(C::IKP, A::IKP, B::IKP)
     # For C = A * B
-    Ad, Bd, Cd = A.ldim, B.ldim, C.ldim
+    Ad, Bd, Cd = A.rdim, B.rdim, C.rdim
     An, Am, Bn, Bm, Cn, Cm = size(A)..., size(B)..., size(C)...
-    if !(A.ldim == B.ldim == C.ldim) || !(Am == Bn && An == Cn && Bm == Cm)
+    if !(A.rdim == B.rdim == C.rdim) || !(Am == Bn && An == Cn && Bm == Cm)
         throw(
             DimensionMismatch(
                 "Matrix multiplication not compatible: A has size ($Ad⋅$An,$Ad⋅$Am), B has size ($Bd⋅$Bn,$Bd⋅$Bm), C has size ($Cd⋅$Cn,$Cd⋅$Cm)",
@@ -99,26 +100,26 @@ end
 
 Base.:+(A::IKP, B::IKP) = begin
     check_same_size(A, B)
-    return IsometricKroneckerProduct(A.ldim, A.B + B.B)
+    return IsometricKroneckerProduct(A.rdim, A.B + B.B)
 end
-Base.:+(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.ldim, U + K.B)
-Base.:+(K::IKP, U::UniformScaling) = IsometricKroneckerProduct(K.ldim, U + K.B)
+Base.:+(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.rdim, U + K.B)
+Base.:+(K::IKP, U::UniformScaling) = IsometricKroneckerProduct(K.rdim, U + K.B)
 
 add!(out::IsometricKroneckerProduct, toadd::IsometricKroneckerProduct) = begin
-    @assert out.ldim == toadd.ldim
+    @assert out.rdim == toadd.rdim
     add!(out.B, toadd.B)
     return out
 end
 
-Base.:-(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.ldim, U - K.B)
-LinearAlgebra.inv(K::IKP) = IsometricKroneckerProduct(K.ldim, inv(K.B))
+Base.:-(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.rdim, U - K.B)
+LinearAlgebra.inv(K::IKP) = IsometricKroneckerProduct(K.rdim, inv(K.B))
 Base.:/(A::IKP, B::IKP) = begin
-    @assert A.ldim == B.ldim
-    return IsometricKroneckerProduct(A.ldim, A.B / B.B)
+    @assert A.rdim == B.rdim
+    return IsometricKroneckerProduct(A.rdim, A.B / B.B)
 end
 Base.:\(A::IKP, B::IKP) = begin
-    @assert A.ldim == B.ldim
-    return IsometricKroneckerProduct(A.ldim, A.B \ B.B)
+    @assert A.rdim == B.rdim
+    return IsometricKroneckerProduct(A.rdim, A.B \ B.B)
 end
 
 mul!(A::IKP, B::IKP, C::IKP) = begin

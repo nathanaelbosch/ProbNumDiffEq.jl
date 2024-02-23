@@ -253,7 +253,7 @@ function compute_backward_kernel!(
     },
 }
     D = length(x.μ)  # full_state_dim
-    d = K.A.ldim     # ode_dimension_dim
+    d = K.A.rdim     # ode_dimension_dim
     Q = D ÷ d        # n_derivatives_dim
     _Kout =
         AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, Q, d), PSDMatrix(Kout.C.R.B))

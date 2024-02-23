@@ -20,7 +20,7 @@ predict_cov(
     Q::PSDMatrix{T,<:IsometricKroneckerProduct},
 ) where {T} = begin
     P_pred_breve = predict_cov(PSDMatrix(Σ.R.B), A.B, PSDMatrix(Q.R.B))
-    return PSDMatrix(IsometricKroneckerProduct(Σ.R.ldim, P_pred_breve.R))
+    return PSDMatrix(IsometricKroneckerProduct(Σ.R.rdim, P_pred_breve.R))
 end
 
 """

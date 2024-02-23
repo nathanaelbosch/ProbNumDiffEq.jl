@@ -163,7 +163,7 @@ function update!(
     R::Union{Nothing,PSDMatrix{T,<:IsometricKroneckerProduct}}=nothing,
 ) where {T}
     D = length(x_out.μ)  # full_state_dim
-    d = H.ldim           # ode_dimension_dim
+    d = H.rdim           # ode_dimension_dim
     Q = D ÷ d            # n_derivatives_dim
     _x_out = Gaussian(reshape_no_alloc(x_out.μ, Q, d), PSDMatrix(x_out.Σ.R.B))
     _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, Q, d), PSDMatrix(x_pred.Σ.R.B))
