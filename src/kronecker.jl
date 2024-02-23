@@ -191,43 +191,35 @@ reshape_no_alloc(a, dims::Tuple) =
 reshape_no_alloc(a, dims...) = reshape_no_alloc(a, Tuple(dims))
 reshape_no_alloc(a::Missing, dims::Tuple) = missing
 
-function mul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    N = A.B
-    c, d = size(N)
+function _prepare_inputs_for_vectrick(A, x, v)
+    M = A.B
+    a, b = size(M)
+    V = reshape_no_alloc(transpose(v), (length(v) ÷ b, b)) |> transpose
+    X = reshape_no_alloc(transpose(x), (length(x) ÷ a, a)) |> transpose
+    return X, V
+end
 
-    V = reshape_no_alloc(v, (d, length(v) ÷ d))
-    X = reshape_no_alloc(x, (c, length(x) ÷ c))
-    mul!(X, N, V)
+function mul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
+    X, V = _prepare_inputs_for_vectrick(A, x, v)
+    mul!(X, A.B, V)
     return x
 end
 function mul_vectrick!(
     x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    N = A.B
-    c, d = size(N)
-
-    V = reshape_no_alloc(v, (d, length(v) ÷ d))
-    X = reshape_no_alloc(x, (c, length(x) ÷ c))
-    mul!(X, N, V, alpha, beta)
+    X, V = _prepare_inputs_for_vectrick(A, x, v)
+    mul!(X, A.B, V, alpha, beta)
     return x
 end
 
 function _matmul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    N = A.B
-    c, d = size(N)
-
-    V = reshape_no_alloc(v, (d, length(v) ÷ d))
-    X = reshape_no_alloc(x, (c, length(x) ÷ c))
-    _matmul!(X, N, V)
+    X, V = _prepare_inputs_for_vectrick(A, x, v)
+    _matmul!(X, A.B, V)
     return x
 end
 function _matmul_vectrick!(
     x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    N = A.B
-    c, d = size(N)
-
-    V = reshape_no_alloc(v, (d, length(v) ÷ d))
-    X = reshape_no_alloc(x, (c, length(x) ÷ c))
-    _matmul!(X, N, V, alpha, beta)
+    X, V = _prepare_inputs_for_vectrick(A, x, v)
+    _matmul!(X, A.B, V, alpha, beta)
     return x
 end
 
