@@ -1,7 +1,16 @@
 """
     BlocksOfDiagonals(blocks::Vector{V}) where {T,V<:AbstractMatrix{T}}
 
-TODO
+A block matrix where each block is a diagonal matrix.
+
+The implementation of this object is closer to that of a block-diagonal matrix, as done
+e.g. in BlockDiagonals.jl. That's because `BlocksOfDiagonals` can be permuted to be a
+block-diagonal matrix. Also, in our context here `BlocksOfDiagonals` is used to represent
+covariance matrices of states, and then each block can be interpreted as the covariance
+matrix of a certain dimension of a state and its derivatives.
+
+`BlocksOfDiagonals` can also be transformed into a `BlockArrays.BlockArray`!
+Just call `BlockArrays.BlockArray(A::BlocksOfDiagonals)`.
 """
 struct BlocksOfDiagonals{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}
