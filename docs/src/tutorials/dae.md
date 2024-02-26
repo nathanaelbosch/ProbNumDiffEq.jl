@@ -115,7 +115,7 @@ simplified_sys = structural_simplify(dae_index_lowering(traced_sys))
 
 Let's build two different ODE problems, and check how well we can solve each:
 ```@example dae
-prob_index3 = ODEProblem(traced_sys, Pair[], tspan)
+prob_index3 = ODEProblem(complete(traced_sys), Pair[], tspan)
 prob_index1 = ODEProblem(simplified_sys, Pair[], tspan)
 
 sol3 = solve(prob_index3, EK1())
