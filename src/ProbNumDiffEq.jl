@@ -60,9 +60,9 @@ Add `toadd` to `out` in-place.
 add!
 add!(out, toadd) = (out .+= toadd)
 
-include("fast_linalg.jl")
-include("kronecker.jl")
-include("blocksofdiagonals.jl")
+include("linear_algebra_utilities/fast_linalg.jl")
+include("linear_algebra_utilities/kronecker.jl")
+include("linear_algebra_utilities/blocksofdiagonals.jl")
 include("covariance_structure.jl")
 export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 
