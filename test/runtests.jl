@@ -1,4 +1,4 @@
-using Test, SafeTestsets, Aqua, JET, TimerOutputs
+using Test, SafeTestsets, TestSetExtensions, Aqua, JET, TimerOutputs
 using ProbNumDiffEq
 using ODEProblemLibrary
 
@@ -16,7 +16,7 @@ end
 
 const GROUP = get(ENV, "GROUP", "All")
 
-@testset "ProbNumDiffEq" begin
+@testset ExtendedTestSet "ProbNumDiffEq" begin
     if GROUP == "All" || GROUP == "Core"
         @timedtestset "Core" begin
             @timedsafetestset "BlocksOfDiagonals" begin
