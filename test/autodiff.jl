@@ -11,7 +11,12 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
 @testset "solver: $ALG" for ALG in (EK0, EK1, DiagonalEK1)
     _prob = prob_ode_fitzhughnagumo
-    prob = ODEProblem(structural_simplify(modelingtoolkitize(_prob)), _prob.u0, _prob.tspan, jac=true)
+    prob = ODEProblem(
+        structural_simplify(modelingtoolkitize(_prob)),
+        _prob.u0,
+        _prob.tspan,
+        jac=true,
+    )
     prob = remake(prob, p=collect(_prob.p))
 
     function param_to_loss(p)
