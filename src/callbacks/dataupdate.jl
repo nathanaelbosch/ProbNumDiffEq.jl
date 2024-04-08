@@ -53,28 +53,26 @@ function DataUpdateCallback(
         d = integ.cache.d
 
         @unpack x, E0, m_tmp, G1 = integ.cache
-        M = observation_matrix
-        H = M * E0
 
-        obs_mean = _matmul!(view(m_tmp.μ, 1:o), H, x.μ)
-        obs_mean .-= val
-
+        x2u_kernel = AffineNormalKernel(E0, PSDMatrix(Zeros(d, d)))
         R = cov2psdmatrix(observation_noise_cov; d=o)
-        R = to_factorized_matrix(integ.cache.covariance_factorization, R)
+        # R = to_factorized_matrix(integ.cache.covariance_factorization, R)
+        u2obs_kernel = AffineNormalKernel(observation_matrix, R)
 
-        # _A = x.Σ.R * H'
-        # obs_cov = _A'_A + R
-        obs_cov = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
+        u = marginalize(x, x2u_kernel)
+        u2x_kernel = compute_backward_kernel(u, x, x2u_kernel)
 
-        obs = Gaussian(obs_mean, obs_cov)
+        obs = marginalize(u, u2obs_kernel)
+        obs2u_kernel = compute_backward_kernel(obs, u, u2obs_kernel)
 
-        if o != d && !(integ.alg isa EK1)
-            error("Partial observations only work with the EK1 right now")
-        end
-        _cache = make_obssized_cache(integ.cache; o)
-        @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
-        _x = copy!(integ.cache.x_tmp, x)
-        _, ll = update!(x, _x, obs, H, K1, C_Dxd, C_DxD, C_dxd, C_d; R=R)
+        z = mean(obs) - val
+        ll = -0.5 * z' * (cov(obs) \ z) - 0.5 * o * log(2π) - 0.5 * logdet(cov(obs))
+
+        unew = obs2u_kernel(val)
+        xnew = marginalize(unew, u2x_kernel)
+
+        @info "??" xnew
+        copy!(integ.cache.x, xnew)
 
         if !isnothing(loglikelihood)
             loglikelihood.ll += ll

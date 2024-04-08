@@ -63,6 +63,7 @@ add!(out, toadd) = (out .+= toadd)
 include("linear_algebra_utilities/fast_linalg.jl")
 include("linear_algebra_utilities/kronecker.jl")
 include("linear_algebra_utilities/blocksofdiagonals.jl")
+include("linear_algebra_utilities/selection_matrices.jl")
 include("covariance_structure.jl")
 export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 

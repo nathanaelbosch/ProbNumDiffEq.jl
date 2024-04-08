@@ -18,7 +18,10 @@ struct AffineNormalKernel{TA,Tb,TC}
     b::Tb
     C::TC
 end
-AffineNormalKernel(A, C) = AffineNormalKernel(A, missing, C)
+AffineNormalKernel(A, C) = AffineNormalKernel(A, Zeros(size(A, 1)), C)
+AffineNormalKernel(A) = AffineNormalKernel(A, PSDMatrix(Zeros(size(A, 1), size(A, 1))))
+(K::AffineNormalKernel)(x) = Gaussian(K.A * x + K.b, K.C)
+const SRAffineNormalKernel{T,S} = AffineNormalKernel{TA,Tb,TC} where {TA,Tb,TC<:PSDMatrix}
 
 iterate(K::AffineNormalKernel, args...) = iterate((K.A, K.b, K.C), args...)
 
@@ -30,7 +33,7 @@ copy!(dst::AffineNormalKernel, src::AffineNormalKernel) = begin
     copy!(dst.A, src.A)
     copy!(dst.b, src.b)
     copy!(dst.C, src.C)
-    return nothing
+    return dst
 end
 
 RecursiveArrayTools.recursivecopy(K::AffineNormalKernel) = copy(K)
@@ -318,4 +321,74 @@ function compute_backward_kernel!(
         )
     end
     return Kout
+end
+
+
+############################################################################################
+# Simple allocating functions
+function marginalize(x::SRGaussian, K::SRAffineNormalKernel)
+    μout = K.A * x.μ
+    if !iszero(K.b)
+        μout += K.b
+    end
+
+    Σ_out = if !iszero(K.C)
+        PSDMatrix(qr([x.Σ.R * K.A'; K.C.R]).R)
+    else
+        PSDMatrix(x.Σ.R * K.A')
+    end
+
+    return Gaussian(μout, Σ_out)
+end
+function _marginalize!( # WIP
+    xout::SRGaussian, x::SRGaussian, K::SRAffineNormalKernel;
+    cachemat=nothing, # can be skipped if K.C is Zero
+    )
+
+    _matmul!(mean(xout), K.A, mean(x))
+    if !iszero(K.b)
+        mean(xout) .+= K.b
+    end
+
+    if !iszero(K.C)
+        @assert !isnothing(cachemat)
+        D1, D2, D3 = size(cov(x).R, 1), size(K.A, 1), size(K.C.R, 1)
+        @assert size(cachemat, 1) >= D1 + D3
+        @assert size(cachemat, 2) >= D2
+
+        @views _matmul!(cachemat[1:D1, 1:D2], cov(x).R, K.A')
+        @.. cachemat[D1+1:D1+D3, 1:D2] = K.C.R
+
+        R = qr!(@view cachemat[1:D1+D3, 1:D2]).R |> PSDMatrix
+        # triangularize!(R, cachemat=C_DxD)
+        copy!(cov(xout), R)
+    else
+        fast_X_A_Xt!(cov(xout), cov(x), K.A)
+    end
+
+    return xout
+end
+
+function compute_backward_kernel(
+    xpred::SRGaussian,
+    x::SRGaussian,
+    K::SRAffineNormalKernel,
+)
+    A, b, Q = K
+
+    G = unfactorize(x.Σ) * A' / xpred.Σ
+    # G = unfactorize(x.Σ) * A' / (A * x.Σ * A' + Q)
+
+    d = x.μ - G * xpred.μ
+    # d = x.μ - G * (A * x.μ + b)
+    # d = (I - G * A)x.μ - G * b
+
+    Λ = if !iszero(Q)
+        # PSDMatrix(qr([x.Σ.R' * (I - G * A)'; (G * Q.R')']).R)
+        PSDMatrix(qr([x.Σ.R - (G * A * x.Σ.R')'; (G * Q.R')']).R)
+    else
+        PSDMatrix(x.Σ.R * (I - G * A)')
+    end
+
+    return AffineNormalKernel(G, d, Λ)
 end

@@ -104,7 +104,17 @@ function update!(
         _matmul!(K2_cache, P_p, H')
     end
 
-    S_chol = length(_S) == 1 ? _S[1] : cholesky!(_S)
+    S_chol = length(_S) == 1 ? _S[1] : begin
+        # cholesky!(_S)
+        # @info "??" H * Matrix(cov(x_pred)) * H' _S
+        @assert isnothing(R)
+        C = Cholesky(qr(cov(x_pred).R * H').R, 'U', 0)
+        _C = cholesky!(_S)
+        @info "????" C _C
+        # isnothing(R) ? Cholesky(qr!(cov(x_pred).R * H').R, 'U', 0) :
+        #     Cholesky(qr!([cov(x_pred).R * H'; R.R]).R, 'U', 0)
+        C
+    end
     rdiv!(K, S_chol)
 
     loglikelihood = zero(eltype(K))

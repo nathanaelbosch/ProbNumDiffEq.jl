@@ -26,6 +26,8 @@ struct RightIsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
 end
 RightIsometricKroneckerProduct(rdim::Integer, B::AbstractVector) =
     RightIsometricKroneckerProduct(rdim, reshape(B, :, 1))
+RightIsometricKroneckerProduct(B::AbstractMatrix, rdim::Integer) =
+    RightIsometricKroneckerProduct(rdim, B)
 RightIsometricKroneckerProduct(M::AbstractMatrix) = throw(
     ArgumentError(
         "Can not create RightIsometricKroneckerProduct from the provided matrix of type $(typeof(M))",
