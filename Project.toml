@@ -46,7 +46,7 @@ RecipesBaseExt = "RecipesBase"
 
 [compat]
 ArrayAllocators = "0.3"
-BlockArrays = "0.16"
+BlockArrays = "0.16, 1"
 DiffEqBase = "6.122"
 DiffEqCallbacks = "2.36, 3"
 DiffEqDevTools = "2"
