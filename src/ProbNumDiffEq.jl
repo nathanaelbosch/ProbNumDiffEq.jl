@@ -3,7 +3,8 @@ __precompile__()
 module ProbNumDiffEq
 
 import Base:
-    copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length, zero
+    copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length, zero,
+    eltype
 
 using LinearAlgebra
 import LinearAlgebra: mul!, norm_sqr
