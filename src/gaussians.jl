@@ -77,7 +77,6 @@ _logdet(Σ, d) = logdet(Σ)
 _logdet(J::UniformScaling, d) = log(J.λ) * d
 logpdf(P::Gaussian, x) = -(sqmahal(P, x) + _logdet(P.Σ, dim(P)) + dim(P) * log(2pi)) / 2
 pdf(P::Gaussian, x) = exp(logpdf(P::Gaussian, x))
-cdf(P::Gaussian{Number}, x) = Distributions.normcdf(P.μ, sqrt(P.Σ), x)
 
 Base.:+(g::Gaussian, vec) = Gaussian(g.μ + vec, g.Σ)
 Base.:+(vec, g::Gaussian) = g + vec
