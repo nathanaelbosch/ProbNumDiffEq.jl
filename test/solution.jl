@@ -134,7 +134,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                 @test_nowarn plot(sol, denseplot=false)
                 message = "This plot does not visualize any uncertainties"
                 @test_logs (:warn, message) plot(sol, idxs=(1, 2))
-                @test_broken plot(sol, idxs=(1, 1, 2))
+                @test_logs (:warn, message) plot(sol, idxs=(1, 1, 2))
                 @test_nowarn plot(sol, tspan=prob.tspan)
             end
 
