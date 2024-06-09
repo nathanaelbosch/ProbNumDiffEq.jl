@@ -7,7 +7,7 @@ using Statistics
 using LinearAlgebra
 
 function chi2(gaussian_estimate, actual_value)
-    μ, Σ = gaussian_estimate
+    μ, Σ = mean(gaussian_estimate), cov(gaussian_estimate)
     d = length(μ)
     diff = μ - actual_value
     if iszero(Σ)
