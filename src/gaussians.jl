@@ -9,7 +9,7 @@ import Base: size, iterate, length
 
 sumlogdiag(Σ::Float64, _) = log(Σ)
 sumlogdiag(Σ, d) = sum(log.(diag(Σ)))
-sumlogdiag(J::UniformScaling, d) = log(J.λ)*d
+sumlogdiag(J::UniformScaling, d) = log(J.λ) * d
 
 # _logdet(Σ::PSD, d) = 2*sumlogdiag(Σ.σ, d)
 _logdet(Σ, d) = logdet(Σ)
@@ -39,29 +39,30 @@ mean(P::Gaussian) = P.μ
 cov(P::Gaussian) = P.Σ
 var(P::Gaussian{<:Number}) = P.Σ
 std(P::Gaussian{<:Number}) = sqrt(var(P))
-Base.convert(::Type{Gaussian{T, S}}, g::Gaussian) where {T, S} =
+Base.convert(::Type{Gaussian{T,S}}, g::Gaussian) where {T,S} =
     Gaussian(convert(T, g.μ), convert(S, g.Σ))
 
 dim(P::Gaussian) = length(P.μ)
 # whiten(Σ::PSD, z) = Σ.σ\z
-whiten(Σ, z) = cholesky(Σ).U'\z
-whiten(Σ::Number, z) = sqrt(Σ)\z
-whiten(Σ::UniformScaling, z) = sqrt(Σ.λ)\z
+whiten(Σ, z) = cholesky(Σ).U' \ z
+whiten(Σ::Number, z) = sqrt(Σ) \ z
+whiten(Σ::UniformScaling, z) = sqrt(Σ.λ) \ z
 
 # unwhiten(Σ::PSD, z) = Σ.σ*z
-unwhiten(Σ, z) = cholesky(Σ).U'*z
-unwhiten(Σ::Number, z) = sqrt(Σ)*z
-unwhiten(Σ::UniformScaling, z) = sqrt(Σ.λ)*z
+unwhiten(Σ, z) = cholesky(Σ).U' * z
+unwhiten(Σ::Number, z) = sqrt(Σ) * z
+unwhiten(Σ::UniformScaling, z) = sqrt(Σ.λ) * z
 
 sqmahal(P::Gaussian, x) = norm_sqr(whiten(P.Σ, x - P.μ))
 
 rand(P::Gaussian) = rand(GLOBAL_RNG, P)
 rand(RNG::AbstractRNG, P::Gaussian) = P.μ + unwhiten(P.Σ, randn(RNG, typeof(P.μ)))
-rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}) where T =
+rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}) where {T} =
     P.μ + unwhiten(P.Σ, randn(RNG, T, length(P.μ)))
-rand(RNG::AbstractRNG, P::Gaussian{<:Number}) = P.μ + sqrt(P.Σ)*randn(RNG, typeof(one(P.μ)))
+rand(RNG::AbstractRNG, P::Gaussian{<:Number}) =
+    P.μ + sqrt(P.Σ) * randn(RNG, typeof(one(P.μ)))
 
-logpdf(P::Gaussian, x) = -(sqmahal(P,x) + _logdet(P.Σ, dim(P)) + dim(P)*log(2pi))/2
+logpdf(P::Gaussian, x) = -(sqmahal(P, x) + _logdet(P.Σ, dim(P)) + dim(P) * log(2pi)) / 2
 pdf(P::Gaussian, x) = exp(logpdf(P::Gaussian, x))
 cdf(P::Gaussian{Number}, x) = Distributions.normcdf(P.μ, sqrt(P.Σ), x)
 
@@ -82,7 +83,11 @@ function rand_scalar(RNG::AbstractRNG, P::Gaussian{T}, dims) where {T}
     X
 end
 
-function rand_vector(RNG::AbstractRNG, P::Gaussian{Vector{T}}, dims::Union{Integer, NTuple}) where {T}
+function rand_vector(
+    RNG::AbstractRNG,
+    P::Gaussian{Vector{T}},
+    dims::Union{Integer,NTuple},
+) where {T}
     X = zeros(T, dim(P), dims...)
     for i in 1:prod(dims)
         X[:, i] = rand(RNG, P)
@@ -90,11 +95,17 @@ function rand_vector(RNG::AbstractRNG, P::Gaussian{Vector{T}}, dims::Union{Integ
     X
 end
 rand(RNG::AbstractRNG, P::Gaussian, dim::Integer) = rand_scalar(RNG, P, dim)
-rand(RNG::AbstractRNG, P::Gaussian, dims::Tuple{Vararg{Int64,N}} where N) = rand_scalar(RNG, P, dims)
+rand(RNG::AbstractRNG, P::Gaussian, dims::Tuple{Vararg{Int64,N}} where {N}) =
+    rand_scalar(RNG, P, dims)
 
-rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}, dim::Integer) where {T} = rand_vector(RNG, P, dim)
-rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}, dims::Tuple{Vararg{Int64,N}} where N) where {T} = rand_vector(RNG, P, dims)
-rand(P::Gaussian, dims::Tuple{Vararg{Int64,N}} where N) = rand(GLOBAL_RNG, P, dims)
+rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}, dim::Integer) where {T} =
+    rand_vector(RNG, P, dim)
+rand(
+    RNG::AbstractRNG,
+    P::Gaussian{Vector{T}},
+    dims::Tuple{Vararg{Int64,N}} where {N},
+) where {T} = rand_vector(RNG, P, dims)
+rand(P::Gaussian, dims::Tuple{Vararg{Int64,N}} where {N}) = rand(GLOBAL_RNG, P, dims)
 rand(P::Gaussian, dim::Integer) = rand(GLOBAL_RNG, P, dim)
 
 ############################################################################################
@@ -129,7 +140,6 @@ Base.eltype(::Type{G}) where {G<:Gaussian} = G
 
 Base.@propagate_inbounds Base.getindex(P::Gaussian, i::Integer) =
     Gaussian(P.μ[i], diag(P.Σ)[i])
-
 
 ############################################################################################
 # `SRGaussian`: Gaussians with PDFMatrix covariances
