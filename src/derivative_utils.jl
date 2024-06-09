@@ -15,13 +15,13 @@ function calc_H!(H, integ, cache)
         OrdinaryDiffEq.calc_J!(ddu, integ, cache, true)
         _ddu = size(ddu, 2) != d ? view(ddu, 1:d, :) : ddu
         ddu_diag = if size(ddu, 2) == d
+            # the normal case: just extract the diagonal
             Diagonal(_ddu)
         else
+            # the "SecondOrderODEProblem" case: since f(ddu, du, u, p, t) we need a bit more
             topleft = view(ddu, 1:d, 1:d)
             topright = view(ddu, 1:d, d+1:2d)
-            collect(zip(diag(topleft), diag(topright)))
-            c = [[a b;] for (a, b) in zip(diag(topleft), diag(topright))]
-            BlocksOfDiagonals(c)
+            BlocksOfDiagonals([[topleft[i, i] topright[i, i];] for i in 1:d])
         end
         _matmul!(H, ddu_diag, cache.SolProj, -1.0, 1.0)
     else
