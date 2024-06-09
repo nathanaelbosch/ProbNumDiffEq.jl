@@ -33,7 +33,7 @@ using FillArrays
 using MatrixEquations
 using DiffEqCallbacks
 
-@reexport using GaussianDistributions
+# @reexport using GaussianDistributions
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!, unfactorize
@@ -69,6 +69,7 @@ export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 
 include("gaussians.jl")
+export Gaussian
 
 include("priors/common.jl")
 include("priors/iwp.jl")
