@@ -20,7 +20,7 @@ function calc_H!(H, integ, cache)
             topleft = view(ddu, 1:d, 1:d)
             topright = view(ddu, 1:d, d+1:2d)
             collect(zip(diag(topleft), diag(topright)))
-            c = [[a b;] for (a,b) in zip(diag(topleft), diag(topright))]
+            c = [[a b;] for (a, b) in zip(diag(topleft), diag(topright))]
             BlocksOfDiagonals(c)
         end
         _matmul!(H, ddu_diag, cache.SolProj, -1.0, 1.0)
