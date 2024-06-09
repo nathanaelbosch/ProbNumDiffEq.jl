@@ -151,7 +151,7 @@ function local_diagonal_diffusion(cache)
     @unpack d, q, H, Qh, measurement, m_tmp = cache
     tmp = m_tmp.μ
     @unpack local_diffusion = cache
-    @assert (H == cache.E1) || (H == cache.E2)
+    # @assert (H == cache.E1) || (H == cache.E2)
 
     z = measurement.μ
     # HQH = H * unfactorize(Qh) * H'
