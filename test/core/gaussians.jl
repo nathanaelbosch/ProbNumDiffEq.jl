@@ -37,7 +37,7 @@ function test_stats(G::Gaussian{TM,TC}) where {TM,TC}
     @test typeof(s + G) == typeof(G)
     @test typeof(G - s) == typeof(G)
     M = rand(size(G.Σ)...)
-    @test typeof(M*G) == typeof(G)
+    @test typeof(M * G) == typeof(G)
 end
 
 @testset "T=$T" for T in (Float64, BigFloat)
