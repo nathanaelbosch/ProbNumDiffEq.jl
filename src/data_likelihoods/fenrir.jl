@@ -127,7 +127,7 @@ function fit_pnsolution_to_data!(
 end
 
 function measure_and_update!(x, u, H, R::PSDMatrix, cache)
-    z, S = cache.m_tmp
+    z, S = mean(cache.m_tmp), cov(cache.m_tmp)
     _matmul!(z, H, x.μ)
     z .-= u
     S = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
