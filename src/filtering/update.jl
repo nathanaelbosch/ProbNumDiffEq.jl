@@ -21,8 +21,8 @@ Joseph / square-root form.
 For better performance, we recommend to use the non-allocating [`update!`](@ref).
 """
 function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
-    m, C = x
-    z, S = measurement
+    m, C = mean(x), cov(x)
+    z, S = mean(measurement), cov(measurement)
 
     K = C * H' * inv(S)
     m_new = m - K * z
@@ -31,8 +31,8 @@ function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
     return Gaussian(m_new, C_new)
 end
 function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix)
-    m, C = x
-    z, S = measurement
+    m, C = mean(x), cov(x)
+    z, S = mean(measurement), cov(measurement)
 
     K = C * H' * inv(S)
     m_new = m - K * z

@@ -1,5 +1,5 @@
 function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
-    m, C = cache.x
+    m, C = mean(cache.x), cov(cache.x)
 
     # Create some caches
     @unpack SolProj, tmp, H, x_tmp = cache
@@ -11,7 +11,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     _K1, _K2 = cache.C_DxD[:, 1:d], cache.C_2DxD[1:D, 1:d]
 
     S = PSDMatrix(C.R[:, 1:d])
-    m_tmp, C_tmp = x_tmp
+    m_tmp, C_tmp = mean(x_tmp), cov(x_tmp)
 
     m_i = copy(m)
     local m_i_new, C_i_new
