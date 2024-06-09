@@ -6,8 +6,9 @@ import Base:
     copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length, zero
 
 using LinearAlgebra
-import LinearAlgebra: mul!
+import LinearAlgebra: mul!, norm_sqr
 import Statistics: mean, var, std, cov
+import Random: rand, GLOBAL_RNG, AbstractRNG
 using Printf
 using DocStringExtensions
 

@@ -1,20 +1,7 @@
-using LinearAlgebra, Random, Statistics
-using Distributions
-using LinearAlgebra: norm_sqr
-import Random: rand, GLOBAL_RNG
-import Statistics: mean, cov, var, std
-import Distributions: pdf, logpdf, sqmahal, cdf, quantile
-import LinearAlgebra: cholesky
-import Base: size, iterate, length
-
-sumlogdiag(Σ::Float64, _) = log(Σ)
-sumlogdiag(Σ, d) = sum(log.(diag(Σ)))
-sumlogdiag(J::UniformScaling, d) = log(J.λ) * d
-
-# _logdet(Σ::PSD, d) = 2*sumlogdiag(Σ.σ, d)
-_logdet(Σ, d) = logdet(Σ)
-_logdet(J::UniformScaling, d) = log(J.λ) * d
-
+############################################################################################
+# `Gaussian` distributions
+# Based on @mschauer's GaussianDistributions.jl
+############################################################################################
 """
     Gaussian(μ, Σ) -> P
 
@@ -30,19 +17,43 @@ struct Gaussian{T,S}
     Gaussian{T,S}(μ, Σ) where {T,S} = new(μ, Σ)
     Gaussian(μ::T, Σ::S) where {T,S} = new{T,S}(μ, Σ)
 end
+Base.convert(::Type{Gaussian{T,S}}, g::Gaussian) where {T,S} =
+    Gaussian(convert(T, g.μ), convert(S, g.Σ))
 
+# Base
 Base.:(==)(g1::Gaussian, g2::Gaussian) = g1.μ == g2.μ && g1.Σ == g2.Σ
 Base.isapprox(g1::Gaussian, g2::Gaussian; kwargs...) =
     isapprox(g1.μ, g2.μ; kwargs...) && isapprox(g1.Σ, g2.Σ; kwargs...)
-Gaussian() = Gaussian(0.0, 1.0)
+copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
+similar(P::Gaussian) = Gaussian(similar(P.μ), similar(P.Σ))
+Base.copyto!(P::AbstractArray{<:Gaussian}, idx::Integer, el::Gaussian) = begin
+    P[idx] = copy(el)
+    P
+end
+function Base.copy!(dst::Gaussian, src::Gaussian)
+    copy!(dst.μ, src.μ)
+    copy!(dst.Σ, src.Σ)
+    return dst
+end
+Base.iterate(::Gaussian) = error()
+Base.iterate(::Gaussian, s) = error()
+Base.length(P::Gaussian) = length(mean(P))
+size(g::Gaussian) = size(g.μ)
+Base.eltype(::Type{G}) where {G<:Gaussian} = G
+Base.@propagate_inbounds Base.getindex(P::Gaussian, i::Integer) =
+    Gaussian(P.μ[i], diag(P.Σ)[i])
+
+# Statistics
 mean(P::Gaussian) = P.μ
 cov(P::Gaussian) = P.Σ
 var(P::Gaussian{<:Number}) = P.Σ
 std(P::Gaussian{<:Number}) = sqrt(var(P))
-Base.convert(::Type{Gaussian{T,S}}, g::Gaussian) where {T,S} =
-    Gaussian(convert(T, g.μ), convert(S, g.Σ))
+var(g::Gaussian) = diag(g.Σ)
+std(g::Gaussian) = sqrt.(diag(g.Σ))
 
 dim(P::Gaussian) = length(P.μ)
+ndims(g::Gaussian) = ndims(g.μ)
+
 # whiten(Σ::PSD, z) = Σ.σ\z
 whiten(Σ, z) = cholesky(Σ).U' \ z
 whiten(Σ::Number, z) = sqrt(Σ) \ z
@@ -62,6 +73,8 @@ rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}) where {T} =
 rand(RNG::AbstractRNG, P::Gaussian{<:Number}) =
     P.μ + sqrt(P.Σ) * randn(RNG, typeof(one(P.μ)))
 
+_logdet(Σ, d) = logdet(Σ)
+_logdet(J::UniformScaling, d) = log(J.λ) * d
 logpdf(P::Gaussian, x) = -(sqmahal(P, x) + _logdet(P.Σ, dim(P)) + dim(P) * log(2pi)) / 2
 pdf(P::Gaussian, x) = exp(logpdf(P::Gaussian, x))
 cdf(P::Gaussian{Number}, x) = Distributions.normcdf(P.μ, sqrt(P.Σ), x)
@@ -69,11 +82,7 @@ cdf(P::Gaussian{Number}, x) = Distributions.normcdf(P.μ, sqrt(P.Σ), x)
 Base.:+(g::Gaussian, vec) = Gaussian(g.μ + vec, g.Σ)
 Base.:+(vec, g::Gaussian) = g + vec
 Base.:-(g::Gaussian, vec) = g + (-vec)
-Base.:*(M, g::Gaussian) = Gaussian(M * g.μ, M * g.Σ * M')
-⊕(g1::Gaussian, g2::Gaussian) = Gaussian(g1.μ + g2.μ, g1.Σ + g2.Σ)
-⊕(vec, g::Gaussian) = vec + g
-⊕(g::Gaussian, vec) = g + vec
-const independent_sum = ⊕
+Base.:*(M, g::Gaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
 
 function rand_scalar(RNG::AbstractRNG, P::Gaussian{T}, dims) where {T}
     X = zeros(T, dims)
@@ -108,46 +117,19 @@ rand(
 rand(P::Gaussian, dims::Tuple{Vararg{Int64,N}} where {N}) = rand(GLOBAL_RNG, P, dims)
 rand(P::Gaussian, dim::Integer) = rand(GLOBAL_RNG, P, dim)
 
-############################################################################################
-# Useful things when working with GaussianDistributions.Gaussian
-############################################################################################
-copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
-similar(P::Gaussian) = Gaussian(similar(P.μ), similar(P.Σ))
-Base.copyto!(P::AbstractArray{<:Gaussian}, idx::Integer, el::Gaussian) = begin
-    P[idx] = copy(el)
-    P
-end
-function Base.copy!(dst::Gaussian, src::Gaussian)
-    copy!(dst.μ, src.μ)
-    copy!(dst.Σ, src.Σ)
-    return dst
-end
-
-Base.iterate(::Gaussian) = error()
-Base.iterate(::Gaussian, s) = error()
-Base.length(P::Gaussian) = length(mean(P))
-
+# RecursiveArrayTools
 RecursiveArrayTools.recursivecopy(P::Gaussian) = copy(P)
 RecursiveArrayTools.recursivecopy!(dst::Gaussian, src::Gaussian) = copy!(dst, src)
+
+# Print
 show(io::IO, g::Gaussian) = print(io, "Gaussian($(g.μ), $(g.Σ))")
 show(io::IO, ::MIME"text/plain", g::Gaussian{T,S}) where {T,S} =
     print(io, "Gaussian{$T,$S}($(g.μ), $(g.Σ))")
-size(g::Gaussian) = size(g.μ)
-ndims(g::Gaussian) = ndims(g.μ)
-var(g::Gaussian) = diag(g.Σ)
-std(g::Gaussian) = sqrt.(diag(g.Σ))
-Base.eltype(::Type{G}) where {G<:Gaussian} = G
-
-Base.@propagate_inbounds Base.getindex(P::Gaussian, i::Integer) =
-    Gaussian(P.μ[i], diag(P.Σ)[i])
 
 ############################################################################################
 # `SRGaussian`: Gaussians with PDFMatrix covariances
 ############################################################################################
 const SRGaussian{T,S} = Gaussian{VM,PSDMatrix{T,S}} where {VM<:AbstractVecOrMat{T}}
-Base.:*(M::AbstractMatrix, g::SRGaussian) = Gaussian(M * g.μ, X_A_Xt(g.Σ, M))
-# GaussianDistributions.whiten(Σ::PSDMatrix, z) = Σ.L\z
-
 function _gaussian_mul!(g_out::SRGaussian, M::AbstractMatrix, g_in::SRGaussian)
     _matmul!(g_out.μ, M, g_in.μ)
     fast_X_A_Xt!(g_out.Σ, g_in.Σ, M)
