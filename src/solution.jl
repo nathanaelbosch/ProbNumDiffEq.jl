@@ -288,6 +288,7 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
+    d = interp.cache.d
     q = interp.cache.q
     dv = deriv.parameters[1]
     proj = if deriv == Val{0}
@@ -301,8 +302,11 @@ function (interp::ODEFilterPosterior)(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
     u = proj * x
-    @assert length(u) == length(idxs)
-    return Gaussian(u.μ, u.Σ)
+    P = zeros(Bool, length(idxs), d)
+    for (i, idx) in enumerate(idxs)
+        P[i, idx] = 1
+    end
+    return P * u
 end
 function (interp::ODEFilterPosterior)(
     t::AbstractVector{<:Real},
