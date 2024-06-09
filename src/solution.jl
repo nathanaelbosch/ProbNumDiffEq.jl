@@ -288,7 +288,6 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    d = interp.cache.d
     q = interp.cache.q
     dv = deriv.parameters[1]
     proj = if deriv == Val{0}
@@ -302,7 +301,7 @@ function (interp::ODEFilterPosterior)(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
     u = proj * x
-    P = zeros(Bool, length(idxs), d)
+    P = zeros(Bool, length(idxs), length(u))
     for (i, idx) in enumerate(idxs)
         P[i, idx] = 1
     end
