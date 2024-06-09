@@ -8,7 +8,7 @@ using LinearAlgebra
 import ProbNumDiffEq: IsometricKroneckerProduct, BlocksOfDiagonals
 import ProbNumDiffEq as PNDE
 using FillArrays
-import ProbNumDiffEq.GaussianDistributions: logpdf
+import ProbNumDiffEq: logpdf
 
 @testset "PREDICT" begin
     # Setup
