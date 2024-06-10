@@ -36,8 +36,8 @@ end
     x::Matrix{<:Gaussian}, y::Matrix{<:Gaussian},
 )
     @warn "This plot does not visualize any uncertainties"
-    xmeans = mean.(x)
-    ymeans = mean.(y)
+    xmeans = mean.(x)'
+    ymeans = mean.(y)'
     return xmeans, ymeans
 end
 @recipe function f(
