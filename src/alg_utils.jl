@@ -31,7 +31,7 @@ OrdinaryDiffEq.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
 # OrdinaryDiffEq.alg_adaptive_order(alg::AbstractEK) =
 
 # PI control is the default!
-OrdinaryDiffEq.isstandard(::AbstractEK) = false # proportional
+OrdinaryDiffEq.isstandard(::AbstractEK) = true # proportional
 OrdinaryDiffEq.ispredictive(::AbstractEK) = false # not sure, maybe Gustafsson acceleration?
 
 # OrdinaryDiffEq.qmin_default(alg::AbstractEK) =
