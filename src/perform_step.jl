@@ -223,6 +223,8 @@ function estimate_errors!(cache::AbstractODEFilterCache)
     _HQH = PSDMatrix(_matmul!(C_Dxd, _Q.R, H'))
     error_estimate = diag!(C_d, _HQH)
     @.. error_estimate = sqrt(error_estimate)
+    # @.. error_estimate = cache.measurement.μ
+    # @.. error_estimate = sqrt(error_estimate^2 + cache.measurement.μ^2)
     return error_estimate
 end
 
