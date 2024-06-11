@@ -47,12 +47,12 @@ Matern(; dim, num_derivatives, lengthscale) =
     Matern{typeof(1.0)}(; dim, num_derivatives, lengthscale)
 Matern(num_derivatives, lengthscale) =
     Matern(; dim=1, num_derivatives, lengthscale)
-Matern(nu::Rational, lengthscale) =
-    Matern(; dim=1, nu, lengthscale)
-Matern(; dim, nu::Rational, lengthscale) = begin
-    @assert nu.den == 2 "The Matern process is only defined for half integers nu = p/2"
-    Matern{typeof(1.0)}(;dim, num_derivatives=Int(floor(nu)), lengthscale)
-end
+# Matern(nu::Rational, lengthscale) =
+#     Matern(; dim=1, nu, lengthscale)
+# Matern(; dim, nu::Rational, lengthscale) = begin
+#     @assert nu.den == 2 "The Matern process is only defined for half integers nu = p/2"
+#     Matern{typeof(1.0)}(;dim, num_derivatives=Int(floor(nu)), lengthscale)
+# end
 
 remake(
     p::Matern{T};
