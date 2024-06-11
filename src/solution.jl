@@ -282,6 +282,32 @@ function (interp::ODEFilterPosterior)(
     return Gaussian(u.μ[idxs], diag(u.Σ)[idxs])
 end
 function (interp::ODEFilterPosterior)(
+    t::Real,
+    idxs::AbstractVector{<:Integer},
+    ::Type{deriv},
+    p,
+    continuity,
+) where {deriv}
+    q = interp.cache.q
+    dv = deriv.parameters[1]
+    proj = if deriv == Val{0}
+        interp.cache.SolProj
+    elseif dv <= q
+        interp.cache.Proj(dv)
+    else
+        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
+    end
+    x = interpolate(
+        t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
+        smoothed=interp.smooth)
+    u = proj * x
+    P = zeros(Bool, length(idxs), length(u))
+    for (i, idx) in enumerate(idxs)
+        P[i, idx] = 1
+    end
+    return P * u
+end
+function (interp::ODEFilterPosterior)(
     t::AbstractVector{<:Real},
     idxs,
     ::Type{deriv},

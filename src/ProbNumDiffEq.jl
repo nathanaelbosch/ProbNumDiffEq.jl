@@ -3,11 +3,13 @@ __precompile__()
 module ProbNumDiffEq
 
 import Base:
-    copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length, zero
+    copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length, zero,
+    eltype
 
 using LinearAlgebra
-import LinearAlgebra: mul!
+import LinearAlgebra: mul!, norm_sqr
 import Statistics: mean, var, std, cov
+import Random: rand, GLOBAL_RNG, AbstractRNG
 using Printf
 using DocStringExtensions
 
@@ -33,7 +35,7 @@ using FillArrays
 using MatrixEquations
 using DiffEqCallbacks
 
-@reexport using GaussianDistributions
+# @reexport using GaussianDistributions
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!, unfactorize
@@ -69,6 +71,7 @@ export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
 
 include("gaussians.jl")
+export Gaussian
 
 include("priors/common.jl")
 include("priors/iwp.jl")

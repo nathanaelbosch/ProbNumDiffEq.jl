@@ -19,6 +19,9 @@ const GROUP = get(ENV, "GROUP", "All")
 @testset ExtendedTestSet "ProbNumDiffEq" begin
     if GROUP == "All" || GROUP == "Core"
         @timedtestset "Core" begin
+            @timedsafetestset "Gaussians" begin
+                include("core/gaussians.jl")
+            end
             @timedsafetestset "BlocksOfDiagonals" begin
                 include("core/blocksofdiagonals.jl")
             end
