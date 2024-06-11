@@ -72,7 +72,8 @@ This implementation is likely to change in the future to allow for more flexibil
 initial_distribution(p::AbstractGaussMarkovProcess{T}) where {T} = begin
     d, q = dim(p), num_derivatives(p)
     D = d * (q + 1)
-    initial_variance = 1e-16*ones(T, q + 1)
+    # initial_variance = 1e-16*ones(T, q + 1)
+    initial_variance = ones(T, q + 1)
     μ0 = T <: LinearAlgebra.BlasFloat ? Array{T}(calloc, D) : zeros(T, D)
     Σ0 = PSDMatrix(IsometricKroneckerProduct(d, diagm(sqrt.(initial_variance))))
     return Gaussian(μ0, Σ0)
