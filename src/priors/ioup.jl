@@ -89,7 +89,7 @@ function to_sde(p::IOUP{T,<:Number}) where {T}
     q = num_derivatives(p)
     r = p.rate_parameter
 
-    F_breve = diagm(1 => ones(q))
+    F_breve = diagm(1 => ones(eltype(r), q))
     F_breve[end, end] = r
 
     L_breve = zeros(q + 1)
@@ -112,7 +112,7 @@ function to_sde(p::IOUP)
         r
     end
 
-    F_breve = diagm(1 => ones(q))
+    F_breve = diagm(1 => ones(eltype(r), q))
     # F_breve[end, end] = r
     F = kron(F_breve, Eye(d))
     F[end-d+1:end, end-d+1:end] = R

@@ -79,7 +79,7 @@ function to_sde(p::Matern)
     ν = q + 1 / 2
     λ = sqrt(2ν) / l
 
-    F_breve = diagm(1 => ones(q))
+    F_breve = diagm(1 => ones(typeof(l), q))
     @. F_breve[end, :] = -binomial(q + 1, 0:q) * λ^((q+1):-1:1)
 
     L_breve = zeros(q + 1)
