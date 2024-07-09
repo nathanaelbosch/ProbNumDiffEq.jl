@@ -143,7 +143,6 @@ const GROUP = get(ENV, "GROUP", "All")
             Aqua.test_all(
                 ProbNumDiffEq,
                 ambiguities=false,
-                piracies=false,
             )
         end
         @timedtestset "Code linting (JET.jl)" begin
