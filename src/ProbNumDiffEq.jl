@@ -39,7 +39,6 @@ using DiffEqCallbacks
 
 @reexport using PSDMatrices
 import PSDMatrices: X_A_Xt, X_A_Xt!, unfactorize
-X_A_Xt(A, X) = X * A * X'
 
 stack(x) = copy(reduce(hcat, x)')
 vecvec2mat(x) = reduce(hcat, x)'
