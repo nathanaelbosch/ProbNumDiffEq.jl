@@ -84,7 +84,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
             end
 
             # Sampling
-            if Alg == EK1 @testset "Solution Sampling" begin
+            @testset "Solution Sampling" begin
                 @testset "Discrete" begin
                     n_samples = 10
 
@@ -103,18 +103,25 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                         (2, (0.8, 0.99)),
                         (3, (0.95, 1)),
                         (4, (0.99, 1)),
-                        )
-                        percent_in_interval = sum(
-                            (sum(abs.(us .- samples[:, :, i]') .<= interval_width * es)
-                             for i in 1:n_samples)
-                        ) / (m*n*o)
+                    )
+                        percent_in_interval =
+                            sum(
+                                (
+                                sum(
+                                    abs.(us .- samples[:, :, i]') .<=
+                                    interval_width * es,
+                                )
+                                for i in 1:n_samples
+                            )
+                            ) / (m * n * o)
                         @test low <= percent_in_interval <= high
                     end
                 end
 
                 @testset "Dense" begin
                     n_samples = 10
-                    dense_samples, dense_times = ProbNumDiffEq.dense_sample(sol, n_samples)
+                    dense_samples, dense_times =
+                        ProbNumDiffEq.dense_sample(sol, n_samples)
 
                     m, n, o = size(dense_samples)
                     @test m == length(dense_times)
@@ -132,39 +139,15 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                         percent_in_interval =
                             sum(
                                 (
-                                    sum(
-                                        abs.(us .- dense_samples[:, :, i]') .<=
-                                            interval_width * es,
-                                    )
-                                    for i in 1:n_samples
-                                        )
+                                sum(
+                                    abs.(us .- dense_samples[:, :, i]') .<=
+                                    interval_width * es,
+                                )
+                                for i in 1:n_samples
+                            )
                             ) / (m * n * o)
                         @test_broken low <= percent_in_interval <= high
                     end
-                end
-            end
-            end
-
-            @testset "Sampling states from the solution" begin
-                if Alg == EK1
-                    n_samples = 2
-
-                    samples = ProbNumDiffEq.sample_states(sol, n_samples)
-
-                    @test samples isa Array
-
-                    m, n, o = size(samples)
-                    @test m == length(sol)
-                    @test n == sol.cache.d * (sol.cache.q + 1)
-                    @test o == n_samples
-
-                    # Dense sampling
-                    dense_samples, dense_times =
-                        ProbNumDiffEq.dense_sample_states(sol, n_samples)
-                    m, n, o = size(dense_samples)
-                    @test m == length(dense_times)
-                    @test n == sol.cache.d * (sol.cache.q + 1)
-                    @test o == n_samples
                 end
             end
 
