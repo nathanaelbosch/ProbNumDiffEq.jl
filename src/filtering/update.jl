@@ -151,6 +151,7 @@ function update!(
     x_out::SRGaussian{T,<:IsometricKroneckerProduct},
     x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
     measurement::Gaussian{
+        T,
         <:AbstractVector,
         <:Union{<:PSDMatrix{T,<:IsometricKroneckerProduct},<:IsometricKroneckerProduct},
     },
@@ -165,9 +166,9 @@ function update!(
     D = length(x_out.μ)  # full_state_dim
     d = H.rdim           # ode_dimension_dim
     Q = D ÷ d            # n_derivatives_dim
-    _x_out = Gaussian(reshape_no_alloc(x_out.μ, d, Q)', PSDMatrix(x_out.Σ.R.B))
-    _x_pred = Gaussian(reshape_no_alloc(x_pred.μ, d, Q)', PSDMatrix(x_pred.Σ.R.B))
-    _measurement = Gaussian(
+    _x_out = Gaussian{T}(reshape_no_alloc(x_out.μ, d, Q)', PSDMatrix(x_out.Σ.R.B))
+    _x_pred = Gaussian{T}(reshape_no_alloc(x_pred.μ, d, Q)', PSDMatrix(x_pred.Σ.R.B))
+    _measurement = Gaussian{T}(
         reshape_no_alloc(measurement.μ, d, 1)',
         measurement.Σ isa PSDMatrix ? PSDMatrix(measurement.Σ.R.B) : measurement.Σ.B,
     )
@@ -197,6 +198,7 @@ function update!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},
     x_pred::SRGaussian{T,<:BlocksOfDiagonals},
     measurement::Gaussian{
+        T,
         <:AbstractVector,
         <:Union{<:PSDMatrix{T,<:BlocksOfDiagonals},<:BlocksOfDiagonals},
     },
@@ -214,11 +216,11 @@ function update!(
     ll = zero(eltype(x_out.μ))
     @views for i in eachindex(blocks(x_out.Σ.R))
         _, _ll = update!(
-            Gaussian(x_out.μ[i:d:end],
+            Gaussian{T}(x_out.μ[i:d:end],
                 PSDMatrix(x_out.Σ.R.blocks[i])),
-            Gaussian(x_pred.μ[i:d:end],
+            Gaussian{T}(x_pred.μ[i:d:end],
                 PSDMatrix(x_pred.Σ.R.blocks[i])),
-            Gaussian(measurement.μ[i:d:end],
+            Gaussian{T}(measurement.μ[i:d:end],
                 if measurement.Σ isa PSDMatrix
                     PSDMatrix(measurement.Σ.R.blocks[i])
                 else
