@@ -10,7 +10,6 @@ authors:
   - name: Nathanael Bosch
     orcid: 0000-0003-0139-4622
     affiliation: 1
-    corresponding: true
 affiliations:
  - name: Tübingen AI Center, University of Tübingen, Germany
    index: 1
@@ -20,106 +19,75 @@ bibliography: paper.bib
 
 # Summary
 
-The forces on stars, galaxies, and dark matter under external gravitational
-fields lead to the dynamical evolution of structures in the universe. The orbits
-of these bodies are therefore key to understanding the formation, history, and
-future state of galaxies. The field of "galactic dynamics," which aims to model
-the gravitating components of galaxies to study their structure and evolution,
-is now well-established, commonly taught, and frequently used in astronomy.
-Aside from toy problems and demonstrations, the majority of problems require
-efficient numerical tools, many of which require the same base code (e.g., for
-performing numerical orbit integration).
+Probabilistic numerical solvers have emerged as an efficient framework for simulation, uncertainty quantification, and inference in dynamical systems.
+In comparison to traditional numerical methods which approximate the true trajectory of a system only by a single point estimate, probabilistic numerical solvers compute a _distribution_ over the true, unknown solution of the given differential equation
+and thereby provide information about the numerical error incurred during the computation.
+ProbNumDiffEq.jl implements such probabilistic numerical solvers for ordinary differential equations (ODEs) and differential algebraic equations (DAEs) in Julia, within the DifferentialEquations.jl ecosystem [@rackauckas2017differentialequations].
+
+More concretely, ProbNumDiffEq.jl provides a range of probabilistic numerical solvers for ordinary differential equations based on Bayesian filtering and smoothing,
+which have emerged as a particularly efficient and flexible class of methods for solving ODEs [@schober19; @kersting20; @tronarp19].
+These so-called "ODE filters" have known polynomial convergence rates 
+[@kersting20; @tronarp21]
+and numerical stability properties (such as A-stability or L-stability)
+[@tronarp19; @bosch2023probabilistic],
+their computational complexity is comparable to traditional numerical methods
+[@krämer2021highdim], 
+they are applicable to a range of numerical differential equation problems 
+[@kraemer202bvp; @kraemer22mol; @bosch22pick],
+and they can be formulated parallel-in-time 
+[@bosch2023parallelintime].
+ODE filters also provide a natural framework for ODE parameter inference 
+[@kersting20invprob; @tronarp2022fenrir; @schmidt21; @beck2024diffusion].
+ProbNumDiffEq.jl implements many of the methods referenced above and packages them in a software library with the aim to be easy-to-use, feature-rich, well-documented, and efficiently implemented.
 
 # Statement of need
 
-`Gala` is an Astropy-affiliated Python package for galactic dynamics. Python
-enables wrapping low-level languages (e.g., C) for speed without losing
-flexibility or ease-of-use in the user-interface. The API for `Gala` was
-designed to provide a class-based and user-friendly interface to fast (C or
-Cython-optimized) implementations of common operations such as gravitational
-potential and force evaluation, orbit integration, dynamical transformations,
-and chaos indicators for nonlinear dynamics. `Gala` also relies heavily on and
-interfaces well with the implementations of physical units and astronomical
-coordinate systems in the `Astropy` package [@astropy] (`astropy.units` and
-`astropy.coordinates`).
+Filtering-based probabilistic numerical ODE solvers have been an active field of research for the past decade, but their application in practical simulation and inference problems has been limited.
+ProbNumDiffEq.jl aims to help close this gap.
+ProbNumDiffEq.jl implements probabilistic numerical methods as performant, documented, and easy-to-use ODE solvers inside the well-established DifferentialEquations.jl ecosystem [@rackauckas2017differentialequations].
+Thereby, the package benefits from the extensive testing, documentation, performance optimization, and functionality that DifferentialEquations.jl provides.
+Users can easily find help and examples regarding many features that are not particular to ProbNumDiffEq.jl in the DifferentialEquations.jl documentation, 
+and we provide probabilistic numerics-specific examples and tutorials in the ProbNumDiffEq.jl documentation.
+We believe that this deep integration within DifferentialEquations.jl can be a key feature to attract users to probabilistic numerics by enabling users to use probabilistic ODE solvers as drop-in replacements for traditional ODE solvers.
 
-`Gala` was designed to be used by both astronomical researchers and by
-students in courses on gravitational dynamics or astronomy. It has already been
-used in a number of scientific publications [@Pearson:2017] and has also been
-used in graduate courses on Galactic dynamics to, e.g., provide interactive
-visualizations of textbook material [@Binney:2008]. The combination of speed,
-design, and support for Astropy functionality in `Gala` will enable exciting
-scientific explorations of forthcoming data releases from the *Gaia* mission
-[@gaia] by students and experts alike.
+On the other hand, ProbNumDiffEq.jl also aims to accelerate the development of new probabilistic numerical ODE solvers by providing a solid foundation to both build on and compare against.
+Several publications have been developed with ProbNumDiffEq.jl, including contributions on
+step-size adaptation and calibration of these solvers [@bosch21capos],
+energy-preserving solvers and DAE solvers [@bosch22pick],
+probabilistic exponential integrators [@bosch2023probabilistic],
+and novel parameter inference algorithms [@tronarp2022fenrir; @beck2024diffusion].
+We also hope that by providing documented and performant implementations of published algorithms we facilitate researchers to use these methods as baselines when developing new numerical solvers.
 
-# Mathematics
-
-Single dollars ($) are required for inline mathematics e.g. $f(x) = e^{\pi/x}$
-
-Double dollars make self-standing equations:
-
-$$\Theta(x) = \left\{\begin{array}{l}
-0\textrm{ if } x < 0\cr
-1\textrm{ else}
-\end{array}\right.$$
-
-You can also use plain \LaTeX for equations
-\begin{equation}\label{eq:fourier}
-\hat f(\omega) = \int_{-\infty}^{\infty} f(x) e^{i\omega x} dx
-\end{equation}
-and refer to \autoref{eq:fourier} from text.
-
-# Citations
-
-Citations to entries in paper.bib should be in
-[rMarkdown](http://rmarkdown.rstudio.com/authoring_bibliographies_and_citations.html)
-format.
-
-If you want to cite a software repository URL (e.g. something on GitHub without a preferred
-citation) then you can do it with the example BibTeX entry below for @fidgit.
-
-For a quick reference, the following citation commands can be used:
-- `@author:2001`  ->  "Author et al. (2001)"
-- `[@author:2001]` -> "(Author et al., 2001)"
-- `[@author1:2001; @author2:2001]` -> "(Author1 et al., 2001; Author2 et al., 2002)"
-
-- `@bosch20_calib_adapt_probab_ode_solver`: developed + implemented
-- `@bosch21_pick_and_mix_infor_operat`: developed + implemented
-- `@krämer2021probabilistic`: implemented
-- `@tronarp2022fenrir`: developed + implemented
-- `@bosch2023probabilistic`: developed + implemented
-- `@beck2024diffusion`: developed
-- `@wenger2021probnum`: related software package
-- DALTON: did they compare against my code?
-- BlackBox PN? Probabilistic richardson extrapolation paper?
-- probdiffeq: related code
-
-# Figures
-
-Figures can be included like this:
-![Caption for example figure.\label{fig:example}](figure.png)
-and referenced from text using \autoref{fig:example}.
-
-Figure sizes can be customized by adding an optional second parameter:
-![Caption for example figure.](figure.png){ width=20% }
+ProbNumDiffEq.jl is also the only software package in Julia, at the time of writing, that provides a comprehensive set of probabilistic numerical ODE solvers.
+Outside of Julia, two other software packages provide a similar functionality.
+ProbNum [@wenger2021probnum]
+is a Python package that provides probabilistic numerical solvers for ODEs, but also for other numerical problems such as linear systems and quadrature.
+It is thus broader in scope and provides functionality not covered by ProbNumDiffEq.jl, but it also lacks some of the specialized ODE solvers available in ProbNumDiffEq.jl.
+And with its reliance on Python and numpy, it is also generally less performant.
+ProbDiffEq [@probdiffeq]
+is a probabilistic numerical ODE solver package built on JAX.
+At the time of writing, it provides a very similar set of ODE solvers as ProbNumDiffEq.jl with the addition of certain filtering and smoothing methods and the lack of certain specialized ODE solvers, but as both ProbDiffEq and ProbNumDiffEq.jl are under active development this might change in the future.
+By building on JAX and leveraging its just-in-time compilation capabilities, ProbDiffEq provides ODE solvers with similar performance as those implemented in ProbNumDiffEq.jl.
+In summary, ProbNumDiffEq.jl provides one of the most feature-rich and performant probabilistic numerical ODE solver packages currently available and is the only one built on the Julia programming language.
 
 # Acknowledgements
 
-The authors gratefully acknowledge co-funding by the European Union (ERC, ANUBIS, 101123955. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Council. Neither the European Union nor the granting authority can be held responsible for them). 
-The authors thank the International Max Planck Research School for Intelligent Systems (IMPRS-IS) for supporting Nathanael Bosch.
+The author gratefully acknowledges co-funding by the European Union (ERC, ANUBIS, 101123955. Views and opinions expressed are however those of the author(s) only and do not necessarily reflect those of the European Union or the European Research Council. Neither the European Union nor the granting authority can be held responsible for them). 
+The author thanks the International Max Planck Research School for Intelligent Systems (IMPRS-IS) for their support.
 
-The authors are grateful to Nicholas Krämer for many valuable discussion and to Jonathan Schmidt for feedback on the manuscript.
-
-We acknowledge contributions from 
-Pietro Monticone (@pitmonticone),
-Vedant Puri (@vpuri3),
-Tim Holy (@timholy),
-Daniel González Arribas (@DaniGlez),
-David Widmann (@devmotion),
-Christopher Rackauckas (@ChrisRackauckas),
-Qingyu Qu (@ErikQQY),
-Cornelius Roemer (@corneliusroemer),
-and Jose Storopoli (@storopoli).
+I am grateful to Philipp Hennig for his support throughout the development of this package.
+I thank Nicholas Krämer, Filip Tronarp, and Jonathan Schmidt for many valuable discussions about probabilistic numerical ODE solvers and their correct, efficient, and elegant implementation.
+I also thank Christopher Rackauckas for support and feedback on how to integrate ProbNumDiffEq.jl with the DifferentialEquations.jl ecosystem and for including ProbNumDiffEq.jl into the testing pipeline of OrdinaryDiffEq.jl.
+I acknowledge contributions from 
+Pietro Monticone (\@pitmonticone),
+Vedant Puri (\@vpuri3),
+Tim Holy (\@timholy),
+Daniel González Arribas (\@DaniGlez),
+David Widmann (\@devmotion),
+Christopher Rackauckas (\@ChrisRackauckas),
+Qingyu Qu (\@ErikQQY),
+Cornelius Roemer (\@corneliusroemer),
+and Jose Storopoli (\@storopoli).
 
 
 # References

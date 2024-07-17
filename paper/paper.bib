@@ -1,6 +1,4 @@
-
-
-@InProceedings{krämer2021probabilistic,
+@InProceedings{krämer2021highdim,
   title =        {Probabilistic {ODE} Solutions in Millions of Dimensions},
   author =       {Kr{\"a}mer, Nicholas and Bosch, Nathanael and Schmidt,
                   Jonathan and Hennig, Philipp},
@@ -57,7 +55,6 @@
   url =          {https://openreview.net/forum?id=43HZG9zwaj}
 }
 
-
 @misc{wenger2021probnum,
   title =        {ProbNum: Probabilistic Numerics in Python},
   author =       {Jonathan Wenger and Nicholas Krämer and Marvin Pförtner and
@@ -68,4 +65,235 @@
   eprint =       {2112.02100},
   archivePrefix ={arXiv},
   primaryClass = {cs.MS}
+}
+
+@InProceedings{dalton2024,
+  title = 	 {Data-Adaptive Probabilistic Likelihood Approximation for Ordinary Differential Equations},
+  author =       {Wu, Mohan and Lysy, Martin},
+  booktitle = 	 {Proceedings of The 27th International Conference on Artificial Intelligence and Statistics},
+  pages = 	 {1018--1026},
+  year = 	 {2024},
+  editor = 	 {Dasgupta, Sanjoy and Mandt, Stephan and Li, Yingzhen},
+  volume = 	 {238},
+  series = 	 {Proceedings of Machine Learning Research},
+  month = 	 {02--04 May},
+  publisher =    {PMLR},
+  pdf = 	 {https://proceedings.mlr.press/v238/wu24b/wu24b.pdf},
+  url = 	 {https://proceedings.mlr.press/v238/wu24b.html},
+}
+
+@article{rackauckas2017differentialequations,
+  title =        {{DifferentialEquations.jl} – A Performant and Feature-Rich
+                  Ecosystem for Solving Differential Equations in Julia},
+  author =       {Rackauckas, Christopher and Nie, Qing},
+  journal =      {Journal of Open Research Software},
+  volume =       5,
+  number =       1,
+  year =         2017,
+  publisher =    {Ubiquity Press}
+}
+
+@misc{probdiffeq,
+  author = {Kr{\"a}mer, Nicholas},
+  title = {probdiffeq: Probabilistic solvers for differential equations in JAX},
+  year = {2023},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  url = {https://github.com/pnkraemer/probdiffeq}
+}
+
+@misc{jax2018github,
+  author =       {James Bradbury and Roy Frostig and Peter Hawkins and Matthew
+                  James Johnson and Chris Leary and Dougal Maclaurin and George
+                  Necula and Adam Paszke and Jake Vander{P}las and Skye
+                  Wanderman-{M}ilne and Qiao Zhang},
+  title =        {{JAX}: composable transformations of {P}ython+{N}um{P}y
+                  programs},
+  version =      {0.2.5},
+  year =         2018,
+}
+
+@article{schober19,
+  author =       "Schober, Michael and S{\"a}rkk{\"a}, Simo and Hennig, Philipp",
+  title =        "A probabilistic model for the numerical solution of initial
+                  value problems",
+  journal =      "Statistics and Computing",
+  year =         2019,
+  month =        "Jan",
+  day =          01,
+  volume =       29,
+  number =       1,
+  pages =        "99--122",
+  issn =         "1573-1375",
+  doi =          "10.1007/s11222-017-9798-7",
+  url =          "https://doi.org/10.1007/s11222-017-9798-7"
+}
+
+@article{tronarp19,
+  author =       {Filip Tronarp and Hans Kersting and Simo S{\"{a}}rkk{\"{a}}
+                  and Philipp Hennig},
+  title =        {Probabilistic solutions to ordinary differential equations as
+                  nonlinear {B}ayesian filtering: a new perspective},
+  year =         2019,
+  volume =       29,
+  number =       6,
+  pages =        {1297-1315},
+  doi =          {10.1007/s11222-019-09900-1},
+  url =          {https://doi.org/10.1007/s11222-019-09900-1},
+  journal =      {Statistics and Computing},
+  timestamp =    {Wed, 25 Mar 2020 09:31:58 +0100},
+  biburl =       {https://dblp.org/rec/journals/sac/TronarpKSH19.bib},
+  bibsource =    {dblp computer science bibliography, https://dblp.org}
+}
+
+@article{kersting20,
+  author =       {Kersting, Hans and Sullivan, T. J. and Hennig, Philipp},
+  title =        {Convergence rates of Gaussian ODE filters},
+  journal =      {Statistics and Computing},
+  year =         2020,
+  month =        {Nov},
+  day =          01,
+  volume =       30,
+  number =       6,
+  pages =        {1791-1816},
+  issn =         {1573-1375},
+  doi =          {10.1007/s11222-020-09972-4},
+  url =          {https://doi.org/10.1007/s11222-020-09972-4}
+}
+
+@article{tronarp21,
+  author =       {Tronarp, Filip and S{\"a}rkk{\"a}, Simo and Hennig, Philipp},
+  title =        {Bayesian ODE solvers: the maximum a posteriori estimate},
+  journal =      {Statistics and Computing},
+  year =         2021,
+  month =        {Mar},
+  day =          03,
+  volume =       31,
+  number =       3,
+  pages =        23,
+  issn =         {1573-1375},
+  doi =          {10.1007/s11222-021-09993-7},
+  url =          {https://doi.org/10.1007/s11222-021-09993-7}
+}
+
+@misc{bosch2023parallelintime,
+  title =        {Parallel-in-Time Probabilistic Numerical {ODE} Solvers},
+  author =       {Nathanael Bosch and Adrien Corenflos and Fatemeh Yaghoobi and
+                  Filip Tronarp and Philipp Hennig and Simo Särkkä},
+  year =         2023,
+  eprint =       {2310.01145},
+  archivePrefix ={arXiv},
+  primaryClass = {math.NA}
+}
+
+@InProceedings{kersting20invprob,
+  title =        {Differentiable Likelihoods for Fast Inversion of
+                  ’{L}ikelihood-Free’ Dynamical Systems},
+  author =       {Kersting, Hans and Kr{\"a}mer, Nicholas and Schiegg, Martin
+                  and Daniel, Christian and Tiemann, Michael and Hennig,
+                  Philipp},
+  booktitle =    {Proceedings of the 37th International Conference on Machine
+                  Learning},
+  pages =        {5198--5208},
+  year =         2020,
+  editor =       {Hal Daumé III and Aarti Singh},
+  volume =       119,
+  series =       {Proceedings of Machine Learning Research},
+  month =        {13--18 Jul},
+  publisher =    {PMLR},
+  pdf =          {http://proceedings.mlr.press/v119/kersting20a/kersting20a.pdf},
+  url =          {http://proceedings.mlr.press/v119/kersting20a.html},
+}
+
+@inproceedings{schmidt21,
+  author =       {Schmidt, Jonathan and Kr\"{a}mer, Nicholas and Hennig,
+                  Philipp},
+  booktitle =    {Advances in Neural Information Processing Systems},
+  editor =       {M. Ranzato and A. Beygelzimer and Y. Dauphin and P.S. Liang
+                  and J. Wortman Vaughan},
+  pages =        {12374--12385},
+  publisher =    {Curran Associates, Inc.},
+  title =        {A Probabilistic State Space Model for Joint Inference from
+                  Differential Equations and Data},
+  url =
+                  {https://proceedings.neurips.cc/paper/2021/file/6734fa703f6633ab896eecbdfad8953a-Paper.pdf},
+  volume =       34,
+  year =         2021
+}
+
+@inproceedings{kraemer202bvp,
+  author =       {Kr\"{a}mer, Nicholas and Hennig, Philipp},
+  booktitle =    {Advances in Neural Information Processing Systems},
+  editor =       {M. Ranzato and A. Beygelzimer and Y. Dauphin and P.S. Liang
+                  and J. Wortman Vaughan},
+  pages =        {11160--11171},
+  publisher =    {Curran Associates, Inc.},
+  title =        {Linear-Time Probabilistic Solution of Boundary Value Problems},
+  url =
+                  {https://papers.nips.cc/paper/2021/hash/5ca3e9b122f61f8f06494c97b1afccf3-Abstract.html},
+  volume =       34,
+  year =         2021
+}
+
+@InProceedings{kraemer22mol,
+  title =        { Probabilistic Numerical Method of Lines for Time-Dependent
+                  Partial Differential Equations },
+  author =       {Kr\"amer, Nicholas and Schmidt, Jonathan and Hennig, Philipp},
+  booktitle =    {Proceedings of The 25th International Conference on Artificial
+                  Intelligence and Statistics},
+  pages =        {625--639},
+  year =         2022,
+  editor =       {Camps-Valls, Gustau and Ruiz, Francisco J. R. and Valera,
+                  Isabel},
+  volume =       151,
+  series =       {Proceedings of Machine Learning Research},
+  month =        {28--30 Mar},
+  publisher =    {PMLR},
+  pdf =          {https://proceedings.mlr.press/v151/kramer22a/kramer22a.pdf},
+  url =          {https://proceedings.mlr.press/v151/kramer22a.html},
+}
+
+@InProceedings{bosch22pick,
+  title =        { Pick-and-Mix Information Operators for Probabilistic {ODE}
+                  Solvers },
+  author =       {Bosch, Nathanael and Tronarp, Filip and Hennig, Philipp},
+  booktitle =    {Proceedings of The 25th International Conference on Artificial
+                  Intelligence and Statistics},
+  pages =        {10015--10027},
+  year =         2022,
+  editor =       {Camps-Valls, Gustau and Ruiz, Francisco J. R. and Valera,
+                  Isabel},
+  volume =       151,
+  series =       {Proceedings of Machine Learning Research},
+  month =        {28--30 Mar},
+  publisher =    {PMLR},
+  pdf =          {https://proceedings.mlr.press/v151/bosch22a/bosch22a.pdf},
+  url =          {https://proceedings.mlr.press/v151/bosch22a.html},
+}
+
+@InProceedings{bosch21capos,
+  title =        { Calibrated Adaptive Probabilistic {ODE} Solvers },
+  author =       {Bosch, Nathanael and Hennig, Philipp and Tronarp, Filip},
+  booktitle =    {Proceedings of The 24th International Conference on Artificial
+                  Intelligence and Statistics},
+  pages =        {3466--3474},
+  year =         2021,
+  editor =       {Banerjee, Arindam and Fukumizu, Kenji},
+  volume =       130,
+  series =       {Proceedings of Machine Learning Research},
+  month =        {13--15 Apr},
+  publisher =    {PMLR},
+  pdf =          {http://proceedings.mlr.press/v130/bosch21a/bosch21a.pdf},
+  url =          {http://proceedings.mlr.press/v130/bosch21a.html},
+}
+
+@article{kraemer24stableimp,
+  author =       {Nicholas Kr{{\"a}}mer and Philipp Hennig},
+  title =        {Stable Implementation of Probabilistic ODE Solvers},
+  journal =      {Journal of Machine Learning Research},
+  year =         2024,
+  volume =       25,
+  number =       111,
+  pages =        {1--29},
+  url =          {http://jmlr.org/papers/v25/20-1423.html}
 }
