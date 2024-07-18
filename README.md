@@ -64,6 +64,16 @@ plot(sol.t, hcat(stds...)', color=["#CB3C33" "#389826" "#9558B2"]
 ![Fitzhugh-Nagumo Standard-Deviations](./examples/fitzhughnagumo_stddevs.svg?raw=true "Fitzhugh-Nagumo Standard-Deviations")
 
 
+## Contributing
+
+**Contributions are very welcome!**
+Check the existing issues for ideas on how to contribute to the package. 
+If you want to implement a new functionality/algorithm, open an issue to start a discussion.
+
+**Please open issues liberally!**
+If there is anything that's unclear or doesn't work, we would very much like to know about it.
+
+
 ## Related packages
 
 - [probdiffeq](https://pnkraemer.github.io/probdiffeq/): Fast and feature-rich filtering-based probabilistic ODE solvers in JAX.
