@@ -72,6 +72,7 @@ If you want to implement a new functionality/algorithm, open an issue to start a
 
 **Please open issues liberally!**
 If there is anything that's unclear or doesn't work, we would very much like to know about it.
+This includes not just bugs and feature requests but also general questions about the software, feedback and suggestions.
 
 
 ## Related packages
