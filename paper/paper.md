@@ -22,7 +22,7 @@ bibliography: paper.bib
 Probabilistic numerical solvers have emerged as an efficient framework for simulation, uncertainty quantification, and inference in dynamical systems.
 In comparison to traditional numerical methods which approximate the true trajectory of a system only by a single point estimate, probabilistic numerical solvers compute a _distribution_ over the true, unknown solution of the given differential equation
 and thereby provide information about the numerical error incurred during the computation.
-ProbNumDiffEq.jl implements such probabilistic numerical solvers for ordinary differential equations (ODEs) and differential algebraic equations (DAEs) in Julia, within the DifferentialEquations.jl ecosystem [@rackauckas2017differentialequations].
+ProbNumDiffEq.jl implements such probabilistic numerical solvers for ordinary differential equations (ODEs) and differential algebraic equations (DAEs) in the Julia programming language [@julia], within the DifferentialEquations.jl ecosystem [@rackauckas2017differentialequations].
 
 More concretely, ProbNumDiffEq.jl provides a range of probabilistic numerical solvers for ordinary differential equations based on Bayesian filtering and smoothing,
 which have emerged as a particularly efficient and flexible class of methods for solving ODEs [@schober19; @kersting20; @tronarp19].
