@@ -1,5 +1,5 @@
-# Called in the OrdinaryDiffEQ.__init; All `OrdinaryDiffEqAlgorithm`s have one
-function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::EKCache)
+# Called in the OrdinaryDiffEqCore.__init; All `OrdinaryDiffEqAlgorithm`s have one
+function OrdinaryDiffEqCore.initialize!(integ::OrdinaryDiffEqCore.ODEIntegrator, cache::EKCache)
     check_secondorderode(integ)
     check_densesmooth(integ)
     check_saveiter(integ)
@@ -13,15 +13,15 @@ function OrdinaryDiffEq.initialize!(integ::OrdinaryDiffEq.ODEIntegrator, cache::
     copy!(integ.cache.xprev, integ.cache.x)
 
     # These are necessary since the solution object is not 100% initialized by default
-    OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
+    OrdinaryDiffEqCore.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
     initial_pu = _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x)
-    OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
+    OrdinaryDiffEqCore.copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
 
     return nothing
 end
 
 function make_new_transitions(integ, cache, repeat_step)::Bool
-    # Similar to OrdinaryDiffEq.do_newJ
+    # Similar to OrdinaryDiffEqCore.do_newJ
     if integ.iter <= 1
         return true
     elseif cache.prior isa IOUP && cache.prior.update_rate_parameter
@@ -59,10 +59,10 @@ Basically consists of the following steps
 - Kalman update step
 - (optional) Update the global diffusion MLE
 
-As in OrdinaryDiffEq.jl, this step is not necessarily successful!
-For that functionality, use `OrdinaryDiffEq.step!(integ)`.
+As in OrdinaryDiffEqCore.jl, this step is not necessarily successful!
+For that functionality, use `OrdinaryDiffEqCore.step!(integ)`.
 """
-function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
+function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=false)
     @unpack t, dt = integ
     @unpack d = integ.cache
     @unpack xprev, x_pred, u_pred, x_filt, err_tmp = integ.cache
@@ -73,7 +73,7 @@ function OrdinaryDiffEq.perform_step!(integ, cache::EKCache, repeat_step=false)
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
         if cache.prior isa IOUP && cache.prior.update_rate_parameter
-            OrdinaryDiffEq.calc_J!(cache.prior.rate_parameter, integ, cache, false)
+            OrdinaryDiffEqDifferentiation.calc_J!(cache.prior.rate_parameter, integ, cache, false)
         end
 
         make_transition_matrices!(cache, cache.prior, dt)
@@ -142,7 +142,7 @@ In addition, compute the measurement mean (`z`) and the measurement function Jac
 Results are saved into `integ.cache.du`, `integ.cache.ddu`, `integ.cache.measurement.μ`
 and `integ.cache.H`.
 Jacobians are computed either with the supplied `f.jac`, or via automatic differentiation,
-as in OrdinaryDiffEq.jl.
+as in OrdinaryDiffEqCore.jl.
 """
 function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ

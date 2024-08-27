@@ -72,7 +72,9 @@ mutable struct EKCache{
     jac_config::JC
 end
 
-function OrdinaryDiffEq.alg_cache(
+OrdinaryDiffEqCore.get_fsalfirstlast(cache::AbstractODEFilterCache, rate_prototype) = (nothing, nothing)
+
+function OrdinaryDiffEqCore.alg_cache(
     alg::AbstractEK,
     u,
     rate_prototype,
@@ -221,8 +223,8 @@ function OrdinaryDiffEq.alg_cache(
     du1 = similar(rate_prototype)
     dw1 = zero(u)
     atmp = similar(u, uEltypeNoUnits)
-    if OrdinaryDiffEq.isimplicit(alg)
-        jac_config = OrdinaryDiffEq.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
+    if OrdinaryDiffEqCore.isimplicit(alg)
+        jac_config = OrdinaryDiffEqDifferentiation.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
     else
         jac_config = nothing
     end
@@ -251,5 +253,5 @@ function OrdinaryDiffEq.alg_cache(
     )
 end
 
-get_uf(f, t, p, ::Val{true}) = OrdinaryDiffEq.UJacobianWrapper(f, t, p)
-get_uf(f, t, p, ::Val{false}) = OrdinaryDiffEq.UDerivativeWrapper(f, t, p)
+get_uf(f, t, p, ::Val{true}) = OrdinaryDiffEqDifferentiation.UJacobianWrapper(f, t, p)
+get_uf(f, t, p, ::Val{false}) = OrdinaryDiffEqDifferentiation.UDerivativeWrapper(f, t, p)

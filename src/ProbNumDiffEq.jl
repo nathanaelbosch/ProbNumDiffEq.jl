@@ -17,7 +17,8 @@ using Reexport
 @reexport using DiffEqBase
 import SciMLBase
 import SciMLBase: interpret_vars, getsyms, remake
-using OrdinaryDiffEq
+using OrdinaryDiffEqCore, OrdinaryDiffEqDifferentiation, OrdinaryDiffEqVerner,
+    OrdinaryDiffEqRosenbrock
 using ToeplitzMatrices
 using FastBroadcast
 using StaticArrayInterface
@@ -67,7 +68,7 @@ include("blocksofdiagonals.jl")
 include("covariance_structure.jl")
 export IsometricKroneckerCovariance, DenseCovariance, BlockDiagonalCovariance
 
-abstract type AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache end
+abstract type AbstractODEFilterCache <: OrdinaryDiffEqCore.OrdinaryDiffEqCache end
 
 include("gaussians.jl")
 export Gaussian
