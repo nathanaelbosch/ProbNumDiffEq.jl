@@ -1,5 +1,5 @@
 # Inspired by:
-# https://github.com/SciML/OrdinaryDiffEqCore.jl/blob/v6.21.0/src/OrdinaryDiffEqCore.jl#L195-L221
+# https://github.com/SciML/OrdinaryDiffEq.jl/blob/v6.21.0/src/OrdinaryDiffEqCore.jl#L195-L221
 
 import PrecompileTools
 
