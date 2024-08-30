@@ -65,7 +65,7 @@ ForwardDiffInit() = begin
 end
 
 """
-    ClassicSolverInit(; alg=OrdinaryDiffEq.Tsit5(), init_on_ddu=false)
+    ClassicSolverInit(; alg=OrdinaryDiffEqCore.Tsit5(), init_on_ddu=false)
 
 Initialization via regression on a few steps of a classic ODE solver.
 
@@ -80,7 +80,7 @@ optionally the second derivative can also be set via automatic differentiation b
 `init_on_ddu=true`.
 
 # Arguments
-- `alg`: The solver to be used. Can be any solver from OrdinaryDiffEq.jl.
+- `alg`: The solver to be used. Can be any solver from OrdinaryDiffEqCore.jl.
 - `init_on_ddu`: If `true`, the second derivative is also initialized exactly via
   automatic differentiation with ForwardDiff.jl.
 

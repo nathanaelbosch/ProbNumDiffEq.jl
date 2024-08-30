@@ -47,7 +47,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     # Compute the other parts with classic solvers
     t0 = integ.sol.prob.tspan[1]
     dt =
-        10 * OrdinaryDiffEq.ode_determine_initdt(
+        10 * OrdinaryDiffEqCore.ode_determine_initdt(
             u,
             t,
             1,

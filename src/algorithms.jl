@@ -1,7 +1,7 @@
 ########################################################################################
 # Algorithm
 ########################################################################################
-abstract type AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm end
+abstract type AbstractEK <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm end
 
 function ekargcheck(
     alg;
@@ -352,9 +352,9 @@ function DiffEqBase.prepare_alg(
     p,
     prob,
 ) where {T}
-    # See OrdinaryDiffEq.jl: ./src/alg_utils.jl (where this is copied from).
+    # See OrdinaryDiffEqCore.jl: ./src/alg_utils.jl (where this is copied from).
     # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
-    # use the prepare_alg from OrdinaryDiffEq; but right now, we do not use `linsolve` which
+    # use the prepare_alg from OrdinaryDiffEqCore; but right now, we do not use `linsolve` which
     # is a requirement.
 
     if (isbitstype(T) && sizeof(T) > 24) || (

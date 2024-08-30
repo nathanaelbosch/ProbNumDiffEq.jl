@@ -74,7 +74,7 @@ function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) whe
     )
 end
 
-# Used to build the initial empty solution in OrdinaryDiffEq.__init
+# Used to build the initial empty solution in OrdinaryDiffEqCore.__init
 function DiffEqBase.build_solution(
     prob::DiffEqBase.AbstractODEProblem,
     alg::AbstractEK,
@@ -87,7 +87,7 @@ function DiffEqBase.build_solution(
     kwargs...,
 )
     # By making an actual cache, interpolation can be written very closely to the solver
-    cache = OrdinaryDiffEq.alg_cache(
+    cache = OrdinaryDiffEqCore.alg_cache(
         alg,
         prob.u0,
         recursivecopy(prob.u0),

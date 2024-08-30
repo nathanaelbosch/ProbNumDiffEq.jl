@@ -1,14 +1,14 @@
 """
-    OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
+    OrdinaryDiffEqCore.postamble!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
 
-ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEq.jl's `postamble!`.
+ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEqCore.jl's `postamble!`.
 
-In addition to calling `OrdinaryDiffEq._postamble!(integ)`, calibrate the diffusion and
+In addition to calling `OrdinaryDiffEqCore._postamble!(integ)`, calibrate the diffusion and
 smooth the solution.
 """
-function OrdinaryDiffEq.postamble!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
-    # OrdinaryDiffEq.jl-related calls:
-    OrdinaryDiffEq._postamble!(integ)
+function OrdinaryDiffEqCore.postamble!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
+    # OrdinaryDiffEqCore.jl-related calls:
+    OrdinaryDiffEqCore._postamble!(integ)
     copyat_or_push!(integ.sol.k, integ.saveiter_dense, integ.k)
     pn_solution_endpoint_match_cur_integrator!(integ)
 
@@ -118,18 +118,18 @@ function smooth_solution!(integ)
     return nothing
 end
 
-"Inspired by `OrdinaryDiffEq.solution_match_cur_integrator!`"
+"Inspired by `OrdinaryDiffEqCore.solution_match_cur_integrator!`"
 function pn_solution_endpoint_match_cur_integrator!(integ)
     if integ.opts.save_end
         if integ.alg.smooth
-            OrdinaryDiffEq.copyat_or_push!(
+            OrdinaryDiffEqCore.copyat_or_push!(
                 integ.sol.x_filt,
                 integ.saveiter_dense,
                 integ.cache.x,
             )
         end
 
-        OrdinaryDiffEq.copyat_or_push!(
+        OrdinaryDiffEqCore.copyat_or_push!(
             integ.sol.pu,
             integ.saveiter,
             _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
@@ -137,26 +137,26 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
     end
 end
 
-"Extends `OrdinaryDiffEq._savevalues!` to save ProbNumDiffEq.jl-specific things."
+"Extends `OrdinaryDiffEqCore._savevalues!` to save ProbNumDiffEq.jl-specific things."
 function DiffEqBase.savevalues!(
-    integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK},
+    integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
     force_save=false,
     reduce_size=true,
 )
 
-    # Do whatever OrdinaryDiffEq would do
-    out = OrdinaryDiffEq._savevalues!(integ, force_save, reduce_size)
+    # Do whatever OrdinaryDiffEqCore would do
+    out = OrdinaryDiffEqCore._savevalues!(integ, force_save, reduce_size)
 
     # Save our custom stuff that we need for the posterior
     if integ.opts.save_everystep
         i = integ.saveiter
-        OrdinaryDiffEq.copyat_or_push!(integ.sol.diffusions, i, integ.cache.local_diffusion)
-        OrdinaryDiffEq.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
+        OrdinaryDiffEqCore.copyat_or_push!(integ.sol.diffusions, i, integ.cache.local_diffusion)
+        OrdinaryDiffEqCore.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
-        OrdinaryDiffEq.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
+        OrdinaryDiffEqCore.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
         if integ.alg.smooth
-            OrdinaryDiffEq.copyat_or_push!(
+            OrdinaryDiffEqCore.copyat_or_push!(
                 integ.sol.backward_kernels, i, integ.cache.backward_kernel)
         end
     end
@@ -164,10 +164,10 @@ function DiffEqBase.savevalues!(
     return out
 end
 
-function OrdinaryDiffEq.update_uprev!(integ::OrdinaryDiffEq.ODEIntegrator{<:AbstractEK})
-    @assert !OrdinaryDiffEq.alg_extrapolates(integ.alg)
+function OrdinaryDiffEqCore.update_uprev!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
+    @assert !OrdinaryDiffEqCore.alg_extrapolates(integ.alg)
     @assert isinplace(integ.sol.prob)
-    @assert !(integ.alg isa OrdinaryDiffEq.DAEAlgorithm)
+    @assert !(integ.alg isa OrdinaryDiffEqCore.DAEAlgorithm)
 
     recursivecopy!(integ.uprev, integ.u)
     recursivecopy!(integ.cache.xprev, integ.cache.x)
