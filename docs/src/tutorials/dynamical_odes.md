@@ -89,6 +89,8 @@ The probabilistic numerical solvers from ProbNumDiffEq.jl have the same internal
 As a result, we can use the `EK1` both for first and second order ODEs, but it automatically specializes on the latter to provide a __2x performance boost__:
 
 ```
+julia> using BenchmarkTools
+
 julia> @btime solve(prob, EK1(order=3), adaptive=false, dt=1e-2);
   766.312 ms (400362 allocations: 173.38 MiB)
 

@@ -12,7 +12,7 @@ Currently, we recommend using the semi-implicit `EK1` algorithm.
 
 First, define the DAE (here the ROBER problem) as an ODE problem with singular mass matrix:
 ```@example dae
-using ProbNumDiffEq, Plots, LinearAlgebra, OrdinaryDiffEq, ModelingToolkit
+using ProbNumDiffEq, Plots, LinearAlgebra, OrdinaryDiffEq, ModelingToolkit, LinearAlgebra
 
 function rober(du, u, p, t)
     y₁, y₂, y₃ = u
