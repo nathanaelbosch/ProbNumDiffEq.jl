@@ -72,7 +72,8 @@ mutable struct EKCache{
     jac_config::JC
 end
 
-OrdinaryDiffEqCore.get_fsalfirstlast(cache::AbstractODEFilterCache, rate_prototype) = (nothing, nothing)
+OrdinaryDiffEqCore.get_fsalfirstlast(cache::AbstractODEFilterCache, rate_prototype) =
+    (nothing, nothing)
 
 function OrdinaryDiffEqCore.alg_cache(
     alg::AbstractEK,
@@ -224,7 +225,9 @@ function OrdinaryDiffEqCore.alg_cache(
     dw1 = zero(u)
     atmp = similar(u, uEltypeNoUnits)
     if OrdinaryDiffEqCore.isimplicit(alg)
-        jac_config = OrdinaryDiffEqDifferentiation.build_jac_config(alg, f, uf, du1, uprev, u, tmp, dw1)
+        jac_config = OrdinaryDiffEqDifferentiation.build_jac_config(
+            alg, f, uf, du1, uprev, u, tmp, dw1,
+        )
     else
         jac_config = nothing
     end

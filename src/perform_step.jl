@@ -1,5 +1,8 @@
 # Called in the OrdinaryDiffEqCore.__init; All `OrdinaryDiffEqAlgorithm`s have one
-function OrdinaryDiffEqCore.initialize!(integ::OrdinaryDiffEqCore.ODEIntegrator, cache::EKCache)
+function OrdinaryDiffEqCore.initialize!(
+    integ::OrdinaryDiffEqCore.ODEIntegrator,
+    cache::EKCache,
+)
     check_secondorderode(integ)
     check_densesmooth(integ)
     check_saveiter(integ)
@@ -73,7 +76,12 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
         if cache.prior isa IOUP && cache.prior.update_rate_parameter
-            OrdinaryDiffEqDifferentiation.calc_J!(cache.prior.rate_parameter, integ, cache, false)
+            OrdinaryDiffEqDifferentiation.calc_J!(
+                cache.prior.rate_parameter,
+                integ,
+                cache,
+                false,
+            )
         end
 
         make_transition_matrices!(cache, cache.prior, dt)

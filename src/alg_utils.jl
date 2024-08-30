@@ -12,10 +12,15 @@ OrdinaryDiffEqDifferentiation.concrete_jac(::AbstractEK) = nothing
 OrdinaryDiffEqCore.isfsal(::AbstractEK) = false
 
 for ALG in [:EK1, :DiagonalEK1]
-    @eval OrdinaryDiffEqDifferentiation._alg_autodiff(::$ALG{CS,AD}) where {CS,AD} = Val{AD}()
-    @eval OrdinaryDiffEqDifferentiation.alg_difftype(::$ALG{CS,AD,DiffType}) where {CS,AD,DiffType} =
+    @eval OrdinaryDiffEqDifferentiation._alg_autodiff(::$ALG{CS,AD}) where {CS,AD} =
+        Val{AD}()
+    @eval OrdinaryDiffEqDifferentiation.alg_difftype(
+        ::$ALG{CS,AD,DiffType},
+    ) where {CS,AD,DiffType} =
         DiffType
-    @eval OrdinaryDiffEqDifferentiation.standardtag(::$ALG{CS,AD,DiffType,ST}) where {CS,AD,DiffType,ST} =
+    @eval OrdinaryDiffEqDifferentiation.standardtag(
+        ::$ALG{CS,AD,DiffType,ST},
+    ) where {CS,AD,DiffType,ST} =
         ST
     @eval OrdinaryDiffEqDifferentiation.concrete_jac(
         ::$ALG{CS,AD,DiffType,ST,CJ},

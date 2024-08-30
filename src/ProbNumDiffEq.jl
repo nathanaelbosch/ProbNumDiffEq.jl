@@ -17,7 +17,9 @@ using Reexport
 @reexport using DiffEqBase
 import SciMLBase
 import SciMLBase: interpret_vars, getsyms, remake
-using OrdinaryDiffEqCore, OrdinaryDiffEqDifferentiation, OrdinaryDiffEqVerner,
+using OrdinaryDiffEqCore,
+    OrdinaryDiffEqDifferentiation,
+    OrdinaryDiffEqVerner,
     OrdinaryDiffEqRosenbrock
 using ToeplitzMatrices
 using FastBroadcast

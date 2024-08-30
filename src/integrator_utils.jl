@@ -6,7 +6,9 @@ ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEqCore.jl's `postamble!`
 In addition to calling `OrdinaryDiffEqCore._postamble!(integ)`, calibrate the diffusion and
 smooth the solution.
 """
-function OrdinaryDiffEqCore.postamble!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
+function OrdinaryDiffEqCore.postamble!(
+    integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
+)
     # OrdinaryDiffEqCore.jl-related calls:
     OrdinaryDiffEqCore._postamble!(integ)
     copyat_or_push!(integ.sol.k, integ.saveiter_dense, integ.k)
@@ -150,7 +152,11 @@ function DiffEqBase.savevalues!(
     # Save our custom stuff that we need for the posterior
     if integ.opts.save_everystep
         i = integ.saveiter
-        OrdinaryDiffEqCore.copyat_or_push!(integ.sol.diffusions, i, integ.cache.local_diffusion)
+        OrdinaryDiffEqCore.copyat_or_push!(
+            integ.sol.diffusions,
+            i,
+            integ.cache.local_diffusion,
+        )
         OrdinaryDiffEqCore.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         OrdinaryDiffEqCore.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
@@ -164,7 +170,9 @@ function DiffEqBase.savevalues!(
     return out
 end
 
-function OrdinaryDiffEqCore.update_uprev!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
+function OrdinaryDiffEqCore.update_uprev!(
+    integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
+)
     @assert !OrdinaryDiffEqCore.alg_extrapolates(integ.alg)
     @assert isinplace(integ.sol.prob)
     @assert !(integ.alg isa OrdinaryDiffEqCore.DAEAlgorithm)
