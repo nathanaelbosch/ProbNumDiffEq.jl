@@ -253,3 +253,5 @@ end
 
 get_uf(f, t, p, ::Val{true}) = OrdinaryDiffEq.UJacobianWrapper(f, t, p)
 get_uf(f, t, p, ::Val{false}) = OrdinaryDiffEq.UDerivativeWrapper(f, t, p)
+
+OrdinaryDiffEq.get_fsalfirstlast(cache::EKCache, rate_prototype) = nothing, nothing
