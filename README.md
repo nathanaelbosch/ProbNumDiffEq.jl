@@ -57,7 +57,7 @@ But we can just plot them directly:
 ```julia
 using Statistics
 stds = std.(sol.pu)
-plot(sol.t, hcat(stds...)', color=["#CB3C33" "#389826" "#9558B2"]
+plot(sol.t, hcat(stds...)', color=["#CB3C33" "#389826" "#9558B2"],
      label=["std(u1(t))" "std(u2(t))"], xlabel="t", ylabel="standard-deviation")
 ```
 
