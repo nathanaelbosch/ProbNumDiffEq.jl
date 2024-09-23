@@ -92,10 +92,10 @@ As a result, we can use the `EK1` both for first and second order ODEs, but it a
 julia> using BenchmarkTools
 
 julia> @btime solve(prob, EK1(order=3), adaptive=false, dt=1e-2);
-  766.312 ms (400362 allocations: 173.38 MiB)
+  317.336 ms (140561 allocations: 140.41 MiB)
 
-julia> @btime solve(prob2, EK1(order=4), adaptive=false, dt=1e-2);
-  388.301 ms (510676 allocations: 102.78 MiB)
+julia> @btime solve(prob2, EK1(order=3), adaptive=false, dt=1e-2);
+  136.654 ms (180647 allocations: 47.95 MiB)
 ```
 
 ## Energy preservation
