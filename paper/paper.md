@@ -61,13 +61,14 @@ We also hope that by providing documented and performant implementations of publ
 ProbNumDiffEq.jl is also the only software package in Julia, at the time of writing, that provides a comprehensive set of probabilistic numerical ODE solvers.
 Outside of Julia, two other software packages provide a similar functionality.
 ProbNum [@wenger2021probnum]
-is a Python package that provides probabilistic numerical solvers for ODEs, but also for other numerical problems such as linear systems and quadrature.
-It is thus broader in scope and provides functionality not covered by ProbNumDiffEq.jl, but it also lacks some of the specialized ODE solvers available in ProbNumDiffEq.jl.
-And with its reliance on Python and numpy, it is also generally less performant.
+is a Python package that implements probabilistic numerical for various numerical problems, including linear systems, quadrature, and ODEs.
+ProbNum particularly aims to facilitate rapid experimentation and accelerate the development of new methods [@wenger2021probnum].
+It is therefore broader in scope and provides functionality not covered by ProbNumDiffEq.jl.
+But, it also lacks some of the specialized ODE solvers available in ProbNumDiffEq.jl, and with its reliance on Python and NumPy [@numpy] and the lack of just-in-time compilation, it is also generally less performant.
 ProbDiffEq [@probdiffeq]
 is a probabilistic numerical ODE solver package built on JAX.
-At the time of writing, it provides a very similar set of ODE solvers as ProbNumDiffEq.jl with the addition of certain filtering and smoothing methods and the lack of certain specialized ODE solvers, but as both ProbDiffEq and ProbNumDiffEq.jl are under active development this might change in the future.
-By building on JAX and leveraging its just-in-time compilation capabilities, ProbDiffEq provides ODE solvers with similar performance as those implemented in ProbNumDiffEq.jl.
+At the time of writing, it provides a very similar set of ODE solvers as ProbNumDiffEq.jl with the addition of certain filtering and smoothing methods and the lack of certain specialized ODE solvers---but as both ProbDiffEq and ProbNumDiffEq.jl are under active development, this might change in the future.
+By building on JAX and leveraging its just-in-time compilation capabilities, ProbDiffEq provides ODE solvers with similar performance as those implemented in ProbNumDiffEq.jl (shown through benchmarks in both packages comparing to SciPy [@scipy]).
 In summary, ProbNumDiffEq.jl provides one of the most feature-rich and performant probabilistic numerical ODE solver packages currently available and is the only one built on the Julia programming language.
 
 # Acknowledgements
