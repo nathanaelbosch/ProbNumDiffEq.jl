@@ -4,6 +4,7 @@ Kersting
 Schober
 [Nn]umerics
 probdiffeq
+ProbDiffEq
 ProbNumDiffEq\.jl
 interpolant
 postamble
