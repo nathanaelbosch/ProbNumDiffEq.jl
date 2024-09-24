@@ -40,5 +40,5 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
 
 ## Related packages
 
-- [probdiffeq](https://pnkraemer.github.io/probdiffeq/): Fast and feature-rich filtering-based probabilistic ODE solvers in JAX.
-- [ProbNum](https://probnum.readthedocs.io/en/latest/): Probabilistic numerics in Python. It has not only probabilistic ODE solvers, but also probabilistic linear solvers, Bayesian quadrature, and many filtering and smoothing implementations.
+- [ProbDiffEq](https://pnkraemer.github.io/probdiffeq/) is similar in scope to ProbNumDiffEq.jl and it provides fast and feature-rich probabilistic ODE solvers but is implemented in Python and built on JAX.
+- [ProbNum](https://probnum.readthedocs.io/en/latest/) implements a wide range of probabilistic numerical methods, not only for ODEs but also for linear algebra, quadrature, and filtering/smoothing. It is implemented in Python and NumPy, and it focuses more on breadth and didactic purposes than on performance.
