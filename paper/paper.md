@@ -43,7 +43,7 @@ ProbNumDiffEq.jl implements many of the methods referenced above and packages th
 # Statement of need
 
 Filtering-based probabilistic numerical ODE solvers have been an active field of research for the past decade, but their application in practical simulation and inference problems has been limited.
-ProbNumDiffEq.jl aims to help close this gap.
+ProbNumDiffEq.jl aims to bridge this gap.
 ProbNumDiffEq.jl implements probabilistic numerical methods as performant, documented, and easy-to-use ODE solvers inside the well-established DifferentialEquations.jl ecosystem [@rackauckas2017differentialequations].
 Thereby, the package benefits from the extensive testing, documentation, performance optimization, and functionality that DifferentialEquations.jl provides.
 Users can easily find help and examples regarding many features that are not particular to ProbNumDiffEq.jl in the DifferentialEquations.jl documentation, 
@@ -61,7 +61,7 @@ We also hope that by providing documented and performant implementations of publ
 ProbNumDiffEq.jl is also the only software package in Julia, at the time of writing, that provides a comprehensive set of probabilistic numerical ODE solvers.
 Outside of Julia, two other software packages provide a similar functionality.
 ProbNum [@wenger2021probnum]
-is a Python package that implements probabilistic numerical for various numerical problems, including linear systems, quadrature, and ODEs.
+is a Python package that implements probabilistic numerical methods for various numerical problems, including linear systems, quadrature, and ODEs.
 ProbNum particularly aims to facilitate rapid experimentation and accelerate the development of new methods [@wenger2021probnum].
 It is therefore broader in scope and provides functionality not covered by ProbNumDiffEq.jl.
 But, it also lacks some of the specialized ODE solvers available in ProbNumDiffEq.jl, and with its reliance on Python and NumPy [@numpy] and the lack of just-in-time compilation, it is also generally less performant.
