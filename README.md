@@ -5,6 +5,7 @@
 [![Build Status](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/workflows/CI/badge.svg)](https://github.com/nathanaelbosch/ProbNumDiffEq.jl/actions)
 [![Coverage](https://codecov.io/gh/nathanaelbosch/ProbNumDiffEq.jl/branch/main/graph/badge.svg?token=eufIemCGXn)](https://codecov.io/gh/nathanaelbosch/ProbNumDiffEq.jl)
 [![Benchmarks](http://img.shields.io/badge/benchmarks-docs-blueviolet.svg)](https://nathanaelbosch.github.io/ProbNumDiffEq.jl/dev/benchmarks/multi-language-wrappers/)
+[![DOI](https://joss.theoj.org/papers/10.21105/joss.07048/status.svg)](https://doi.org/10.21105/joss.07048)
 
 ![Banner](./examples/banner.svg?raw=true)
 
@@ -73,6 +74,26 @@ If you want to implement a new functionality/algorithm, open an issue to start a
 **Please open issues liberally!**
 If there is anything that's unclear or doesn't work, we would very much like to know about it.
 This includes not just bugs and feature requests but also general questions about the software, feedback and suggestions.
+
+
+## Citing ProbNumDiffEq.jl
+
+If you use ProbNumDiffEq.jl helpful for your research project, please cite our JOSS paper ([link](https://doi.org/10.21105/joss.07048)):
+```
+@article{Bosch2024,
+  doi =          {10.21105/joss.07048},
+  url =          {https://doi.org/10.21105/joss.07048},
+  year =         2024,
+  publisher =    {The Open Journal},
+  volume =       9,
+  number =       101,
+  pages =        7048,
+  author =       {Nathanael Bosch},
+  title =        {ProbNumDiffEq.jl: Probabilistic Numerical Solvers for Ordinary
+                  Differential Equations in Julia},
+  journal =      {Journal of Open Source Software}
+}
+```
 
 
 ## Related packages
