@@ -146,7 +146,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                                 for i in 1:n_samples
                             )
                             ) / (m * n * o)
-                        @test_broken low <= percent_in_interval <= high
+                        @test low <= percent_in_interval <= high
                     end
                 end
             end
