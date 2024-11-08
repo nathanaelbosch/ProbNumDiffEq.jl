@@ -28,7 +28,7 @@ plot(
     ylabel=[&quot;u₁(t)&quot; &quot;u₂(t)&quot; &quot;u₃(t)&quot;],
     xlabel=[&quot;&quot; &quot;&quot; &quot;t&quot;],
     denseplot=false,
-)</code></pre><img src="ad82ca63.svg" alt="Example block output"/><p>Looks good!</p><h2 id="Solving-an-Index-3-DAE-directly"><a class="docs-heading-anchor" href="#Solving-an-Index-3-DAE-directly">Solving an Index-3 DAE directly</a><a id="Solving-an-Index-3-DAE-directly-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-an-Index-3-DAE-directly" title="Permalink"></a></h2><p>The following is based on the <a href="https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/">&quot;Automatic Index Reduction of DAEs&quot;</a> tutorial by <a href="https://docs.sciml.ai/ModelingToolkit/stable/">ModelingToolkit.jl</a>, which demonstrates how the classic <code>Rodas4</code> solver fails to solve a DAE due to the fact that it is of index 3; which is why ModelingToolkit&#39;s automatic index reduction is so useful.</p><p><strong>It turns out that our probabilistic numerical solvers can directly solve the index-3 DAE!</strong></p><p>First, define the pendulum problem as in the tutorial:</p><pre><code class="language-julia hljs">function pendulum!(du, u, p, t)
+)</code></pre><img src="37521a5a.svg" alt="Example block output"/><p>Looks good!</p><h2 id="Solving-an-Index-3-DAE-directly"><a class="docs-heading-anchor" href="#Solving-an-Index-3-DAE-directly">Solving an Index-3 DAE directly</a><a id="Solving-an-Index-3-DAE-directly-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-an-Index-3-DAE-directly" title="Permalink"></a></h2><p>The following is based on the <a href="https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/">&quot;Automatic Index Reduction of DAEs&quot;</a> tutorial by <a href="https://docs.sciml.ai/ModelingToolkit/stable/">ModelingToolkit.jl</a>, which demonstrates how the classic <code>Rodas4</code> solver fails to solve a DAE due to the fact that it is of index 3; which is why ModelingToolkit&#39;s automatic index reduction is so useful.</p><p><strong>It turns out that our probabilistic numerical solvers can directly solve the index-3 DAE!</strong></p><p>First, define the pendulum problem as in the tutorial:</p><pre><code class="language-julia hljs">function pendulum!(du, u, p, t)
     x, dx, y, dy, T = u
     g, L = p
     du[1] = dx
@@ -75,48 +75,48 @@ t: 637-element Vector{Float64}:
  0.003763856534047043
  0.005191196217624695
  ⋮
- 4.905981142344071
- 4.923072046379877
- 4.939712741084385
- 4.955319566223264
- 4.9694706451654245
- 4.982014085482488
- 4.991556791257769
- 4.999028623538522
+ 4.907553725698676
+ 4.924636353074359
+ 4.9411967014972324
+ 4.95668039898637
+ 4.970681486255768
+ 4.981792730511177
+ 4.990762595647369
+ 4.998031888191015
  5.0
 u: 637-element Vector{Vector{Float64}}:
  [1.0, 0.0, 0.0, 0.0, 0.0]
- [1.0, -2.4320529399291366e-18, -4.899999999937319e-12, -9.800000000000003e-6, -3.8704386586000607e-16]
- [1.0, 1.779329406237433e-14, -5.929000004468982e-10, -0.00010780000000000091, -3.0178910935929276e-12]
- [0.9999999999999998, -3.705258905142665e-12, -1.9407725978899373e-8, -0.0006167588102611186, -1.3036995276752237e-9]
- [0.9999999999999896, 1.2317344504921522e-11, -1.4461910374134008e-7, -0.001683607564645096, -3.158050959193969e-8]
- [0.9999999999996371, -9.14785818709879e-11, -8.520677279956676e-7, -0.0040866278858198955, -4.845676419218797e-7]
- [0.9999999999857808, -1.89123361432229e-9, -5.332756312011664e-6, -0.010223601306518774, -7.83009150843562e-6]
- [0.9999999996124844, -5.726676667507785e-8, -2.7839381844866408e-5, -0.023359192721600835, -9.453399402972135e-5]
- [0.9999999975906804, -3.475524673632411e-7, -6.941641839846304e-5, -0.0368857940178753, -0.00037351360952485107]
- [0.9999999912816985, -1.2748041584224705e-6, -0.0001320477376462588, -0.050873722820905354, -0.0009815962497527718]
+ [1.0, -2.4320527589833776e-18, -4.8999999999373206e-12, -9.800000000000003e-6, -3.870438350247696e-16]
+ [1.0, 1.779329265947601e-14, -5.929000004468873e-10, -0.00010780000000000091, -3.0178908529874883e-12]
+ [0.9999999999999998, -3.705258613763331e-12, -1.9407725978901355e-8, -0.0006167588102611186, -1.3036994235702973e-9]
+ [0.9999999999999896, 1.231734351558704e-11, -1.4461910374133314e-7, -0.001683607564645096, -3.158050706805358e-8]
+ [0.9999999999996371, -9.147857460683334e-11, -8.520677279956897e-7, -0.0040866278858198955, -4.845676031758449e-7]
+ [0.9999999999857808, -1.891233463103192e-9, -5.332756312011546e-6, -0.010223601306518774, -7.83009088217851e-6]
+ [0.9999999996124844, -5.726676209454051e-8, -2.7839381844867827e-5, -0.023359192721600835, -9.45339864680247e-5]
+ [0.9999999975906804, -3.4755243956250846e-7, -6.941641839844382e-5, -0.0368857940178753, -0.00037351357964688953]
+ [0.9999999912816985, -1.2748040564497867e-6, -0.00013204773764628023, -0.05087372282090536, -0.0009815961712321248]
  ⋮
- [0.9905247799261719, -0.22537551686665527, -0.13733412142246734, -1.6259873619138987, -4.039397159711885]
- [0.9860478635340651, -0.30073881653778056, -0.1664620427217003, -1.781877069088252, -4.897256533167963]
- [0.9803344626636025, -0.3882225173693333, -0.197343211472203, -1.9287504836515301, -5.808941760007055]
- [0.9735476385359553, -0.48374584567209383, -0.22848413502658996, -2.0608598494557318, -6.7314773610507235]
- [0.9660215638346084, -0.5821903599880927, -0.25846150309914806, -2.174808501343366, -7.623501407344294]
- [0.9581252462517632, -0.6791831555269633, -0.2863494943871072, -2.2702581674292546, -8.457578518679306]
- [0.9512746785824608, -0.7592332348196944, -0.30834478058129816, -2.338838284797042, -9.118979833194777]
- [0.945362978941864, -0.8257295231332944, -0.32601971896089704, -2.3898180239992906, -9.65281669795631]
- [0.9445580045387526, -0.8346223374638927, -0.32834459959791545, -2.3962584682163732, -9.723238999078445]</code></pre><p>Nope! The <code>EK1</code> is able to solve the index-3 DAE directly. Pretty cool!</p><pre><code class="language-julia hljs">plot(sol)</code></pre><img src="fdf042b4.svg" alt="Example block output"/><h3 id="Is-index-reduction-still-worth-it?"><a class="docs-heading-anchor" href="#Is-index-reduction-still-worth-it?">Is index-reduction still worth it?</a><a id="Is-index-reduction-still-worth-it?-1"></a><a class="docs-heading-anchor-permalink" href="#Is-index-reduction-still-worth-it?" title="Permalink"></a></h3><p>The point of the <a href="https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/">&quot;Automatic Index Reduction of DAEs&quot;</a> tutorial is to demonstrate ModelingToolkit&#39;s utility for automatic index reduction, which enables the classic implicit Runge-Kutta solvers such as <code>Rodas5</code> to solve this DAE. Let&#39;s see if that still helps in this context here.</p><p>First, <code>modelingtoolkitize</code> the problem:</p><pre><code class="language-julia hljs">traced_sys = modelingtoolkitize(pendulum_prob)</code></pre><p class="math-container">\[ \begin{align}
-\frac{\mathrm{d} x_1\left( t \right)}{\mathrm{d}t} &amp;= x_2\left( t \right) \\
-\frac{\mathrm{d} x_2\left( t \right)}{\mathrm{d}t} &amp;= x_1\left( t \right) x_5\left( t \right) \\
-\frac{\mathrm{d} x_3\left( t \right)}{\mathrm{d}t} &amp;= x_4\left( t \right) \\
-\frac{\mathrm{d} x_4\left( t \right)}{\mathrm{d}t} &amp;=  - \alpha_1 + x_3\left( t \right) x_5\left( t \right) \\
-0 &amp;= \left( x_1\left( t \right) \right)^{2} + \left( x_3\left( t \right) \right)^{2} - \alpha_2^{2}
+ [0.9901651613957098, -0.23172735115694545, -0.13990337266694583, -1.6405123591693411, -4.115166337579525]
+ [0.9855712161386252, -0.3083616993192879, -0.16926127369263747, -1.795912092376441, -4.980213518414672]
+ [0.9797518017566736, -0.3967501726849769, -0.20021590560182462, -1.9415667671742471, -5.894755669328316]
+ [0.9728831662637859, -0.4927520327194497, -0.23129710247383958, -2.072072459058729, -6.816526114467944]
+ [0.9653111301491414, -0.5912124320760092, -0.26110234215619854, -2.184252881590318, -7.704686847211488]
+ [0.9582752681971104, -0.6774847635078917, -0.28584702809597784, -2.268603444057187, -8.445920248663054]
+ [0.9518735971071052, -0.7524892742760094, -0.3064909010545698, -2.3332438885829054, -9.067471577304934]
+ [0.9461805448181262, -0.8168252614310116, -0.32363929847919043, -2.383121166331972, -9.58619264314162]
+ [0.9445584480218617, -0.834794040825908, -0.3283433240601558, -2.3962124390909865, -9.728925871084446]</code></pre><p>Nope! The <code>EK1</code> is able to solve the index-3 DAE directly. Pretty cool!</p><pre><code class="language-julia hljs">plot(sol)</code></pre><img src="a2e90d1c.svg" alt="Example block output"/><h3 id="Is-index-reduction-still-worth-it?"><a class="docs-heading-anchor" href="#Is-index-reduction-still-worth-it?">Is index-reduction still worth it?</a><a id="Is-index-reduction-still-worth-it?-1"></a><a class="docs-heading-anchor-permalink" href="#Is-index-reduction-still-worth-it?" title="Permalink"></a></h3><p>The point of the <a href="https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/">&quot;Automatic Index Reduction of DAEs&quot;</a> tutorial is to demonstrate ModelingToolkit&#39;s utility for automatic index reduction, which enables the classic implicit Runge-Kutta solvers such as <code>Rodas5</code> to solve this DAE. Let&#39;s see if that still helps in this context here.</p><p>First, <code>modelingtoolkitize</code> the problem:</p><pre><code class="language-julia hljs">traced_sys = modelingtoolkitize(pendulum_prob)</code></pre><p class="math-container">\[ \begin{align}
+\frac{\mathrm{d} \mathtt{x_1}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_2}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_2}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_1}\left( t \right) \mathtt{x_5}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_3}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_4}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_4}\left( t \right)}{\mathrm{d}t} &amp;=  - \mathtt{\alpha_1} + \mathtt{x_3}\left( t \right) \mathtt{x_5}\left( t \right) \\
+0 &amp;= \left( \mathtt{x_1}\left( t \right) \right)^{2} + \left( \mathtt{x_3}\left( t \right) \right)^{2} - \mathtt{\alpha_2}^{2}
 \end{align}
  \]</p><p>(how cool is this latex output ?!?)</p><p>Next, lower the DAE index and simplify it with ModelingToolkit&#39;s <code>dae_index_lowering</code> and <code>structural_simplify</code>:</p><pre><code class="language-julia hljs">simplified_sys = structural_simplify(dae_index_lowering(traced_sys))</code></pre><p class="math-container">\[ \begin{align}
-\frac{\mathrm{d} x_1\left( t \right)}{\mathrm{d}t} &amp;= x_2\left( t \right) \\
-\frac{\mathrm{d} x_2\left( t \right)}{\mathrm{d}t} &amp;= x_1\left( t \right) x_5\left( t \right) \\
-\frac{\mathrm{d} x_3\left( t \right)}{\mathrm{d}t} &amp;= x_4\left( t \right) \\
-\frac{\mathrm{d} x_4\left( t \right)}{\mathrm{d}t} &amp;=  - \alpha_1 + x_3\left( t \right) x_5\left( t \right) \\
-0 &amp;= 2 \left( x_4\left( t \right) \right)^{2} + 2 \left( x_2\left( t \right) \right)^{2} + 2 \left( x_1\left( t \right) \right)^{2} x_5\left( t \right) + 2 x_3\left( t \right) \left(  - \alpha_1 + x_3\left( t \right) x_5\left( t \right) \right)
+\frac{\mathrm{d} \mathtt{x_1}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_2}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_2}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_1}\left( t \right) \mathtt{x_5}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_3}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_4}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_4}\left( t \right)}{\mathrm{d}t} &amp;=  - \mathtt{\alpha_1} + \mathtt{x_3}\left( t \right) \mathtt{x_5}\left( t \right) \\
+0 &amp;= 2 \left( \mathtt{x_4}\left( t \right) \right)^{2} + 2 \left( \mathtt{x_2}\left( t \right) \right)^{2} + 2 \left( \mathtt{x_1}\left( t \right) \right)^{2} \mathtt{x_5}\left( t \right) + 2 \mathtt{x_3}\left( t \right) \left(  - \mathtt{\alpha_1} + \mathtt{x_3}\left( t \right) \mathtt{x_5}\left( t \right) \right)
 \end{align}
  \]</p><p>Let&#39;s build two different ODE problems, and check how well we can solve each:</p><pre><code class="language-julia hljs">prob_index3 = ODEProblem(complete(traced_sys), Pair[], tspan)
 prob_index1 = ODEProblem(simplified_sys, Pair[], tspan)
@@ -131,7 +131,7 @@ sol1_f_evals     = sol1.stats.nf
 sol3_final_error = norm(sol3.u[end] - truesol.u[end])
 sol3_f_evals     = sol3.stats.nf
 @info &quot;Results&quot; sol1_final_error sol1_f_evals sol3_final_error sol3_f_evals</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">┌ Info: Results
-│   sol1_final_error = 0.010926370202213426
+│   sol1_final_error = 0.010916847865436992
 │   sol1_f_evals = 1085
-│   sol3_final_error = 0.06182444138049775
-└   sol3_f_evals = 1377</code></pre><p>The error for the index-1 DAE solve is <em>much</em> lower. Thus it seems that, even if the index-3 DAE could also be solved directly, index lowering might still be beneficial when solving DAEs with the <code>EK1</code>!</p><h3 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h3><div class="citation noncanonical"><dl><dt>[1]</dt><dd><div>N. Bosch, F. Tronarp and P. Hennig. <a href="https://proceedings.mlr.press/v151/bosch22a.html"><em>Pick-and-Mix Information Operators for Probabilistic ODE                   Solvers</em></a>. In: <em>Proceedings of The 25th International Conference on Artificial                   Intelligence and Statistics</em>, Vol. 151 of <em>Proceedings of Machine Learning Research</em>, edited by G. Camps-Valls, F. J. Ruiz and I. Valera (PMLR, 28–30 Mar 2022); pp. 10015–10027.</div></dd></dl></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../dynamical_odes/">« Second Order ODEs and Energy Preservation</a><a class="docs-footer-nextpage" href="../exponential_integrators/">Probabilistic Exponential Integrators »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Tuesday 1 October 2024 18:09">Tuesday 1 October 2024</span>. Using Julia version 1.10.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+│   sol3_final_error = 0.06751295080513564
+└   sol3_f_evals = 1379</code></pre><p>The error for the index-1 DAE solve is <em>much</em> lower. Thus it seems that, even if the index-3 DAE could also be solved directly, index lowering might still be beneficial when solving DAEs with the <code>EK1</code>!</p><h3 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h3><div class="citation noncanonical"><dl><dt>[1]</dt><dd><div>N. Bosch, F. Tronarp and P. Hennig. <a href="https://proceedings.mlr.press/v151/bosch22a.html"><em>Pick-and-Mix Information Operators for Probabilistic ODE                   Solvers</em></a>. In: <em>Proceedings of The 25th International Conference on Artificial                   Intelligence and Statistics</em>, Vol. 151 of <em>Proceedings of Machine Learning Research</em>, edited by G. Camps-Valls, F. J. Ruiz and I. Valera (PMLR, 28–30 Mar 2022); pp. 10015–10027.</div></dd></dl></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../dynamical_odes/">« Second Order ODEs and Energy Preservation</a><a class="docs-footer-nextpage" href="../exponential_integrators/">Probabilistic Exponential Integrators »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.7.0 on <span class="colophon-date" title="Friday 8 November 2024 11:56">Friday 8 November 2024</span>. Using Julia version 1.11.1.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
