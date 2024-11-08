@@ -5,7 +5,7 @@ import ODEProblemLibrary: prob_ode_lotkavolterra
 
 @testset "Fixed-timestep requires dt" begin
     prob = prob_ode_lotkavolterra
-    @test_throws ErrorException solve(prob, EK0(), adaptive=false)
+    @test_throws ArgumentError solve(prob, EK0(), adaptive=false)
     @test_nowarn solve(
         prob,
         EK0(smooth=false),
