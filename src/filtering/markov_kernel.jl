@@ -209,7 +209,9 @@ function compute_backward_kernel!(
     # G = Matrix(x.Σ) * A' / Matrix(xpred.Σ)
     _matmul!(C_DxD, x.Σ.R, A')
     _matmul!(G, x.Σ.R', C_DxD)
-    rdiv!(G, Cholesky(xpred.Σ.R, 'U', 0))
+    if !iszero(G) # TODO check if this is actually correct
+        rdiv!(G, Cholesky(xpred.Σ.R, 'U', 0))
+    end
 
     # b = μ - G * μ_pred
     _matmul!(b, G, xpred.μ)
