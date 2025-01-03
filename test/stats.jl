@@ -32,7 +32,7 @@ end
     EK0(prior=IWP(q), smooth=false),
     # EK0(prior=IWP(q), smooth=false, initialization=ClassicSolverInit()),
     # ClassicSolverInit does not work for second order ODEs right now
-    EK1(prior=IWP(q), smooth=false),
+    # EK1(prior=IWP(q), smooth=false), # currently broken; see https://github.com/SciML/OrdinaryDiffEq.jl/issues/2537
     EK1(prior=IWP(q), smooth=false, autodiff=false),
 )
     f_counter = [0]
