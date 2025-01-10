@@ -14,5 +14,6 @@ timestepping
 DAE(s)
 runtime(s)
 diffusion(s)
-[a posteriori]
+a posteriori
+posteriori
 linearize

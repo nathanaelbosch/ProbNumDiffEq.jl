@@ -266,7 +266,7 @@ plot_chisq_interval!(4)
 
 ## [Fixed-step solver comparison](@id hh_fixed_steps)
 
-Without smothing:
+Without smoothing:
 ```@raw html
 <details><summary>Code:</summary>
 ```
