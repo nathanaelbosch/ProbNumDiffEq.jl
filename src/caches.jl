@@ -177,7 +177,7 @@ function OrdinaryDiffEqCore.alg_cache(
     H = factorized_similar(FAC, d, D)
     v = similar(Array{uElType}, d)
     S = factorized_zeros(FAC, d, d)
-    measurement = Gaussian(v, S)
+    measurement = Gaussian{uElType}(v, S)
 
     # Caches
     du = is_secondorder_ode ? similar(u.x[2]) : similar(u)

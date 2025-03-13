@@ -136,6 +136,6 @@ import ..ProbNumDiffEq: dalton_data_loglik, filtering_data_loglik, fenrir_data_l
 export dalton_data_loglik, filtering_data_loglik, fenrir_data_loglik
 end
 
-include("precompile.jl")
+# include("precompile.jl")
 
 end

@@ -33,9 +33,18 @@ copy!(dst::AffineNormalKernel, src::AffineNormalKernel) = begin
     return nothing
 end
 
-RecursiveArrayTools.recursivecopy(K::AffineNormalKernel) = copy(K)
-RecursiveArrayTools.recursivecopy!(
-    dst::AffineNormalKernel, src::AffineNormalKernel) = copy!(dst, src)
+RecursiveArrayTools.recursivecopy(K::AffineNormalKernel) =
+    AffineNormalKernel(
+        RecursiveArrayTools.recursivecopy(K.A),
+        ismissing(K.b) ? missing : RecursiveArrayTools.recursivecopy(K.b),
+        RecursiveArrayTools.recursivecopy(K.C),
+    )
+RecursiveArrayTools.recursivecopy!(dst::AffineNormalKernel, src::AffineNormalKernel) = begin
+    RecursiveArrayTools.recursivecopy!(dst.A, src.A)
+    RecursiveArrayTools.recursivecopy!(dst.b, src.b)
+    RecursiveArrayTools.recursivecopy!(dst.C, src.C)
+    return dst
+end
 
 isapprox(K1::AffineNormalKernel, K2::AffineNormalKernel; kwargs...) =
     isapprox(K1.A, K2.A; kwargs...) &&
@@ -259,8 +268,8 @@ function compute_backward_kernel!(
     Q = D ÷ d        # n_derivatives_dim
     _Kout =
         AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, d, Q)', PSDMatrix(Kout.C.R.B))
-    _x_pred = Gaussian(reshape_no_alloc(xpred.μ, d, Q)', PSDMatrix(xpred.Σ.R.B))
-    _x = Gaussian(reshape_no_alloc(x.μ, d, Q)', PSDMatrix(x.Σ.R.B))
+    _x_pred = Gaussian{T}(reshape_no_alloc(xpred.μ, d, Q)', PSDMatrix(xpred.Σ.R.B))
+    _x = Gaussian{T}(reshape_no_alloc(x.μ, d, Q)', PSDMatrix(x.Σ.R.B))
     _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, d, Q)', PSDMatrix(K.C.R.B))
     _C_DxD = C_DxD.B
     _diffusion =
@@ -300,11 +309,11 @@ function compute_backward_kernel!(
             Kout.b[i:d:end],
             PSDMatrix(Kout.C.R.blocks[i]),
         )
-        _xpred = Gaussian(
+        _xpred = Gaussian{T}(
             xpred.μ[i:d:end],
             PSDMatrix(xpred.Σ.R.blocks[i]),
         )
-        _x = Gaussian(
+        _x = Gaussian{T}(
             x.μ[i:d:end],
             PSDMatrix(x.Σ.R.blocks[i]),
         )

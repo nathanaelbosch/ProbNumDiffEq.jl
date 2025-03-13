@@ -301,7 +301,7 @@ function (interp::ODEFilterPosterior)(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
     u = proj * x
-    P = zeros(Bool, length(idxs), length(u))
+    P = zeros(Bool, length(idxs), length(u.μ))
     for (i, idx) in enumerate(idxs)
         P[i, idx] = 1
     end
@@ -362,7 +362,7 @@ function interpolate(
         return goal_pred
     end
 
-    @assert length(x_filt) == length(x_smooth)
+    @assert length(x_filt.μ) == length(x_smooth.μ)
     next_t = t[idx+1]
     next_smoothed = x_smooth[idx+1]
 
