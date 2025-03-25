@@ -182,6 +182,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
+    autodiff::AD
     EK1(;
         order=3,
         prior::PT=IWP(order),
@@ -189,7 +190,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         smooth=true,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
-        autodiff=Val{true}(),
+        autodiff=AutoForwardDiff(),
         diff_type=Val{:forward},
         standardtag=Val{true}(),
         concrete_jac=nothing,
@@ -197,9 +198,11 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         covariance_factorization::CF=covariance_structure(EK1, prior, diffusionmodel),
     ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(EK1; diffusionmodel, pn_observation_noise, covariance_factorization)
+        AD_choice, chunk_size, diff_type =
+            OrdinaryDiffEqCore._process_AD_choice(autodiff, chunk_size, diff_type)
         new{
             _unwrap_val(chunk_size),
-            _unwrap_val(autodiff),
+            typeof(AD_choice),
             diff_type,
             _unwrap_val(standardtag),
             _unwrap_val(concrete_jac),
@@ -215,6 +218,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             initialization,
             pn_observation_noise,
             covariance_factorization,
+            AD_choice
         )
     end
 end
@@ -226,6 +230,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
+    autodiff::AD
     DiagonalEK1(;
         order=3,
         prior::PT=IWP(order),
@@ -233,7 +238,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         smooth=true,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
-        autodiff=Val{true}(),
+        autodiff=AutoForwardDiff(),
         diff_type=Val{:forward},
         standardtag=Val{true}(),
         concrete_jac=nothing,
@@ -245,9 +250,11 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         ),
     ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise, covariance_factorization)
+        AD_choice, chunk_size, diff_type =
+            OrdinaryDiffEqCore._process_AD_choice(autodiff, chunk_size, diff_type)
         new{
             _unwrap_val(chunk_size),
-            _unwrap_val(autodiff),
+            typeof(AD_choice),
             diff_type,
             _unwrap_val(standardtag),
             _unwrap_val(concrete_jac),
@@ -263,6 +270,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             initialization,
             pn_observation_noise,
             covariance_factorization,
+            AD_choice
         )
     end
 end
@@ -334,16 +342,17 @@ RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
 
 function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
+    if haskey(kwargs, :autodiff) && kwargs[:autodiff] isa AutoForwardDiff
+        chunk_size = OrdinaryDiffEqCore._get_fwd_chunksize(kwargs[:autodiff])
+    else
+        chunk_size = Val{CS}()
+    end
+
     T = SciMLBase.remaker_of(thing)
-    T(;
-        SciMLBase.struct_as_namedtuple(thing)...,
-        chunk_size=Val{CS}(),
-        autodiff=Val{AD}(),
-        standardtag=Val{ST}(),
+    T(; SciMLBase.struct_as_namedtuple(thing)...,
+        chunk_size=chunk_size, autodiff=thing.autodiff, standardtag=Val{ST}(),
         concrete_jac=CJ === nothing ? CJ : Val{CJ}(),
-        diff_type=DT,
-        kwargs...,
-    )
+        kwargs...)
 end
 
 function DiffEqBase.prepare_alg(
@@ -357,21 +366,25 @@ function DiffEqBase.prepare_alg(
     # use the prepare_alg from OrdinaryDiffEqCore; but right now, we do not use `linsolve` which
     # is a requirement.
 
-    if (isbitstype(T) && sizeof(T) > 24) || (
-        prob.f isa ODEFunction &&
-        prob.f.f isa FunctionWrappersWrappers.FunctionWrappersWrapper
-    )
-        return remake(alg, chunk_size=Val{1}())
-    end
+    prepped_AD = OrdinaryDiffEqDifferentiation.prepare_ADType(OrdinaryDiffEqDifferentiation.alg_autodiff(alg), prob, u0, p, OrdinaryDiffEqDifferentiation.standardtag(alg))
+
+    sparse_prepped_AD = OrdinaryDiffEqDifferentiation.prepare_user_sparsity(prepped_AD, prob)
 
     L = StaticArrayInterface.known_length(typeof(u0))
     @assert L === nothing "ProbNumDiffEq.jl does not support StaticArrays yet."
 
-    x = if prob.f.colorvec === nothing
-        length(u0)
+    if (
+        (
+            (eltype(u0) <: Complex) ||
+            (!(prob.f isa DAEFunction) && prob.f.mass_matrix isa MatrixOperator)
+        ) && sparse_prepped_AD isa AutoSparse
+    )
+        @warn "Input type or problem definition is incompatible with sparse automatic differentiation. Switching to using dense automatic differentiation."
+        autodiff = ADTypes.dense_ad(sparse_prepped_AD)
     else
-        maximum(prob.f.colorvec)
+        autodiff = sparse_prepped_AD
     end
-    cs = ForwardDiff.pickchunksize(x)
-    return remake(alg, chunk_size=Val{cs}())
+    
+
+    return remake(alg, autodiff = autodiff)
 end
