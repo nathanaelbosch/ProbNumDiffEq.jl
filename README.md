@@ -100,3 +100,4 @@ If you use ProbNumDiffEq.jl helpful for your research project, please cite our J
 
 - [ProbDiffEq](https://pnkraemer.github.io/probdiffeq/) is similar in scope to ProbNumDiffEq.jl and it provides fast and feature-rich probabilistic ODE solvers but is implemented in Python and built on JAX.
 - [ProbNum](https://probnum.readthedocs.io/en/latest/) implements a wide range of probabilistic numerical methods, not only for ODEs but also for linear algebra, quadrature, and filtering/smoothing. It is implemented in Python and NumPy, and it focuses more on breadth and didactic purposes than on performance.
+
