@@ -30,8 +30,8 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             remake(prob, p=ps),
             ALG(order=3, smooth=false),
             sensealg=SensitivityADPassThrough(),
-            abstol=1e-3,
-            reltol=1e-2,
+            abstol=1e-6,
+            reltol=1e-5,
             save_everystep=false,
             dense=false,
         )
@@ -42,8 +42,8 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             remake(prob, u0=u0),
             ALG(order=3, smooth=false),
             sensealg=SensitivityADPassThrough(),
-            abstol=1e-3,
-            reltol=1e-2,
+            abstol=1e-6,
+            reltol=1e-5,
             save_everystep=false,
             dense=false,
         )
