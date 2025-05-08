@@ -4,6 +4,7 @@ using Test
 using LinearAlgebra
 using FiniteDifferences
 using ForwardDiff
+import SciMLStructures
 # using ReverseDiff
 # using Zygote
 
