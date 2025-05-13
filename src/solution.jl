@@ -66,6 +66,17 @@ ProbODESolution{T,N}(
     pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 )
 
+function SciMLBase.constructorof(
+    ::Type{
+        ProbNumDiffEq.ProbODESolution{T,N,uType,puType,uType2,DType,tType,rateType,xType,
+            diffType,bkType,PN,P,A,IType,
+            CType,DE}},
+) where {T,N,uType,puType,uType2,DType,tType,rateType,xType,
+    diffType,bkType,PN,P,A,IType,
+    CType,DE}
+    ProbODESolution{T,N}
+end
+
 function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,

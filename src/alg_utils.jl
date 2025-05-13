@@ -12,8 +12,8 @@ OrdinaryDiffEqDifferentiation.concrete_jac(::AbstractEK) = nothing
 OrdinaryDiffEqCore.isfsal(::AbstractEK) = false
 
 for ALG in [:EK1, :DiagonalEK1]
-    @eval OrdinaryDiffEqDifferentiation._alg_autodiff(::$ALG{CS,AD}) where {CS,AD} =
-        Val{AD}()
+    @eval OrdinaryDiffEqDifferentiation._alg_autodiff(alg::$ALG{CS,AD}) where {CS,AD} =
+        alg.autodiff
     @eval OrdinaryDiffEqDifferentiation.alg_difftype(
         ::$ALG{CS,AD,DiffType},
     ) where {CS,AD,DiffType} =
