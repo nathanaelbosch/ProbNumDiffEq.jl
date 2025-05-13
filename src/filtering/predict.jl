@@ -77,9 +77,9 @@ function predict_cov!(
 
     _matmul!(view(R, 1:D, 1:D), Σ_curr.R, Ah')
     if isone(diffusion)
-        @.. R[D+1:2D, 1:D] = Qh.R
+        @.. R[(D+1):2D, 1:D] = Qh.R
     else
-        apply_diffusion!(PSDMatrix(view(R, D+1:2D, 1:D)), Qh, diffusion)
+        apply_diffusion!(PSDMatrix(view(R, (D+1):2D, 1:D)), Qh, diffusion)
     end
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)

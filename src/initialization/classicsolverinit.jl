@@ -69,8 +69,8 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         alg,
         dense=false,
         save_start=false,
-        abstol=integ.opts.abstol / 100,
-        reltol=integ.opts.reltol / 100,
+        abstol=(integ.opts.abstol / 100),
+        reltol=(integ.opts.reltol / 100),
         saveat=tstops,
     )
     # This is necessary in order to fairly account for the cost of initialization!
@@ -130,7 +130,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
 
     # Smooth backwards
     x_smooth = filts
-    for i in length(x_smooth)-1:-1:1
+    for i in (length(x_smooth)-1):-1:1
         marginalize!(x_smooth[i], x_smooth[i+1], backward_kernels[i]; C_DxD, C_3DxD)
     end
 

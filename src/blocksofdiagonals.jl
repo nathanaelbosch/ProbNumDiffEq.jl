@@ -225,7 +225,7 @@ for _mul! in (:mul!, :_matmul!)
         D = nblocks(A)
         d1, d2 = size(A.blocks[1])
         for i in eachindex(blocks(A))
-            @inbounds $_mul!(view(C, i:D:D*d1), A.blocks[i], view(B, i:D:D*d2))
+            @inbounds $_mul!(view(C, i:D:(D*d1)), A.blocks[i], view(B, i:D:(D*d2)))
         end
         return C
     end
@@ -239,7 +239,7 @@ for _mul! in (:mul!, :_matmul!)
         D = nblocks(A)
         d1, d2 = size(A.blocks[1])
         for i in eachindex(blocks(A))
-            @inbounds $_mul!(view(C, i:D:D*d1), A.blocks[i], view(B, i:D:D*d2))
+            @inbounds $_mul!(view(C, i:D:(D*d1)), A.blocks[i], view(B, i:D:(D*d2)))
         end
         return C
     end
@@ -269,7 +269,7 @@ Base.:*(D::Diagonal, A::BlocksOfDiagonals) = begin
     local S = nblocks(A)
     outblocks = map(enumerate(blocks(A))) do (i, Ai)
         d = size(Ai, 1)
-        outi = Diagonal(view(D.diag, i:S:S*d)) * Ai
+        outi = Diagonal(view(D.diag, i:S:(S*d))) * Ai
         outi
     end
     return BlocksOfDiagonals(outblocks)
@@ -278,7 +278,7 @@ Base.:*(A::BlocksOfDiagonals, D::Diagonal) = begin
     local S = nblocks(A)
     outblocks = map(enumerate(blocks(A))) do (i, Ai)
         d = size(Ai, 2)
-        outi = Ai * Diagonal(view(D.diag, i:S:S*d))
+        outi = Ai * Diagonal(view(D.diag, i:S:(S*d)))
         outi
     end
     return BlocksOfDiagonals(outblocks)
@@ -290,7 +290,7 @@ for _mul! in (:mul!, :_matmul!)
         for i in eachindex(blocks(C))
             Ci, Ai = blocks(C)[i], blocks(A)[i]
             d = size(Ai, 2)
-            $_mul!(Ci, Ai, Diagonal(view(B.diag, i:D:D*d)))
+            $_mul!(Ci, Ai, Diagonal(view(B.diag, i:D:(D*d))))
         end
         return C
     end
@@ -300,7 +300,7 @@ for _mul! in (:mul!, :_matmul!)
         for i in eachindex(blocks(C))
             Ci, Bi = blocks(C)[i], blocks(B)[i]
             d = size(Bi, 1)
-            $_mul!(Ci, Diagonal(view(A.diag, i:D:D*d)), Bi)
+            $_mul!(Ci, Diagonal(view(A.diag, i:D:(D*d))), Bi)
         end
         return C
     end
@@ -317,7 +317,7 @@ for _mul! in (:mul!, :_matmul!)
             for i in eachindex(blocks(C))
                 Ci, Ai = blocks(C)[i], blocks(A)[i]
                 d = size(Ai, 2)
-                $_mul!(Ci, Ai, Diagonal(view(B.diag, i:D:D*d)), alpha, beta)
+                $_mul!(Ci, Ai, Diagonal(view(B.diag, i:D:(D*d))), alpha, beta)
             end
             return C
         end
@@ -334,7 +334,7 @@ for _mul! in (:mul!, :_matmul!)
             for i in eachindex(blocks(C))
                 Ci, Bi = blocks(C)[i], blocks(B)[i]
                 d = size(Bi, 1)
-                @inbounds $_mul!(Ci, Diagonal(view(A.diag, i:D:D*d)), Bi, alpha, beta)
+                @inbounds $_mul!(Ci, Diagonal(view(A.diag, i:D:(D*d))), Bi, alpha, beta)
             end
             return C
         end

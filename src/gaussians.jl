@@ -26,7 +26,7 @@ Base.isapprox(g1::Gaussian, g2::Gaussian; kwargs...) =
 copy(P::Gaussian) = Gaussian(copy(P.μ), copy(P.Σ))
 similar(P::Gaussian) = Gaussian(similar(P.μ), similar(P.Σ))
 Base.copyto!(P::AbstractArray{<:Gaussian}, idx::Integer, el::Gaussian) =
-    (P[idx] = copy(el); P)
+    (P[idx]=copy(el); P)
 function Base.copy!(dst::Gaussian, src::Gaussian)
     copy!(dst.μ, src.μ)
     copy!(dst.Σ, src.Σ)
@@ -63,7 +63,11 @@ sqmahal(P::Gaussian, x) = norm_sqr(whiten(P.Σ, x - P.μ))
 rand(P::Gaussian) = rand(GLOBAL_RNG, P)
 rand(RNG::AbstractRNG, P::Gaussian) = P.μ + unwhiten(P.Σ, randn(RNG, typeof(P.μ)))
 rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}) where {T} =
-    P.μ + unwhiten(P.Σ, randn(RNG, T, length(P.μ)))
+    if iszero(P.Σ)
+        P.μ
+    else
+        P.μ + unwhiten(P.Σ, randn(RNG, T, length(P.μ)))
+    end
 rand(RNG::AbstractRNG, P::Gaussian{<:Number}) =
     P.μ + sqrt(P.Σ) * randn(RNG, typeof(one(P.μ)))
 

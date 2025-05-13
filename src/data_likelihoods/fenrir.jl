@@ -97,7 +97,7 @@ function fit_pnsolution_to_data!(
 
     # Now iterate backwards
     data_idx = length(data.u) - 1
-    for i in length(x_posterior)-1:-1:1
+    for i in (length(x_posterior)-1):-1:1
         # logic closely related to ProbNumDiffEq.jl's `smooth_solution!`
         if sol.t[i] == sol.t[i+1]
             copy!(x_posterior[i], x_posterior[i+1])

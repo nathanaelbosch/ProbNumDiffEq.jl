@@ -52,7 +52,7 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
         _q = INIT isa SimpleInit ? 1 : INIT.order
         integ = init(prob, EK0(order=q, initialization=INIT))
         dus = integ.cache.x.μ
-        @test dus[1:d*(_q+1)] ≈ true_init_states[1:d*(_q+1)]
+        @test dus[1:(d*(_q+1))] ≈ true_init_states[1:(d*(_q+1))]
     end
 
     @testset "Low-order exact init via ClassiSolverInit: `initial_update!`" begin
@@ -81,7 +81,7 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
             init(prob, EK1(order=2, initialization=ClassicSolverInit(init_on_ddu=true)))
         ProbNumDiffEq.initial_update!(integ, integ.cache, integ.alg.initialization)
         x = integ.cache.x
-        @test x.μ[:] ≈ true_init_states[1:(2+1)*d]
+        @test x.μ[:] ≈ true_init_states[1:((2+1)*d)]
     end
 end
 

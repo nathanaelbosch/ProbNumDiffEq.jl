@@ -68,7 +68,7 @@ end
 function get_derivatives(
     init::ForwardDiffInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
     q = init.order
-    _f(u) = (du = copy(u); f(du, u, p, t); du)
+    _f(u) = (du=copy(u); f(du, u, p, t); du)
 
     out = [u]
     push!(out, _f(u))
@@ -98,12 +98,12 @@ function iip_forwarddiff_get_derivatives!(
     _f(du, u) = f(du, u, p, t)
 
     out[1:d] .= u
-    @views _f(out[d+1:2d], u)
+    @views _f(out[(d+1):2d], u)
 
     f_n = _f
     for o in 2:q
         f_n = forwarddiff_iip_vectorfield_derivative_iteration(f_n, _f)
-        @views f_n(out[o*d+1:(o+1)*d], u)
+        @views f_n(out[(o*d+1):((o+1)*d)], u)
     end
 
     return out

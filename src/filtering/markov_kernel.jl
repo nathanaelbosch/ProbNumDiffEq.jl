@@ -93,7 +93,7 @@ function marginalize_cov!(
     R = C_3DxD
 
     _matmul!(view(R, 1:_D, 1:_D), Σ_curr.R, A')
-    @.. R[_D+1:3_D, 1:_D] = C.R
+    @.. R[(_D+1):3_D, 1:_D] = C.R
 
     Q_R = triangularize!(R, cachemat=C_DxD)
     copy!(Σ_out.R, Q_R)
@@ -225,10 +225,10 @@ function compute_backward_kernel!(
     _matmul!(view(Λ.R, 1:D, 1:D), x.Σ.R, C_DxD)
     # Λ.R[D+1:2D, 1:D] = (G * Q.R')'
     if isone(diffusion)
-        _matmul!(view(Λ.R, D+1:2D, 1:D), Q.R, G')
+        _matmul!(view(Λ.R, (D+1):2D, 1:D), Q.R, G')
     else
         apply_diffusion!(PSDMatrix(C_DxD), Q, diffusion)
-        _matmul!(view(Λ.R, D+1:2D, 1:D), C_DxD, G')
+        _matmul!(view(Λ.R, (D+1):2D, 1:D), C_DxD, G')
     end
 
     return Kout

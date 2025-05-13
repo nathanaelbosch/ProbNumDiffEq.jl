@@ -1,7 +1,7 @@
 function projection(
     d::Integer,
     q::Integer,
-    ::Type{elType}=typeof(1.0),
+    (::Type{elType})=typeof(1.0),
 ) where {elType}
     D = d * (q + 1)
     Proj(deriv) = begin

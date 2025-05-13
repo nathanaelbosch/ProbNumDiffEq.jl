@@ -20,7 +20,7 @@ function calc_H!(H, integ, cache)
         else
             # the "SecondOrderODEProblem" case: since f(ddu, du, u, p, t) we need a bit more
             topleft = view(ddu, 1:d, 1:d)
-            topright = view(ddu, 1:d, d+1:2d)
+            topright = view(ddu, 1:d, (d+1):2d)
             BlocksOfDiagonals([[topleft[i, i] topright[i, i];] for i in 1:d])
         end
         _matmul!(H, ddu_diag, cache.SolProj, -1.0, 1.0)

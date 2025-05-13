@@ -84,7 +84,7 @@ end
     σ^2 * Eye(2),
     Diagonal([σ^2 0; 0 2σ^2]),
     [σ^2 0; 0 2σ^2],
-    (A = randn(2, 2); A'A),
+    (A=randn(2, 2); A'A),
     (PSDMatrix(randn(2, 2))),
 )
     @testset "$alg" for alg in (EK0(), DiagonalEK1(), EK1())

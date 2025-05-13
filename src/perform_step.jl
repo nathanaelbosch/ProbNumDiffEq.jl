@@ -90,7 +90,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     # Predict the mean
     predict_mean!(x_pred.μ, xprev.μ, Ah)
     write_into_solution!(
-        integ.u, x_pred.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
+        integ.u, x_pred.μ; cache, is_secondorder_ode=(integ.f isa DynamicalODEFunction))
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -125,7 +125,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     x_filt, loglikelihood = update!(
         x_filt, x_pred, cache.measurement, cache.H; cache, R=cache.R)
     write_into_solution!(
-        integ.u, x_filt.μ; cache, is_secondorder_ode=integ.f isa DynamicalODEFunction)
+        integ.u, x_filt.μ; cache, is_secondorder_ode=(integ.f isa DynamicalODEFunction))
 
     cache.log_likelihood = loglikelihood
     integ.sol.pnstats.log_likelihood += cache.log_likelihood

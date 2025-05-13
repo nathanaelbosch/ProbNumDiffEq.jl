@@ -37,7 +37,7 @@ function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1)
     sample_path[end, :, :] .= sample
     # @info "final value and samples" x.μ sample sample_path[end, :]
 
-    for i in length(xs)-1:-1:1
+    for i in (length(xs)-1):-1:1
         dt = ts[i+1] - ts[i]
 
         i_diffusion = sum(difftimes .<= ts[i])

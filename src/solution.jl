@@ -218,16 +218,16 @@ function mean(sol::ProbODESolution{T,N}) where {T,N}
 end
 
 function (sol::MeanProbODESolution)(
-    t::Number, ::Type{deriv}=Val{0}; idxs=nothing, continuity=:left) where {deriv}
+    t::Number, (::Type{deriv})=Val{0}; idxs=nothing, continuity=:left) where {deriv}
     return mean(sol.probsol(t, deriv; idxs, continuity))
 end
 function (sol::MeanProbODESolution)(
-    t::AbstractArray{<:Number}, ::Type{deriv}=Val{0}; idxs=nothing, continuity=:left,
+    t::AbstractArray{<:Number}, (::Type{deriv})=Val{0}; idxs=nothing, continuity=:left,
 ) where {deriv}
     return DiffEqArray(mean.(sol.probsol(t, deriv; idxs, continuity).u), t)
 end
 function (sol::MeanProbODESolution)(
-    v, t, ::Type{deriv}=Val{0}; idxs=nothing, continuity=:left) where {deriv}
+    v, t, (::Type{deriv})=Val{0}; idxs=nothing, continuity=:left) where {deriv}
     return mean(sol.probsol(v, t, deriv; idxs, continuity))
 end
 
@@ -246,8 +246,7 @@ struct ODEFilterPosterior{T1,T2,T3,T4,T5,T6} <: AbstractODEFilterPosterior
     cache::T5
     smooth::T6
 end
-DiffEqBase.interp_summary(interp::ODEFilterPosterior) =
-    "ODE Filter Posterior"
+DiffEqBase.interp_summary(interp::ODEFilterPosterior) = "ODE Filter Posterior"
 
 function (interp::ODEFilterPosterior)(
     t::Real,
