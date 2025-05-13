@@ -37,6 +37,7 @@ using FiniteHorizonGramians
 using FillArrays
 using MatrixEquations
 using DiffEqCallbacks
+using ADTypes
 
 # @reexport using GaussianDistributions
 
