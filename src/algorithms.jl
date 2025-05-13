@@ -218,7 +218,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             initialization,
             pn_observation_noise,
             covariance_factorization,
-            AD_choice
+            AD_choice,
         )
     end
 end
@@ -270,7 +270,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             initialization,
             pn_observation_noise,
             covariance_factorization,
-            AD_choice
+            AD_choice,
         )
     end
 end
@@ -366,9 +366,16 @@ function DiffEqBase.prepare_alg(
     # use the prepare_alg from OrdinaryDiffEqCore; but right now, we do not use `linsolve` which
     # is a requirement.
 
-    prepped_AD = OrdinaryDiffEqDifferentiation.prepare_ADType(OrdinaryDiffEqDifferentiation.alg_autodiff(alg), prob, u0, p, OrdinaryDiffEqDifferentiation.standardtag(alg))
+    prepped_AD = OrdinaryDiffEqDifferentiation.prepare_ADType(
+        OrdinaryDiffEqDifferentiation.alg_autodiff(alg),
+        prob,
+        u0,
+        p,
+        OrdinaryDiffEqDifferentiation.standardtag(alg),
+    )
 
-    sparse_prepped_AD = OrdinaryDiffEqDifferentiation.prepare_user_sparsity(prepped_AD, prob)
+    sparse_prepped_AD =
+        OrdinaryDiffEqDifferentiation.prepare_user_sparsity(prepped_AD, prob)
 
     L = StaticArrayInterface.known_length(typeof(u0))
     @assert L === nothing "ProbNumDiffEq.jl does not support StaticArrays yet."
@@ -384,7 +391,6 @@ function DiffEqBase.prepare_alg(
     else
         autodiff = sparse_prepped_AD
     end
-    
 
-    return remake(alg, autodiff = autodiff)
+    return remake(alg, autodiff=autodiff)
 end
