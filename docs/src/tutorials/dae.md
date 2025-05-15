@@ -118,19 +118,20 @@ Let's build two different ODE problems, and check how well we can solve each:
 prob_index3 = ODEProblem(complete(traced_sys), Pair[], tspan)
 prob_index1 = ODEProblem(simplified_sys, Pair[], tspan)
 
-sol3 = solve(prob_index3, EK1())
-sol1 = solve(prob_index1, EK1())
+sol3 = solve(prob_index3, EK1(), abstol=1e-7)
+sol1 = solve(prob_index1, EK1(), abstol=1e-7)
 
 truesol = solve(prob_index1, Rodas4(), abstol=1e-10, reltol=1e-10)
 
 sol1_final_error = norm(sol1.u[end] - truesol.u[end])
 sol1_f_evals     = sol1.stats.nf
-sol3_final_error = norm(sol3.u[end] - truesol.u[end])
+perm = [findfirst(x -> x === s, unknowns(traced_sys)) for s in unknowns(simplified_sys)]
+sol3_final_error = norm(sol3.u[end][perm] - truesol.u[end])
 sol3_f_evals     = sol3.stats.nf
 @info "Results" sol1_final_error sol1_f_evals sol3_final_error sol3_f_evals
 ```
 
-The error for the index-1 DAE solve is _much_ lower.
+The error for the index-1 DAE solve is quite a bit lower.
 Thus it seems that, even if the index-3 DAE could also be solved directly, index lowering might still be beneficial when solving DAEs with the `EK1`!
 
 
