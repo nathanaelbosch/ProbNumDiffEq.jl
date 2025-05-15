@@ -28,7 +28,17 @@ makedocs(
     plugins=[bib],
     sitename="ProbNumDiffEq.jl",
     format=Documenter.HTML(
-        assets=String["assets/citations.css"],
+        assets=[
+            "assets/citations.css",
+            asset(
+                "https://cloud.umami.is/script.js",
+                class=:js,
+                attributes=Dict(
+                    Symbol("data-website-id") => "5a44fc2f-2cf0-47b1-a0df-c1a99b99e6db",
+                    :defer => "",
+                ),
+            ),
+        ],
     ),
     modules=[ProbNumDiffEq],
     pages=[
