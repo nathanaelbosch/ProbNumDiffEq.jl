@@ -51,6 +51,7 @@ end
 """
 function get_derivatives(
     init::TaylorModeInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
+    f_as_Function(du, u, p, t) = f(du, u, p, t)
     q = init.order
     tT = Taylor1(typeof(t), q)
     tT[0] = t
@@ -60,7 +61,7 @@ function get_derivatives(
     end
     duT = zero(uT)
     uauxT = similar(uT)
-    TaylorIntegration.jetcoeffs!(f.f, tT, uT, duT, uauxT, p)
+    TaylorIntegration.jetcoeffs!(f_as_Function, tT, uT, duT, uauxT, p)
     # return hcat([evaluate.(differentiate.(uT, i)) for i in 0:q]...)'
     return [evaluate.(differentiate.(uT, i)) for i in 0:q]
 end
