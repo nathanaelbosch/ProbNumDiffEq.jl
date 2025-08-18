@@ -60,7 +60,7 @@ function get_derivatives(
     end
     duT = zero(uT)
     uauxT = similar(uT)
-    TaylorIntegration.jetcoeffs!(f, tT, uT, duT, uauxT, p)
+    TaylorIntegration.jetcoeffs!(f.f, tT, uT, duT, uauxT, p)
     # return hcat([evaluate.(differentiate.(uT, i)) for i in 0:q]...)'
     return [evaluate.(differentiate.(uT, i)) for i in 0:q]
 end
