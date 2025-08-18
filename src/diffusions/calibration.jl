@@ -8,6 +8,7 @@ Needed for MLE diffusion estimation.
 invquad
 invquad(v, M::Matrix; v_cache, M_cache) = begin
     v_cache .= v
+    M = make_hermitian_if_fowarddiff(M)
     M_chol = cholesky!(copy!(M_cache, M))
     ldiv!(M_chol, v_cache)
     dot(v, v_cache)

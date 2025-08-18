@@ -56,6 +56,14 @@ cov2psdmatrix(cov::Diagonal; d) =
 cov2psdmatrix(cov::AbstractMatrix; d) =
     (@assert size(cov, 1) == size(cov, 2) == d; PSDMatrix(Matrix(cholesky(cov).U)))
 cov2psdmatrix(cov::PSDMatrix; d) = (@assert size(cov, 1) == size(cov, 2) == d; cov)
+make_hermitian_if_fowarddiff(M::AbstractMatrix) = M
+make_hermitian_if_fowarddiff(M::AbstractMatrix{<:ForwardDiff.Dual}) = begin
+    # Since ForwardDiff 1.0 `ishermitian` fails for small fluctuations in the dual
+    if !ishermitian(ForwardDiff.value.(M))
+        error("Matrix is not Hermitian.")
+    end
+    return 0.5 * (M + M')
+end
 
 """
     add!(out, toadd)

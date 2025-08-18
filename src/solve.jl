@@ -2,12 +2,10 @@
 function DiffEqBase.__init(
     prob::DiffEqBase.AbstractODEProblem{uType,tType,false},
     alg::AbstractEK,
-    timeseries_init=(),
-    ts_init=(),
-    ks_init=(),
-    recompile::Type{Val{recompile_flag}}=Val{true};
+    args...;
     kwargs...,
-) where {uType,tType,recompile_flag}
+) where {uType,tType}
+    # @info "Inside ProbNumDiffEq's overloaded DiffEqBase.__init function"
     @warn "The given problem is in out-of-place form. Since the algorithms in this " *
           "package are written for in-place problems, it will be automatically converted."
     if prob.f isa DynamicalODEFunction
@@ -43,13 +41,12 @@ function DiffEqBase.__init(
             prob.kwargs...,
         )
     end
+
+    # @info "Calling DiffEqBase.__init now"
     return DiffEqBase.__init(
         _prob,
         alg,
-        timeseries_init,
-        ts_init,
-        ks_init,
-        recompile;
+        args...;
         kwargs...,
     )
 end

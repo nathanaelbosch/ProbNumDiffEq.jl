@@ -104,6 +104,7 @@ function update!(
         _matmul!(K2_cache, P_p, H')
     end
 
+    _S = make_hermitian_if_fowarddiff(_S)
     S_chol = length(_S) == 1 ? _S[1] : cholesky!(_S)
     rdiv!(K, S_chol)
 
