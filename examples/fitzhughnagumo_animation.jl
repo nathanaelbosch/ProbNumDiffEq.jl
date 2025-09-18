@@ -1,31 +1,30 @@
 using ProbNumDiffEq
 using ProbNumDiffEq: stack
-using DifferentialEquations
+using OrdinaryDiffEqTsit5
 using Statistics
 using Plots
 
 C1, C2 = "#107D79", "#FF9933"
 
 # ODE definition as in DifferentialEquations.jl
-function fitz(u, p, t)
+function fitz(du, u, p, t)
     a, b, c = p
-    return [
-        c * (u[1] - u[1]^3 / 3 + u[2])
-        -(1 / c) * (u[1] - a - b * u[2])
-    ]
+    du[1] = c * (u[1] - u[1]^3 / 3 + u[2])
+    du[2] = -(1 / c) * (u[1] - a - b * u[2])
 end
 u0 = [-1.0; 1.0]
 tspan = (0.0, 20.0)
 p = (0.2, 0.2, 3.0)
 prob = ODEProblem(fitz, u0, tspan, p)
 
-appxsol = solve(prob, abstol=1e-12, reltol=1e-12)
+appxsol = solve(prob, Tsit5(), abstol=1e-12, reltol=1e-12)
 
 ############################################################################################
 # Solve with integrator interface and make animation
-integ = init(prob, EK0(order=1), adaptive=false, dt=7e-2)
+integ = init(prob, EK0(order=1, smooth=false), dense=false, adaptive=false, dt=7e-2)
 
 anim = @animate for i in 1:(prob.tspan[2]/integ.dt)
+    @info "Step $i / $(prob.tspan[2]/integ.dt)"
     step!(integ)
 
     plot(
@@ -43,8 +42,8 @@ anim = @animate for i in 1:(prob.tspan[2]/integ.dt)
     post = integ.sol(times).u
     plot!(
         times,
-        stack(mean(post)),
-        ribbon=3stack(std(post)),
+        stack(mean.(post)),
+        ribbon=3stack(std.(post)),
         linestyle=:dot,
         color=[C1 C2],
         fillalpha=0.2,
