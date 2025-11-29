@@ -236,7 +236,7 @@ Samples from the Gauss-Markov process on the given time grid.
 
 See also: [`marginalize`](@ref).
 """
-function sample(process::AbstractGaussMarkovProcess, times, N=1)
+function sample(process::AbstractGaussMarkovProcess, times, N::Integer=1)
     X = initial_distribution(process)
     X = Gaussian(mean(X), Matrix(cov(X)))
     s = rand(X, N)

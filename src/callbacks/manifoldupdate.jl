@@ -14,7 +14,6 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     m_tmp, C_tmp = mean(x_tmp), cov(x_tmp)
 
     m_i = copy(m)
-    local m_i_new, C_i_new
     for i in 1:maxiters
         u_i = mul!(tmp, SolProj, m_i)
 
@@ -40,7 +39,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         m_i = m_i_new
     end
 
-    copy!(cache.x, Gaussian(m_i_new, C_i_new))
+    copy!(cache.x, Gaussian(m_tmp, C_tmp))
 
     return nothing
 end
