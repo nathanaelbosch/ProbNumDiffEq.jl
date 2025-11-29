@@ -138,7 +138,7 @@ const GROUP = get(ENV, "GROUP", "All")
         end
     end
 
-    if GROUP == "All"
+    if GROUP == "All" || GROUP == "CodeQuality"
         @timedtestset "Code quality (Aqua.jl)" begin
             Aqua.test_all(
                 ProbNumDiffEq,
