@@ -10,15 +10,20 @@ import SciMLStructures
 
 import ODEProblemLibrary: prob_ode_fitzhughnagumo
 
+# Helper function to convert a regular ODE problem to MTK form with symbolic maps
+function make_mtk_problem(_prob)
+    sys = structural_simplify(modelingtoolkitize(_prob))
+    unknowns_list = ModelingToolkit.unknowns(sys)
+    params_list = ModelingToolkit.parameters(sys)
+    u0_map = Dict(unknowns_list[i] => _prob.u0[i] for i in eachindex(_prob.u0))
+    p_vals = collect(_prob.p)
+    p_map = Dict(params_list[i] => p_vals[i] for i in eachindex(p_vals))
+    return ODEProblem(sys, merge(u0_map, p_map), _prob.tspan; jac=true)
+end
+
 @testset "solver: $ALG" for ALG in (EK0, EK1, DiagonalEK1)
     _prob = prob_ode_fitzhughnagumo
-    prob = ODEProblem(
-        structural_simplify(modelingtoolkitize(_prob)),
-        _prob.u0,
-        _prob.tspan,
-        jac=true,
-    )
-    #prob = remake(prob, p=collect(_prob.p))
+    prob = make_mtk_problem(_prob)
     ps = ModelingToolkit.parameter_values(prob)
     ps = SciMLStructures.replace(SciMLStructures.Tunable(), ps, [1.0, 2.0, 3.0, 4.0])
     prob = remake(prob, p=ps)
