@@ -16,7 +16,7 @@ using DocStringExtensions
 using Reexport
 @reexport using DiffEqBase
 import SciMLBase
-import SciMLBase: WOperator # just to fix an Aqua.jl test
+const WOperator = DiffEqBase.WOperator # to fix an Aqua.jl undefined export test
 import SciMLBase: interpret_vars, getsyms, remake
 using OrdinaryDiffEqCore,
     OrdinaryDiffEqDifferentiation,

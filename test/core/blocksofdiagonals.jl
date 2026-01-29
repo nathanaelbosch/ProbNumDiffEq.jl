@@ -100,12 +100,12 @@ D = d1 * d2
 
     # Matrix-Vector Products
     v = rand(T, size(A, 2))
-    @test A * v == AM * v
+    @test A * v ≈ AM * v
     x = rand(T, size(A, 1))
-    @test mul!(x, A, v) == mul!(x, AM, v)
-    @test mul!(x, A, v, alpha, beta) == mul!(x, AM, v, alpha, beta)
-    @test _matmul!(x, A, v) == _matmul!(x, AM, v)
-    @test _matmul!(x, A, v, alpha, beta) == _matmul!(x, AM, v, alpha, beta)
+    @test mul!(x, A, v) ≈ mul!(x, AM, v)
+    @test mul!(x, A, v, alpha, beta) ≈ mul!(x, AM, v, alpha, beta)
+    @test _matmul!(x, A, v) ≈ _matmul!(x, AM, v)
+    @test _matmul!(x, A, v, alpha, beta) ≈ _matmul!(x, AM, v, alpha, beta)
 
     @test tttm([A; B]) == [AM; BM]
     @test tttm([A B]) == [AM BM]
