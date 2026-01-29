@@ -114,7 +114,7 @@ function DiffEqBase.build_solution(
         prob.p,
         true,
         Val(isinplace(prob)),
-        OrdinaryDiffEqCore.DEVerbosity(OrdinaryDiffEqCore.SciMLLogging.None())
+        OrdinaryDiffEqCore.DEVerbosity(OrdinaryDiffEqCore.SciMLLogging.None()),
     )
 
     T = eltype(eltype(u))
