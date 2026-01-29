@@ -13,24 +13,23 @@ concurrency:
 
 jobs:
   test:
-    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.group }} - Julia ${{ matrix.version }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         version:
           - '1'
-          # - 'nightly'
-        os:
-          - ubuntu-latest
-        arch:
-          - x64
+        group:
+          - Core
+          - Solvers
+          - Interface
+          - CodeQuality
     steps:
       - uses: actions/checkout@v6
       - uses: julia-actions/setup-julia@v2
         with:
           version: ${{ matrix.version }}
-          arch: ${{ matrix.arch }}
       - uses: actions/cache@v5
         env:
           cache-name: cache-artifacts
@@ -43,8 +42,12 @@ jobs:
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@v1
+        env:
+          GROUP: ${{ matrix.group }}
       - uses: julia-actions/julia-processcoverage@v1
+        if: matrix.group != 'CodeQuality'
       - uses: codecov/codecov-action@v5
+        if: matrix.group != 'CodeQuality'
         with:
           file: lcov.info
         env:
