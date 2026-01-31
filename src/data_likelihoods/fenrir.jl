@@ -48,8 +48,7 @@ function fenrir_data_loglik(
     T = prob.tspan[2] - prob.tspan[1]
     step!(integ, T, false) # basically `solve!` but this prevents smoothing
     sol = integ.sol
-
-    if sol.retcode != :Success && sol.retcode != :Default
+    if sol.retcode !== SciMLBase.ReturnCode.Success && sol.retcode !== SciMLBase.ReturnCode.Default
         @error "The PN ODE solver did not succeed!" sol.retcode
         return -Inf * one(eltype(integ.p))
     end

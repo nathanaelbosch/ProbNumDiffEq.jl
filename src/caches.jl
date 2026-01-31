@@ -91,6 +91,7 @@ function OrdinaryDiffEqCore.alg_cache(
     p,
     calck,
     ::Val{IIP},
+    verbose,
 ) where {IIP,uEltypeNoUnits,uBottomEltypeNoUnits,tTypeNoUnits}
     if u isa Number
         error("We currently don't support scalar-valued problems")
