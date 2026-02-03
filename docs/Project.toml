@@ -14,4 +14,5 @@ ProbNumDiffEq = "bf3e78b0-7d74-48a5-b855-9609533b56a5"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
+DocumenterCitations = "1"
 ModelingToolkit = "11"
