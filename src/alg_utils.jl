@@ -32,7 +32,10 @@ end
 ############################################
 # Step size control
 OrdinaryDiffEqCore.isadaptive(::AbstractEK) = true
-OrdinaryDiffEqCore.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
+# The probabilistic error estimate is a standard deviation, scaling as h^(q+1/2)
+# rather than the h^q of a classical order-q method. Report q+1/2 so that the
+# PI step size controller uses the correct gains.
+OrdinaryDiffEqCore.alg_order(alg::AbstractEK) = num_derivatives(alg.prior) + 1 // 2
 # OrdinaryDiffEqCore.alg_adaptive_order(alg::AbstractEK) =
 
 # PI control is the default!
@@ -41,8 +44,6 @@ OrdinaryDiffEqCore.ispredictive(::AbstractEK) = false # not sure, maybe Gustafss
 
 # OrdinaryDiffEqCore.qmin_default(alg::AbstractEK) =
 # OrdinaryDiffEqCore.qmax_default(alg::AbstractEK) =
-# OrdinaryDiffEqCore.beta2_default(alg::AbstractEK) = 2 // (5(OrdinaryDiffEqCore.alg_order(alg) + 1))
-# OrdinaryDiffEqCore.beta1_default(alg::AbstractEK, beta2) = 7 // (10(OrdinaryDiffEqCore.alg_order(alg) + 1))
 # OrdinaryDiffEqCore.gamma_default(alg::AbstractEK) =
 
 # OrdinaryDiffEqCore.uses_uprev(alg::, adaptive::Bool) = adaptive
