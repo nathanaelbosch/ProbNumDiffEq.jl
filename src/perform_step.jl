@@ -188,7 +188,11 @@ function compute_scaled_error_estimate!(integ, cache)
     @unpack err_tmp = cache
     t = integ.t + integ.dt
     err_est_unscaled = estimate_errors!(cache)
-    err_est_unscaled .*= integ.dt
+    if integ.f isa DynamicalODEFunction # second-order ODE
+        err_est_unscaled .*= integ.dt^2 / 2
+    else
+        err_est_unscaled .*= integ.dt
+    end
     if integ.f isa DynamicalODEFunction # second-order ODE
         DiffEqBase.calculate_residuals!(
             err_tmp,
