@@ -1,44 +1,23 @@
 using Documenter
+using DocumenterVitepress
 using ProbNumDiffEq
 
 using DocumenterCitations, Bibliography
 
-# DocumenterCitations.bib_sorting(::Val{:numeric}) = :nyt
-# function DocumenterCitations.format_bibliography_label(
-#     ::Val{:numeric},
-#     entry,
-#     citations::DocumenterCitations.OrderedDict{String,Int64},
-# )
-#     key = entry.id
-#     sorted_bibtex_keys = citations |> keys |> collect |> sort
-#     i = findfirst(x -> x == key, sorted_bibtex_keys)
-#     @info "format_bibliography_label" entry.id citations sorted_bibtex_keys i entry.date
-#     return "[$i]"
-# end
-# Bibliography.sorting_rules[:nyt] = [:authors; :date; :title]
-
 bib = CitationBibliography(
     joinpath(@__DIR__, "src", "refs.bib"),
     style=:numeric,
-    # style=:authoryear,
 )
 sort_bibliography!(bib.entries, :nyt)  # name-year-title
 
 makedocs(
     plugins=[bib],
     sitename="ProbNumDiffEq.jl",
-    format=Documenter.HTML(
-        assets=[
-            "assets/citations.css",
-            asset(
-                "https://cloud.umami.is/script.js",
-                class=:js,
-                attributes=Dict(
-                    Symbol("data-website-id") => "5a44fc2f-2cf0-47b1-a0df-c1a99b99e6db",
-                    :defer => "",
-                ),
-            ),
-        ],
+    format=DocumenterVitepress.MarkdownVitepress(
+        repo="https://github.com/nathanaelbosch/ProbNumDiffEq.jl",
+        devbranch="main",
+        devurl="dev",
+        deploy_url="nathanaelbosch.github.io/ProbNumDiffEq.jl",
     ),
     modules=[ProbNumDiffEq],
     pages=[
@@ -84,10 +63,7 @@ makedocs(
     checkdocs=:none,
 )
 
-# Documenter can also automatically deploy documentation to gh-pages.
-# See "Hosting Documentation" and deploydocs() in the Documenter manual
-# for more information.
-deploydocs(
+DocumenterVitepress.deploydocs(
     repo="github.com/nathanaelbosch/ProbNumDiffEq.jl.git",
     devbranch="main",
     push_preview=true,
