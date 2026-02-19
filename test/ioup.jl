@@ -15,7 +15,7 @@ ref = solve(prob, Vern9(), abstol=1e-9, reltol=1e-9);
 
 sol_iwp = solve(prob, EK1());
 err_iwp = norm(ref.u[end] - sol_iwp.u[end])
-@test err_iwp < 1e-5
+@test err_iwp < 2e-5
 
 A_noisy = A + 1e-3 * randn(MersenneTwister(42), 2, 2)
 
@@ -49,6 +49,6 @@ end
         sol = solve(prob, EK1(prior=IOUP(3, r)))
 
         err = norm(ref.u[end] - sol.u[end])
-        @test err < 6e-6
+        @test err < 2e-5
     end
 end

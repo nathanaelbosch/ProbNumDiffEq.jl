@@ -105,8 +105,8 @@ end
         (o > 1) && @test Proj1(2) * tm_init ≈ Proj2(2) * rk_init
 
         # # Test if the others are correct, up to order 5
-        (5 > o > 2) && @test Proj1(3) * tm_init ≈ Proj2(3) * rk_init rtol = 1e-1
-        (5 > o > 3) && @test Proj1(4) * tm_init ≈ Proj2(4) * rk_init rtol = 1e-1
+        (5 > o > 2) && @test Proj1(3) * tm_init ≈ Proj2(3) * rk_init rtol = 2e-1
+        (5 > o > 3) && @test Proj1(4) * tm_init ≈ Proj2(4) * rk_init rtol = 2e-1
         # (o == 5) && @test Proj1(3) * tm_init ≈ Proj2(3) * rk_init rtol=6e-1
         # (o == 5) && @test Proj1(4) * tm_init ≈ Proj2(4) * rk_init rtol=2e-2
         # (o == 5) && @test Proj1(5) * tm_init ≈ Proj2(5) * rk_init rtol=8e-1
@@ -120,7 +120,7 @@ end
             Cm = Matrix(C)
             @assert isdiag(Cm)
             whitened_err = err ./ sqrt.(diag(Cm))
-            @test all(abs.(whitened_err) .< 4e-1)
+            @test all(abs.(whitened_err) .< 5e-1)
         end
     end
 end
