@@ -13,6 +13,70 @@ ODEInterface.loadODESolvers()
 
 using ProbNumDiffEq
 
+# Workaround: deSolveDiffEq doesn't set retcode in build_solution, so it defaults to
+# ReturnCode.Default which is not considered successful by DiffEqDevTools.WorkPrecisionSet,
+# causing all deSolve results to be NaN.
+# We use include_string to evaluate the fix inside the deSolveDiffEq module where RCall
+# and DiffEqBase are available (they are transitive deps, not directly importable here).
+include_string(deSolveDiffEq, """
+function DiffEqBase.__solve(
+        prob::DiffEqBase.AbstractODEProblem,
+        alg::deSolveAlgorithm, timeseries = [], ts = [], ks = [];
+        saveat = eltype(prob.tspan)[], timeseries_errors = true,
+        reltol = 1e-3, abstol = 1e-6,
+        maxiters = 100000,
+        kwargs...)
+    p = prob.p
+    tspan = prob.tspan
+    u0 = prob.u0
+
+    if DiffEqBase.isinplace(prob)
+        f = function (t, u, __p)
+            du = similar(u)
+            prob.f(du, u, p, t)
+            R"list(\$du)"
+        end
+    else
+        f = function (t, u, __p)
+            du = prob.f(u, p, t)
+            R"list(\$du)"
+        end
+    end
+
+    _saveat = isempty(saveat) ? nothing : saveat
+    if _saveat isa Array
+        __saveat = _saveat
+    elseif _saveat isa Number
+        __saveat = Array(tspan[1]:_saveat:tspan[2])
+    elseif _saveat isa Nothing
+        __saveat = [tspan[1], tspan[2]]
+    else
+        __saveat = Array(_saveat)
+    end
+
+    out = RCall.rcopy(solver[].ode(times = __saveat, y = u0, func = f,
+        method = string(alg)[15:(end - 2)],
+        parms = nothing, maxsteps = maxiters,
+        rtol = reltol, atol = abstol))
+
+    ts = @view out[:, 1]
+
+    if u0 isa AbstractArray
+        timeseries = Vector{typeof(u0)}(undef, length(ts))
+        for i in 1:length(ts)
+            timeseries[i] = @view out[i, 2:end]
+        end
+    else
+        timeseries = out[i, end]
+    end
+
+    DiffEqBase.build_solution(prob, alg, ts, timeseries,
+        dense = false,
+        retcode = DiffEqBase.SciMLBase.ReturnCode.Success,
+        timeseries_errors = timeseries_errors)
+end
+""")
+
 Plots.theme(
     :dao;
     markerstrokewidth=0.5,
