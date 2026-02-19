@@ -11,8 +11,9 @@ Adapted from
 
 ```julia, results="hidden"
 using LinearAlgebra, Statistics, Distributions
-using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Sundials, Plots
+using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
 using ModelingToolkit
+using ModelingToolkit: t_nounits as t, D_nounits as D
 using ProbNumDiffEq
 
 Plots.theme(
@@ -33,23 +34,18 @@ end
 ```
 
 ```julia
-@variables t y1(t)=1.0 y2(t)=2.0 y3(t)=3.0
+@variables y1(t)=1.0 y2(t)=2.0 y3(t)=3.0
 @parameters p1=77.27 p2=8.375e-6 p3=0.161
-D = Differential(t)
 eqs = [
   D(y1) ~ p1*(y2+y1*(1-p2*y1-y2))
   D(y2) ~ (y3-(1+y1)*y2)/p1
   D(y3) ~ p3*(y1-y3)
 ]
-@named sys = ODESystem(eqs)
-simpsys = structural_simplify(sys)
-mmprob = ODEProblem(sys,[],(0.0,30.0))
-daeprob = DAEProblem(sys,[D(y1)=>77.26935286375,
-                          D(y2)=>-0.012941633234114146,
-                          D(y3)=>-0.322],[],(0.0,30.0))
-odaeprob = ODAEProblem(simpsys,[],(0.0,30.0))
+@named sys = ODESystem(eqs, t)
+simpsys = mtkcompile(sys)
+mmprob = ODEProblem(simpsys,[],(0.0,30.0))
 
-ref_sol = solve(daeprob,IDA(),abstol=1/10^14,reltol=1/10^14)
+ref_sol = solve(mmprob,Rodas5(),abstol=1/10^14,reltol=1/10^14)
 
 plot(ref_sol, title="OREGO Solution", legend=false, xticks=:auto)
 ```

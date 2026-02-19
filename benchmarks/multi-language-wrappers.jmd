@@ -7,8 +7,9 @@ Adapted from
 # Imports
 using LinearAlgebra, Statistics
 using StaticArrays, DiffEqDevTools, ParameterizedFunctions, Plots, SciMLBase, OrdinaryDiffEq
-using ODEInterface, ODEInterfaceDiffEq, Sundials, SciPyDiffEq, deSolveDiffEq, MATLABDiffEq, LSODA
+using ODEInterface, ODEInterfaceDiffEq, Sundials, SciPyDiffEq, deSolveDiffEq, LSODA
 using LoggingExtras
+ODEInterface.loadODESolvers()
 
 using ProbNumDiffEq
 
@@ -30,7 +31,6 @@ COLORS = Dict(
     "Julia" => :LightGreen,
     "Julia (static)" => :DarkGreen,
     "Hairer" => :Red,
-    "MATLAB" => :Orange,
     "SciPy" => :Yellow,
     "deSolve" => :Blue,
     "Sundials" => :Purple,
@@ -73,8 +73,6 @@ _setups = [
   "Julia: Tsit5" => Dict(:alg=>Tsit5())
   "Julia: Vern7" => Dict(:alg=>Vern7())
   "Hairer: dopri5" => Dict(:alg=>ODEInterfaceDiffEq.dopri5())
-  "MATLAB: ode45" => Dict(:alg=>MATLABDiffEq.ode45())
-  "MATLAB: ode113" => Dict(:alg=>MATLABDiffEq.ode113())
   "SciPy: RK45" => Dict(:alg=>SciPyDiffEq.RK45())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
@@ -135,8 +133,6 @@ _setups = [
   "Julia: Tsit5" => Dict(:alg=>Tsit5())
   "Julia: Vern7" => Dict(:alg=>Vern7())
   "Hairer: dopri5" => Dict(:alg=>dopri5())
-  "MATLAB: ode45" => Dict(:alg=>MATLABDiffEq.ode45())
-  "MATLAB: ode113" => Dict(:alg=>MATLABDiffEq.ode113())
   "SciPy: RK45" => Dict(:alg=>SciPyDiffEq.RK45())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
@@ -198,8 +194,6 @@ _setups = [
   "Julia: Rodas5" => Dict(:alg=>Rodas5())
   "Hairer: rodas" => Dict(:alg=>rodas())
   "Hairer: radau" => Dict(:alg=>radau())
-  "MATLAB: ode23s" => Dict(:alg=>MATLABDiffEq.ode23s())
-  "MATLAB: ode15s" => Dict(:alg=>MATLABDiffEq.ode15s())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: BDF" => Dict(:alg=>SciPyDiffEq.BDF())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
@@ -264,8 +258,6 @@ _setups = [
   "Julia: radau" => Dict(:alg=>RadauIIA5())
   "Hairer: rodas" => Dict(:alg=>rodas())
   "Hairer: radau" => Dict(:alg=>radau())
-  "MATLAB: ode23s" => Dict(:alg=>MATLABDiffEq.ode23s())
-  "MATLAB: ode15s" => Dict(:alg=>MATLABDiffEq.ode15s())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: BDF" => Dict(:alg=>SciPyDiffEq.BDF())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
