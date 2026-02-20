@@ -335,38 +335,50 @@ nothing
 <details><summary>Code:</summary>
 ```
 ```julia
-DENSE = true;
-SAVE_EVERYSTEP = true;
-
-_setups = [
-  "EK1(3) 1st order" => Dict(:alg => EK1(order=3, smooth=DENSE))
-  "EK1(4) 1st order" => Dict(:alg => EK1(order=4, smooth=DENSE))
-  "EK1(5) 1st order" => Dict(:alg => EK1(order=5, smooth=DENSE))
-  "EK1(4) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=4, smooth=DENSE))
-  "EK1(5) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=5, smooth=DENSE))
-  "EK1(6) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=6, smooth=DENSE))
-  "EK1(7) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=7, smooth=DENSE))
-]
-
-labels = first.(_setups)
-setups = last.(_setups)
+DENSE = false;
+SAVE_EVERYSTEP = false;
 
 abstols = 1.0 ./ 10.0 .^ (6:11)
 reltols = 1.0 ./ 10.0 .^ (3:8)
 
-wp = WorkPrecisionSet(
-    [prob, prob2], abstols, reltols, setups;
-    names = labels,
-    appxsol = [test_sol, test_sol2],
+_setups_1st = [
+  "EK1(3) 1st order" => Dict(:alg => EK1(order=3, smooth=DENSE))
+  "EK1(4) 1st order" => Dict(:alg => EK1(order=4, smooth=DENSE))
+  "EK1(5) 1st order" => Dict(:alg => EK1(order=5, smooth=DENSE))
+]
+wp_1st = WorkPrecisionSet(
+    prob, abstols, reltols, last.(_setups_1st);
+    names = first.(_setups_1st),
+    appxsol = test_sol,
     dense = DENSE,
     save_everystep = SAVE_EVERYSTEP,
     maxiters = Int(1e7),
     numruns = 5,
 )
 
-color = [1 1 1 2 2 2 2]
-plot(wp; x=:final, color)
-plot!(ref_wp_dense, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
+# Tighter tolerances for 2nd order: loose tolerances go unstable for higher orders
+abstols_2nd = 1.0 ./ 10.0 .^ (9:13)
+reltols_2nd = 1.0 ./ 10.0 .^ (6:10)
+
+_setups_2nd = [
+  "EK1(4) 2nd order" => Dict(:alg => EK1(order=4, smooth=DENSE))
+  "EK1(5) 2nd order" => Dict(:alg => EK1(order=5, smooth=DENSE))
+  "EK1(6) 2nd order" => Dict(:alg => EK1(order=6, smooth=DENSE))
+  "EK1(7) 2nd order" => Dict(:alg => EK1(order=7, smooth=DENSE))
+]
+wp_2nd = WorkPrecisionSet(
+    prob2, abstols_2nd, reltols_2nd, last.(_setups_2nd);
+    names = first.(_setups_2nd),
+    appxsol = test_sol2,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    maxiters = Int(1e7),
+    numruns = 5,
+)
+
+plot(wp_1st; x=:final, color=1)
+plot!(wp_2nd; x=:final, color=2)
+plot!(ref_wp_final, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
 ```@raw html
 </details>
@@ -376,41 +388,21 @@ plot!(ref_wp_dense, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 
 
 
-```@raw html
-<details><summary>Interpolation errors (L2):</summary>
-```
-```@raw html
-<details><summary>Code:</summary>
-```
-```julia
-plot(wp; x=:L2, color)
-plot!(ref_wp_dense, x=:L2, color=:gray, alpha=0.7, linestyle=:dash)
-```
-```@raw html
-</details>
-```
-
-![](figures/vanderpol_11_1.svg)
-
-
-```@raw html
-</details>
-```
-
 ### Calibration
 
 ```@raw html
 <details><summary>Code:</summary>
 ```
 ```julia
-plot(wp; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color)
+plot(wp_1st; x=:final, y=:chi2_final, yguide="Chi-squared (final)", color=1)
+plot!(wp_2nd; x=:final, y=:chi2_final, color=2)
 plot_chisq_interval!(2)
 ```
 ```@raw html
 </details>
 ```
 
-![](figures/vanderpol_12_1.svg)
+![](figures/vanderpol_11_1.svg)
 
 
 
