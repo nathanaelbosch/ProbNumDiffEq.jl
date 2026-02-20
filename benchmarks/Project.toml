@@ -22,4 +22,5 @@ deSolveDiffEq = "0518478a-701b-4815-806c-24ad5cb92f09"
 
 [compat]
 DiffEqDevTools = "2.42.0"
+SciPyDiffEq = "0.2.3"
 deSolveDiffEq = "1.1.0"
