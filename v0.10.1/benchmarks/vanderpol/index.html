@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Stiff ODE: Van der Pol · ProbNumDiffEq.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.045/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.24/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ProbNumDiffEq.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../../dynamical_odes/">Second Order ODEs and Energy Preservation</a></li><li><a class="tocitem" href="../../dae/">Differential Algebraic Equations</a></li></ul></li><li><span class="tocitem">Solvers and Options</span><ul><li><a class="tocitem" href="../../solvers/">Solvers</a></li><li><a class="tocitem" href="../../diffusions/">Diffusion models and calibration</a></li><li><a class="tocitem" href="../../initialization/">Initialization</a></li><li><a class="tocitem" href="../../priors/">Priors</a></li></ul></li><li><span class="tocitem">Benchmarks</span><ul><li><a class="tocitem" href="../multi-language-wrappers/">Multi-Language Wrapper Benchmark</a></li><li><a class="tocitem" href="../lotkavolterra/">Non-stiff ODE: Lotka-Volterra</a></li><li class="is-active"><a class="tocitem" href>Stiff ODE: Van der Pol</a><ul class="internal"><li><a class="tocitem" href="#EK1-accross-orders"><span>EK1 accross orders</span></a></li><li><a class="tocitem" href="#Solving-the-first-vs-second-order-ODE"><span>Solving the first- vs second-order ODE</span></a></li><li><a class="tocitem" href="#Conclusion"><span>Conclusion</span></a></li><li><a class="tocitem" href="#Appendix"><span>Appendix</span></a></li></ul></li><li><a class="tocitem" href="../rober/">DAE: ROBER</a></li></ul></li><li><span class="tocitem">Internals</span><ul><li><a class="tocitem" href="../../filtering/">Filtering and Smoothing</a></li><li><a class="tocitem" href="../../implementation/">Implementation via OrdinaryDiffEq.jl</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Benchmarks</a></li><li class="is-active"><a href>Stiff ODE: Van der Pol</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Stiff ODE: Van der Pol</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/main/docs/src/benchmarks/vanderpol.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Van-der-Pol-benchmark"><a class="docs-heading-anchor" href="#Van-der-Pol-benchmark">Van der Pol benchmark</a><a id="Van-der-Pol-benchmark-1"></a><a class="docs-heading-anchor-permalink" href="#Van-der-Pol-benchmark" title="Permalink"></a></h1><pre><code class="language-julia hljs">using LinearAlgebra, Statistics, InteractiveUtils
+using DiffEqDevTools, ParameterizedFunctions, SciMLBase, OrdinaryDiffEq, Plots
+using ProbNumDiffEq
+
+# Plotting theme
+theme(:dao;
+    markerstrokewidth=0.5,
+    legend=:outertopright,
+    bottom_margin=5Plots.mm,
+    size = (1000, 400),
+)</code></pre><h3 id="Van-der-Pol-problem-definition"><a class="docs-heading-anchor" href="#Van-der-Pol-problem-definition">Van der Pol problem definition</a><a id="Van-der-Pol-problem-definition-1"></a><a class="docs-heading-anchor-permalink" href="#Van-der-Pol-problem-definition" title="Permalink"></a></h3><pre><code class="language-julia hljs">function vanderpol!(du, u, p, t)
+    du[1] = u[2]
+    du[2] = p[1] * ((1 - u[1]^2) * u[2] - u[1])
+end
+p = [1e5]
+tspan = (0.0, 6.3)
+u0 = [2.0, 0.0]
+prob = ODEProblem(vanderpol!, u0, tspan, p)
+
+test_sol = solve(prob, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
+plot(test_sol, title=&quot;Van der Pol Solution&quot;, legend=false, ylims=(-2.5, 2.5))</code></pre><p><img src="../figures/vanderpol_2_1.svg" alt/></p><h2 id="EK1-accross-orders"><a class="docs-heading-anchor" href="#EK1-accross-orders">EK1 accross orders</a><a id="EK1-accross-orders-1"></a><a class="docs-heading-anchor-permalink" href="#EK1-accross-orders" title="Permalink"></a></h2><pre><code class="language-julia hljs">DENSE = false;
+SAVE_EVERYSTEP = false;
+
+_setups = [
+  &quot;EK1($order)&quot; =&gt; Dict(:alg =&gt; EK1(order=order, smooth=DENSE))
+  for order in 2:6
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (6:13)
+reltols = 1.0 ./ 10.0 .^ (3:10)
+
+wp = WorkPrecisionSet(
+    prob, abstols, reltols, setups;
+    names = labels,
+    #print_names = true,
+    appxsol = test_sol,
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(wp, palette=Plots.palette([:blue, :red], length(_setups)), xticks = 10.0 .^ (-16:1:5))</code></pre><p><img src="../figures/vanderpol_3_1.svg" alt/></p><h2 id="Solving-the-first-vs-second-order-ODE"><a class="docs-heading-anchor" href="#Solving-the-first-vs-second-order-ODE">Solving the first- vs second-order ODE</a><a id="Solving-the-first-vs-second-order-ODE-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-the-first-vs-second-order-ODE" title="Permalink"></a></h2><pre><code class="language-julia hljs">function vanderpol2!(ddu, du, u, p, t)
+    ddu[1] = p[1] * ((1 - u[1]^2) * du[1] - u[1])
+end
+p = [1e5]
+tspan = (0.0, 6.3)
+u0 = [2.0]
+du0 = [0.0]
+prob2 = SecondOrderODEProblem(vanderpol2!, du0, u0, tspan, p)
+
+test_sol2 = solve(prob2, RadauIIA5(), abstol=1/10^14, reltol=1/10^14, dense=false)
+plot(test_sol2, title=&quot;Van der Pol Solution (2nd order)&quot;, legend=false, ylims=(-2.5, 2.5))</code></pre><p><img src="../figures/vanderpol_4_1.svg" alt/></p><pre><code class="language-julia hljs">DENSE = false;
+SAVE_EVERYSTEP = false;
+
+_setups = [
+  &quot;EK1(2) 1st order&quot; =&gt; Dict(:alg =&gt; EK1(order=2, smooth=DENSE))
+  &quot;EK1(3) 1st order&quot; =&gt; Dict(:alg =&gt; EK1(order=3, smooth=DENSE))
+  &quot;EK1(4) 1st order&quot; =&gt; Dict(:alg =&gt; EK1(order=4, smooth=DENSE))
+  &quot;EK1(5) 1st order&quot; =&gt; Dict(:alg =&gt; EK1(order=5, smooth=DENSE))
+  &quot;EK1(3) 2nd order&quot; =&gt; Dict(:prob_choice =&gt; 2, :alg =&gt; EK1(order=3, smooth=DENSE))
+  &quot;EK1(4) 2nd order&quot; =&gt; Dict(:prob_choice =&gt; 2, :alg =&gt; EK1(order=4, smooth=DENSE))
+  &quot;EK1(5) 2nd order&quot; =&gt; Dict(:prob_choice =&gt; 2, :alg =&gt; EK1(order=5, smooth=DENSE))
+  &quot;EK1(5) 2nd order&quot; =&gt; Dict(:prob_choice =&gt; 2, :alg =&gt; EK1(order=6, smooth=DENSE))
+]
+
+labels = first.(_setups)
+setups = last.(_setups)
+
+abstols = 1.0 ./ 10.0 .^ (6:13)
+reltols = 1.0 ./ 10.0 .^ (3:10)
+
+wp = WorkPrecisionSet(
+    [prob, prob2], abstols, reltols, setups;
+    names = labels,
+    #print_names = true,
+    appxsol = [test_sol, test_sol2],
+    dense = DENSE,
+    save_everystep = SAVE_EVERYSTEP,
+    numruns = 10,
+    maxiters = Int(1e7),
+    timeseries_errors = false,
+    verbose = false,
+)
+
+plot(wp, color=[1 1 1 1 2 2 2 2], xticks = 10.0 .^ (-16:1:5))</code></pre><p><img src="../figures/vanderpol_5_1.svg" alt/></p><h2 id="Conclusion"><a class="docs-heading-anchor" href="#Conclusion">Conclusion</a><a id="Conclusion-1"></a><a class="docs-heading-anchor-permalink" href="#Conclusion" title="Permalink"></a></h2><ul><li>Use the <code>EK1</code> to solve stiff problems, with orders <span>$\leq 6$</span> depending on the error tolerance.</li><li>When the problem is actually a second-order ODE, as is the case for the Van der Pol system here, <em>solve it as a second-order ODE</em>.</li></ul><h2 id="Appendix"><a class="docs-heading-anchor" href="#Appendix">Appendix</a><a id="Appendix-1"></a><a class="docs-heading-anchor-permalink" href="#Appendix" title="Permalink"></a></h2><p>Computer information:</p><pre><code class="language-julia hljs">InteractiveUtils.versioninfo()</code></pre><pre><code class="nohighlight hljs">Julia Version 1.8.5
+Commit 17cfb8e65ea (2023-01-08 06:45 UTC)
+Platform Info:
+  OS: Linux (x86_64-linux-gnu)
+  CPU: 12 × Intel(R) Core(TM) i7-6800K CPU @ 3.40GHz
+  WORD_SIZE: 64
+  LIBM: libopenlibm
+  LLVM: libLLVM-13.0.1 (ORCJIT, broadwell)
+  Threads: 12 on 12 virtual cores
+Environment:
+  JULIA_NUM_THREADS = auto
+  JULIA_STACKTRACE_MINIMAL = true</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../lotkavolterra/">« Non-stiff ODE: Lotka-Volterra</a><a class="docs-footer-nextpage" href="../rober/">DAE: ROBER »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.24 on <span class="colophon-date" title="Saturday 11 March 2023 17:44">Saturday 11 March 2023</span>. Using Julia version 1.8.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
