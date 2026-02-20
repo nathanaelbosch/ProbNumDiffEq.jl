@@ -115,67 +115,6 @@ function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem,
 end
 """)
 
-# Workaround: deSolveDiffEq doesn't set retcode in build_solution, so it defaults to
-# ReturnCode.Default which is not considered successful by DiffEqDevTools.WorkPrecisionSet,
-# causing all deSolve results to be NaN.
-include_string(deSolveDiffEq, """
-function DiffEqBase.__solve(
-        prob::DiffEqBase.AbstractODEProblem,
-        alg::deSolveAlgorithm, timeseries = [], ts = [], ks = [];
-        saveat = eltype(prob.tspan)[], timeseries_errors = true,
-        reltol = 1e-3, abstol = 1e-6,
-        maxiters = 100000,
-        kwargs...)
-    p = prob.p
-    tspan = prob.tspan
-    u0 = prob.u0
-
-    if DiffEqBase.isinplace(prob)
-        f = function (t, u, __p)
-            du = similar(u)
-            prob.f(du, u, p, t)
-            R"list(\$du)"
-        end
-    else
-        f = function (t, u, __p)
-            du = prob.f(u, p, t)
-            R"list(\$du)"
-        end
-    end
-
-    _saveat = isempty(saveat) ? nothing : saveat
-    if _saveat isa Array
-        __saveat = _saveat
-    elseif _saveat isa Number
-        __saveat = Array(tspan[1]:_saveat:tspan[2])
-    elseif _saveat isa Nothing
-        __saveat = [tspan[1], tspan[2]]
-    else
-        __saveat = Array(_saveat)
-    end
-
-    out = RCall.rcopy(solver[].ode(times = __saveat, y = u0, func = f,
-        method = string(alg)[15:(end - 2)],
-        parms = nothing, maxsteps = maxiters,
-        rtol = reltol, atol = abstol))
-
-    ts = @view out[:, 1]
-
-    if u0 isa AbstractArray
-        timeseries = Vector{typeof(u0)}(undef, length(ts))
-        for i in 1:length(ts)
-            timeseries[i] = @view out[i, 2:end]
-        end
-    else
-        timeseries = out[i, end]
-    end
-
-    DiffEqBase.build_solution(prob, alg, ts, timeseries,
-        dense = false,
-        retcode = DiffEqBase.SciMLBase.ReturnCode.Success,
-        timeseries_errors = timeseries_errors)
-end
-""")
 
 Plots.theme(
     :dao;
@@ -582,20 +521,22 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Project.toml`
   [7f56f5a3] LSODA v0.7.5
   [e6f89c97] LoggingExtras v1.2.0
   [e2752cbe] MATLABDiffEq v1.4.0
-  [961ee093] ModelingToolkit v11.10.0
+⌃ [961ee093] ModelingToolkit v11.10.0
   [54ca160b] ODEInterface v0.5.0
   [09606e27] ODEInterfaceDiffEq v3.15.0
   [1dea7af3] OrdinaryDiffEq v6.108.0
   [65888b18] ParameterizedFunctions v5.22.0
-  [91a5bcdd] Plots v1.41.5
+⌃ [91a5bcdd] Plots v1.41.5
   [bf3e78b0] ProbNumDiffEq v0.16.4 `/home/nrbosch/.julia/dev/ProbNumDiffEq`
-  [0bca4576] SciMLBase v2.138.1
+⌃ [0bca4576] SciMLBase v2.138.1
   [505e40e9] SciPyDiffEq v0.2.2
   [ce78b400] SimpleUnPack v1.1.0
   [90137ffa] StaticArrays v1.9.16
   [c3572dad] Sundials v5.1.0
   [44d3d7a6] Weave v0.10.12
-  [0518478a] deSolveDiffEq v1.0.0
+  [0518478a] deSolveDiffEq v1.1.0
+Info Packages marked with ⌃ have new versions available and may be upgradable.
+Warning The project dependencies or compat requirements have changed since the manifest was last resolved. It is recommended to `Pkg.resolve()` or consider `Pkg.update()` if necessary.
 ```
 
 ```@raw html
@@ -625,11 +566,11 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [4c555306] ArrayLayouts v1.12.2
   [0e736298] Bessels v0.2.8
   [e2ed5e7c] Bijections v0.2.2
-  [caf10ac8] BipartiteGraphs v0.1.6
+⌃ [caf10ac8] BipartiteGraphs v0.1.6
   [d1d4a3ce] BitFlags v0.1.9
   [62783981] BitTwiddlingConvenienceFunctions v0.1.6
   [8e7c35d0] BlockArrays v1.9.3
-  [70df07ce] BracketingNonlinearSolve v1.7.1
+⌃ [70df07ce] BracketingNonlinearSolve v1.7.1
   [fa961155] CEnum v0.5.0
   [2a0fbf3d] CPUSummary v0.2.7
   [324d7699] CategoricalArrays v1.0.2
@@ -648,7 +589,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [b152e2b5] CompositeTypes v0.1.4
   [a33af91c] CompositionsBase v0.1.2
   [2569d6c7] ConcreteStructs v0.2.3
-  [f0e56b4a] ConcurrentUtilities v2.5.0
+⌃ [f0e56b4a] ConcurrentUtilities v2.5.0
   [8f4d0f93] Conda v1.10.3
   [187b0558] ConstructionBase v1.6.0
   [d38c429a] Contour v0.6.3
@@ -660,7 +601,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [864edb3b] DataStructures v0.19.3
   [e2d170a0] DataValueInterfaces v1.0.0
   [8bb1440f] DelimitedFiles v1.9.1
-  [2b5f629d] DiffEqBase v6.203.0
+⌃ [2b5f629d] DiffEqBase v6.203.0
   [459566f4] DiffEqCallbacks v4.12.0
   [f3b72e0c] DiffEqDevTools v2.49.0
   [77a26b50] DiffEqNoiseProcess v5.27.0
@@ -729,7 +670,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [87fe0de2] LineSearch v0.1.6
 ⌃ [d3d80556] LineSearches v7.5.1
   [7a12625a] LinearMaps v3.11.4
-  [7ed4a6bd] LinearSolve v3.58.0
+⌃ [7ed4a6bd] LinearSolve v3.58.0
   [2ab3a3ac] LogExpFunctions v0.3.29
   [e6f89c97] LoggingExtras v1.2.0
   [bdcacae8] LoopVectorization v0.12.173
@@ -742,8 +683,8 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [739be429] MbedTLS v1.1.9
   [442fdcdd] Measures v0.3.3
   [e1d29d7a] Missings v1.2.0
-  [961ee093] ModelingToolkit v11.10.0
-  [7771a370] ModelingToolkitBase v1.13.1
+⌃ [961ee093] ModelingToolkit v11.10.0
+⌃ [7771a370] ModelingToolkitBase v1.13.1
   [6bb917b9] ModelingToolkitTearing v1.3.1
   [2e0e35c7] Moshi v0.3.7
   [46d2c3a1] MuladdMacro v0.2.4
@@ -768,7 +709,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [1dea7af3] OrdinaryDiffEq v6.108.0
   [89bda076] OrdinaryDiffEqAdamsBashforthMoulton v1.9.0
   [6ad6398a] OrdinaryDiffEqBDF v1.16.0
-  [bbf590c4] OrdinaryDiffEqCore v3.5.1
+⌅ [bbf590c4] OrdinaryDiffEqCore v3.5.1
   [50262376] OrdinaryDiffEqDefault v1.12.0
   [4302a76b] OrdinaryDiffEqDifferentiation v2.0.0
   [9286f039] OrdinaryDiffEqExplicitRK v1.9.0
@@ -803,7 +744,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [69de0a69] Parsers v2.8.3
   [ccf2f8ad] PlotThemes v3.3.0
   [995b91a9] PlotUtils v1.4.4
-  [91a5bcdd] Plots v1.41.5
+⌃ [91a5bcdd] Plots v1.41.5
   [e409e4f3] PoissonRandom v0.4.7
   [f517fe37] Polyester v0.7.19
   [1d0040c9] PolyesterWeave v0.2.2
@@ -831,12 +772,12 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [79098fc4] Rmath v0.9.0
   [47965b36] RootedTrees v2.25.0
   [7e49a35a] RuntimeGeneratedFunctions v0.5.17
-  [9dfe8606] SCCNonlinearSolve v1.10.0
+⌃ [9dfe8606] SCCNonlinearSolve v1.10.0
   [94e857df] SIMDTypes v0.1.0
   [476501e8] SLEEFPirates v0.6.43
-  [0bca4576] SciMLBase v2.138.1
+⌃ [0bca4576] SciMLBase v2.138.1
   [19f34311] SciMLJacobianOperators v0.1.12
-  [a6db7da4] SciMLLogging v1.9.0
+⌃ [a6db7da4] SciMLLogging v1.9.0
   [c0aeaf25] SciMLOperators v1.15.1
   [431bcebd] SciMLPublic v1.0.1
   [53ae85a6] SciMLStructures v1.10.0
@@ -897,7 +838,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [1b915085] WinReg v1.0.0
   [ddb6d928] YAML v0.4.16
   [c2297ded] ZMQ v1.5.1
-  [0518478a] deSolveDiffEq v1.0.0
+  [0518478a] deSolveDiffEq v1.1.0
   [6e34b625] Bzip2_jll v1.0.9+0
   [83423d85] Cairo_jll v1.18.5+1
   [ee1fde0b] Dbus_jll v1.16.2+0
@@ -937,7 +878,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [91d4177d] Opus_jll v1.6.1+0
   [36c8627f] Pango_jll v1.57.0+0
 ⌅ [30392449] Pixman_jll v0.44.2+0
-  [c0090381] Qt6Base_jll v6.8.2+2
+⌅ [c0090381] Qt6Base_jll v6.8.2+2
   [629bc702] Qt6Declarative_jll v6.8.2+1
   [ce943373] Qt6ShaderTools_jll v6.8.2+1
   [e99dba38] Qt6Wayland_jll v6.8.2+2
@@ -1037,6 +978,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq/benchmarks/Manifest.toml`
   [8e850ede] nghttp2_jll v1.64.0+1
   [3f19e933] p7zip_jll v17.7.0+0
 Info Packages marked with ⌃ and ⌅ have new versions available. Those with ⌃ may be upgradable, but those with ⌅ are restricted by compatibility constraints from upgrading. To see why use `status --outdated -m`
+Warning The project dependencies or compat requirements have changed since the manifest was last resolved. It is recommended to `Pkg.resolve()` or consider `Pkg.update()` if necessary.
 ```
 
 ```@raw html
