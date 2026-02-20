@@ -7,10 +7,111 @@ Adapted from
 # Imports
 using LinearAlgebra, Statistics
 using StaticArrays, DiffEqDevTools, ParameterizedFunctions, Plots, SciMLBase, OrdinaryDiffEq
-using ODEInterface, ODEInterfaceDiffEq, Sundials, SciPyDiffEq, deSolveDiffEq, MATLABDiffEq, LSODA
+using ODEInterface, ODEInterfaceDiffEq, Sundials, SciPyDiffEq, deSolveDiffEq, LSODA
 using LoggingExtras
+ODEInterface.loadODESolvers()
 
 using ProbNumDiffEq
+
+# Workaround: SciPyDiffEq's odeint retcode check compares fullout["tcur"] == saveat[end],
+# but tcur is the internal step endpoint (e.g. 10.07) which overshoots the requested time.
+# Fix: use >= comparison and index into the tcur vector.
+include_string(SciPyDiffEq, """
+function DiffEqBase.__solve(prob::DiffEqBase.AbstractODEProblem,
+        alg::SciPyAlgorithm, timeseries = [], ts = [], ks = [];
+        dense = true, dt = nothing,
+        dtmax = abs(prob.tspan[2] - prob.tspan[1]),
+        dtmin = eps(eltype(prob.tspan)), save_everystep = false,
+        saveat = eltype(prob.tspan)[], timeseries_errors = true,
+        reltol = 1e-3, abstol = 1e-6, maxiters = 10_000,
+        kwargs...)
+    p = prob.p
+    tspan = prob.tspan
+    u0 = prob.u0
+
+    if DiffEqBase.isinplace(prob)
+        f = function (t, u)
+            du = similar(u)
+            prob.f(du, u, p, t)
+            du
+        end
+    else
+        f = (t, u) -> prob.f(u, p, t)
+    end
+
+    _saveat = isempty(saveat) ? nothing : saveat
+    if _saveat isa Array
+        __saveat = _saveat
+    elseif _saveat isa Number
+        __saveat = Array(tspan[1]:_saveat:tspan[2])
+    elseif _saveat isa Nothing
+        if save_everystep
+            __saveat = nothing
+        else
+            __saveat = [tspan[1], tspan[2]]
+        end
+    else
+        __saveat = Array(_saveat)
+    end
+
+    if alg isa odeint
+        __saveat === nothing && error("saveat is required for odeint!")
+        sol,
+        fullout = integrate.odeint(f, u0, __saveat,
+            hmax = dtmax,
+            rtol = reltol, atol = abstol,
+            full_output = 1, tfirst = true,
+            mxstep = maxiters)
+        tcur = fullout["tcur"]
+        retcode = first(tcur) >= __saveat[end] ? ReturnCode.Success : ReturnCode.Failure
+        ts = __saveat
+        y = sol
+
+        if u0 isa AbstractArray
+            timeseries = Vector{typeof(u0)}(undef, length(ts))
+            for i in 1:length(ts)
+                timeseries[i] = @view y[i, :]
+            end
+        else
+            timeseries = y
+        end
+
+    else
+        sol = integrate.solve_ivp(f, tspan, u0,
+            first_step = dt,
+            max_step = dtmax,
+            rtol = reltol, atol = abstol,
+            t_eval = __saveat,
+            dense_output = dense,
+            method = string(alg)[13:(end - 2)])
+        ts = sol["t"]
+        y = sol["y"]
+        retcode = sol["success"] == false ? ReturnCode.Failure : ReturnCode.Success
+
+        if u0 isa AbstractArray
+            timeseries = Vector{typeof(u0)}(undef, length(ts))
+            for i in 1:length(ts)
+                timeseries[i] = @view y[:, i]
+            end
+        else
+            timeseries = y
+        end
+    end
+
+    if !(alg isa odeint) && dense
+        _interp = PyInterpolation(sol["sol"])
+    else
+        _interp = DiffEqBase.LinearInterpolation(ts, timeseries)
+    end
+
+    DiffEqBase.build_solution(prob, alg, ts, timeseries,
+        interp = _interp,
+        dense = dense,
+        retcode = retcode,
+        timeseries_errors = timeseries_errors)
+end
+""")
+
 
 Plots.theme(
     :dao;
@@ -30,7 +131,6 @@ COLORS = Dict(
     "Julia" => :LightGreen,
     "Julia (static)" => :DarkGreen,
     "Hairer" => :Red,
-    "MATLAB" => :Orange,
     "SciPy" => :Yellow,
     "deSolve" => :Blue,
     "Sundials" => :Purple,
@@ -73,8 +173,6 @@ _setups = [
   "Julia: Tsit5" => Dict(:alg=>Tsit5())
   "Julia: Vern7" => Dict(:alg=>Vern7())
   "Hairer: dopri5" => Dict(:alg=>ODEInterfaceDiffEq.dopri5())
-  "MATLAB: ode45" => Dict(:alg=>MATLABDiffEq.ode45())
-  "MATLAB: ode113" => Dict(:alg=>MATLABDiffEq.ode113())
   "SciPy: RK45" => Dict(:alg=>SciPyDiffEq.RK45())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
@@ -135,8 +233,6 @@ _setups = [
   "Julia: Tsit5" => Dict(:alg=>Tsit5())
   "Julia: Vern7" => Dict(:alg=>Vern7())
   "Hairer: dopri5" => Dict(:alg=>dopri5())
-  "MATLAB: ode45" => Dict(:alg=>MATLABDiffEq.ode45())
-  "MATLAB: ode113" => Dict(:alg=>MATLABDiffEq.ode113())
   "SciPy: RK45" => Dict(:alg=>SciPyDiffEq.RK45())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
@@ -198,8 +294,6 @@ _setups = [
   "Julia: Rodas5" => Dict(:alg=>Rodas5())
   "Hairer: rodas" => Dict(:alg=>rodas())
   "Hairer: radau" => Dict(:alg=>radau())
-  "MATLAB: ode23s" => Dict(:alg=>MATLABDiffEq.ode23s())
-  "MATLAB: ode15s" => Dict(:alg=>MATLABDiffEq.ode15s())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: BDF" => Dict(:alg=>SciPyDiffEq.BDF())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
@@ -264,8 +358,6 @@ _setups = [
   "Julia: radau" => Dict(:alg=>RadauIIA5())
   "Hairer: rodas" => Dict(:alg=>rodas())
   "Hairer: radau" => Dict(:alg=>radau())
-  "MATLAB: ode23s" => Dict(:alg=>MATLABDiffEq.ode23s())
-  "MATLAB: ode15s" => Dict(:alg=>MATLABDiffEq.ode15s())
   "SciPy: LSODA" => Dict(:alg=>SciPyDiffEq.LSODA())
   "SciPy: BDF" => Dict(:alg=>SciPyDiffEq.BDF())
   "SciPy: odeint" => Dict(:alg=>SciPyDiffEq.odeint())
