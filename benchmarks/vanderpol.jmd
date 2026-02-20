@@ -110,7 +110,7 @@ SAVE_EVERYSTEP = true;
 
 _setups = [
   "EK1($order)" => Dict(:alg => EK1(order=order, smooth=DENSE))
-  for order in 3:7
+  for order in 3:5
 ]
 
 labels = first.(_setups)
@@ -257,7 +257,6 @@ _setups = [
   "EK1(3) 1st order" => Dict(:alg => EK1(order=3, smooth=DENSE))
   "EK1(4) 1st order" => Dict(:alg => EK1(order=4, smooth=DENSE))
   "EK1(5) 1st order" => Dict(:alg => EK1(order=5, smooth=DENSE))
-  "EK1(6) 1st order" => Dict(:alg => EK1(order=6, smooth=DENSE))
   "EK1(4) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=4, smooth=DENSE))
   "EK1(5) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=5, smooth=DENSE))
   "EK1(6) 2nd order" => Dict(:prob_choice => 2, :alg => EK1(order=6, smooth=DENSE))
@@ -280,7 +279,7 @@ wp = WorkPrecisionSet(
     numruns = 5,
 )
 
-color = [1 1 1 1 2 2 2 2]
+color = [1 1 1 2 2 2 2]
 plot(wp; x=:final, color)
 plot!(ref_wp_dense, x=:final, color=:gray, alpha=0.7, linestyle=:dash)
 ```
