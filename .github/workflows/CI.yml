@@ -5,6 +5,9 @@ on:
       - main
     tags: '*'
   pull_request:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
 concurrency:
   # Skip intermediate builds: always.
   # Cancel intermediate builds: only if it is a pull request build.
@@ -45,15 +48,16 @@ jobs:
         env:
           GROUP: ${{ matrix.group }}
       - uses: julia-actions/julia-processcoverage@v1
-        if: matrix.group != 'CodeQuality'
+        if: matrix.group != 'CodeQuality' && github.event_name != 'schedule'
       - uses: codecov/codecov-action@v5
-        if: matrix.group != 'CodeQuality'
+        if: matrix.group != 'CodeQuality' && github.event_name != 'schedule'
         with:
           file: lcov.info
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   docs:
+    if: github.event_name != 'schedule'
     name: Documentation
     runs-on: ubuntu-latest
     steps:
