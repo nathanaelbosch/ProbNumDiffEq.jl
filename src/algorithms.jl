@@ -3,6 +3,33 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm end
 
+# Tell SciMLBase that EK1/DiagonalEK1 use ForwardDiff on the model function,
+# so that FunctionWrappersWrapper registers Dual-compatible wrappers.
+function SciMLBase.forwarddiffs_model(alg::AbstractEK)
+    hasfield(typeof(alg), :autodiff) || return false
+    ad = alg.autodiff
+    ad isa ADTypes.AutoForwardDiff && return true
+    ad isa ADTypes.AutoSparse && return ADTypes.dense_ad(ad) isa ADTypes.AutoForwardDiff
+    return false
+end
+
+# Newer OrdinaryDiffEqCore dispatches _default_dae_init! by algorithm type, but only
+# extends it for its own implicit algorithm types in OrdinaryDiffEqNonlinearSolve.
+# Replicate the same behavior here so that DAE initialization (BrownFullBasicInit)
+# works for singular mass matrices, as it did before the refactor.
+function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::AbstractEK)
+    initializealg = DiffEqBase.BrownFullBasicInit(integrator.opts.abstol)
+    if applicable(OrdinaryDiffEqCore._initialize_dae!, integrator, prob, initializealg, x)
+        OrdinaryDiffEqCore._initialize_dae!(integrator, prob, initializealg, x)
+    else
+        error(
+            "`OrdinaryDiffEqNonlinearSolve` is not loaded, which is required for " *
+            "DAE initialization with singular mass matrices. " *
+            "To fix this, do `using OrdinaryDiffEqNonlinearSolve` or `using OrdinaryDiffEq`.",
+        )
+    end
+end
+
 function ekargcheck(
     alg;
     diffusionmodel,
