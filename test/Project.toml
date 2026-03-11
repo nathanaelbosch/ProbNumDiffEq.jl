@@ -14,6 +14,7 @@ LinearRegression = "92481ed7-9fb7-40fd-80f2-46fd0f076581"
 ModelingToolkit = "961ee093-0014-501f-94e3-6117800e7a78"
 ODEProblemLibrary = "fdc4e326-1af4-4b90-96e7-779fcce2daa5"
 OrdinaryDiffEq = "1dea7af3-3e70-54e6-95c3-0bf5283fa5ed"
+OrdinaryDiffEqNonlinearSolve = "127b3ac7-2247-4354-8eb6-78cf4e7c58e8"
 ParameterizedFunctions = "65888b18-ceab-5e60-b2b9-181511a3b968"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 ProbNumDiffEq = "bf3e78b0-7d74-48a5-b855-9609533b56a5"
@@ -25,7 +26,6 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TestSetExtensions = "98d24dd4-01ad-11ea-1b02-c9a08f80db04"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
-
 
 [compat]
 Aqua = "0.8.2"
