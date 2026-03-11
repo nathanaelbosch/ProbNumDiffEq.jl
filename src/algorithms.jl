@@ -3,6 +3,16 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm end
 
+# Tell SciMLBase that EK1/DiagonalEK1 use ForwardDiff on the model function,
+# so that FunctionWrappersWrapper registers Dual-compatible wrappers.
+function SciMLBase.forwarddiffs_model(alg::AbstractEK)
+    hasfield(typeof(alg), :autodiff) || return false
+    ad = alg.autodiff
+    ad isa ADTypes.AutoForwardDiff && return true
+    ad isa ADTypes.AutoSparse && return ADTypes.dense_ad(ad) isa ADTypes.AutoForwardDiff
+    return false
+end
+
 function ekargcheck(
     alg;
     diffusionmodel,
