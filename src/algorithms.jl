@@ -25,7 +25,8 @@ function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::Abstrac
         error(
             "`OrdinaryDiffEqNonlinearSolve` is not loaded, which is required for " *
             "DAE initialization with singular mass matrices. " *
-            "To fix this, do `using OrdinaryDiffEqNonlinearSolve` or `using OrdinaryDiffEq`.")
+            "To fix this, do `using OrdinaryDiffEqNonlinearSolve` or `using OrdinaryDiffEq`.",
+        )
     end
 end
 
