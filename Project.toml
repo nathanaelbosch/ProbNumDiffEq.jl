@@ -1,6 +1,6 @@
 name = "ProbNumDiffEq"
 uuid = "bf3e78b0-7d74-48a5-b855-9609533b56a5"
-version = "0.16.4"
+version = "0.16.5"
 authors = ["Nathanael Bosch"]
 
 [deps]
