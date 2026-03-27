@@ -182,9 +182,13 @@ function OrdinaryDiffEqCore.alg_cache(
 
     # Caches
     du = is_secondorder_ode ? similar(u.x[2]) : similar(u)
-    ddu =
-        !isnothing(f.jac_prototype) ?
-        f.jac_prototype : zeros(uElType, length(u), length(u))
+    ddu = if alg isa EK0
+        nothing
+    elseif !isnothing(f.jac_prototype)
+        f.jac_prototype
+    else
+        zeros(uElType, length(u), length(u))
+    end
     _d = is_secondorder_ode ? 2d : d
     pu_tmp = Gaussian(
         similar(Array{uElType}, _d),

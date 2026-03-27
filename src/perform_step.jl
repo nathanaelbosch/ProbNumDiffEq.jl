@@ -154,7 +154,7 @@ as in OrdinaryDiffEqCore.jl.
 """
 function evaluate_ode!(integ, x_pred, t)
     @unpack f, p, dt = integ
-    @unpack du, ddu, measurement, R, H = integ.cache
+    @unpack du, measurement, R, H = integ.cache
 
     z = integ.cache.measurement
     z_tmp = integ.cache.m_tmp

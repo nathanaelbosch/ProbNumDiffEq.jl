@@ -5,6 +5,29 @@ using ProbNumDiffEq, LinearAlgebra
 import LinearRegression: linregress, slope
 using Test, SafeTestsets
 
+@testset "EK0 memory allocation scales linearly without jac_prototype" begin
+    f(du, u, p, t) = mul!(du, -0.9I, u)
+    tspan = (0.0, 1.0)
+
+    _alloc(d) = begin
+        prob = ODEProblem(f, ones(d), tspan)
+        # Warmup
+        init(prob, EK0(order=3, smooth=false); adaptive=false, dt=1e-2,
+            dense=false, save_everystep=false)
+        # Measure
+        bytes = @allocated init(
+            prob, EK0(order=3, smooth=false); adaptive=false, dt=1e-2,
+            dense=false, save_everystep=false)
+        return bytes
+    end
+
+    dims = 2 .^ (8:13)
+    allocs = [_alloc(d) for d in dims]
+    lr = linregress(log.(dims), log.(allocs))
+    # Should scale linearly (slope ≈ 1), not quadratically (slope ≈ 2)
+    @test slope(lr)[1] < 1.5
+end
+
 @testset "Scaling with ODE dimension" begin
     f(du, u, p, t) = mul!(du, -0.9I, u)
     jac(J, u, p, t) = @simd ivdep for i in 1:size(J, 1)
