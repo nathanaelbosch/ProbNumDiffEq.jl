@@ -7,7 +7,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         @warn "ClassicSolverInit might be unstable for high orders"
     end
 
-    @unpack ddu, du = cache
+    @unpack du = cache
 
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
@@ -32,6 +32,13 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         dfdt = copy(u)
         ForwardDiff.derivative!(dfdt, (du, t) -> _f(du, u, p, t), du, t)
 
+        # Allocate ddu locally if the cache doesn't have it (e.g. EK0)
+        ddu = cache.ddu
+        if isnothing(ddu)
+            ddu =
+                !isnothing(f.jac_prototype) ? similar(f.jac_prototype) :
+                zeros(eltype(u), length(u), length(u))
+        end
         if !isnothing(f.jac)
             f.jac(ddu, u, p, t)
         else

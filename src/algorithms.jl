@@ -250,6 +250,51 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     end
 end
 
+"""
+    DiagonalEK1(; order=3,
+                  smooth=true,
+                  prior=IWP(order),
+                  diffusionmodel=DynamicDiffusion(),
+                  initialization=TaylorModeInit(num_derivatives(prior)),
+                  kwargs...)
+
+**Gaussian ODE filter with first-order vector field linearization and diagonal Jacobian approximation.**
+
+A semi-implicit solver that approximates the Jacobian as diagonal, using a block-diagonal
+covariance representation to achieve linear scaling with the ODE dimension
+[krämer21highdim](@cite). This makes it suitable for high-dimensional problems where
+the full [`EK1`](@ref) would be too expensive.
+
+!!! tip "Providing a Jacobian for linear scaling"
+    For truly linear O(d) time and memory complexity, provide both a custom Jacobian
+    function and a diagonal `jac_prototype` in your `ODEFunction`:
+    ```julia
+    ODEFunction(f; jac=jac, jac_prototype=Diagonal(ones(d)))
+    ```
+    Without these, the solver falls back to computing and storing the full d×d Jacobian
+    via automatic differentiation and only extracting the diagonal afterwards, resulting
+    in O(d²) time and memory for the Jacobian computation.
+
+# Arguments
+- `order::Integer`: Order of the integrated Wiener process (IWP) prior.
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
+   By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
+   See also: [Priors](@ref).
+- `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
+- `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
+
+Some additional `kwargs` relating to implicit solvers are supported;
+check out DifferentialEquations.jl's [Extra Options](https://diffeq.sciml.ai/stable/solvers/ode_solve/#Extra-Options) page.
+Right now, we support `autodiff`, `chunk_size`, and `diff_type`.
+
+# Examples
+```julia-repl
+julia> solve(prob, DiagonalEK1())
+```
+
+# [References](@ref references)
+"""
 struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
