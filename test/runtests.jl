@@ -114,6 +114,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Callbacks.jl" begin
                 include("callbacks.jl")
             end
+            @timedsafetestset "reinit!" begin
+                include("reinit.jl")
+            end
             @timedsafetestset "BigFloat" begin
                 include("bigfloat.jl")
             end

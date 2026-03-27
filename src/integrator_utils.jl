@@ -152,11 +152,11 @@ function DiffEqBase.savevalues!(
     # Save our custom stuff that we need for the posterior
     if integ.opts.save_everystep
         i = integ.saveiter
-        OrdinaryDiffEqCore.copyat_or_push!(
-            integ.sol.diffusions,
-            i,
-            integ.cache.local_diffusion,
-        )
+        if i <= length(integ.sol.diffusions)
+            integ.sol.diffusions[i] = copy(integ.cache.local_diffusion)
+        else
+            push!(integ.sol.diffusions, copy(integ.cache.local_diffusion))
+        end
         OrdinaryDiffEqCore.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         OrdinaryDiffEqCore.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
