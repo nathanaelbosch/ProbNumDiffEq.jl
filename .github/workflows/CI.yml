@@ -6,7 +6,7 @@ on:
     tags: '*'
   pull_request:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 2 * * 1,4'
   workflow_dispatch:
 concurrency:
   # Skip intermediate builds: always.
