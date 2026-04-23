@@ -1,3 +1,14 @@
+# On OrdinaryDiffEqCore v4+ the local error estimate `EEst` lives on `integrator.controller_cache`
+# and must be accessed through `get_EEst`/`set_EEst!`. On v3 it was a mutable field on the
+# integrator struct itself. These helpers paper over that difference.
+@static if isdefined(OrdinaryDiffEqCore, :set_EEst!)
+    _set_EEst!(integ, val) = OrdinaryDiffEqCore.set_EEst!(integ, val)
+    _get_EEst(integ) = OrdinaryDiffEqCore.get_EEst(integ)
+else
+    _set_EEst!(integ, val) = (integ.EEst = val)
+    _get_EEst(integ) = integ.EEst
+end
+
 # Called in the OrdinaryDiffEqCore.__init; All `OrdinaryDiffEqAlgorithm`s have one
 function OrdinaryDiffEqCore.initialize!(
     integ::OrdinaryDiffEqCore.ODEIntegrator,
@@ -100,8 +111,9 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
         cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ)
     end
     if integ.opts.adaptive
-        integ.EEst = compute_scaled_error_estimate!(integ, cache)
-        if integ.EEst >= one(integ.EEst)
+        _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache))
+        _EEst = _get_EEst(integ)
+        if _EEst >= one(_EEst)
             return
         end
     end
