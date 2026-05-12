@@ -16,7 +16,21 @@ abstract type AbstractEK <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm e
 else
     function _process_AD_choice(autodiff, chunk_size, diff_type)
         ad = autodiff
-        if ad isa ADTypes.AutoForwardDiff
+        if ad isa Bool
+            # Mirror v3 OrdinaryDiffEqCore: `autodiff=true` → AutoForwardDiff (folding
+            # chunk_size into chunksize), `autodiff=false` → AutoFiniteDiff (folding
+            # diff_type into fdtype, with dir=1 to keep integration reversible).
+            # Without this branch the Bool would propagate as EK1/DiagonalEK1's AD
+            # type parameter and break downstream dispatch on AbstractADType.
+            if ad
+                cs_int = _unwrap_val(chunk_size)
+                cs = cs_int == 0 ? nothing : cs_int
+                ad = ADTypes.AutoForwardDiff(; chunksize=cs)
+            else
+                fdtype = diff_type isa Val ? diff_type : Val(diff_type)
+                ad = ADTypes.AutoFiniteDiff(; fdtype=fdtype, dir=1)
+            end
+        elseif ad isa ADTypes.AutoForwardDiff
             cs_int = _unwrap_val(chunk_size)
             # If the user set an explicit chunk_size kwarg, fold it into the ADType.
             # Otherwise defer to whatever chunksize is already on `ad`.
