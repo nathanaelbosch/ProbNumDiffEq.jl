@@ -3,13 +3,11 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm end
 
-# `OrdinaryDiffEqCore._process_AD_choice` is a private helper on v3 that normalizes
-# `(autodiff, chunk_size, diff_type)` legacy kwargs into an `ADTypes.AbstractADType`
-# object. v4 (OrdinaryDiffEq v7) removed the chunk_size / diff_type / standardtag
-# kwargs entirely — users must pass a preconfigured `AutoForwardDiff(chunksize=…)` or
-# `AutoFiniteDiff(fdtype=…)`. For backward compatibility we keep accepting the legacy
-# kwargs on EK1/DiagonalEK1 and fold them into the ADType object ourselves when running
-# against v4.
+# `_process_AD_choice` normalizes the legacy `(autodiff, chunk_size, diff_type)`
+# kwargs into an `ADTypes.AbstractADType`. v3's OrdinaryDiffEqCore exports this
+# helper; v4 (OrdinaryDiffEq v7) removed it along with the legacy kwargs. We keep
+# accepting the kwargs on EK1/DiagonalEK1 by delegating to OrdinaryDiffEqCore on v3
+# and inlining an equivalent shim on v4.
 @static if isdefined(OrdinaryDiffEqCore, :_process_AD_choice)
     _process_AD_choice(autodiff, chunk_size, diff_type) =
         OrdinaryDiffEqCore._process_AD_choice(autodiff, chunk_size, diff_type)
@@ -17,11 +15,9 @@ else
     function _process_AD_choice(autodiff, chunk_size, diff_type)
         ad = autodiff
         if ad isa Bool
-            # Mirror v3 OrdinaryDiffEqCore: `autodiff=true` → AutoForwardDiff (folding
-            # chunk_size into chunksize), `autodiff=false` → AutoFiniteDiff (folding
-            # diff_type into fdtype, with dir=1 to keep integration reversible).
-            # Without this branch the Bool would propagate as EK1/DiagonalEK1's AD
-            # type parameter and break downstream dispatch on AbstractADType.
+            # Mirror v3: `true` → AutoForwardDiff(chunksize=chunk_size), `false` →
+            # AutoFiniteDiff(fdtype=diff_type, dir=1). Without this a Bool would
+            # propagate as EK1's AD type parameter and break `AbstractADType` dispatch.
             if ad
                 cs_int = _unwrap_val(chunk_size)
                 cs = cs_int == 0 ? nothing : cs_int
@@ -38,8 +34,13 @@ else
                 ad = ADTypes.AutoForwardDiff(; chunksize=cs_int, tag=ad.tag)
             end
         elseif ad isa ADTypes.AutoFiniteDiff
+            # Only override the ADType's fdtype if the user passed a non-default
+            # legacy `diff_type` kwarg; otherwise preserve their pre-configured
+            # AutoFiniteDiff (matching v3's behavior).
             fdtype = diff_type isa Val ? diff_type : Val(diff_type)
-            ad = ADTypes.AutoFiniteDiff(; fdtype=fdtype)
+            if fdtype !== Val(:forward)
+                ad = ADTypes.AutoFiniteDiff(; fdtype=fdtype)
+            end
         end
         return (ad, chunk_size, diff_type)
     end
@@ -57,22 +58,12 @@ end
 
 # DAE-initialization hook.
 #
-# OrdinaryDiffEqCore v3 dispatches `_default_dae_init!` by algorithm type but only
-# extends it for its own implicit algorithms (in OrdinaryDiffEqNonlinearSolve), so
-# without an override the EK solvers hit a MethodError on DAE / singular-mass-matrix
-# problems. We override it for `AbstractEK` and route through `CheckInit`, matching
-# the OrdinaryDiffEq v7 / DifferentialEquations v8 default. `CheckInit` errors on
-# inconsistent initial conditions instead of silently correcting them with
-# `BrownFullBasicInit` like older OrdinaryDiffEq versions did. Its `_initialize_dae!`
-# method ships in OrdinaryDiffEqCore itself, so no OrdinaryDiffEqNonlinearSolve
-# guard is needed.
-#
-# Users who want the previous "silently fix the IC" behavior should pass
-# `initializealg = BrownFullBasicInit()` to `solve` explicitly.
-#
-# On OrdinaryDiffEqCore v4 (OrdinaryDiffEq v7) the per-alg `_default_dae_init!` hook
-# was removed and `CheckInit` is already the default for `DefaultInit`, so no
-# override is needed there.
+# v3's `_default_dae_init!` is only extended for OrdinaryDiffEq's own implicit
+# algorithms (in OrdinaryDiffEqNonlinearSolve), so without an override the EK
+# solvers hit a MethodError on DAE / singular-mass-matrix problems. Route through
+# `CheckInit` to match the OrdinaryDiffEq v7 default; users who want the previous
+# silent-fix behavior pass `initializealg = BrownFullBasicInit()` explicitly.
+# v4 dropped the hook and `CheckInit` is already its `DefaultInit` target.
 @static if isdefined(OrdinaryDiffEqCore, :_default_dae_init!)
     function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::AbstractEK)
         return OrdinaryDiffEqCore._initialize_dae!(

@@ -3,11 +3,10 @@
 # https://github.com/SciML/OrdinaryDiffEqCore.jl/blob/master/src/alg_utils.jl
 ############################################################################################
 
-# OrdinaryDiffEqCore v3 reached autodiff settings via the private `_alg_autodiff` hook;
-# v4 renamed the public entry point to `alg_autodiff` and deleted `_alg_autodiff`. Set
-# whichever one exists so prepare_alg / jacobian wrappers can find our AD choice on
-# either version. Defining both on v3 is harmless (v3 still calls `_alg_autodiff`
-# internally, and `alg_autodiff` simply gets a new method).
+# v3 reaches autodiff settings via the private `_alg_autodiff`; v4 promoted
+# `alg_autodiff` to the public entry point and deleted `_alg_autodiff`. Define both:
+# the `_alg_autodiff` override is gated so v4 doesn't see it, and `alg_autodiff` is
+# harmlessly redefined on v3 (an existing function gets a new method).
 @static if isdefined(OrdinaryDiffEqDifferentiation, :_alg_autodiff)
     OrdinaryDiffEqDifferentiation._alg_autodiff(::AbstractEK) = Val{true}()
 end
