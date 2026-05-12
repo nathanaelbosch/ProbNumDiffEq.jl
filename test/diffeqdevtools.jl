@@ -91,7 +91,6 @@ end
         numruns=2,
         maxiters=Int(1e7),
         timeseries_errors=false,
-        verbose=false,
     )
     @test_nowarn WorkPrecisionSet(
         prob, abstols, reltols, setups;
@@ -101,6 +100,5 @@ end
         numruns=2,
         maxiters=Int(1e7),
         timeseries_errors=false,
-        verbose=false,
     )
 end

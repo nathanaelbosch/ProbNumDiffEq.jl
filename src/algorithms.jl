@@ -57,60 +57,30 @@ end
 
 # DAE-initialization hook.
 #
-# OrdinaryDiffEqCore v3 dispatches `_default_dae_init!` by algorithm type (but only
-# extends it for its own implicit algorithms in OrdinaryDiffEqNonlinearSolve). We
-# replicate that behavior for `AbstractEK` so that DAE initialization with
-# `BrownFullBasicInit` works for singular mass matrices, as it did before the refactor.
+# OrdinaryDiffEqCore v3 dispatches `_default_dae_init!` by algorithm type but only
+# extends it for its own implicit algorithms (in OrdinaryDiffEqNonlinearSolve), so
+# without an override the EK solvers hit a MethodError on DAE / singular-mass-matrix
+# problems. We override it for `AbstractEK` and route through `CheckInit`, matching
+# the OrdinaryDiffEq v7 / DifferentialEquations v8 default. `CheckInit` errors on
+# inconsistent initial conditions instead of silently correcting them with
+# `BrownFullBasicInit` like older OrdinaryDiffEq versions did. Its `_initialize_dae!`
+# method ships in OrdinaryDiffEqCore itself, so no OrdinaryDiffEqNonlinearSolve
+# guard is needed.
 #
-# OrdinaryDiffEqCore v4 (OrdinaryDiffEq v7) removed this per-alg hook entirely and
-# switched the default initialization algorithm from `BrownFullBasicInit` to
-# `CheckInit`, which errors on inconsistent initial conditions instead of silently
-# fixing them. On v4 we instead route through `_initialize_dae!` for our integrator
-# type so the probabilistic solvers continue to accept inconsistent ICs by default
-# (users can always pass `initializealg = CheckInit()` explicitly to opt into the new
-# strict behavior).
+# Users who want the previous "silently fix the IC" behavior should pass
+# `initializealg = BrownFullBasicInit()` to `solve` explicitly.
+#
+# On OrdinaryDiffEqCore v4 (OrdinaryDiffEq v7) the per-alg `_default_dae_init!` hook
+# was removed and `CheckInit` is already the default for `DefaultInit`, so no
+# override is needed there.
 @static if isdefined(OrdinaryDiffEqCore, :_default_dae_init!)
     function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::AbstractEK)
-        initializealg = DiffEqBase.BrownFullBasicInit(integrator.opts.abstol)
-        if applicable(
-            OrdinaryDiffEqCore._initialize_dae!,
+        return OrdinaryDiffEqCore._initialize_dae!(
             integrator,
             prob,
-            initializealg,
+            DiffEqBase.CheckInit(),
             x,
         )
-            OrdinaryDiffEqCore._initialize_dae!(integrator, prob, initializealg, x)
-        else
-            error(
-                "`OrdinaryDiffEqNonlinearSolve` is not loaded, which is required for " *
-                "DAE initialization with singular mass matrices. " *
-                "To fix this, do `using OrdinaryDiffEqNonlinearSolve` or `using OrdinaryDiffEq`.",
-            )
-        end
-    end
-else
-    function OrdinaryDiffEqCore._initialize_dae!(
-        integrator::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
-        prob::Union{SciMLBase.ODEProblem,SciMLBase.DAEProblem},
-        alg::DiffEqBase.DefaultInit,
-        x::Union{Val{true},Val{false}},
-    )
-        initializealg = DiffEqBase.BrownFullBasicInit(integrator.opts.abstol)
-        if applicable(
-            OrdinaryDiffEqCore._initialize_dae!,
-            integrator,
-            prob,
-            initializealg,
-            x,
-        )
-            return OrdinaryDiffEqCore._initialize_dae!(integrator, prob, initializealg, x)
-        else
-            error(
-                "`OrdinaryDiffEqNonlinearSolve` is not loaded, which is required for " *
-                "DAE initialization with singular mass matrices. " *
-                "To fix this, do `using OrdinaryDiffEqNonlinearSolve` or `using OrdinaryDiffEq`.",
-            )
-        end
     end
 end
 
