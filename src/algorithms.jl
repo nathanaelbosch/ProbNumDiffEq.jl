@@ -58,7 +58,13 @@ end
 @static if isdefined(OrdinaryDiffEqCore, :_default_dae_init!)
     function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::AbstractEK)
         initializealg = DiffEqBase.BrownFullBasicInit(integrator.opts.abstol)
-        if applicable(OrdinaryDiffEqCore._initialize_dae!, integrator, prob, initializealg, x)
+        if applicable(
+            OrdinaryDiffEqCore._initialize_dae!,
+            integrator,
+            prob,
+            initializealg,
+            x,
+        )
             OrdinaryDiffEqCore._initialize_dae!(integrator, prob, initializealg, x)
         else
             error(
@@ -76,7 +82,13 @@ else
         x::Union{Val{true},Val{false}},
     )
         initializealg = DiffEqBase.BrownFullBasicInit(integrator.opts.abstol)
-        if applicable(OrdinaryDiffEqCore._initialize_dae!, integrator, prob, initializealg, x)
+        if applicable(
+            OrdinaryDiffEqCore._initialize_dae!,
+            integrator,
+            prob,
+            initializealg,
+            x,
+        )
             return OrdinaryDiffEqCore._initialize_dae!(integrator, prob, initializealg, x)
         else
             error(
