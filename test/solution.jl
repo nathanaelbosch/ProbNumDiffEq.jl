@@ -26,7 +26,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
         @testset "Alg $Alg" for Alg in (EK0, EK1)
             sol = solve(prob, Alg())
 
-            @test length(sol) > 2
+            @test length(sol.u) > 2
             @test length(sol.t) == length(sol.u)
             @test length(prob.u0) == length(sol.u[end])
 
@@ -93,7 +93,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                     @test samples isa Array
 
                     m, n, o = size(samples)
-                    @test m == length(sol)
+                    @test m == length(sol.u)
                     @test n == length(sol.u[1])
                     @test o == n_samples
 

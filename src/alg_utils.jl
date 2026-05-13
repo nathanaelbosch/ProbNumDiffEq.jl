@@ -3,7 +3,14 @@
 # https://github.com/SciML/OrdinaryDiffEqCore.jl/blob/master/src/alg_utils.jl
 ############################################################################################
 
-OrdinaryDiffEqDifferentiation._alg_autodiff(::AbstractEK) = Val{true}()
+# v3 reaches autodiff settings via the private `_alg_autodiff`; v4 promoted
+# `alg_autodiff` to the public entry point and deleted `_alg_autodiff`. Define both:
+# the `_alg_autodiff` override is gated so v4 doesn't see it, and `alg_autodiff` is
+# harmlessly redefined on v3 (an existing function gets a new method).
+@static if isdefined(OrdinaryDiffEqDifferentiation, :_alg_autodiff)
+    OrdinaryDiffEqDifferentiation._alg_autodiff(::AbstractEK) = Val{true}()
+end
+OrdinaryDiffEqDifferentiation.alg_autodiff(::AbstractEK) = ADTypes.AutoForwardDiff()
 OrdinaryDiffEqDifferentiation.standardtag(::AbstractEK) = false
 OrdinaryDiffEqDifferentiation.concrete_jac(::AbstractEK) = nothing
 
@@ -12,8 +19,11 @@ OrdinaryDiffEqDifferentiation.concrete_jac(::AbstractEK) = nothing
 OrdinaryDiffEqCore.isfsal(::AbstractEK) = false
 
 for ALG in [:EK1, :DiagonalEK1]
-    @eval OrdinaryDiffEqDifferentiation._alg_autodiff(alg::$ALG{CS,AD}) where {CS,AD} =
-        alg.autodiff
+    @static if isdefined(OrdinaryDiffEqDifferentiation, :_alg_autodiff)
+        @eval OrdinaryDiffEqDifferentiation._alg_autodiff(alg::$ALG{CS,AD}) where {CS,AD} =
+            alg.autodiff
+    end
+    @eval OrdinaryDiffEqDifferentiation.alg_autodiff(alg::$ALG) = alg.autodiff
     @eval OrdinaryDiffEqDifferentiation.alg_difftype(
         ::$ALG{CS,AD,DiffType},
     ) where {CS,AD,DiffType} =
@@ -35,9 +45,13 @@ OrdinaryDiffEqCore.isadaptive(::AbstractEK) = true
 OrdinaryDiffEqCore.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
 # OrdinaryDiffEqCore.alg_adaptive_order(alg::AbstractEK) =
 
-# PI control is the default!
-OrdinaryDiffEqCore.isstandard(::AbstractEK) = false # proportional
-OrdinaryDiffEqCore.ispredictive(::AbstractEK) = false # not sure, maybe Gustafsson acceleration?
+# PI control is the default. On OrdinaryDiffEqCore v3 we have to explicitly set the
+# `isstandard`/`ispredictive` traits to false; on v4 those traits were removed and the
+# default is PI already (via `default_controller`), so we only opt in on the old version.
+@static if isdefined(OrdinaryDiffEqCore, :isstandard)
+    OrdinaryDiffEqCore.isstandard(::AbstractEK) = false # proportional
+    OrdinaryDiffEqCore.ispredictive(::AbstractEK) = false # not sure, maybe Gustafsson acceleration?
+end
 
 # OrdinaryDiffEqCore.qmin_default(alg::AbstractEK) =
 # OrdinaryDiffEqCore.qmax_default(alg::AbstractEK) =

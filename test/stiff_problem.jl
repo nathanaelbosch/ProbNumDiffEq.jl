@@ -1,6 +1,7 @@
 using ProbNumDiffEq
 using Test
 using OrdinaryDiffEq
+using OrdinaryDiffEqFIRK: RadauIIA5
 using ODEProblemLibrary: prob_ode_vanderpol_stiff
 
 prob = prob_ode_vanderpol_stiff

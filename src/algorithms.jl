@@ -3,6 +3,49 @@
 ########################################################################################
 abstract type AbstractEK <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm end
 
+# `_process_AD_choice` normalizes the legacy `(autodiff, chunk_size, diff_type)`
+# kwargs into an `ADTypes.AbstractADType`. v3's OrdinaryDiffEqCore exports this
+# helper; v4 (OrdinaryDiffEq v7) removed it along with the legacy kwargs. We keep
+# accepting the kwargs on EK1/DiagonalEK1 by delegating to OrdinaryDiffEqCore on v3
+# and inlining an equivalent shim on v4.
+@static if isdefined(OrdinaryDiffEqCore, :_process_AD_choice)
+    _process_AD_choice(autodiff, chunk_size, diff_type) =
+        OrdinaryDiffEqCore._process_AD_choice(autodiff, chunk_size, diff_type)
+else
+    function _process_AD_choice(autodiff, chunk_size, diff_type)
+        ad = autodiff
+        if ad isa Bool
+            # Mirror v3: `true` → AutoForwardDiff(chunksize=chunk_size), `false` →
+            # AutoFiniteDiff(fdtype=diff_type, dir=1). Without this a Bool would
+            # propagate as EK1's AD type parameter and break `AbstractADType` dispatch.
+            if ad
+                cs_int = _unwrap_val(chunk_size)
+                cs = cs_int == 0 ? nothing : cs_int
+                ad = ADTypes.AutoForwardDiff(; chunksize=cs)
+            else
+                fdtype = diff_type isa Val ? diff_type : Val(diff_type)
+                ad = ADTypes.AutoFiniteDiff(; fdtype=fdtype, dir=1)
+            end
+        elseif ad isa ADTypes.AutoForwardDiff
+            cs_int = _unwrap_val(chunk_size)
+            # If the user set an explicit chunk_size kwarg, fold it into the ADType.
+            # Otherwise defer to whatever chunksize is already on `ad`.
+            if cs_int != 0
+                ad = ADTypes.AutoForwardDiff(; chunksize=cs_int, tag=ad.tag)
+            end
+        elseif ad isa ADTypes.AutoFiniteDiff
+            # Only override the ADType's fdtype if the user passed a non-default
+            # legacy `diff_type` kwarg; otherwise preserve their pre-configured
+            # AutoFiniteDiff (matching v3's behavior).
+            fdtype = diff_type isa Val ? diff_type : Val(diff_type)
+            if fdtype !== Val(:forward)
+                ad = ADTypes.AutoFiniteDiff(; fdtype=fdtype)
+            end
+        end
+        return (ad, chunk_size, diff_type)
+    end
+end
+
 # Tell SciMLBase that EK1/DiagonalEK1 use ForwardDiff on the model function,
 # so that FunctionWrappersWrapper registers Dual-compatible wrappers.
 function SciMLBase.forwarddiffs_model(alg::AbstractEK)
@@ -13,19 +56,21 @@ function SciMLBase.forwarddiffs_model(alg::AbstractEK)
     return false
 end
 
-# Newer OrdinaryDiffEqCore dispatches _default_dae_init! by algorithm type, but only
-# extends it for its own implicit algorithm types in OrdinaryDiffEqNonlinearSolve.
-# Replicate the same behavior here so that DAE initialization (BrownFullBasicInit)
-# works for singular mass matrices, as it did before the refactor.
-function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::AbstractEK)
-    initializealg = DiffEqBase.BrownFullBasicInit(integrator.opts.abstol)
-    if applicable(OrdinaryDiffEqCore._initialize_dae!, integrator, prob, initializealg, x)
-        OrdinaryDiffEqCore._initialize_dae!(integrator, prob, initializealg, x)
-    else
-        error(
-            "`OrdinaryDiffEqNonlinearSolve` is not loaded, which is required for " *
-            "DAE initialization with singular mass matrices. " *
-            "To fix this, do `using OrdinaryDiffEqNonlinearSolve` or `using OrdinaryDiffEq`.",
+# DAE-initialization hook.
+#
+# v3's `_default_dae_init!` is only extended for OrdinaryDiffEq's own implicit
+# algorithms (in OrdinaryDiffEqNonlinearSolve), so without an override the EK
+# solvers hit a MethodError on DAE / singular-mass-matrix problems. Route through
+# `CheckInit` to match the OrdinaryDiffEq v7 default; users who want the previous
+# silent-fix behavior pass `initializealg = BrownFullBasicInit()` explicitly.
+# v4 dropped the hook and `CheckInit` is already its `DefaultInit` target.
+@static if isdefined(OrdinaryDiffEqCore, :_default_dae_init!)
+    function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::AbstractEK)
+        return OrdinaryDiffEqCore._initialize_dae!(
+            integrator,
+            prob,
+            DiffEqBase.CheckInit(),
+            x,
         )
     end
 end
@@ -226,7 +271,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(EK1; diffusionmodel, pn_observation_noise, covariance_factorization)
         AD_choice, chunk_size, diff_type =
-            OrdinaryDiffEqCore._process_AD_choice(autodiff, chunk_size, diff_type)
+            _process_AD_choice(autodiff, chunk_size, diff_type)
         new{
             _unwrap_val(chunk_size),
             typeof(AD_choice),
@@ -323,7 +368,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise, covariance_factorization)
         AD_choice, chunk_size, diff_type =
-            OrdinaryDiffEqCore._process_AD_choice(autodiff, chunk_size, diff_type)
+            _process_AD_choice(autodiff, chunk_size, diff_type)
         new{
             _unwrap_val(chunk_size),
             typeof(AD_choice),

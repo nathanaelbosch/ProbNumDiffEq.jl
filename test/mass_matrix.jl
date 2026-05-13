@@ -1,5 +1,6 @@
 using ProbNumDiffEq
 using OrdinaryDiffEq
+using OrdinaryDiffEqFIRK: RadauIIA5
 using LinearAlgebra
 using Test
 
