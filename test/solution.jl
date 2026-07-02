@@ -86,7 +86,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
             # Sampling
             @testset "Solution Sampling" begin
                 @testset "Discrete" begin
-                    n_samples = 10
+                    n_samples = 100
 
                     samples = ProbNumDiffEq.sample(sol, n_samples)
 
