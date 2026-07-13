@@ -66,7 +66,7 @@ ProbODESolution{T,N}(
     pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 )
 
-function SciMLBase.constructorof(
+function ConstructionBase.constructorof(
     ::Type{
         ProbNumDiffEq.ProbODESolution{T,N,uType,puType,uType2,DType,tType,rateType,xType,
             diffType,bkType,PN,P,A,IType,
