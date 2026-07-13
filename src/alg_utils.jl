@@ -7,6 +7,8 @@
 # `alg_autodiff` to the public entry point and deleted `_alg_autodiff`. Define both:
 # the `_alg_autodiff` override is gated so v4 doesn't see it, and `alg_autodiff` is
 # harmlessly redefined on v3 (an existing function gets a new method).
+# The algorithm traits are owned by OrdinaryDiffEqCore; OrdinaryDiffEqDifferentiation
+# only re-imports them (and stopped re-importing some in v3.3), so extend them on Core.
 @static if isdefined(OrdinaryDiffEqDifferentiation, :_alg_autodiff)
     OrdinaryDiffEqDifferentiation._alg_autodiff(::AbstractEK) = Val{true}()
 end
@@ -41,8 +43,8 @@ end
 
 ############################################
 # Step size control
-OrdinaryDiffEqCore.isadaptive(::AbstractEK) = true
-OrdinaryDiffEqCore.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
+SciMLBase.isadaptive(::AbstractEK) = true
+SciMLBase.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
 # OrdinaryDiffEqCore.alg_adaptive_order(alg::AbstractEK) =
 
 # PI control is the default. On OrdinaryDiffEqCore v3 we have to explicitly set the

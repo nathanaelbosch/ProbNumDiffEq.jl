@@ -1,11 +1,11 @@
 
-function DiffEqBase.__init(
-    prob::DiffEqBase.AbstractODEProblem{uType,tType,false},
+function SciMLBase.__init(
+    prob::SciMLBase.AbstractODEProblem{uType,tType,false},
     alg::AbstractEK,
     args...;
     kwargs...,
 ) where {uType,tType}
-    # @info "Inside ProbNumDiffEq's overloaded DiffEqBase.__init function"
+    # @info "Inside ProbNumDiffEq's overloaded SciMLBase.__init function"
     @warn "The given problem is in out-of-place form. Since the algorithms in this " *
           "package are written for in-place problems, it will be automatically converted."
     if prob.f isa DynamicalODEFunction
@@ -42,8 +42,8 @@ function DiffEqBase.__init(
         )
     end
 
-    # @info "Calling DiffEqBase.__init now"
-    return DiffEqBase.__init(
+    # @info "Calling SciMLBase.__init now"
+    return SciMLBase.__init(
         _prob,
         alg,
         args...;

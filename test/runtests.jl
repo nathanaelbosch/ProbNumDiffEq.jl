@@ -154,6 +154,9 @@ const GROUP = get(ENV, "GROUP", "All")
                 target_defined_modules=true,
             )
         end
+        @timedsafetestset "Explicit imports (ExplicitImports.jl)" begin
+            include("explicit_imports.jl")
+        end
     end
 end
 

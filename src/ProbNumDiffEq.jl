@@ -2,50 +2,66 @@ __precompile__()
 
 module ProbNumDiffEq
 
+# All imports are explicit and from the owner module (not from re-exporting middlemen),
+# so that upstream `using`-to-explicit-import cleanups cannot silently remove our access
+# paths. Enforced by the ExplicitImports checks in the CodeQuality test group.
 import Base:
-    copy, copy!, show, size, ndims, similar, isapprox, isequal, iterate, ==, length, zero,
-    eltype
+    copy, copy!, show, size, similar, isapprox, isequal, iterate, ==, length, zero,
+    eltype, rand
 
-using LinearAlgebra
-import LinearAlgebra: mul!, norm_sqr
+using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
+    UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
+    issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
+import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
-import Random: rand, GLOBAL_RNG, AbstractRNG
-using Printf
-using DocStringExtensions
+import Random: Random, AbstractRNG
+using Printf: Printf, @printf
+using DocStringExtensions: DocStringExtensions, TYPEDEF, TYPEDSIGNATURES
 
-using Reexport
+using Reexport: Reexport, @reexport
 @reexport using DiffEqBase
+using DiffEqBase: DiffEqBase
 import SciMLBase
+import SciMLBase: remake
+using SciMLBase: DAEFunction, DiscreteCallback, DynamicalODEFunction, ODEFunction,
+    ODEProblem, ReturnCode, SecondOrderODEProblem, isinplace
+using CommonSolve: init, solve, step!
 import SciMLOperators
+using SciMLOperators: MatrixOperator
 const WOperator = SciMLOperators.WOperator # to fix an Aqua.jl undefined export test
-import SciMLBase: interpret_vars, getsyms, remake
 import ConstructionBase
-using OrdinaryDiffEqCore,
-    OrdinaryDiffEqDifferentiation,
-    OrdinaryDiffEqVerner,
-    OrdinaryDiffEqRosenbrock
-using ToeplitzMatrices
-using FastBroadcast
-using StaticArrayInterface
-using FunctionWrappersWrappers
-using TaylorSeries, TaylorIntegration
+using OrdinaryDiffEqCore: OrdinaryDiffEqCore
+using OrdinaryDiffEqDifferentiation: OrdinaryDiffEqDifferentiation
+using OrdinaryDiffEqVerner: OrdinaryDiffEqVerner, AutoVern7
+using OrdinaryDiffEqRosenbrock: OrdinaryDiffEqRosenbrock, Rodas4
+using ToeplitzMatrices: ToeplitzMatrices, TriangularToeplitz
+using FastBroadcast: FastBroadcast, @..
+using StaticArrayInterface: StaticArrayInterface
+using FunctionWrappersWrappers: FunctionWrappersWrappers
+using TaylorSeries: TaylorSeries, Taylor1, differentiate, evaluate, order
+using TaylorIntegration: TaylorIntegration
 @reexport using StructArrays
-using SimpleUnPack
-using RecursiveArrayTools
-using ForwardDiff
-using Octavian
+using StructArrays: StructArrays, StructArray
+using SimpleUnPack: SimpleUnPack, @unpack
+using RecursiveArrayTools: RecursiveArrayTools, ArrayPartition, DiffEqArray,
+    copyat_or_push!, recursive_unitless_bottom_eltype, recursive_unitless_eltype,
+    recursivecopy, recursivecopy!
+using ForwardDiff: ForwardDiff
+using DiffResults: DiffResults
+using Octavian: Octavian, matmul!
 import Kronecker
-using ArrayAllocators
-using FiniteHorizonGramians
-using FillArrays
-using MatrixEquations
-using DiffEqCallbacks
-using ADTypes
+using ArrayAllocators: ArrayAllocators, calloc
+using FiniteHorizonGramians: FiniteHorizonGramians
+using FillArrays: FillArrays, Eye, Fill
+using MatrixEquations: MatrixEquations, plyapc
+using DiffEqCallbacks: DiffEqCallbacks, PresetTimeCallback
+using ADTypes: ADTypes, AutoForwardDiff, AutoSparse
 
 # @reexport using GaussianDistributions
 
 @reexport using PSDMatrices
-import PSDMatrices: X_A_Xt, X_A_Xt!, unfactorize
+using PSDMatrices: PSDMatrices, PSDMatrix
+import PSDMatrices: X_A_Xt, X_A_Xt!
 
 stack(x) = copy(reduce(hcat, x)')
 vecvec2mat(x) = reduce(hcat, x)'

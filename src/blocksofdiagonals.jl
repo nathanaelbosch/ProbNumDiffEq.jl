@@ -252,7 +252,7 @@ LinearAlgebra.rmul!(B::BlocksOfDiagonals, n::Number) = begin
     return B
 end
 
-LinearAlgebra.inv(A::BlocksOfDiagonals) = BlocksOfDiagonals(inv.(blocks(A)))
+Base.inv(A::BlocksOfDiagonals) = BlocksOfDiagonals(inv.(blocks(A)))
 
 copy!(A::BlocksOfDiagonals, B::Diagonal) = begin
     @assert size(A) == size(B)

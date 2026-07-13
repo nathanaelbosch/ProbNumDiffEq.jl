@@ -58,9 +58,10 @@ unwhiten(Σ, z) = cholesky(Σ).U' * z
 unwhiten(Σ::Number, z) = sqrt(Σ) * z
 unwhiten(Σ::UniformScaling, z) = sqrt(Σ.λ) * z
 
-sqmahal(P::Gaussian, x) = norm_sqr(whiten(P.Σ, x - P.μ))
+# Same as the non-public `LinearAlgebra.norm_sqr`, whose generic method is `norm(x)^2`
+sqmahal(P::Gaussian, x) = norm(whiten(P.Σ, x - P.μ))^2
 
-rand(P::Gaussian) = rand(GLOBAL_RNG, P)
+rand(P::Gaussian) = rand(Random.default_rng(), P)
 rand(RNG::AbstractRNG, P::Gaussian) = P.μ + unwhiten(P.Σ, randn(RNG, typeof(P.μ)))
 rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}) where {T} =
     if iszero(P.Σ)
@@ -111,8 +112,8 @@ rand(
     P::Gaussian{Vector{T}},
     dims::Tuple{Vararg{Int64,N}} where {N},
 ) where {T} = rand_vector(RNG, P, dims)
-rand(P::Gaussian, dims::Tuple{Vararg{Int64,N}} where {N}) = rand(GLOBAL_RNG, P, dims)
-rand(P::Gaussian, dim::Integer) = rand(GLOBAL_RNG, P, dim)
+rand(P::Gaussian, dims::Tuple{Vararg{Int64,N}} where {N}) = rand(Random.default_rng(), P, dims)
+rand(P::Gaussian, dim::Integer) = rand(Random.default_rng(), P, dim)
 
 # RecursiveArrayTools
 RecursiveArrayTools.recursivecopy(P::Gaussian) = copy(P)

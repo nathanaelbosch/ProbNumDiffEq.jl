@@ -1,8 +1,8 @@
 module RecipesBaseExt
 
-using RecipesBase
+using RecipesBase: RecipesBase, @recipe, @series
 using ProbNumDiffEq
-using Statistics
+using Statistics: Statistics, mean, std
 
 @recipe function f(
     p::AbstractArray{<:Gaussian};

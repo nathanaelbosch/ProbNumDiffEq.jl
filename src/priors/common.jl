@@ -222,7 +222,7 @@ function marginalize(process::AbstractGaussMarkovProcess, times)
     out = Gaussian[X]
     for i in 2:length(times)
         dt = times[i] - times[i-1]
-        A, Q = ProbNumDiffEq.discretize(process, dt)
+        A, Q = discretize(process, dt)
         X = predict(X, A, Q)
         push!(out, X)
     end
