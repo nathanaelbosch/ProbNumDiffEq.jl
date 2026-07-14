@@ -112,7 +112,8 @@ rand(
     P::Gaussian{Vector{T}},
     dims::Tuple{Vararg{Int64,N}} where {N},
 ) where {T} = rand_vector(RNG, P, dims)
-rand(P::Gaussian, dims::Tuple{Vararg{Int64,N}} where {N}) = rand(Random.default_rng(), P, dims)
+rand(P::Gaussian, dims::Tuple{Vararg{Int64,N}} where {N}) =
+    rand(Random.default_rng(), P, dims)
 rand(P::Gaussian, dim::Integer) = rand(Random.default_rng(), P, dim)
 
 # RecursiveArrayTools
