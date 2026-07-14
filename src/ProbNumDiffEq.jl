@@ -15,10 +15,10 @@ using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetri
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 import Random: Random, AbstractRNG
-using Printf: Printf, @printf
-using DocStringExtensions: DocStringExtensions, TYPEDEF, TYPEDSIGNATURES
+using Printf: @printf
+using DocStringExtensions: TYPEDEF, TYPEDSIGNATURES
 
-using Reexport: Reexport, @reexport
+using Reexport: @reexport
 @reexport using DiffEqBase
 using DiffEqBase: DiffEqBase
 import SciMLBase
@@ -32,29 +32,28 @@ const WOperator = SciMLOperators.WOperator # to fix an Aqua.jl undefined export 
 import ConstructionBase
 using OrdinaryDiffEqCore: OrdinaryDiffEqCore
 using OrdinaryDiffEqDifferentiation: OrdinaryDiffEqDifferentiation
-using OrdinaryDiffEqVerner: OrdinaryDiffEqVerner, AutoVern7
-using OrdinaryDiffEqRosenbrock: OrdinaryDiffEqRosenbrock, Rodas4
-using ToeplitzMatrices: ToeplitzMatrices, TriangularToeplitz
-using FastBroadcast: FastBroadcast, @..
+using OrdinaryDiffEqVerner: AutoVern7
+using OrdinaryDiffEqRosenbrock: Rodas4
+using ToeplitzMatrices: TriangularToeplitz
+using FastBroadcast: @..
 using StaticArrayInterface: StaticArrayInterface
-using FunctionWrappersWrappers: FunctionWrappersWrappers
-using TaylorSeries: TaylorSeries, Taylor1, differentiate, evaluate, order
+using TaylorSeries: Taylor1, differentiate, evaluate, order
 using TaylorIntegration: TaylorIntegration
 @reexport using StructArrays
 using StructArrays: StructArrays, StructArray
-using SimpleUnPack: SimpleUnPack, @unpack
+using SimpleUnPack: @unpack
 using RecursiveArrayTools: RecursiveArrayTools, ArrayPartition, DiffEqArray,
     copyat_or_push!, recursive_unitless_bottom_eltype, recursive_unitless_eltype,
     recursivecopy, recursivecopy!
 using ForwardDiff: ForwardDiff
 using DiffResults: DiffResults
-using Octavian: Octavian, matmul!
+using Octavian: matmul!
 import Kronecker
-using ArrayAllocators: ArrayAllocators, calloc
+using ArrayAllocators: calloc
 using FiniteHorizonGramians: FiniteHorizonGramians
 using FillArrays: FillArrays, Eye, Fill
-using MatrixEquations: MatrixEquations, plyapc
-using DiffEqCallbacks: DiffEqCallbacks, PresetTimeCallback
+using MatrixEquations: plyapc
+using DiffEqCallbacks: PresetTimeCallback
 using ADTypes: ADTypes, AutoForwardDiff, AutoSparse
 
 # @reexport using GaussianDistributions
