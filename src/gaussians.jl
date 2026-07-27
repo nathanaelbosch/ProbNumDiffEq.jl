@@ -58,7 +58,6 @@ unwhiten(Σ, z) = cholesky(Σ).U' * z
 unwhiten(Σ::Number, z) = sqrt(Σ) * z
 unwhiten(Σ::UniformScaling, z) = sqrt(Σ.λ) * z
 
-# Same as the non-public `LinearAlgebra.norm_sqr`, whose generic method is `norm(x)^2`
 sqmahal(P::Gaussian, x) = norm(whiten(P.Σ, x - P.μ))^2
 
 rand(P::Gaussian) = rand(Random.default_rng(), P)
