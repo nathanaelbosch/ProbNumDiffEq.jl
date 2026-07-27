@@ -146,6 +146,11 @@ const GROUP = get(ENV, "GROUP", "All")
             Aqua.test_all(
                 ProbNumDiffEq,
                 ambiguities=false,
+                # `test_persistent_tasks` spawns a second process that precompiles this
+                # package's full dependency tree from scratch while the main test process
+                # is still running; on CI that reliably gets SIGKILLed by the OOM killer
+                # (the subprocess exits with no output at all, tens of seconds in).
+                persistent_tasks=false,
             )
         end
         @timedtestset "Code linting (JET.jl)" begin
@@ -153,6 +158,9 @@ const GROUP = get(ENV, "GROUP", "All")
                 ProbNumDiffEq;
                 target_defined_modules=true,
             )
+        end
+        @timedsafetestset "Explicit imports (ExplicitImports.jl)" begin
+            include("explicit_imports.jl")
         end
     end
 end

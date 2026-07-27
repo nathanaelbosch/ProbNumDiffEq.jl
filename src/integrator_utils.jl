@@ -124,14 +124,14 @@ end
 function pn_solution_endpoint_match_cur_integrator!(integ)
     if integ.opts.save_end
         if integ.alg.smooth
-            OrdinaryDiffEqCore.copyat_or_push!(
+            copyat_or_push!(
                 integ.sol.x_filt,
                 integ.saveiter_dense,
                 integ.cache.x,
             )
         end
 
-        OrdinaryDiffEqCore.copyat_or_push!(
+        copyat_or_push!(
             integ.sol.pu,
             integ.saveiter,
             _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
@@ -157,12 +157,12 @@ function DiffEqBase.savevalues!(
         else
             push!(integ.sol.diffusions, copy(integ.cache.local_diffusion))
         end
-        OrdinaryDiffEqCore.copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
+        copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
-        OrdinaryDiffEqCore.copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
+        copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
         if integ.alg.smooth
-            OrdinaryDiffEqCore.copyat_or_push!(
+            copyat_or_push!(
                 integ.sol.backward_kernels, i, integ.cache.backward_kernel)
         end
     end

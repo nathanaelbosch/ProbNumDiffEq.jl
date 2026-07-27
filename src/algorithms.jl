@@ -484,11 +484,11 @@ function DiffEqBase.prepare_alg(
     # is a requirement.
 
     prepped_AD = OrdinaryDiffEqDifferentiation.prepare_ADType(
-        OrdinaryDiffEqDifferentiation.alg_autodiff(alg),
+        OrdinaryDiffEqCore.alg_autodiff(alg),
         prob,
         u0,
         p,
-        OrdinaryDiffEqDifferentiation.standardtag(alg),
+        OrdinaryDiffEqCore.standardtag(alg),
     )
 
     sparse_prepped_AD =

@@ -10,9 +10,9 @@
 @static if isdefined(OrdinaryDiffEqDifferentiation, :_alg_autodiff)
     OrdinaryDiffEqDifferentiation._alg_autodiff(::AbstractEK) = Val{true}()
 end
-OrdinaryDiffEqDifferentiation.alg_autodiff(::AbstractEK) = ADTypes.AutoForwardDiff()
-OrdinaryDiffEqDifferentiation.standardtag(::AbstractEK) = false
-OrdinaryDiffEqDifferentiation.concrete_jac(::AbstractEK) = nothing
+OrdinaryDiffEqCore.alg_autodiff(::AbstractEK) = ADTypes.AutoForwardDiff()
+OrdinaryDiffEqCore.standardtag(::AbstractEK) = false
+OrdinaryDiffEqCore.concrete_jac(::AbstractEK) = nothing
 
 @inline DiffEqBase.get_tmp_cache(integ, alg::AbstractEK, cache::AbstractODEFilterCache) =
     (cache.tmp, cache.atmp)
@@ -23,26 +23,26 @@ for ALG in [:EK1, :DiagonalEK1]
         @eval OrdinaryDiffEqDifferentiation._alg_autodiff(alg::$ALG{CS,AD}) where {CS,AD} =
             alg.autodiff
     end
-    @eval OrdinaryDiffEqDifferentiation.alg_autodiff(alg::$ALG) = alg.autodiff
-    @eval OrdinaryDiffEqDifferentiation.alg_difftype(
+    @eval OrdinaryDiffEqCore.alg_autodiff(alg::$ALG) = alg.autodiff
+    @eval OrdinaryDiffEqCore.alg_difftype(
         ::$ALG{CS,AD,DiffType},
     ) where {CS,AD,DiffType} =
         DiffType
-    @eval OrdinaryDiffEqDifferentiation.standardtag(
+    @eval OrdinaryDiffEqCore.standardtag(
         ::$ALG{CS,AD,DiffType,ST},
     ) where {CS,AD,DiffType,ST} =
         ST
-    @eval OrdinaryDiffEqDifferentiation.concrete_jac(
+    @eval OrdinaryDiffEqCore.concrete_jac(
         ::$ALG{CS,AD,DiffType,ST,CJ},
     ) where {CS,AD,DiffType,ST,CJ} = CJ
-    @eval OrdinaryDiffEqDifferentiation.get_chunksize(::$ALG{CS}) where {CS} = Val(CS)
+    @eval OrdinaryDiffEqCore.get_chunksize(::$ALG{CS}) where {CS} = Val(CS)
     @eval OrdinaryDiffEqCore.isimplicit(::$ALG) = true
 end
 
 ############################################
 # Step size control
-OrdinaryDiffEqCore.isadaptive(::AbstractEK) = true
-OrdinaryDiffEqCore.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
+SciMLBase.isadaptive(::AbstractEK) = true
+SciMLBase.alg_order(alg::AbstractEK) = num_derivatives(alg.prior)
 # OrdinaryDiffEqCore.alg_adaptive_order(alg::AbstractEK) =
 
 # PI control is the default. On OrdinaryDiffEqCore v3 we have to explicitly set the

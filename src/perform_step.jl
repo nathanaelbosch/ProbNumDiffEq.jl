@@ -10,7 +10,7 @@ else
 end
 
 # Called in the OrdinaryDiffEqCore.__init; All `OrdinaryDiffEqAlgorithm`s have one
-function OrdinaryDiffEqCore.initialize!(
+function DiffEqBase.initialize!(
     integ::OrdinaryDiffEqCore.ODEIntegrator,
     cache::EKCache,
 )
@@ -27,9 +27,9 @@ function OrdinaryDiffEqCore.initialize!(
     copy!(integ.cache.xprev, integ.cache.x)
 
     # These are necessary since the solution object is not 100% initialized by default
-    OrdinaryDiffEqCore.copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
+    copyat_or_push!(integ.sol.x_filt, integ.saveiter, cache.x)
     initial_pu = _gaussian_mul!(cache.pu_tmp, cache.SolProj, cache.x)
-    OrdinaryDiffEqCore.copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
+    copyat_or_push!(integ.sol.pu, integ.saveiter, initial_pu)
 
     return nothing
 end

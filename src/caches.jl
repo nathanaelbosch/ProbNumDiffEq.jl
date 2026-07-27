@@ -261,5 +261,5 @@ function OrdinaryDiffEqCore.alg_cache(
     )
 end
 
-get_uf(f, t, p, ::Val{true}) = OrdinaryDiffEqDifferentiation.UJacobianWrapper(f, t, p)
-get_uf(f, t, p, ::Val{false}) = OrdinaryDiffEqDifferentiation.UDerivativeWrapper(f, t, p)
+get_uf(f, t, p, ::Val{true}) = SciMLBase.UJacobianWrapper(f, t, p)
+get_uf(f, t, p, ::Val{false}) = SciMLBase.UDerivativeWrapper(f, t, p)

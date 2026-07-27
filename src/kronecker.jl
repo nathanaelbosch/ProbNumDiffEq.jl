@@ -111,7 +111,7 @@ add!(out::IsometricKroneckerProduct, toadd::IsometricKroneckerProduct) = begin
 end
 
 Base.:-(U::UniformScaling, K::IKP) = IsometricKroneckerProduct(K.rdim, U - K.B)
-LinearAlgebra.inv(K::IKP) = IsometricKroneckerProduct(K.rdim, inv(K.B))
+Base.inv(K::IKP) = IsometricKroneckerProduct(K.rdim, inv(K.B))
 Base.:/(A::IKP, B::IKP) = begin
     @assert A.rdim == B.rdim
     return IsometricKroneckerProduct(A.rdim, A.B / B.B)

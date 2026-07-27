@@ -17,10 +17,10 @@ end
 prob = SecondOrderODEProblem(vanderpol!, du0, u0, tspan, p)
 ref = solve(remake(prob, tspan=evaltspan), EK1(), abstol=1e-9, reltol=1e-9);
 sol = solve(prob, EK1(
-        prior=Matern(3, 3),
-        # prior=IOUP(2, -1),
-        # prior=IWP(3),
-        diffusionmodel=FixedDiffusion()),
+    prior=Matern(3, 3),
+    # prior=IOUP(2, -1),
+    # prior=IWP(3),
+    diffusionmodel=FixedDiffusion()),
     abstol=1e-3, reltol=1e-2,
 );
 

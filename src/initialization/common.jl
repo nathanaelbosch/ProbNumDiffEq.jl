@@ -92,7 +92,7 @@ Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG = AutoVern7(Rodas4())
     init_on_ddu::Bool = false
 end
-ClassicSolverInit(alg::DiffEqBase.AbstractODEAlgorithm) = ClassicSolverInit(; alg)
+ClassicSolverInit(alg::SciMLBase.AbstractODEAlgorithm) = ClassicSolverInit(; alg)
 
 """
     initial_update!(integ, cache[, init::InitializationScheme])

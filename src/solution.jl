@@ -20,7 +20,7 @@ end
 ########################################################################################
 # Solution
 ########################################################################################
-abstract type AbstractProbODESolution{T,N,S} <: DiffEqBase.AbstractODESolution{T,N,S} end
+abstract type AbstractProbODESolution{T,N,S} <: SciMLBase.AbstractODESolution{T,N,S} end
 
 """
     ProbODESolution
@@ -66,9 +66,9 @@ ProbODESolution{T,N}(
     pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 )
 
-function SciMLBase.constructorof(
+function ConstructionBase.constructorof(
     ::Type{
-        ProbNumDiffEq.ProbODESolution{T,N,uType,puType,uType2,DType,tType,rateType,xType,
+        ProbODESolution{T,N,uType,puType,uType2,DType,tType,rateType,xType,
             diffType,bkType,PN,P,A,IType,
             CType,DE}},
 ) where {T,N,uType,puType,uType2,DType,tType,rateType,xType,
@@ -77,7 +77,7 @@ function SciMLBase.constructorof(
     ProbODESolution{T,N}
 end
 
-function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
+function SciMLBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
         sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
@@ -86,8 +86,8 @@ function DiffEqBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) whe
 end
 
 # Used to build the initial empty solution in OrdinaryDiffEqCore.__init
-function DiffEqBase.build_solution(
-    prob::DiffEqBase.AbstractODEProblem,
+function SciMLBase.build_solution(
+    prob::SciMLBase.AbstractODEProblem,
     alg::AbstractEK,
     t,
     u;
@@ -134,7 +134,7 @@ function DiffEqBase.build_solution(
         t, x_filt, x_smooth, diffusions, cache, alg.smooth,
     )
 
-    if DiffEqBase.has_analytic(prob.f)
+    if SciMLBase.has_analytic(prob.f)
         u_analytic = Vector{typeof(prob.u0)}()
         errors = Dict{Symbol,real(uElType)}()
     else
@@ -150,7 +150,7 @@ function DiffEqBase.build_solution(
     )
 end
 
-function DiffEqBase.build_solution(
+function SciMLBase.build_solution(
     sol::ProbODESolution{T,N},
     u_analytic,
     errors,
@@ -175,7 +175,7 @@ were a classic ODE solution and is well-compatible with e.g. DiffEqDevtools.jl.
 """
 mutable struct MeanProbODESolution{
     T,N,uType,uType2,DType,tType,rateType,P,A,IType,CType,DE,PSolType,
-} <: DiffEqBase.AbstractODESolution{T,N,uType}
+} <: SciMLBase.AbstractODESolution{T,N,uType}
     u::uType
     u_analytic::uType2
     errors::DType
@@ -201,7 +201,7 @@ MeanProbODESolution{T,N}(
     probsol,
 )
 
-DiffEqBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) where {T,N} =
+SciMLBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) where {T,N} =
     MeanProbODESolution{T,N}(
         sol.u, u_analytic, errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp, sol.cache,
         sol.dense, sol.tslocation, sol.stats, sol.retcode, sol.probsol)
@@ -231,13 +231,13 @@ function (sol::MeanProbODESolution)(
     return mean(sol.probsol(v, t, deriv; idxs, continuity))
 end
 
-DiffEqBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) =
-    DiffEqBase.calculate_solution_errors!(mean(sol), args...; kwargs...)
+SciMLBase.calculate_solution_errors!(sol::ProbODESolution, args...; kwargs...) =
+    SciMLBase.calculate_solution_errors!(mean(sol), args...; kwargs...)
 
 ########################################################################################
 # Dense Output
 ########################################################################################
-abstract type AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation end
+abstract type AbstractODEFilterPosterior <: SciMLBase.AbstractDiffEqInterpolation end
 struct ODEFilterPosterior{T1,T2,T3,T4,T5,T6} <: AbstractODEFilterPosterior
     ts::T1
     x_filt::T2
@@ -246,7 +246,7 @@ struct ODEFilterPosterior{T1,T2,T3,T4,T5,T6} <: AbstractODEFilterPosterior
     cache::T5
     smooth::T6
 end
-DiffEqBase.interp_summary(interp::ODEFilterPosterior) = "ODE Filter Posterior"
+SciMLBase.interp_summary(interp::ODEFilterPosterior) = "ODE Filter Posterior"
 
 function (interp::ODEFilterPosterior)(
     t::Real,
