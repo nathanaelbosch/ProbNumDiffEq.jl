@@ -35,9 +35,9 @@ end
     last_error = 1.0
     for order in (1, 2, 3, 5)
         sol = solve(prob, EK1(
-                prior=IOUP(order, A_noisy),
-                diffusionmodel=FixedDiffusion(),
-            ), adaptive=false, dt=1e-1)
+            prior=IOUP(order, A_noisy),
+            diffusionmodel=FixedDiffusion(),
+        ), adaptive=false, dt=1e-1)
         err = norm(ref.u[end] - sol.u[end])
         @test err < last_error
         last_error = err

@@ -186,10 +186,10 @@ function check_all_bounds(project_dir::String)
                 continue
             end
 
-            print("Testing $pkg $(lower)...");
+            print("Testing $pkg $(lower)...")
             flush(stdout)
             if test_resolve(pkg, lower)
-                println(" OK");
+                println(" OK")
                 flush(stdout)
                 push!(
                     results,
@@ -199,14 +199,14 @@ function check_all_bounds(project_dir::String)
                     ),
                 )
             else
-                print(" FAIL, searching...");
+                print(" FAIL, searching...")
                 flush(stdout)
                 min_ver = find_minimum_resolvable(pkg, range_versions)
                 if min_ver !== nothing
-                    println(" minimum: $min_ver");
+                    println(" minimum: $min_ver")
                     flush(stdout)
                 else
-                    println(" entire range dead");
+                    println(" entire range dead")
                     flush(stdout)
                 end
                 push!(
@@ -393,7 +393,7 @@ function main()
     end
 
     println("Checking lower compat bounds in $PROJECT_DIR")
-    println("This may take a while (one temp environment per test)...\n");
+    println("This may take a while (one temp environment per test)...\n")
     flush(stdout)
 
     results = check_all_bounds(PROJECT_DIR)
@@ -408,7 +408,7 @@ function main()
     print_suggestions(suggestions, results)
     save_suggestions(suggestions)
 
-    print("\nApply these updates to Project.toml? [y/N] ");
+    print("\nApply these updates to Project.toml? [y/N] ")
     flush(stdout)
     response = strip(readline())
     if lowercase(response) in ("y", "yes")
