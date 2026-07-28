@@ -58,27 +58,33 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
     @testset "Low-order exact init via ClassiSolverInit: `initial_update!`" begin
         @test_nowarn init(
             prob,
-            EK0(order=1, initialization=ClassicSolverInit(init_on_ddu=true)),
+            EK0(order=1, initialization=ClassicSolverInit(alg=Tsit5(), init_on_ddu=true)),
         )
         @test_nowarn init(
             prob,
-            EK0(order=2, initialization=ClassicSolverInit(init_on_ddu=false)),
+            EK0(order=2, initialization=ClassicSolverInit(alg=Tsit5(), init_on_ddu=false)),
         )
         @test_nowarn init(
             prob,
-            EK0(order=2, initialization=ClassicSolverInit(init_on_ddu=true)),
+            EK0(order=2, initialization=ClassicSolverInit(alg=Tsit5(), init_on_ddu=true)),
         )
 
         @test_nowarn init(
             prob,
-            EK1(order=1, initialization=ClassicSolverInit(init_on_ddu=true)),
+            EK1(order=1, initialization=ClassicSolverInit(alg=Tsit5(), init_on_ddu=true)),
         )
         @test_nowarn init(
             prob,
-            EK1(order=2, initialization=ClassicSolverInit(init_on_ddu=true)),
+            EK1(order=2, initialization=ClassicSolverInit(alg=Tsit5(), init_on_ddu=true)),
         )
         integ =
-            init(prob, EK1(order=2, initialization=ClassicSolverInit(init_on_ddu=true)))
+            init(
+                prob,
+                EK1(
+                    order=2,
+                    initialization=ClassicSolverInit(alg=Tsit5(), init_on_ddu=true),
+                ),
+            )
         ProbNumDiffEq.initial_update!(integ, integ.cache, integ.alg.initialization)
         x = integ.cache.x
         @test x.μ[:] ≈ true_init_states[1:((2+1)*d)]
@@ -95,7 +101,13 @@ end
 
     @testset "Order $o" for o in (1, 2, 3, 4, 5)
         integ2 =
-            init(prob, EK1(order=o, initialization=ClassicSolverInit(init_on_ddu=true)))
+            init(
+                prob,
+                EK1(
+                    order=o,
+                    initialization=ClassicSolverInit(alg=Tsit5(), init_on_ddu=true),
+                ),
+            )
         rk_init = integ2.cache.x.μ
         Proj2 = integ2.cache.Proj
 
@@ -135,7 +147,7 @@ end
     @test_throws ArgumentError TaylorModeInit(0)
     @test_throws ArgumentError TaylorModeInit(-1)
     @test_nowarn SimpleInit()
-    @test_nowarn ClassicSolverInit()
+    @test_nowarn ClassicSolverInit(alg=Tsit5())
     @test_nowarn ClassicSolverInit(Tsit5())
     @test_throws MethodError ClassicSolverInit(3)
 end

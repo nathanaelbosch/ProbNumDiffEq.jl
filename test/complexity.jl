@@ -2,6 +2,7 @@
 Test that the Kronecker EK0 scales linearly with the ODE dimension, not cubically as the EK1
 =#
 using ProbNumDiffEq, LinearAlgebra
+using OrdinaryDiffEq: Tsit5
 import LinearRegression: linregress, slope
 using Test, SafeTestsets
 
@@ -55,7 +56,7 @@ end
 
     @testset "Order 1 + perfect init + no smoothing" begin
         t(d, Alg) = _timer(
-            d, Alg(smooth=false, order=1, initialization=ClassicSolverInit());
+            d, Alg(smooth=false, order=1, initialization=ClassicSolverInit(Tsit5()));
             dense=false, save_everystep=false,
         )
 
