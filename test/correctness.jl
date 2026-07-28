@@ -33,7 +33,8 @@ CONSTANT_ALGS = (
     DiagonalEK1(order=3, smooth=false) => 1e-7,
     DiagonalEK1(order=3, smooth=false, diffusionmodel=FixedDiffusion()) => 1e-7,
     DiagonalEK1(order=3, smooth=false, diffusionmodel=DynamicDiffusion()) => 1e-7,
-    DiagonalEK1(order=3, smooth=false, initialization=ClassicSolverInit(Tsit5())) => 1e-7,
+    DiagonalEK1(
+        order=3, smooth=false, initialization=ClassicSolverInit(Tsit5())) => 1e-7,
     # smoothing
     EK0(order=3, smooth=true) => 1e-8,
     EK0(order=3, smooth=true, diffusionmodel=FixedDiffusion()) => 2e-8,
@@ -44,7 +45,8 @@ CONSTANT_ALGS = (
     DiagonalEK1(order=3, smooth=true) => 1e-7,
     DiagonalEK1(order=3, smooth=true, diffusionmodel=FixedDiffusion()) => 1e-7,
     DiagonalEK1(order=3, smooth=true, diffusionmodel=DynamicDiffusion()) => 1e-7,
-    DiagonalEK1(order=3, smooth=true, initialization=ClassicSolverInit(Tsit5())) => 1e-7,
+    DiagonalEK1(
+        order=3, smooth=true, initialization=ClassicSolverInit(Tsit5())) => 1e-7,
     # Priors
     EK0(prior=IOUP(3, -1), smooth=true) => 2e-9,
     EK1(prior=IOUP(3, -1), smooth=true, diffusionmodel=FixedDiffusion()) => 1e-9,
@@ -60,7 +62,11 @@ ADAPTIVE_ALGS = (
     EK0(order=3, diffusionmodel=DynamicMVDiffusion()) => 5e-5,
     EK0(order=3, initialization=ClassicSolverInit(Tsit5())) => 5e-5,
     EK0(order=3, initialization=SimpleInit()) => 1e-4,
-    EK0(order=3, diffusionmodel=DynamicMVDiffusion(), initialization=ClassicSolverInit(Tsit5())) => 4e-5,
+    EK0(
+        order=3,
+        diffusionmodel=DynamicMVDiffusion(),
+        initialization=ClassicSolverInit(Tsit5()),
+    ) => 4e-5,
     EK0(order=3, diffusionmodel=FixedMVDiffusion()) => 1e-4,
     EK1(order=2) => 2e-5,
     EK1(order=3) => 1e-5,
