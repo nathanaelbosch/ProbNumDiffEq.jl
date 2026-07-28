@@ -2,6 +2,7 @@ using Documenter
 using ProbNumDiffEq
 
 using DocumenterCitations, Bibliography
+using DocumenterCodeBlocks
 
 # DocumenterCitations.bib_sorting(::Val{:numeric}) = :nyt
 # function DocumenterCitations.format_bibliography_label(
@@ -25,7 +26,7 @@ bib = CitationBibliography(
 sort_bibliography!(bib.entries, :nyt)  # name-year-title
 
 makedocs(
-    plugins=[bib],
+    plugins=[bib, CodeBlocks()],
     sitename="ProbNumDiffEq.jl",
     format=Documenter.HTML(
         assets=[
