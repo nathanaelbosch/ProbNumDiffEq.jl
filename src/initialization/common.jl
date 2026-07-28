@@ -80,8 +80,11 @@ optionally the second derivative can also be set via automatic differentiation b
 `init_on_ddu=true`.
 
 # Arguments
-- `alg`: The solver to be used, e.g. `OrdinaryDiffEqTsit5.Tsit5()`. Can be any solver from
-  OrdinaryDiffEq.jl (or one of its sub-packages).
+- `alg`: The solver to be used. Can be any solver from OrdinaryDiffEq.jl (or one of its
+  sub-packages). If you don't know whether your problem is stiff, a robust choice is
+  `AutoTsit5(Rosenbrock23())`, which automatically switches between the two depending on
+  the detected stiffness; this is also what plain `solve(prob)` uses internally when no
+  algorithm is specified.
 - `init_on_ddu`: If `true`, the second derivative is also initialized exactly via
   automatic differentiation with ForwardDiff.jl.
 
