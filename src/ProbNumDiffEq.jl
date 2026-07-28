@@ -32,8 +32,6 @@ const WOperator = SciMLOperators.WOperator # to fix an Aqua.jl undefined export 
 import ConstructionBase
 using OrdinaryDiffEqCore: OrdinaryDiffEqCore
 using OrdinaryDiffEqDifferentiation: OrdinaryDiffEqDifferentiation
-using OrdinaryDiffEqVerner: AutoVern7
-using OrdinaryDiffEqRosenbrock: Rodas4
 using ToeplitzMatrices: TriangularToeplitz
 using FastBroadcast: @..
 using StaticArrayInterface: StaticArrayInterface

@@ -1,5 +1,6 @@
 using ProbNumDiffEq
 using ModelingToolkit
+using OrdinaryDiffEq
 using Test
 
 # Helper function to convert a regular ODE problem to MTK form with symbolic maps
@@ -20,7 +21,7 @@ end
         # first without defined jac
         @test solve(prob, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob, EK1(order=4, initialization=ClassicSolverInit())) isa
+        @test solve(prob, EK1(order=4, initialization=ClassicSolverInit(Tsit5()))) isa
               ProbNumDiffEq.ProbODESolution
     end
     @testset "with jacobian" begin
@@ -28,7 +29,7 @@ end
         prob_mtk = make_mtk_problem(prob)
         @test solve(prob_mtk, EK0(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob_mtk, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
-        @test solve(prob_mtk, EK1(order=4, initialization=ClassicSolverInit())) isa
+        @test solve(prob_mtk, EK1(order=4, initialization=ClassicSolverInit(Tsit5()))) isa
               ProbNumDiffEq.ProbODESolution
     end
 end

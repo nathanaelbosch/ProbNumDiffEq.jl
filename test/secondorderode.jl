@@ -51,5 +51,5 @@ appxsol = solve(prob_base, Vern9(), abstol=1e-9, reltol=1e-6)
     end
 end
 @testset "ClassicSolverInit" begin
-    @test_nowarn solve(prob_iip, EK1(initialization=ClassicSolverInit()))
+    @test_nowarn solve(prob_iip, EK1(initialization=ClassicSolverInit(Tsit5())))
 end

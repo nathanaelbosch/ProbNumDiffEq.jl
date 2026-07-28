@@ -65,7 +65,7 @@ ForwardDiffInit() = begin
 end
 
 """
-    ClassicSolverInit(; alg=OrdinaryDiffEqCore.Tsit5(), init_on_ddu=false)
+    ClassicSolverInit(; alg, init_on_ddu=false)
 
 Initialization via regression on a few steps of a classic ODE solver.
 
@@ -80,7 +80,11 @@ optionally the second derivative can also be set via automatic differentiation b
 `init_on_ddu=true`.
 
 # Arguments
-- `alg`: The solver to be used. Can be any solver from OrdinaryDiffEqCore.jl.
+- `alg`: The solver to be used. Can be any solver from OrdinaryDiffEq.jl (or one of its
+  sub-packages). If you don't know whether your problem is stiff, a robust choice is
+  `AutoTsit5(Rosenbrock23())`, which automatically switches between the two depending on
+  the detected stiffness; this is also what plain `solve(prob)` uses internally when no
+  algorithm is specified.
 - `init_on_ddu`: If `true`, the second derivative is also initialized exactly via
   automatic differentiation with ForwardDiff.jl.
 
@@ -89,7 +93,7 @@ optionally the second derivative can also be set via automatic differentiation b
 * [schober16probivp](@cite) Schober et al, "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing (2019)
 """
 Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
-    alg::ALG = AutoVern7(Rodas4())
+    alg::ALG
     init_on_ddu::Bool = false
 end
 ClassicSolverInit(alg::SciMLBase.AbstractODEAlgorithm) = ClassicSolverInit(; alg)
