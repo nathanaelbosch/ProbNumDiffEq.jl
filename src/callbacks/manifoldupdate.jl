@@ -15,13 +15,12 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         )
     end
 
-    # All of the following are views into cache matrices, to avoid allocating
-    _H = view(cache.H, 1:d, :)                    # d×D
-    _K1 = view(cache.C_2DxD, 1:D, 1:d)            # D×d
-    _K2 = view(cache.C_2DxD, (D+1):(2D), 1:d)     # D×d
-    M_cache = cache.C_DxD                         # D×D
-    S = PSDMatrix(view(cache.C_Dxd, :, 1:d))      # left square root of S; D×d
-    S_gram = view(cache.C_dxd, 1:d, 1:d)          # d×d
+    _H = view(cache.H, 1:d, :)
+    _K1 = view(cache.C_2DxD, 1:D, 1:d)
+    _K2 = view(cache.C_2DxD, (D+1):(2D), 1:d)
+    M_cache = cache.C_DxD
+    S = PSDMatrix(view(cache.C_Dxd, :, 1:d))
+    S_gram = view(cache.C_dxd, 1:d, 1:d)
 
     m_tmp, C_tmp = mean(x_tmp), cov(x_tmp)
 
@@ -37,9 +36,6 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         fast_X_A_Xt!(S, C, _H)  # S.R = C.R * H'
 
         # m_i_new, C_i_new = update(x, Gaussian(z .+ (H * (m - m_i)), S), H)
-        # Since `S.R == C.R * H'` we can compute the gain as
-        #   K = C * H' * S⁻¹ = C.R' * (C.R * H') * S⁻¹ = C.R' * S.R * S⁻¹,
-        # which saves both a matrix product and the generic (allocating) `/`.
         _S = make_hermitian_if_fowarddiff(_matmul!(S_gram, S.R', S.R))
         S_chol = if length(_S) == 1
             iszero(_S[1]) && rankerror(u_i)
@@ -74,12 +70,6 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     return nothing
 end
 
-"""
-    rankerror(u)
-
-Throw the error that corresponds to a singular `ManifoldUpdate` measurement covariance at
-`u`, which is always caused by a residual function whose Jacobian is rank-deficient there.
-"""
 rankerror(u) = throw(
     ArgumentError(
         "The measurement covariance of the `ManifoldUpdate` is singular at u = $u. " *
@@ -89,13 +79,6 @@ rankerror(u) = throw(
         "components as there are independent constraints."),
 )
 
-"""
-    cholesky_or_rankerror!(S, u)
-
-Cholesky-factorize the measurement covariance `S`, and turn the `PosDefException` that
-occurs for singular `S` into an error message that points at the actual cause: a residual
-function whose Jacobian does not have full row rank at `u`. See [`rankerror`](@ref).
-"""
 function cholesky_or_rankerror!(S, u)
     try
         return cholesky!(S)

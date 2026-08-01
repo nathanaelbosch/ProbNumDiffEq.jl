@@ -65,9 +65,6 @@ end
 end
 
 @testset "ManifoldUpdate with multiple constraints" begin
-    # Two uncoupled oscillators: 4-dimensional ODE with two independent energy constraints.
-    # The measurement covariance is then 2x2 and non-singular; the residual neither has to
-    # be one-dimensional nor to have the same shape as `u`.
     function two_oscillators(du, u, p, t)
         du[1] = u[2]
         du[2] = -u[1]
@@ -84,15 +81,10 @@ end
 end
 
 @testset "ManifoldUpdate residual shape errors" begin
-    # A residual padded with an identically-zero component has a rank-deficient Jacobian,
-    # which makes the measurement covariance singular. This should raise an informative
-    # error instead of a bare `PosDefException`.
     E_padded(u) = [dot(u, u) - 2; 0]
     @test_throws ArgumentError solve(
         prob, EK1(order=3), callback=ManifoldUpdate(E_padded))
 
-    # A residual with more components than the ODE has dimensions can never have full row
-    # rank, and is rejected up front.
     E_toolong(u) = [dot(u, u) - 2; u[1]; u[2]]
     @test_throws DimensionMismatch solve(
         prob, EK1(order=3), callback=ManifoldUpdate(E_toolong))
@@ -105,7 +97,6 @@ end
     allocs_with = @allocated solve(prob, EK1(order=3); kwargs...)
     solve(prob, EK1(order=3), adaptive=false, dt=0.05)  # compile
     allocs_without = @allocated solve(prob, EK1(order=3), adaptive=false, dt=0.05)
-    # The callback used to allocate ~50x more than the solve itself; it should now be a
-    # small additive overhead. The bound is deliberately loose to not be brittle.
+    # Loose bound; the callback used to allocate ~50x more than the solve itself
     @test allocs_with < 3 * allocs_without
 end
