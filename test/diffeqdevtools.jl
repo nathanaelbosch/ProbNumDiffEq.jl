@@ -76,14 +76,16 @@ end
     @test plot(wps) isa AbstractPlot
 end
 
-@testset "WorkPrecisionSet with TestSolution is broken" begin
+@testset "WorkPrecisionSet with TestSolution" begin
     abstols = 1.0 ./ 10.0 .^ (6:7)
     reltols = 1.0 ./ 10.0 .^ (3:4)
     setups = [
         Dict(:alg => EK0(smooth=false))
         Dict(:alg => EK1(smooth=false))
     ]
-    @test_broken wp = WorkPrecisionSet(
+    # This used to throw a `BoundsError`: with `save_everystep=false` the solution was
+    # left without any diffusions, which the interpolation needs; see issue #428
+    wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
         appxsol=test_sol,
         dense=false,
@@ -92,6 +94,7 @@ end
         maxiters=Int(1e7),
         timeseries_errors=false,
     )
+    @test wp isa WorkPrecisionSet
     @test_nowarn WorkPrecisionSet(
         prob, abstols, reltols, setups;
         appxsol=appxsol_nondense,
