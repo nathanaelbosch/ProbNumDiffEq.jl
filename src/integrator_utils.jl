@@ -1,12 +1,12 @@
 """
-    OrdinaryDiffEqCore.postamble!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
+    SciMLBase.postamble!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
 
-ProbNumDiffEq.jl-specific implementation of OrdinaryDiffEqCore.jl's `postamble!`.
+ProbNumDiffEq.jl-specific implementation of SciMLBase's `postamble!` hook.
 
 In addition to calling `OrdinaryDiffEqCore._postamble!(integ)`, calibrate the diffusion and
 smooth the solution.
 """
-function OrdinaryDiffEqCore.postamble!(
+function SciMLBase.postamble!(
     integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
 )
     # OrdinaryDiffEqCore.jl-related calls:
