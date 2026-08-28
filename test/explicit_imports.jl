@@ -16,7 +16,7 @@ NONPUBLIC_ACCESSES = (
     # OrdinaryDiffEqDifferentiation Jacobian machinery; no public interface exists.
     :calc_J!, :build_jac_config, :prepare_ADType, :prepare_user_sparsity,
     # OrdinaryDiffEqCore integrator internals used by our save/smooth loop.
-    :_postamble!, :_savevalues!, :update_uprev!,
+    :postamble!, :_postamble!, :_savevalues!, :update_uprev!,
     # SciMLBase remake helpers used in DiffEqBase.remake(::EK1).
     :remaker_of, :struct_as_namedtuple,
     # SciMLBase re-exports this module; used for function wrapper type checks.
