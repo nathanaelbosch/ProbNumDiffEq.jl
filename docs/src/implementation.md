@@ -16,7 +16,7 @@ In particular:
    - `OrdinaryDiffEq.loopheader!`
    - `OrdinaryDiffEq.perform_step!`
    - `OrdinaryDiffEq.loopfooter!`
-   - `OrdinaryDiffEq.postamble!`
+   - `SciMLBase.postamble!`
 
 ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
 
@@ -27,7 +27,7 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
   - `./src/caches.jl` implements the cache and its main constructor: `OrdinaryDiffEq.alg_cache`
 - **Initialization and `perform_step!`:** via `OrdinaryDiffEq.initialize!` and `OrdinaryDiffEq.perform_step!`.
   Implemented in `./src/perform_step.jl`.
-- **Custom postamble** by overloading `OrdinaryDiffEq.postamble!` (which should always call `OrdinaryDiffEq._postamble!`).
+- **Custom postamble** by overloading `SciMLBase.postamble!` (which should always call `OrdinaryDiffEqCore._postamble!`).
   This is where we do the "smoothing" of the solution.
   Implemented in `./src/integrator_utils.jl`.
 - **Custom saving** by overloading `OrdinaryDiffEq.savevalues!` (which should always call `OrdinaryDiffEq._savevalues!`).

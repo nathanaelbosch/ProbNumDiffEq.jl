@@ -37,12 +37,7 @@ NONPUBLIC_ACCESSES = (
 @test check_no_stale_explicit_imports(ProbNumDiffEq) === nothing
 @test check_no_self_qualified_accesses(ProbNumDiffEq) === nothing
 @test check_all_explicit_imports_via_owners(ProbNumDiffEq) === nothing
-# `postamble!` moved from SciMLBase to OrdinaryDiffEqCore between the OrdinaryDiffEqCore
-# versions in our compat range, so we cannot access it via a fixed owner.
-@test check_all_qualified_accesses_via_owners(
-    ProbNumDiffEq;
-    ignore=(:postamble!,),
-) === nothing
+@test check_all_qualified_accesses_via_owners(ProbNumDiffEq) === nothing
 
 # SciML only started declaring its downstream-facing API `public` in mid-2026
 # (SciMLBase#1401, OrdinaryDiffEq#3787). Test-dependency version constraints can still
@@ -62,6 +57,8 @@ OWN_INTERNALS_USED_BY_EXTENSIONS = (
 )
 
 if SCIML_DECLARES_PUBLIC_API
+    # Owned by SciMLBase, not OrdinaryDiffEqCore (OrdinaryDiffEq#4119).
+    @test Base.ispublic(ProbNumDiffEq.SciMLBase, :postamble!)
     @test check_all_explicit_imports_are_public(ProbNumDiffEq) === nothing
     @test check_all_qualified_accesses_are_public(
         ProbNumDiffEq;
