@@ -81,4 +81,26 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
         appxsol = appxtrue(sol, true_sol, dense_errors=false)
         @test appxsol.errors[:final] < 1e-5
     end
+
+    # Fixes https://github.com/nathanaelbosch/ProbNumDiffEq.jl/issues/428
+    @testset "`save_everystep=false` returns the same endpoint: $D" for D in (
+        FixedDiffusion(),
+        FixedMVDiffusion(),
+        FixedDiffusion(1e3, false),
+        DynamicDiffusion(),
+        DynamicMVDiffusion(),
+    )
+        alg = EK0(diffusionmodel=D, smooth=false)
+        kwargs = (dense=false, adaptive=false, dt=1e-2)
+        sol_all = solve(prob, alg; save_everystep=true, kwargs...)
+        sol_end = solve(prob, alg; save_everystep=false, kwargs...)
+
+        @test length(sol_end.u) == length(sol_end.pu) == length(sol_end.x_filt) == 2
+        @test length(sol_end.diffusions) == 1
+
+        @test sol_end.pu[end].μ ≈ sol_all.pu[end].μ
+        @test Matrix(sol_end.pu[end].Σ) ≈ Matrix(sol_all.pu[end].Σ)
+        @test sol_end.diffusions[end] ≈ sol_all.diffusions[end]
+        @test length(sol_end(0.5).μ) == length(prob.u0)
+    end
 end

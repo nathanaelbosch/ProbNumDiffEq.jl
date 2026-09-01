@@ -30,7 +30,7 @@ function SciMLBase.postamble!(
         smooth_solution!(integ)
     end
 
-    @assert (length(integ.sol.u) == length(integ.sol.pu))
+    @assert (length(integ.sol.u) == length(integ.sol.pu) == length(integ.sol.x_filt))
 
     return nothing
 end
@@ -58,8 +58,8 @@ function calibrate_solution!(integ, mle_diffusion)
     end
 
     # Re-write into the solution estimates
-    for (pu, x) in zip(integ.sol.pu, integ.sol.x_filt)
-        _gaussian_mul!(pu, integ.cache.SolProj, x)
+    for i in eachindex(integ.sol.pu, integ.sol.x_filt)
+        _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, integ.sol.x_filt[i])
     end
     # [(su[:] .= pu) for (su, pu) in zip(integ.sol.u, integ.sol.pu.μ)]
 end
@@ -123,20 +123,35 @@ end
 "Inspired by `OrdinaryDiffEqCore.solution_match_cur_integrator!`"
 function pn_solution_endpoint_match_cur_integrator!(integ)
     if integ.opts.save_end
-        if integ.alg.smooth
-            copyat_or_push!(
-                integ.sol.x_filt,
-                integ.saveiter_dense,
-                integ.cache.x,
-            )
-        end
+        i = integ.saveiter
+
+        copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
 
         copyat_or_push!(
             integ.sol.pu,
-            integ.saveiter,
+            i,
             _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
         )
+
+        if !integ.opts.save_everystep && i > 1
+            save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
+        end
     end
+end
+
+"""
+    save_diffusion!(sol, i, diffusion)
+
+`copyat_or_push!` for `sol.diffusions`, which needs to replace entries instead of copying
+into them: the scalar diffusions are `Fill`-backed `Diagonal`s and cannot be mutated.
+"""
+function save_diffusion!(sol, i, diffusion)
+    if i <= length(sol.diffusions)
+        sol.diffusions[i] = copy(diffusion)
+    else
+        push!(sol.diffusions, copy(diffusion))
+    end
+    return nothing
 end
 
 "Extends `OrdinaryDiffEqCore._savevalues!` to save ProbNumDiffEq.jl-specific things."
@@ -152,11 +167,7 @@ function DiffEqBase.savevalues!(
     # Save our custom stuff that we need for the posterior
     if integ.opts.save_everystep
         i = integ.saveiter
-        if i <= length(integ.sol.diffusions)
-            integ.sol.diffusions[i] = copy(integ.cache.local_diffusion)
-        else
-            push!(integ.sol.diffusions, copy(integ.cache.local_diffusion))
-        end
+        save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
         copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)

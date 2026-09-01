@@ -25,6 +25,12 @@ end
     @test_throws ErrorException solve(prob, EK0(smooth=true), save_everystep=false)
 end
 
+@testset "`saveat` is not supported" begin
+    prob = prob_ode_lotkavolterra
+    @test_throws ErrorException solve(prob, EK0(), saveat=0.1)
+    @test_throws ErrorException solve(prob, EK0(smooth=false), saveat=[1.0, 2.0])
+end
+
 @testset "Invalid prior" begin
     prob = prob_ode_lotkavolterra
     @test_throws DimensionMismatch solve(prob, EK0(prior=IWP(dim=3, num_derivatives=2)))
