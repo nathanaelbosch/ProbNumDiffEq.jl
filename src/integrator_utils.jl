@@ -58,7 +58,6 @@ function calibrate_solution!(integ, mle_diffusion)
     end
 
     # Re-write into the solution estimates
-    # two-argument `eachindex` errors on a length mismatch instead of truncating
     for i in eachindex(integ.sol.pu, integ.sol.x_filt)
         _gaussian_mul!(integ.sol.pu[i], integ.cache.SolProj, integ.sol.x_filt[i])
     end
@@ -126,11 +125,6 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
     if integ.opts.save_end
         i = integ.saveiter
 
-        # `savevalues!` saved nothing here, so the last step's diffusion is still missing
-        if !integ.opts.save_everystep && i > 1
-            save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
-        end
-
         copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
 
         copyat_or_push!(
@@ -138,10 +132,19 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
             i,
             _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
         )
+
+        if !integ.opts.save_everystep && i > 1
+            save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
+        end
     end
 end
 
-"Save `diffusion` as the `i`-th entry of `sol.diffusions`, appending if necessary."
+"""
+    save_diffusion!(sol, i, diffusion)
+
+`copyat_or_push!` for `sol.diffusions`, which needs to replace entries instead of copying
+into them: the scalar diffusions are `Fill`-backed `Diagonal`s and cannot be mutated.
+"""
 function save_diffusion!(sol, i, diffusion)
     if i <= length(sol.diffusions)
         sol.diffusions[i] = copy(diffusion)

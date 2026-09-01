@@ -18,6 +18,12 @@ function check_densesmooth(integ)
     if !integ.opts.save_everystep && integ.alg.smooth
         error("If you set `save_everystep=false` also set `smooth=false` in the alg!")
     end
+    if !isempty(integ.opts.saveat)
+        error(
+            "`saveat` is not supported. " *
+            "Solve with `save_everystep=true` and index the solution at the desired times instead.",
+        )
+    end
 end
 function check_saveiter(integ)
     @assert integ.saveiter == 1

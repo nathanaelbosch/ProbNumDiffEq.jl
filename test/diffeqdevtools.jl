@@ -83,8 +83,6 @@ end
         Dict(:alg => EK0(smooth=false))
         Dict(:alg => EK1(smooth=false))
     ]
-    # This used to throw a `BoundsError`: with `save_everystep=false` the solution was
-    # left without any diffusions, which the interpolation needs; see issue #428
     wp = WorkPrecisionSet(
         prob, abstols, reltols, setups;
         appxsol=test_sol,

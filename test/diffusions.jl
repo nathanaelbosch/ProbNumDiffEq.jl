@@ -101,8 +101,6 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
         @test sol_end.pu[end].μ ≈ sol_all.pu[end].μ
         @test Matrix(sol_end.pu[end].Σ) ≈ Matrix(sol_all.pu[end].Σ)
         @test sol_end.diffusions[end] ≈ sol_all.diffusions[end]
-
-        # the interpolation reads `sol.diffusions`, which used to be empty here
         @test length(sol_end(0.5).μ) == length(prob.u0)
     end
 end
