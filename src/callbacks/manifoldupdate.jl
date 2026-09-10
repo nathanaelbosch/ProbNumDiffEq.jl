@@ -1,30 +1,26 @@
 function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
     m, C = mean(cache.x), cov(cache.x)
 
-    @unpack SolProj, tmp, x_tmp = cache
+    @unpack SolProj, tmp, x_tmp, x_tmp2 = cache
     D = cache.d * (cache.q + 1)
     z_tmp = residualf(mul!(tmp, SolProj, m))
     result = DiffResults.JacobianResult(z_tmp, tmp)
     d = length(z_tmp)
-    if d > cache.d
-        throw(
-            DimensionMismatch(
-                "The residual function returned a $d-dimensional residual, but the ODE " *
-                "is only $(cache.d)-dimensional. `ManifoldUpdate` requires " *
-                "`length(residual(u)) <= length(u)`."),
-        )
-    end
+    d <= cache.d || throw(
+        DimensionMismatch(
+            "The residual function returned a $d-dimensional residual, but the ODE is " *
+            "only $(cache.d)-dimensional; `ManifoldUpdate` requires " *
+            "`length(residual(u)) <= length(u)`."))
 
     _H = view(cache.H, 1:d, :)
     _K1 = view(cache.C_2DxD, 1:D, 1:d)
     _K2 = view(cache.C_2DxD, (D+1):(2D), 1:d)
-    M_cache = cache.C_DxD
     S = PSDMatrix(view(cache.C_Dxd, :, 1:d))
     S_gram = view(cache.C_dxd, 1:d, 1:d)
 
     m_tmp, C_tmp = mean(x_tmp), cov(x_tmp)
 
-    m_i = copy(m)
+    m_i = copy!(mean(x_tmp2), m)
     for i in 1:maxiters
         u_i = mul!(tmp, SolProj, m_i)
 
@@ -36,13 +32,8 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         fast_X_A_Xt!(S, C, _H)  # S.R = C.R * H'
 
         # m_i_new, C_i_new = update(x, Gaussian(z .+ (H * (m - m_i)), S), H)
-        _S = make_hermitian_if_fowarddiff(_matmul!(S_gram, S.R', S.R))
-        S_chol = if length(_S) == 1
-            iszero(_S[1]) && rankerror(u_i)
-            _S[1]
-        else
-            cholesky_or_rankerror!(_S, u_i)
-        end
+        S_chol = cholesky_or_rankerror!(
+            make_hermitian_if_fowarddiff(_matmul!(S_gram, S.R', S.R)), u_i)
         copyto!(_K1, S.R)
         rdiv!(_K1, S_chol)
         K = _matmul!(_K2, C.R', _K1)
@@ -53,13 +44,10 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         mul!(m_tmp, K, z_tmp)
         m_i_new = m_tmp .+= m
 
-        if (norm(m_i_new .- m_i) < ϵ₁ && norm(z) < ϵ₂) || (i == maxiters)
-            # C_i_new = X_A_Xt(C, I - K * H)
-            _matmul!(M_cache, K, _H, -1.0, 0.0)
-            @inbounds @simd ivdep for j in 1:D
-                M_cache[j, j] += 1
-            end
-            fast_X_A_Xt!(C_tmp, C, M_cache)
+        if (norm(z) < ϵ₂ && norm(m_i_new .- m_i) < ϵ₁) || (i == maxiters)
+            # C_tmp.R = C.R * (I - K * H)' = C.R - S.R * K'
+            copy!(C_tmp.R, C.R)
+            _matmul!(C_tmp.R, S.R, K', -1.0, 1.0)
             break
         end
         m_i = m_i_new
@@ -70,23 +58,24 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     return nothing
 end
 
-rankerror(u) = throw(
+function cholesky_or_rankerror!(S, u)
+    if length(S) == 1
+        iszero(S[1]) && manifold_rankerror(u)
+        return S[1]
+    end
+    chol = cholesky!(Symmetric(S), check=false)
+    issuccess(chol) || manifold_rankerror(u)
+    return chol
+end
+
+manifold_rankerror(u) = throw(
     ArgumentError(
         "The measurement covariance of the `ManifoldUpdate` is singular at u = $u. " *
-        "This means that the Jacobian of the provided residual function does not have " *
+        "Usually this means that the Jacobian of the residual function does not have " *
         "full row rank there, e.g. because the residual contains redundant or " *
-        "identically-zero components. Provide a residual function with only as many " *
-        "components as there are independent constraints."),
+        "identically-zero components; it can also happen if the state covariance " *
+        "itself has become singular."),
 )
-
-function cholesky_or_rankerror!(S, u)
-    try
-        return cholesky!(S)
-    catch e
-        e isa LinearAlgebra.PosDefException || rethrow()
-        rankerror(u)
-    end
-end
 
 """
     ManifoldUpdate(residual::Function)
@@ -100,11 +89,9 @@ zero. Additional arguments and keyword arguments for the `DiscreteCallback` can 
 The residual function should be `residual(u::AbstractVector)::AbstractVector`, that is
 _it should not be in-place_ (whereas DiffEqCallback.jl's `ManifoldProjection`) is.
 
-The residual should have exactly one component per independent constraint, and in
-particular `length(residual(u)) <= length(u)`; it does _not_ need to have the same shape as
-`u`. Its Jacobian must have full row rank, so do not pad the residual with
-identically-zero components to match `length(u)`: that makes the measurement covariance
-singular and raises an error.
+The residual should have one component per independent constraint, so
+`length(residual(u)) <= length(u)`; it does _not_ need to have the same shape as `u`.
+Its Jacobian must have full row rank.
 
 # Additional keyword arguments
 - `maxiters::Int`: Maximum number of IEKF iterations.
