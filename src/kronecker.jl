@@ -61,7 +61,7 @@ function Base.:*(A::IKP, B::IKP)
 end
 Base.:*(K::IKP, a::Number) = IsometricKroneckerProduct(K.rdim, K.B * a)
 Base.:*(a::Number, K::IKP) = IsometricKroneckerProduct(K.rdim, a * K.B)
-LinearAlgebra.adjoint(A::IKP) = IsometricKroneckerProduct(A.rdim, A.B')
+Base.adjoint(A::IKP) = IsometricKroneckerProduct(A.rdim, A.B')
 LinearAlgebra.rmul!(A::IKP, b::Number) = IsometricKroneckerProduct(A.rdim, rmul!(A.B, b))
 
 function check_same_size(A::IKP, B::IKP)
