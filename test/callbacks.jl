@@ -63,3 +63,40 @@ end
     err2 = sol2.u[end] .- appxsol.u[end]
     @test all(err1 .^ 2 > err2 .^ 2)
 end
+
+@testset "ManifoldUpdate with multiple constraints" begin
+    function two_oscillators(du, u, p, t)
+        du[1] = u[2]
+        du[2] = -u[1]
+        du[3] = u[4]
+        du[4] = -u[3]
+        return nothing
+    end
+    prob2 = ODEProblem(two_oscillators, ones(4), (0.0, 10.0))
+    E2(u) = [u[1]^2 + u[2]^2 - 2; u[3]^2 + u[4]^2 - 2]
+
+    sol1 = solve(prob2, EK1(order=3))
+    sol2 = solve(prob2, EK1(order=3), callback=ManifoldUpdate(E2))
+    @test all(E2(sol1.u[end]) .^ 2 .> E2(sol2.u[end]) .^ 2)
+end
+
+@testset "ManifoldUpdate residual shape errors" begin
+    E_padded(u) = [dot(u, u) - 2; 0]
+    @test_throws ArgumentError solve(
+        prob, EK1(order=3), callback=ManifoldUpdate(E_padded))
+
+    E_toolong(u) = [dot(u, u) - 2; u[1]; u[2]]
+    @test_throws DimensionMismatch solve(
+        prob, EK1(order=3), callback=ManifoldUpdate(E_toolong))
+end
+
+@testset "ManifoldUpdate allocations" begin
+    E(u) = [dot(u, u) - 2]
+    kwargs = (adaptive=false, dt=0.05, callback=ManifoldUpdate(E))
+    solve(prob, EK1(order=3); kwargs...)  # compile
+    allocs_with = @allocated solve(prob, EK1(order=3); kwargs...)
+    solve(prob, EK1(order=3), adaptive=false, dt=0.05)  # compile
+    allocs_without = @allocated solve(prob, EK1(order=3), adaptive=false, dt=0.05)
+    # Loose bound; the callback used to allocate ~50x more than the solve itself
+    @test allocs_with < 3 * allocs_without
+end
