@@ -1,7 +1,7 @@
 """
 $(TYPEDSIGNATURES)
 
-Compute the DALTON [wu23dalton](@cite) approximate negative log-likelihood (NLL) of the data.
+Compute the DALTON [Wu & Lysy (2023)](@cite wu23dalton) approximate negative log-likelihood (NLL) of the data.
 
 You can control the step-size behaviour of the solver as you would for a standard ODE solve,
 but additionally the solver always steps through the `data.t` locations by adding them to
@@ -18,7 +18,7 @@ so use at your own risk!
 - `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
 
 # Reference
-* [wu23dalton](@cite) Wu et al, "Data-Adaptive Probabilistic Likelihood Approximation for Ordinary Differential Equations", arXiv (2023)
+* [Wu & Lysy (2023)](@cite wu23dalton) "Data-Adaptive Probabilistic Likelihood Approximation for Ordinary Differential Equations"
 """
 function dalton_data_loglik(
     prob::SciMLBase.AbstractODEProblem,

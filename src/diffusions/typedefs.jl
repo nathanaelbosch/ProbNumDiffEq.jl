@@ -34,7 +34,7 @@ covariances when using the [`EK0`](@ref), since the individual dimensions can be
 separately.
 
 # References
-* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
+* [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicMVDiffusion, d, q, Eltype) = Diagonal(ones(Eltype, d))
@@ -74,7 +74,7 @@ covariances when using the [`EK0`](@ref), since the individual dimensions can be
 separately.
 
 # References
-* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
+* [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0

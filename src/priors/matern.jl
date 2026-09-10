@@ -8,7 +8,7 @@ Matern process.
 The class of [`Matern`](@ref) processes is well-known in the Gaussian process literature,
 and they also have a corresponding SDE representation similarly to the
 [`IWP`](@ref) and the [`IOUP`](@ref).
-See also [sarkka19appliedsde](@cite) for more details.
+See also [Särkkä & Solin (2019)](@cite sarkka19appliedsde) for more details.
 
 # In math
 A Matern process is a Gauss--Markov process, which we model with a state representation

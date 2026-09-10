@@ -28,7 +28,7 @@ given problem (typically because the problem definition does not allow for eleme
 (for low enough orders), [`ClassicSolverInit`](@ref).
 
 # References
-* [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
+* [Krämer & Hennig (2020)](@cite kraemer20stableimplementation) "Stable Implementation of Probabilistic ODE Solvers"
 """
 struct TaylorModeInit <: AutodiffInitializationScheme
     order::Int64
@@ -89,8 +89,8 @@ optionally the second derivative can also be set via automatic differentiation b
   automatic differentiation with ForwardDiff.jl.
 
 # References
-* [kraemer20stableimplementation](@cite) Krämer et al, "Stable Implementation of Probabilistic ODE Solvers" (2020)
-* [schober16probivp](@cite) Schober et al, "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing (2019)
+* [Krämer & Hennig (2020)](@cite kraemer20stableimplementation) "Stable Implementation of Probabilistic ODE Solvers"
+* [Schober et al. (2019)](@cite schober16probivp) "A probabilistic model for the numerical solution of initial value problems", Statistics and Computing
 """
 Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     alg::ALG

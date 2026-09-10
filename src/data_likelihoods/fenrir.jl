@@ -1,7 +1,7 @@
 """
 $(TYPEDSIGNATURES)
 
-Compute the Fenrir [tronarp22fenrir](@cite) approximate negative log-likelihood (NLL) of the data.
+Compute the Fenrir [Tronarp et al. (2022)](@cite tronarp22fenrir) approximate negative log-likelihood (NLL) of the data.
 
 This is a convenience function that
 1. Solves the ODE with a `ProbNumDiffEq.EK1` of the specified order and with a diffusion
@@ -25,7 +25,7 @@ so use at your own risk!
 - `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
 
 # Reference
-* [tronarp22fenrir](@cite) Tronarp et al, "Fenrir: Physics-Enhanced Regression for Initial Value Problems", ICML (2022)
+* [Tronarp et al. (2022)](@cite tronarp22fenrir) "Fenrir: Physics-Enhanced Regression for Initial Value Problems", ICML
 """
 function fenrir_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
