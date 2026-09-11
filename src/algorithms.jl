@@ -160,7 +160,7 @@ end
 **Gaussian ODE filter with zeroth-order vector field linearization.**
 
 This is an _explicit_ ODE solver. It is fast and scales well to high-dimensional problems
-[krämer21highdim](@cite), but it is not L-stable [tronarp18probsol](@cite). So for stiff
+[Krämer et al. (2022)](@cite krämer21highdim), but it is not L-stable [Tronarp et al. (2019)](@cite tronarp18probsol). So for stiff
 problems, use the [`EK1`](@ref).
 
 Whenever possible this solver will use a Kronecker-factored implementation to achieve its
@@ -220,9 +220,9 @@ _unwrap_val(B) = B
 
 **Gaussian ODE filter with first-order vector field linearization.**
 
-This is a _semi-implicit_, L-stable ODE solver so it can handle stiffness quite well [tronarp18probsol](@cite),
+This is a _semi-implicit_, L-stable ODE solver so it can handle stiffness quite well [Tronarp et al. (2019)](@cite tronarp18probsol),
 and it generally produces more expressive posterior covariances than the [`EK0`](@ref).
-However, as typical implicit ODE solvers it scales cubically with the ODE dimension [krämer21highdim](@cite),
+However, as typical implicit ODE solvers it scales cubically with the ODE dimension [Krämer et al. (2022)](@cite krämer21highdim),
 so if you're solving a high-dimensional non-stiff problem you might want to give the [`EK0`](@ref) a try.
 
 # Arguments
@@ -307,7 +307,7 @@ end
 
 A semi-implicit solver that approximates the Jacobian as diagonal, using a block-diagonal
 covariance representation to achieve linear scaling with the ODE dimension
-[krämer21highdim](@cite). This makes it suitable for high-dimensional problems where
+[Krämer et al. (2022)](@cite krämer21highdim). This makes it suitable for high-dimensional problems where
 the full [`EK1`](@ref) would be too expensive.
 
 !!! tip "Providing a Jacobian for linear scaling"
@@ -420,7 +420,7 @@ julia> solve(prob, ExpEK(L=-1))
 
 
 # Reference
-* [bosch23expint](@cite) Bosch et al, "Probabilistic Exponential Integrators", arXiv (2021)
+* [Bosch et al. (2023)](@cite bosch23expint) "Probabilistic Exponential Integrators", NeurIPS
 """
 ExpEK(; L, order=3, kwargs...) = EK0(; prior=IOUP(order, L), kwargs...)
 
@@ -453,7 +453,7 @@ julia> solve(prob, RosenbrockExpEK())
 ```
 
 # Reference
-* [bosch23expint](@cite) Bosch et al, "Probabilistic Exponential Integrators", NeurIPS (2023)
+* [Bosch et al. (2023)](@cite bosch23expint) "Probabilistic Exponential Integrators", NeurIPS
 """
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)

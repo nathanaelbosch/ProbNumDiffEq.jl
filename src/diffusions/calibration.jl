@@ -44,7 +44,7 @@ This function updates the iteratively computed global diffusion estimate by comp
 ```
 
 For more background information
-* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
+* [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 function estimate_global_diffusion(::FixedDiffusion, integ)
     @unpack d, measurement, m_tmp, Smat = integ.cache
@@ -83,7 +83,7 @@ This function updates the iteratively computed global diffusion estimate by comp
 ```
 
 For more background information
-* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
+* [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 function estimate_global_diffusion(::FixedMVDiffusion, integ)
     @unpack d, q, measurement, local_diffusion, C_d = integ.cache
@@ -118,7 +118,7 @@ Corresponds to
 where ``z, H, Q`` are taken from the passed integrator.
 
 For more background information
-* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
+* [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 function local_scalar_diffusion(cache)
     @unpack d, R, H, Qh, measurement, m_tmp, Smat, C_Dxd, C_d, C_dxd = cache
@@ -146,7 +146,7 @@ Corresponds to
 where ``z, H, Q`` are taken from the passed integrator.
 
 For more background information
-* [bosch20capos](@cite) Bosch et al, "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS (2021)
+* [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 function local_diagonal_diffusion(cache)
     @unpack d, q, H, Qh, measurement, m_tmp = cache
