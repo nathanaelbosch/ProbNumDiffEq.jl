@@ -70,6 +70,11 @@ makedocs(
             "Second-order ODEs" => [
                 "Pleiades" => "benchmarks/pleiades.md",
             ],
+            "Energy Conservation" => [
+                "Hénon-Heiles" => "benchmarks/henon-heiles-energy.md",
+                "Quadrupole Boson" => "benchmarks/quadruple-boson-energy.md",
+                "Single Pendulum" => "benchmarks/single-pendulum-energy.md",
+            ],
             "Differential-Algebraic Equations (DAEs)" => [
                 "OREGO" => "benchmarks/orego.md",
                 "ROBER" => "benchmarks/rober.md",
