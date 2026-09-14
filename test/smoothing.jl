@@ -1,6 +1,7 @@
 using ProbNumDiffEq
 using Test
 using LinearAlgebra
+using Statistics
 using OrdinaryDiffEq
 import ODEProblemLibrary: prob_ode_lotkavolterra
 using Plots
@@ -50,4 +51,19 @@ end
 
     # Previously we compared the smooth and non-smooth dense output, but this
     # does not work anymore since dense output requires smoothing!
+end
+
+@testset "Backward smoothing stability at high orders (#393)" begin
+    function vanderpol!(du, u, p, t)
+        du[1] = u[2]
+        du[2] = p[1] * ((1 - u[1]^2) * u[2] - u[1])
+    end
+    vdp_prob = ODEProblem(vanderpol!, [2.0, 0.0], (0.0, 2.0), [1e5])
+
+    for order in [6, 7]
+        sol = solve(vdp_prob, EK1(order=order, smooth=true), abstol=1e-10, reltol=1e-7)
+        ts = range(vdp_prob.tspan..., length=100)
+        dense_vals = [mean(sol(t)) for t in ts]
+        @test all(v -> all(isfinite, v), dense_vals)
+    end
 end
