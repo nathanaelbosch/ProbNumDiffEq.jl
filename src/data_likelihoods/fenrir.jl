@@ -97,6 +97,7 @@ function fit_pnsolution_to_data!(
 
     # Now iterate backwards
     data_idx = length(data.u) - 1
+    @unpack d, q = cache
     for i in (length(x_posterior)-1):-1:1
         # logic closely related to ProbNumDiffEq.jl's `smooth_solution!`
         if sol.t[i] == sol.t[i+1]
@@ -104,8 +105,21 @@ function fit_pnsolution_to_data!(
             continue
         end
 
+        dt = sol.t[i+1] - sol.t[i]
+        make_transition_matrices!(cache, cache.prior, dt)
+
         K = backward_kernels[i]
-        marginalize!(x_posterior[i], x_posterior[i+1], K; C_DxD, C_3DxD)
+
+        _gaussian_mul!(x_tmp, cache.P, x_posterior[i+1])
+        _gaussian_mul!(x_tmp2, cache.P, x_posterior[i])
+
+        _matmul!(x_posterior[i].μ, A, x_tmp2.μ)
+        x_posterior[i].μ .= x_tmp.μ .- x_posterior[i].μ
+        _matmul!(x_tmp2.μ, K.A, x_posterior[i].μ, 1.0, 1.0)
+
+        marginalize_cov!(x_tmp2.Σ, x_tmp.Σ, K; C_DxD, C_3DxD)
+
+        _gaussian_mul!(x_posterior[i], cache.PI, x_tmp2)
 
         if data_idx > 0 && sol.t[i] == data.t[data_idx]
             _, ll = measure_and_update!(

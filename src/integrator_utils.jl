@@ -102,7 +102,7 @@ function smooth_solution!(integ)
     end
 
     @unpack x_smooth, t, backward_kernels = sol
-    @unpack C_DxD, C_3DxD = cache
+    @unpack d, q, A, C_DxD, C_3DxD, x_tmp, x_tmp2 = cache
 
     @assert length(x_smooth) == length(backward_kernels) + 1
 
@@ -113,8 +113,22 @@ function smooth_solution!(integ)
             continue
         end
 
+        make_transition_matrices!(cache, cache.prior, dt)
+
         K = backward_kernels[i]
-        marginalize!(x_smooth[i], x_smooth[i+1], K; C_DxD, C_3DxD)
+
+        _gaussian_mul!(x_tmp, cache.P, x_smooth[i+1])
+        _gaussian_mul!(x_tmp2, cache.P, x_smooth[i])
+
+        # Mean: RTS formula in preconditioned coordinates
+        # μ_smooth = μ_filt + G * (μ_next_smooth - A * μ_filt)
+        _matmul!(x_smooth[i].μ, A, x_tmp2.μ)
+        x_smooth[i].μ .= x_tmp.μ .- x_smooth[i].μ
+        _matmul!(x_tmp2.μ, K.A, x_smooth[i].μ, 1.0, 1.0)
+
+        marginalize_cov!(x_tmp2.Σ, x_tmp.Σ, K; C_DxD, C_3DxD)
+
+        _gaussian_mul!(x_smooth[i], cache.PI, x_tmp2)
 
         _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
         sol.u[i][:] .= sol.pu[i].μ

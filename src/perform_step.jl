@@ -124,10 +124,12 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     predict_cov!(x_pred.Σ, xprev.Σ, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
     if integ.alg.smooth
-        @unpack C_DxD, backward_kernel = cache
-        K = AffineNormalKernel(Ah, Qh)
+        @unpack C_DxD, backward_kernel, A, Q, P, x_tmp, x_tmp2 = cache
+        _gaussian_mul!(x_tmp, P, x_pred)
+        _gaussian_mul!(x_tmp2, P, xprev)
+        K = AffineNormalKernel(A, Q)
         compute_backward_kernel!(
-            backward_kernel, x_pred, xprev, K; C_DxD, diffusion=extrapolation_diff)
+            backward_kernel, x_tmp, x_tmp2, K; C_DxD, diffusion=extrapolation_diff)
     end
 
     # Compute measurement covariance only now; likelihood computation is currently broken
