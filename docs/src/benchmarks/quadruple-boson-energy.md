@@ -93,6 +93,7 @@ function adaptive_energy_wpd(prob, alg, abstols, reltols, E0, Hfunc; numruns=5, 
     for (abstol, reltol) in zip(abstols, reltols)
         kw = (; abstol, reltol, dense=false, maxiters=Int(1e7), kwargs...)
         sol = solve(prob, alg; kw...)
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
         push!(errors, maximum(abs(Hfunc(u) - E0) for u in sol.u))
         push!(nevals, sol.stats.nf + sol.stats.nf2)
         solve(prob, alg; kw...)
@@ -109,6 +110,7 @@ function fixedstep_energy_wpd(prob, alg, dts, E0, Hfunc; numruns=5, kwargs...)
     for dt in dts
         kw = (; dt, adaptive=false, dense=false, maxiters=Int(1e7), kwargs...)
         sol = solve(prob, alg; kw...)
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
         push!(errors, maximum(abs(Hfunc(u) - E0) for u in sol.u))
         push!(nevals, sol.stats.nf + sol.stats.nf2)
         solve(prob, alg; kw...)
@@ -207,7 +209,13 @@ plot!(e_vern9, t_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:d
 </details>
 ```
 
-![](figures/quadruple-boson-energy_6_1.svg)
+```
+Error: UndefVarError: `e_ek1_mu8` not defined in `Main.var"##WeaveSandBox#1
+46"`
+Suggestion: check for spelling errors or missing imports.
+```
+
+
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -233,7 +241,13 @@ plot!(e_vern9, n_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:d
 </details>
 ```
 
-![](figures/quadruple-boson-energy_7_1.svg)
+```
+Error: UndefVarError: `e_ek1_mu8` not defined in `Main.var"##WeaveSandBox#1
+46"`
+Suggestion: check for spelling errors or missing imports.
+```
+
+
 
 
 
@@ -293,7 +307,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq2/benchmarks/Project.toml`
 ⌃ [1dea7af3] OrdinaryDiffEq v6.111.0
 ⌃ [65888b18] ParameterizedFunctions v5.25.0
   [91a5bcdd] Plots v1.41.7
-  [bf3e78b0] ProbNumDiffEq v0.17.1
+  [bf3e78b0] ProbNumDiffEq v0.18.0 `..`
 ⌅ [0bca4576] SciMLBase v2.155.2
 ⌃ [505e40e9] SciPyDiffEq v0.2.9
   [ce78b400] SimpleUnPack v1.1.0
@@ -328,7 +342,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq2/benchmarks/Manifest.toml`
   [66dad0bd] AliasTables v1.1.3
   [ec485272] ArnoldiMethod v0.4.0
   [c9d4266f] ArrayAllocators v0.3.0
-⌃ [4fba245c] ArrayInterface v7.30.1
+  [4fba245c] ArrayInterface v7.30.2
   [4c555306] ArrayLayouts v1.12.2
   [15f4f7f2] AutoHashEquals v2.2.0
   [aae01518] BandedMatrices v1.12.0
@@ -428,7 +442,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq2/benchmarks/Manifest.toml`
   [ae98c720] Jieko v0.2.1
 ⌃ [ccbc3e58] JumpProcesses v9.29.0
   [2c470bb0] Kronecker v0.5.5
-⌃ [ba0b0d4f] Krylov v0.10.9
+  [ba0b0d4f] Krylov v0.10.10
   [7f56f5a3] LSODA v1.2.0
   [b964fa9f] LaTeXStrings v1.4.1
   [23fbe1c1] Latexify v0.16.12
@@ -516,11 +530,11 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq2/benchmarks/Manifest.toml`
   [f27b6e38] Polynomials v4.1.3
   [d236fae5] PreallocationTools v1.7.1
   [aea7be01] PrecompileTools v1.3.4
-⌃ [21216c6a] Preferences v1.5.2
+  [21216c6a] Preferences v1.6.0
   [27ebfcd6] Primes v0.5.7
-  [bf3e78b0] ProbNumDiffEq v0.17.1
+  [bf3e78b0] ProbNumDiffEq v0.18.0 `..`
   [43287f4e] PtrArrays v1.4.0
-⌃ [0c0d3e7f] PureKLU v1.4.2
+  [0c0d3e7f] PureKLU v1.5.0
   [438e738f] PyCall v1.96.4
   [1fd47b50] QuadGK v2.11.3
   [988b38a3] ReadOnlyArrays v0.2.0
@@ -542,7 +556,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq2/benchmarks/Manifest.toml`
 ⌅ [0bca4576] SciMLBase v2.155.2
 ⌃ [19f34311] SciMLJacobianOperators v0.1.17
 ⌅ [a6db7da4] SciMLLogging v1.10.1
-⌃ [c0aeaf25] SciMLOperators v1.30.0
+  [c0aeaf25] SciMLOperators v1.30.1
   [431bcebd] SciMLPublic v1.3.0
   [53ae85a6] SciMLStructures v1.10.5
 ⌃ [505e40e9] SciPyDiffEq v0.2.9
@@ -580,7 +594,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq2/benchmarks/Manifest.toml`
   [bd369af6] Tables v1.14.0
   [ed4db957] TaskLocalValues v0.1.3
 ⌃ [92b13dbe] TaylorIntegration v0.18.14
-⌃ [6aa5eb33] TaylorSeries v0.22.4
+  [6aa5eb33] TaylorSeries v0.22.6
   [62fd8b95] TensorCore v0.1.1
   [8ea1fca8] TermInterface v2.0.0
   [8290d209] ThreadingUtilities v0.5.6

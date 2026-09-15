@@ -68,6 +68,7 @@ function adaptive_energy_wpd(prob, alg, abstols, reltols, E0; numruns=5, kwargs.
     for (abstol, reltol) in zip(abstols, reltols)
         kw = (; abstol, reltol, dense=false, maxiters=Int(1e7), kwargs...)
         sol = solve(prob, alg; kw...)
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
         push!(errors, maximum(abs(H(u) - E0) for u in sol.u))
         push!(nevals, sol.stats.nf + sol.stats.nf2)
         solve(prob, alg; kw...)
@@ -84,6 +85,7 @@ function fixedstep_energy_wpd(prob, alg, dts, E0; numruns=5, kwargs...)
     for dt in dts
         kw = (; dt, adaptive=false, dense=false, maxiters=Int(1e7), kwargs...)
         sol = solve(prob, alg; kw...)
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
         push!(errors, maximum(abs(H(u) - E0) for u in sol.u))
         push!(nevals, sol.stats.nf + sol.stats.nf2)
         solve(prob, alg; kw...)
