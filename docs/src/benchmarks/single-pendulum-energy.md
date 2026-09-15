@@ -165,11 +165,15 @@ cb_mp = ManifoldProjection(energy_manifold!;
 <details><summary>Code:</summary>
 ```
 ```julia
+e_ek1_mu3, t_ek1_mu3, n_ek1_mu3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0, H_pend; callback=cb_mu)
 e_ek1_mu5, t_ek1_mu5, n_ek1_mu5 = adaptive_energy_wpd(
     prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0, H_pend; callback=cb_mu)
 e_ek1_mu8, t_ek1_mu8, n_ek1_mu8 = adaptive_energy_wpd(
     prob_2nd, EK1(order=8, smooth=false), abstols, reltols, E0, H_pend; callback=cb_mu)
 
+e_ek1_3, t_ek1_3, n_ek1_3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0, H_pend)
 e_ek1_5, t_ek1_5, n_ek1_5 = adaptive_energy_wpd(
     prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0, H_pend)
 e_ek1_8, t_ek1_8, n_ek1_8 = adaptive_energy_wpd(
@@ -197,9 +201,12 @@ plot(xlabel="Max. Energy Error", ylabel="Time (s)",
      xscale=:log10, yscale=:log10,
      title="Single Pendulum Energy Conservation (tspan=100)")
 
+plot!(e_ek1_mu3, t_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
 plot!(e_ek1_mu5, t_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
 plot!(e_ek1_mu8, t_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
       linestyle=:dash)
+plot!(e_ek1_3, t_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
 plot!(e_ek1_5, t_ek1_5, label="EK1(5)", color=2, marker=:diamond)
 plot!(e_ek1_8, t_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
 plot!(e_kl8, t_kl8, label="KahanLi8", color=:gray, marker=:star5)
@@ -219,13 +226,16 @@ plot!(e_vern9, t_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:d
 <details><summary>Code:</summary>
 ```
 ```julia
-plot(xlabel="Max. Energy Error", ylabel="Number of Evaluations",
+plot(xlabel="Max. Energy Error", ylabel="Number of f Evaluations",
      xscale=:log10, yscale=:log10,
      title="Single Pendulum Energy Conservation (tspan=100)")
 
+plot!(e_ek1_mu3, n_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
 plot!(e_ek1_mu5, n_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
 plot!(e_ek1_mu8, n_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
       linestyle=:dash)
+plot!(e_ek1_3, n_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
 plot!(e_ek1_5, n_ek1_5, label="EK1(5)", color=2, marker=:diamond)
 plot!(e_ek1_8, n_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
 plot!(e_kl8, n_kl8, label="KahanLi8", color=:gray, marker=:star5)
@@ -269,7 +279,6 @@ Platform Info:
 Threads: 16 default, 1 interactive, 16 GC (on 128 virtual cores)
 Environment:
   LD_LIBRARY_PATH = 
-  JULIA_PROJECT = benchmarks
 ```
 
 ```@raw html

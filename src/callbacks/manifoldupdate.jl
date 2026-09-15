@@ -1,6 +1,12 @@
 function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
     m, C = mean(cache.x), cov(cache.x)
 
+    # If the state covariance is exactly zero (e.g. right after `TaylorModeInit`, before
+    # the covariance has grown), the innovation covariance `H C Hᵀ` is zero too, and the
+    # Kalman gain is undefined. With zero covariance the filter has no uncertainty to
+    # correct, so skip the update instead of computing a degenerate gain.
+    iszero(C.R) && return nothing
+
     @unpack SolProj, tmp, x_tmp, x_tmp2 = cache
     D = cache.d * (cache.q + 1)
     z_tmp = residualf(mul!(tmp, SolProj, m))
