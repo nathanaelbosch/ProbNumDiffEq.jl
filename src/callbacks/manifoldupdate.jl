@@ -4,7 +4,10 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     # If the state covariance is exactly zero (e.g. right after `TaylorModeInit`, before
     # the covariance has grown), the innovation covariance `H C Hᵀ` is zero too, and the
     # Kalman gain is undefined. With zero covariance the filter has no uncertainty to
-    # correct, so skip the update instead of computing a degenerate gain.
+    # correct, so skip the update instead of computing a degenerate gain. This is checked
+    # here (rather than in `cholesky_or_rankerror!` below, which handles the same
+    # singular-innovation-covariance failure mode for the non-exact-zero case) so that the
+    # `ForwardDiff.jacobian!` call and matrix work below are skipped entirely.
     iszero(C.R) && return nothing
 
     @unpack SolProj, tmp, x_tmp, x_tmp2 = cache
@@ -64,6 +67,9 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     return nothing
 end
 
+# Handles the singular-innovation-covariance case where `S` is non-zero but rank
+# deficient; the exact-zero case (`S` identically zero) is instead handled by the early
+# return in `manifoldupdate!` above, to avoid computing `S` at all in that case.
 function cholesky_or_rankerror!(S, u)
     if length(S) == 1
         iszero(S[1]) && manifold_rankerror(u)
