@@ -100,6 +100,8 @@ abstract type AbstractODEFilterCache <: OrdinaryDiffEqCore.OrdinaryDiffEqCache e
 include("gaussians.jl")
 export Gaussian
 
+include("smoother_state.jl")
+
 include("priors/common.jl")
 include("priors/iwp.jl")
 include("priors/ltisde.jl")

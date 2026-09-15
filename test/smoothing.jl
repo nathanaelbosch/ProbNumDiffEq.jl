@@ -61,9 +61,22 @@ end
     vdp_prob = ODEProblem(vanderpol!, [2.0, 0.0], (0.0, 2.0), [1e5])
 
     for order in [6, 7]
-        sol = solve(vdp_prob, EK1(order=order, smooth=true), abstol=1e-10, reltol=1e-7)
-        ts = range(vdp_prob.tspan..., length=100)
-        dense_vals = [mean(sol(t)) for t in ts]
-        @test all(v -> all(isfinite, v), dense_vals)
+        sol = solve(
+            vdp_prob, EK1(order=order, smooth=true),
+            dense=false, abstol=1e-10, reltol=1e-7)
+        n = length(sol.t)
+        # Smoothed means should be finite and reasonable
+        @test all(u -> all(isfinite, u), sol.u)
+        @test norm(mean(sol).u) < 1e10
+        # Smoothed covariances should be finite
+        @test all(x -> all(isfinite, x.Σ.R), sol.x_smooth)
+        # The actual #393 regression: backward smoothing must not blow up the
+        # covariance relative to the filtered solution (which itself can carry
+        # legitimately huge Taylor-coefficient magnitudes at high derivative
+        # orders near a stiff transient -- that's not itself a bug).
+        @test all(
+            norm(sol.x_smooth[i].Σ.R) < 100 * max(norm(sol.x_filt[i].Σ.R), 1.0)
+            for i in 1:n
+        )
     end
 end

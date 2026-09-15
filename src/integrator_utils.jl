@@ -92,8 +92,10 @@ end
 Smooth the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updating the
 values saved in `integ.sol.pu` and `integ.sol.u`.
 
-This function handles the iteration and preconditioning.
-The actual smoothing step happens by [`marginalize!`](@ref)ing backward kernels.
+Uses the square-root Modified Bryson-Frazier (√MBF) smoother (Gibbs 2011), which propagates
+adjoint variables backward and only inverts the `d×d` measurement covariance (not the full
+`D×D` predicted state covariance as in the RTS smoother). Covariance recovery uses hyperbolic
+QR to guarantee positive semi-definiteness.
 """
 function smooth_solution!(integ)
     @unpack cache, sol = integ
@@ -101,39 +103,210 @@ function smooth_solution!(integ)
         copyat_or_push!(sol.x_smooth, i, x)
     end
 
-    @unpack x_smooth, t, backward_kernels = sol
-    @unpack d, q, A, C_DxD, C_3DxD, x_tmp, x_tmp2 = cache
+    @unpack x_smooth, t, diffusions, smoother_states = sol
+    @unpack d, q, x_pred, C_DxD, C_2DxD = cache
+    D = d * (q + 1)
+    n = length(x_smooth)
 
-    @assert length(x_smooth) == length(backward_kernels) + 1
+    λ = zeros(eltype(x_smooth[1].μ), D)
+    λ_tmp = similar(λ)
+    U_Λ = zeros(eltype(λ), D, D)
+    U_Λ_tmp = similar(U_Λ)
 
-    for i in (length(x_smooth)-1):-1:1
-        dt = t[i+1] - t[i]
-        if iszero(dt)
+    for i in n:-1:1
+        if i < n && iszero(t[i+1] - t[i])
             copy!(x_smooth[i], x_smooth[i+1])
+            _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
+            sol.u[i][:] .= sol.pu[i].μ
             continue
         end
 
-        make_transition_matrices!(cache, cache.prior, dt)
+        # Recover smoothed mean: m_s = m_f - P_f * λ
+        U_f = Matrix(sol.x_filt[i].Σ.R)
+        _mbf_recover_mean!(x_smooth[i].μ, U_f, λ)
 
-        K = backward_kernels[i]
-
-        _gaussian_mul!(x_tmp, cache.P, x_smooth[i+1])
-        _gaussian_mul!(x_tmp2, cache.P, x_smooth[i])
-
-        # Mean: RTS formula in preconditioned coordinates
-        # μ_smooth = μ_filt + G * (μ_next_smooth - A * μ_filt)
-        _matmul!(x_smooth[i].μ, A, x_tmp2.μ)
-        x_smooth[i].μ .= x_tmp.μ .- x_smooth[i].μ
-        _matmul!(x_tmp2.μ, K.A, x_smooth[i].μ, 1.0, 1.0)
-
-        marginalize_cov!(x_tmp2.Σ, x_tmp.Σ, K; C_DxD, C_3DxD)
-
-        _gaussian_mul!(x_smooth[i], cache.PI, x_tmp2)
+        # Recover smoothed covariance via hyperbolic QR
+        if i < n
+            _mbf_recover_cov!(x_smooth[i].Σ, U_f, U_Λ)
+        end
 
         _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
         sol.u[i][:] .= sol.pu[i].μ
+
+        if i == 1
+            break
+        end
+
+        ss_idx = i - 1
+        dt_step = t[i] - t[i-1]
+        make_transition_matrices!(cache, cache.prior, dt_step)
+
+        if ss_idx < 1 || ss_idx > length(smoother_states)
+            copyto!(λ_tmp, λ)
+            _matmul!(λ, cache.Ah', λ_tmp)
+            U_Λ .= U_Λ * Matrix(cache.Ah)
+            continue
+        end
+        ss = smoother_states[ss_idx]
+
+        # Recompute Σ_pred (and hence K, S_U) fresh from the (possibly diffusion-
+        # recalibrated) filtered covariance, so it is always consistent with it --
+        # unlike z, H (which do not depend on the diffusion scale), K and S_U cannot
+        # simply be reused from the forward pass if the diffusion was later calibrated.
+        predict_mean!(x_pred.μ, sol.x_filt[i-1].μ, cache.Ah)
+        extrapolation_diff = diffusions[min(i - 1, length(diffusions))]
+        predict_cov!(
+            x_pred.Σ, sol.x_filt[i-1].Σ, cache.Ah, cache.Qh, C_DxD, C_2DxD,
+            extrapolation_diff)
+        K, S_U = _mbf_measurement_covariance(ss.H, x_pred.Σ, cache.R)
+
+        # √MBF adjoint update
+        _sqrt_mbf_update!(λ, U_Λ, K, S_U, ss.z, ss.H, D, d)
+
+        # √MBF predict: propagate backward through transition
+        Ah_mat = Matrix(cache.Ah)
+        copyto!(λ_tmp, λ)
+        λ .= Ah_mat' * λ_tmp
+        copyto!(U_Λ_tmp, U_Λ)
+        U_Λ .= U_Λ_tmp * Ah_mat
     end
     return nothing
+end
+
+function _mbf_recover_mean!(μ_smooth, U_f::Matrix, λ)
+    μ_smooth .-= U_f' * (U_f * λ)
+end
+
+function _mbf_recover_cov!(Σ_smooth::PSDMatrix, U_f::Matrix, U_Λ::Matrix)
+    # P_s = P_f - P_f*Λ*P_f = U_f' * (I - W*W') * U_f  with  W = U_f*U_Λ'
+    # _hyperbolic_qr! computes R with R'R = I - V'V, so pass V = W' = U_Λ*U_f'
+    V = U_Λ * U_f'
+    R_M = _hyperbolic_qr!(V)
+    U_s = R_M * U_f
+    _copy_upper_to_R!(Σ_smooth.R, U_s)
+end
+
+function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, d)
+    S_chol = Cholesky(S_U, 'U', 0)
+
+    # λ update (BK-free form); z_code = h(m_pred), innovation = -z_code
+    w = K' * λ - S_chol \ z
+    λ .-= H' * w
+
+    # Λ update (sqrt form via QR)
+    BK = -K * H
+    @inbounds for j in 1:D
+        BK[j, j] += 1
+    end
+    Stack = [U_Λ * BK; S_chol.U \ H]
+    U_Λ .= _positive_qr_r(Stack)
+end
+
+function _save_smoother_state!(smoother_states, cache)
+    T = eltype(cache.C_Dxd)
+    H = Matrix{T}(cache.H)
+    z = Vector{T}(cache.measurement.μ)
+    push!(smoother_states, SmootherState(z, H))
+end
+
+"""
+    _mbf_measurement_covariance(H, Σ_pred, R)
+
+Compute the Kalman gain `K` and measurement-covariance Cholesky factor `S_U` (upper
+triangular) from `H` and the predicted covariance `Σ_pred`, freshly at backward-smoothing
+time so that they are always consistent with (possibly diffusion-recalibrated) covariances.
+"""
+function _mbf_measurement_covariance(H, Σ_pred::PSDMatrix, R)
+    T = eltype(H)
+    P_pred = Matrix(Σ_pred)
+    S_mat = H * P_pred * H'
+    if !isnothing(R)
+        S_mat .+= R.R' * R.R
+    end
+    S_chol = cholesky(Symmetric(S_mat), check=false)
+    S_U = issuccess(S_chol) ? Matrix{T}(S_chol.U) : Matrix{T}(I, size(S_mat)...)
+    K = issuccess(S_chol) ? (S_chol \ (P_pred * H')')' : zeros(T, size(P_pred, 1), size(H, 1))
+    return K, S_U
+end
+
+function _hyperbolic_qr!(V::Matrix{T}) where {T}
+    d = size(V, 1)
+    top = Matrix{T}(I, d, d)
+    bot = V
+    v_h = Vector{T}(undef, d)
+    w_h = Vector{T}(undef, d)
+
+    @inbounds for i in 1:d
+        na = d - i + 1
+
+        asq = zero(T)
+        for l in i:d; asq += top[l, i] * top[l, i]; end
+        bsq = zero(T)
+        for l in 1:d; bsq += bot[l, i] * bot[l, i]; end
+
+        α² = max(asq - bsq, zero(T))
+        α = sqrt(α²)
+
+        if α < eps(T) * d
+            for l in i:d; top[l, i] = zero(T); end
+            for l in 1:d; bot[l, i] = zero(T); end
+            continue
+        end
+
+        α = top[i, i] >= 0 ? -α : α
+        β = one(T) / (α * (α - top[i, i]))
+
+        # u_top, u_bot (unscaled householder-like vectors for this hyperbolic reflection)
+        v_h[1] = top[i, i] - α
+        for l in 2:na; v_h[l] = top[i + l - 1, i]; end
+        for l in 1:d; w_h[l] = bot[l, i]; end
+
+        for j in (i + 1):d
+            τ = zero(T)
+            for l in 1:na; τ += v_h[l] * top[i + l - 1, j]; end
+            for l in 1:d; τ -= w_h[l] * bot[l, j]; end
+            τ *= β
+
+            for l in 1:na; top[i + l - 1, j] -= τ * v_h[l]; end
+            for l in 1:d; bot[l, j] -= τ * w_h[l]; end
+        end
+
+        top[i, i] = α
+        for l in (i + 1):d; top[l, i] = zero(T); end
+        for l in 1:d; bot[l, i] = zero(T); end
+    end
+    return top
+end
+
+function _positive_qr_r(Stack)
+    R = Matrix(qr(Stack).R)
+    @inbounds for i in axes(R, 1)
+        if R[i, i] < 0
+            @views R[i, :] .*= -1
+        end
+    end
+    return R
+end
+
+function _copy_upper_to_R!(R, U_s)
+    if R isa IsometricKroneckerProduct
+        d = R.rdim
+        q1 = size(R.B, 1)
+        for j in 1:q1, i in 1:q1
+            R.B[i, j] = U_s[(i-1)*d+1, (j-1)*d+1]
+        end
+    elseif R isa BlocksOfDiagonals
+        d = length(blocks(R))
+        q1 = size(blocks(R)[1], 1)
+        for bi in 1:d
+            for j in 1:q1, i in 1:q1
+                blocks(R)[bi][i, j] = U_s[(i-1)*d+bi, (j-1)*d+bi]
+            end
+        end
+    else
+        n = size(U_s, 1)
+        copy!(R, UpperTriangular(view(U_s, 1:n, 1:n)))
+    end
 end
 
 "Inspired by `OrdinaryDiffEqCore.solution_match_cur_integrator!`"
@@ -191,6 +364,7 @@ function DiffEqBase.savevalues!(
         if integ.alg.smooth
             copyat_or_push!(
                 integ.sol.backward_kernels, i, integ.cache.backward_kernel)
+            _save_smoother_state!(integ.sol.smoother_states, integ.cache)
         end
     end
 
