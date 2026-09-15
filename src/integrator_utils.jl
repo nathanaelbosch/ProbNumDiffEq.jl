@@ -97,14 +97,8 @@ The actual smoothing step happens by [`marginalize!`](@ref)ing backward kernels.
 """
 function smooth_solution!(integ)
     @unpack cache, sol = integ
-    # NOTE: Deep-copy each filtered marginal instead of `append!(sol.x_smooth,
-    # sol.x_filt)`, which would only copy the outer container and leave
-    # `sol.x_smooth[i]` and `sol.x_filt[i]` aliasing the very same `μ`/`Σ` arrays. The
-    # loop below then overwrites `x_smooth[i]` in place, which would silently corrupt
-    # `sol.x_filt` too (and anything, like `sample_states`, that relies on `x_filt`
-    # still holding the true filtering marginals after smoothing).
-    for x in sol.x_filt
-        push!(sol.x_smooth, copy(x))
+    for (i, x) in enumerate(sol.x_filt)
+        copyat_or_push!(sol.x_smooth, i, x)
     end
 
     @unpack x_smooth, t, backward_kernels = sol

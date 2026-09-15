@@ -86,15 +86,6 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
             # Sampling
             @testset "Solution Sampling" begin
                 @testset "x_filt and x_smooth are not aliased" begin
-                    # Regression test: `smooth_solution!` used to build `sol.x_smooth`
-                    # via `append!(sol.x_smooth, sol.x_filt)`, which only copies the
-                    # outer container and leaves `sol.x_smooth[i]` and `sol.x_filt[i]`
-                    # sharing the same underlying `μ`/`Σ` arrays. The subsequent
-                    # in-place backward pass then silently overwrote `sol.x_filt` with
-                    # smoothed values too, which in particular breaks
-                    # `sample_states`'s Forward-Filtering-Backward-Sampling, since it
-                    # relies on `sol.x_filt` holding the true (unsmoothed) filtering
-                    # marginals.
                     for i in eachindex(sol.x_filt, sol.x_smooth)
                         @test sol.x_filt[i].μ !== sol.x_smooth[i].μ
                         @test sol.x_filt[i].Σ.R !== sol.x_smooth[i].Σ.R
