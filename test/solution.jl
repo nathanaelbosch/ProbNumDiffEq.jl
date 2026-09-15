@@ -85,6 +85,13 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
 
             # Sampling
             @testset "Solution Sampling" begin
+                @testset "x_filt and x_smooth are not aliased" begin
+                    for i in eachindex(sol.x_filt, sol.x_smooth)
+                        @test sol.x_filt[i].μ !== sol.x_smooth[i].μ
+                        @test sol.x_filt[i].Σ.R !== sol.x_smooth[i].Σ.R
+                    end
+                end
+
                 @testset "Discrete" begin
                     n_samples = 100
 
