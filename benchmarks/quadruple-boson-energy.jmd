@@ -1,0 +1,223 @@
+# Quadrupole Boson Energy Conservation
+
+
+!!! note "Summary"
+    The Quadrupole Boson Hamiltonian is a 2D Hamiltonian system with cubic and quartic
+    potential terms. This benchmark compares the energy preservation of different solver
+    approaches using a work-precision diagram.
+
+
+```julia, results="hidden"
+using LinearAlgebra, Statistics
+using SciMLBase, OrdinaryDiffEq, DiffEqCallbacks, Plots
+using ProbNumDiffEq
+
+Plots.theme(
+    :dao;
+    markerstrokewidth=0.5,
+    legend=:outertopright,
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
+)
+```
+
+```julia
+const A_QB = 1.0
+const B_QB = 0.55
+const D_QB = 0.4
+
+function QB_acceleration!(ddu, du, u, p, t)
+    q1, q2 = u
+    r2 = q1^2 + q2^2
+    ddu[1] = -A_QB * q1 - 3 * B_QB / sqrt(2) * (q2^2 - q1^2) - D_QB * q1 * r2
+    ddu[2] = -q2 * (A_QB + 3 * sqrt(2) * B_QB * q1 + D_QB * r2)
+end
+u0 = [4.919080920016389, 2.836942666663649]
+du0 = [0.0, 0.0]
+tspan = (0.0, 1000.0)
+prob_2nd = SecondOrderODEProblem(QB_acceleration!, du0, u0, tspan)
+
+function QB_dp!(dp, p, q, params, t)
+    q1, q2 = q
+    r2 = q1^2 + q2^2
+    dp[1] = -A_QB * q1 - 3 * B_QB / sqrt(2) * (q2^2 - q1^2) - D_QB * q1 * r2
+    dp[2] = -q2 * (A_QB + 3 * sqrt(2) * B_QB * q1 + D_QB * r2)
+end
+function QB_dq!(dq, p, q, params, t)
+    dq[1] = A_QB * p[1]
+    dq[2] = A_QB * p[2]
+end
+prob_dyn = DynamicalODEProblem(QB_dp!, QB_dq!, du0, u0, tspan)
+
+function H_QB(dx, dy, x, y)
+    r2 = x^2 + y^2
+    A_QB / 2 * (dx^2 + dy^2) + A_QB / 2 * r2 +
+        B_QB / sqrt(2) * x * (3 * y^2 - x^2) + D_QB / 4 * r2^2
+end
+H_QB(u) = H_QB(u...)
+E0 = H_QB(du0..., u0...)
+
+ref_sol = solve(prob_2nd, Vern9(), abstol=1/10^14, reltol=1/10^14)
+plot(ref_sol, idxs=(3, 4), title="Quadrupole Boson Solution", legend=false,
+     xticks=:auto, yticks=:auto)
+```
+
+
+## [Energy Error Work-Precision Diagram](@id qb_energy_wpd)
+
+```julia, results="hidden"
+# `ManifoldUpdate` fires as a `DiscreteCallback`, which by default saves the state both
+# before and after its `affect!`; since `savevalues!` at the "before" position always
+# runs regardless of `save_positions` when `save_everystep=true`, both the raw and the
+# manifold-corrected state end up in `sol.u` at the same `t`. Keep only the last (i.e.
+# manifold-corrected) value per unique `t` so the error metric reflects the actual output.
+function last_per_t(sol)
+    n = length(sol.t)
+    return (sol.u[i] for i in 1:n if i == n || sol.t[i] != sol.t[i+1])
+end
+
+function adaptive_energy_wpd(prob, alg, abstols, reltols, E0, Hfunc; numruns=5, kwargs...)
+    errors = Float64[]
+    times = Float64[]
+    nevals = Int[]
+    for (abstol, reltol) in zip(abstols, reltols)
+        kw = (; abstol, reltol, dense=false, maxiters=Int(1e7), kwargs...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg abstol reltol exception = e
+            continue
+        end
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
+        push!(errors, maximum(abs(Hfunc(u) - E0) for u in last_per_t(sol)))
+        push!(nevals, sol.stats.nf + sol.stats.nf2)
+        solve(prob, alg; kw...)
+        t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
+        push!(times, t)
+    end
+    errors, times, nevals
+end
+
+function fixedstep_energy_wpd(prob, alg, dts, E0, Hfunc; numruns=5, kwargs...)
+    errors = Float64[]
+    times = Float64[]
+    nevals = Int[]
+    for dt in dts
+        kw = (; dt, adaptive=false, dense=false, maxiters=Int(1e7), kwargs...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg dt exception = e
+            continue
+        end
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
+        push!(errors, maximum(abs(Hfunc(u) - E0) for u in last_per_t(sol)))
+        push!(nevals, sol.stats.nf + sol.stats.nf2)
+        solve(prob, alg; kw...)
+        t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
+        push!(times, t)
+    end
+    errors, times, nevals
+end
+```
+
+```julia, results="hidden"
+abstols = 1.0 ./ 10.0 .^ (5:11)
+reltols = 1.0 ./ 10.0 .^ (2:8)
+dts = 10.0 .^ range(-0.5, -2.5, length=7)
+
+residual(u) = [H_QB(u) - E0]
+cb_mu = ManifoldUpdate(residual)
+
+function energy_manifold!(resid, u, p)
+    resid[1] = H_QB(u) - E0
+end
+function energy_jacobian!(J, u, p)
+    dx, dy, x, y = u
+    r2 = x^2 + y^2
+    J[1, 1] = A_QB * dx
+    J[1, 2] = A_QB * dy
+    J[1, 3] = A_QB * x + B_QB / sqrt(2) * (3 * y^2 - 3 * x^2) + D_QB * x * r2
+    J[1, 4] = A_QB * y + 6 * B_QB / sqrt(2) * x * y + D_QB * y * r2
+end
+cb_mp = ManifoldProjection(energy_manifold!;
+    manifold_jacobian=energy_jacobian!,
+    resid_prototype=zeros(1),
+    autonomous=Val(true))
+```
+
+```julia, results="hidden"
+e_ek1_mu3, t_ek1_mu3, n_ek1_mu3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0, H_QB; callback=cb_mu)
+e_ek1_mu5, t_ek1_mu5, n_ek1_mu5 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0, H_QB; callback=cb_mu)
+e_ek1_mu8, t_ek1_mu8, n_ek1_mu8 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=8, smooth=false), abstols, reltols, E0, H_QB; callback=cb_mu)
+
+e_ek1_3, t_ek1_3, n_ek1_3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0, H_QB)
+e_ek1_5, t_ek1_5, n_ek1_5 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0, H_QB)
+e_ek1_8, t_ek1_8, n_ek1_8 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=8, smooth=false), abstols, reltols, E0, H_QB)
+
+e_kl8, t_kl8, n_kl8 = fixedstep_energy_wpd(prob_dyn, KahanLi8(), dts, E0, H_QB)
+e_ss10, t_ss10, n_ss10 = fixedstep_energy_wpd(prob_dyn, SofSpa10(), dts, E0, H_QB)
+
+e_dprkn6, t_dprkn6, n_dprkn6 = adaptive_energy_wpd(prob_2nd, DPRKN6(), abstols, reltols, E0, H_QB)
+
+e_vern9_mp, t_vern9_mp, n_vern9_mp = adaptive_energy_wpd(
+    prob_2nd, Vern9(), abstols, reltols, E0, H_QB; callback=cb_mp)
+e_vern9, t_vern9, n_vern9 = adaptive_energy_wpd(prob_2nd, Vern9(), abstols, reltols, E0, H_QB)
+```
+
+```julia
+plot(xlabel="Max. Energy Error", ylabel="Time (s)",
+     xscale=:log10, yscale=:log10,
+     title="Quadrupole Boson Energy Conservation (tspan=1000)")
+
+plot!(e_ek1_mu3, t_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
+plot!(e_ek1_mu5, t_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
+plot!(e_ek1_mu8, t_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dash)
+plot!(e_ek1_3, t_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
+plot!(e_ek1_5, t_ek1_5, label="EK1(5)", color=2, marker=:diamond)
+plot!(e_ek1_8, t_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
+plot!(e_kl8, t_kl8, label="KahanLi8", color=:gray, marker=:star5)
+plot!(e_ss10, t_ss10, label="SofSpa10", color=:gray, marker=:star5, linestyle=:dash)
+plot!(e_dprkn6, t_dprkn6, label="DPRKN6", color=:gray, marker=:utriangle, linestyle=:dot)
+plot!(e_vern9_mp, t_vern9_mp, label="Vern9 + ManifoldProjection", color=:gray,
+      marker=:square)
+plot!(e_vern9, t_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:dash)
+```
+
+```julia
+plot(xlabel="Max. Energy Error", ylabel="Number of f Evaluations",
+     xscale=:log10, yscale=:log10,
+     title="Quadrupole Boson Energy Conservation (tspan=1000)")
+
+plot!(e_ek1_mu3, n_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
+plot!(e_ek1_mu5, n_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
+plot!(e_ek1_mu8, n_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dash)
+plot!(e_ek1_3, n_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
+plot!(e_ek1_5, n_ek1_5, label="EK1(5)", color=2, marker=:diamond)
+plot!(e_ek1_8, n_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
+plot!(e_kl8, n_kl8, label="KahanLi8", color=:gray, marker=:star5)
+plot!(e_ss10, n_ss10, label="SofSpa10", color=:gray, marker=:star5, linestyle=:dash)
+plot!(e_dprkn6, n_dprkn6, label="DPRKN6", color=:gray, marker=:utriangle, linestyle=:dot)
+plot!(e_vern9_mp, n_vern9_mp, label="Vern9 + ManifoldProjection", color=:gray,
+      marker=:square)
+plot!(e_vern9, n_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:dash)
+```
+
+
+## Appendix
+```julia, echo=false
+include("utils.jl")
+appendix()
+```

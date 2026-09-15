@@ -1,0 +1,205 @@
+# Single Pendulum Energy Conservation
+
+
+!!! note "Summary"
+    The single pendulum is a 1D Hamiltonian system with ``H(p, q) = p^2/2 - \cos(q) + 1``.
+    This benchmark compares the energy preservation of different solver approaches
+    using a work-precision diagram.
+
+
+```julia, results="hidden"
+using LinearAlgebra, Statistics
+using SciMLBase, OrdinaryDiffEq, DiffEqCallbacks, Plots
+using ProbNumDiffEq
+
+Plots.theme(
+    :dao;
+    markerstrokewidth=0.5,
+    legend=:outertopright,
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
+)
+```
+
+```julia
+function pendulum_acceleration!(ddu, du, u, p, t)
+    ddu[1] = -sin(u[1])
+end
+k = 0.999
+u0 = [0.0]
+du0 = [2k]
+tspan = (0.0, 100.0)
+prob_2nd = SecondOrderODEProblem(pendulum_acceleration!, du0, u0, tspan)
+
+function pend_dp!(dp, p, q, params, t)
+    dp[1] = -sin(q[1])
+end
+function pend_dq!(dq, p, q, params, t)
+    dq[1] = p[1]
+end
+prob_dyn = DynamicalODEProblem(pend_dp!, pend_dq!, du0, u0, tspan)
+
+H_pend(dq, q) = dq^2 / 2 - cos(q) + 1
+H_pend(u) = H_pend(u...)
+E0 = H_pend(du0..., u0...)
+
+ref_sol = solve(prob_2nd, Vern9(), abstol=1/10^14, reltol=1/10^14)
+plot(ref_sol, title="Single Pendulum Solution", legend=false, xticks=:auto)
+```
+
+
+## [Energy Error Work-Precision Diagram](@id pend_energy_wpd)
+
+```julia, results="hidden"
+# `ManifoldUpdate` fires as a `DiscreteCallback`, which by default saves the state both
+# before and after its `affect!`; since `savevalues!` at the "before" position always
+# runs regardless of `save_positions` when `save_everystep=true`, both the raw and the
+# manifold-corrected state end up in `sol.u` at the same `t`. Keep only the last (i.e.
+# manifold-corrected) value per unique `t` so the error metric reflects the actual output.
+function last_per_t(sol)
+    n = length(sol.t)
+    return (sol.u[i] for i in 1:n if i == n || sol.t[i] != sol.t[i+1])
+end
+
+function adaptive_energy_wpd(prob, alg, abstols, reltols, E0, Hfunc; numruns=5, kwargs...)
+    errors = Float64[]
+    times = Float64[]
+    nevals = Int[]
+    for (abstol, reltol) in zip(abstols, reltols)
+        kw = (; abstol, reltol, dense=false, maxiters=Int(1e7), kwargs...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg abstol reltol exception = e
+            continue
+        end
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
+        push!(errors, maximum(abs(Hfunc(u) - E0) for u in last_per_t(sol)))
+        push!(nevals, sol.stats.nf + sol.stats.nf2)
+        solve(prob, alg; kw...)
+        t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
+        push!(times, t)
+    end
+    errors, times, nevals
+end
+
+function fixedstep_energy_wpd(prob, alg, dts, E0, Hfunc; numruns=5, kwargs...)
+    errors = Float64[]
+    times = Float64[]
+    nevals = Int[]
+    for dt in dts
+        kw = (; dt, adaptive=false, dense=false, maxiters=Int(1e7), kwargs...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg dt exception = e
+            continue
+        end
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
+        push!(errors, maximum(abs(Hfunc(u) - E0) for u in last_per_t(sol)))
+        push!(nevals, sol.stats.nf + sol.stats.nf2)
+        solve(prob, alg; kw...)
+        t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
+        push!(times, t)
+    end
+    errors, times, nevals
+end
+```
+
+```julia, results="hidden"
+abstols = 1.0 ./ 10.0 .^ (5:11)
+reltols = 1.0 ./ 10.0 .^ (2:8)
+dts = 10.0 .^ range(-0.5, -2.5, length=7)
+
+residual(u) = [H_pend(u) - E0]
+cb_mu = ManifoldUpdate(residual)
+
+function energy_manifold!(resid, u, p)
+    resid[1] = H_pend(u) - E0
+end
+function energy_jacobian!(J, u, p)
+    dq, q = u
+    J[1, 1] = dq
+    J[1, 2] = sin(q)
+end
+cb_mp = ManifoldProjection(energy_manifold!;
+    manifold_jacobian=energy_jacobian!,
+    resid_prototype=zeros(1),
+    autonomous=Val(true))
+```
+
+```julia, results="hidden"
+e_ek1_mu3, t_ek1_mu3, n_ek1_mu3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0, H_pend; callback=cb_mu)
+e_ek1_mu5, t_ek1_mu5, n_ek1_mu5 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0, H_pend; callback=cb_mu)
+e_ek1_mu8, t_ek1_mu8, n_ek1_mu8 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=8, smooth=false), abstols, reltols, E0, H_pend; callback=cb_mu)
+
+e_ek1_3, t_ek1_3, n_ek1_3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0, H_pend)
+e_ek1_5, t_ek1_5, n_ek1_5 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0, H_pend)
+e_ek1_8, t_ek1_8, n_ek1_8 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=8, smooth=false), abstols, reltols, E0, H_pend)
+
+e_kl8, t_kl8, n_kl8 = fixedstep_energy_wpd(prob_dyn, KahanLi8(), dts, E0, H_pend)
+e_ss10, t_ss10, n_ss10 = fixedstep_energy_wpd(prob_dyn, SofSpa10(), dts, E0, H_pend)
+
+e_dprkn6, t_dprkn6, n_dprkn6 = adaptive_energy_wpd(prob_2nd, DPRKN6(), abstols, reltols, E0, H_pend)
+
+e_vern9_mp, t_vern9_mp, n_vern9_mp = adaptive_energy_wpd(
+    prob_2nd, Vern9(), abstols, reltols, E0, H_pend; callback=cb_mp)
+e_vern9, t_vern9, n_vern9 = adaptive_energy_wpd(prob_2nd, Vern9(), abstols, reltols, E0, H_pend)
+```
+
+```julia
+plot(xlabel="Max. Energy Error", ylabel="Time (s)",
+     xscale=:log10, yscale=:log10,
+     title="Single Pendulum Energy Conservation (tspan=100)")
+
+plot!(e_ek1_mu3, t_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
+plot!(e_ek1_mu5, t_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
+plot!(e_ek1_mu8, t_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dash)
+plot!(e_ek1_3, t_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
+plot!(e_ek1_5, t_ek1_5, label="EK1(5)", color=2, marker=:diamond)
+plot!(e_ek1_8, t_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
+plot!(e_kl8, t_kl8, label="KahanLi8", color=:gray, marker=:star5)
+plot!(e_ss10, t_ss10, label="SofSpa10", color=:gray, marker=:star5, linestyle=:dash)
+plot!(e_dprkn6, t_dprkn6, label="DPRKN6", color=:gray, marker=:utriangle, linestyle=:dot)
+plot!(e_vern9_mp, t_vern9_mp, label="Vern9 + ManifoldProjection", color=:gray,
+      marker=:square)
+plot!(e_vern9, t_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:dash)
+```
+
+```julia
+plot(xlabel="Max. Energy Error", ylabel="Number of f Evaluations",
+     xscale=:log10, yscale=:log10,
+     title="Single Pendulum Energy Conservation (tspan=100)")
+
+plot!(e_ek1_mu3, n_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
+plot!(e_ek1_mu5, n_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
+plot!(e_ek1_mu8, n_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dash)
+plot!(e_ek1_3, n_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
+plot!(e_ek1_5, n_ek1_5, label="EK1(5)", color=2, marker=:diamond)
+plot!(e_ek1_8, n_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
+plot!(e_kl8, n_kl8, label="KahanLi8", color=:gray, marker=:star5)
+plot!(e_ss10, n_ss10, label="SofSpa10", color=:gray, marker=:star5, linestyle=:dash)
+plot!(e_dprkn6, n_dprkn6, label="DPRKN6", color=:gray, marker=:utriangle, linestyle=:dot)
+plot!(e_vern9_mp, n_vern9_mp, label="Vern9 + ManifoldProjection", color=:gray,
+      marker=:square)
+plot!(e_vern9, n_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:dash)
+```
+
+
+## Appendix
+```julia, echo=false
+include("utils.jl")
+appendix()
+```

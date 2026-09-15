@@ -1,0 +1,217 @@
+# Hénon-Heiles Energy Conservation
+
+
+!!! note "Summary"
+    The Hénon-Heiles system is a Hamiltonian ODE whose solutions preserve energy.
+    This benchmark compares the energy preservation of different solver approaches
+    using a work-precision diagram with the maximum energy error as the accuracy metric.
+    - [**`EK1` + `ManifoldUpdate` preserves energy well and is competitive with symplectic integrators.**](@ref hh_energy_wpd)
+    - [**Standard solvers without energy-preserving mechanisms drift over long time spans.**](@ref hh_energy_wpd)
+
+
+```julia, results="hidden"
+using LinearAlgebra, Statistics
+using SciMLBase, OrdinaryDiffEq, DiffEqCallbacks, Plots
+using ProbNumDiffEq
+
+Plots.theme(
+    :dao;
+    markerstrokewidth=0.5,
+    legend=:outertopright,
+    margin=5Plots.mm,
+    xticks=10.0 .^ (-16:1:16),
+)
+```
+
+```julia
+function HH_acceleration!(ddu, du, u, p, t)
+    ddu[1] = -u[1] - 2 * u[1] * u[2]
+    ddu[2] = u[2]^2 - u[2] - u[1]^2
+end
+u0 = [0.0, 0.1]
+du0 = [0.5, 0.0]
+tspan = (0.0, 1000.0)
+prob_2nd = SecondOrderODEProblem(HH_acceleration!, du0, u0, tspan)
+
+function dp!(dp, p, q, params, t)
+    dp[1] = -q[1] - 2 * q[1] * q[2]
+    dp[2] = q[2]^2 - q[2] - q[1]^2
+end
+function dq!(dq, p, q, params, t)
+    dq[1] = p[1]
+    dq[2] = p[2]
+end
+prob_dyn = DynamicalODEProblem(dp!, dq!, du0, u0, tspan)
+
+PotentialEnergy(x, y) = 1 // 2 * (x^2 + y^2 + 2x^2 * y - 2 // 3 * y^3)
+KineticEnergy(dx, dy) = 1 // 2 * (dx^2 + dy^2)
+H(dx, dy, x, y) = PotentialEnergy(x, y) + KineticEnergy(dx, dy)
+H(u) = H(u...)
+E0 = H(du0..., u0...)
+
+ref_sol = solve(prob_2nd, Vern9(), abstol=1/10^14, reltol=1/10^14)
+plot(ref_sol, idxs=(3, 4), title="Hénon-Heiles Solution", legend=false,
+     xticks=:auto, yticks=:auto)
+```
+
+
+## [Energy Error Work-Precision Diagram](@id hh_energy_wpd)
+
+We measure the maximum energy error ``\max_t |H(t) - H(0)|`` over the full trajectory
+for various solver configurations and tolerances, and plot it against runtime.
+
+```julia, results="hidden"
+# `ManifoldUpdate` fires as a `DiscreteCallback`, which by default saves the state both
+# before and after its `affect!`; since `savevalues!` at the "before" position always
+# runs regardless of `save_positions` when `save_everystep=true`, both the raw and the
+# manifold-corrected state end up in `sol.u` at the same `t`. Keep only the last (i.e.
+# manifold-corrected) value per unique `t` so the error metric reflects the actual output.
+function last_per_t(sol)
+    n = length(sol.t)
+    return (sol.u[i] for i in 1:n if i == n || sol.t[i] != sol.t[i+1])
+end
+
+function adaptive_energy_wpd(prob, alg, abstols, reltols, E0; numruns=5, kwargs...)
+    errors = Float64[]
+    times = Float64[]
+    nevals = Int[]
+    for (abstol, reltol) in zip(abstols, reltols)
+        kw = (; abstol, reltol, dense=false, maxiters=Int(1e7), kwargs...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg abstol reltol exception = e
+            continue
+        end
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
+        push!(errors, maximum(abs(H(u) - E0) for u in last_per_t(sol)))
+        push!(nevals, sol.stats.nf + sol.stats.nf2)
+        solve(prob, alg; kw...)
+        t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
+        push!(times, t)
+    end
+    errors, times, nevals
+end
+
+function fixedstep_energy_wpd(prob, alg, dts, E0; numruns=5, kwargs...)
+    errors = Float64[]
+    times = Float64[]
+    nevals = Int[]
+    for dt in dts
+        kw = (; dt, adaptive=false, dense=false, maxiters=Int(1e7), kwargs...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg dt exception = e
+            continue
+        end
+        sol.retcode == SciMLBase.ReturnCode.Success || continue
+        push!(errors, maximum(abs(H(u) - E0) for u in last_per_t(sol)))
+        push!(nevals, sol.stats.nf + sol.stats.nf2)
+        solve(prob, alg; kw...)
+        t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
+        push!(times, t)
+    end
+    errors, times, nevals
+end
+```
+
+```julia, results="hidden"
+abstols = 1.0 ./ 10.0 .^ (5:11)
+reltols = 1.0 ./ 10.0 .^ (2:8)
+dts = 10.0 .^ range(-0.5, -2.5, length=7)
+
+residual(u) = [H(u) - E0]
+cb_mu = ManifoldUpdate(residual)
+
+function energy_manifold!(resid, u, p)
+    resid[1] = H(u) - E0
+end
+function energy_jacobian!(J, u, p)
+    dx, dy, x, y = u
+    J[1, 1] = dx
+    J[1, 2] = dy
+    J[1, 3] = x + 2*x*y
+    J[1, 4] = y + x^2 - y^2
+end
+cb_mp = ManifoldProjection(energy_manifold!;
+    manifold_jacobian=energy_jacobian!,
+    resid_prototype=zeros(1),
+    autonomous=Val(true))
+```
+
+```julia, results="hidden"
+e_ek1_mu3, t_ek1_mu3, n_ek1_mu3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0; callback=cb_mu)
+e_ek1_mu5, t_ek1_mu5, n_ek1_mu5 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0; callback=cb_mu)
+e_ek1_mu8, t_ek1_mu8, n_ek1_mu8 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=8, smooth=false), abstols, reltols, E0; callback=cb_mu)
+
+e_ek1_3, t_ek1_3, n_ek1_3 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=3, smooth=false), abstols, reltols, E0)
+e_ek1_5, t_ek1_5, n_ek1_5 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=5, smooth=false), abstols, reltols, E0)
+e_ek1_8, t_ek1_8, n_ek1_8 = adaptive_energy_wpd(
+    prob_2nd, EK1(order=8, smooth=false), abstols, reltols, E0)
+
+e_kl8, t_kl8, n_kl8 = fixedstep_energy_wpd(prob_dyn, KahanLi8(), dts, E0)
+e_ss10, t_ss10, n_ss10 = fixedstep_energy_wpd(prob_dyn, SofSpa10(), dts, E0)
+
+e_dprkn6, t_dprkn6, n_dprkn6 = adaptive_energy_wpd(prob_2nd, DPRKN6(), abstols, reltols, E0)
+
+e_vern9_mp, t_vern9_mp, n_vern9_mp = adaptive_energy_wpd(
+    prob_2nd, Vern9(), abstols, reltols, E0; callback=cb_mp)
+e_vern9, t_vern9, n_vern9 = adaptive_energy_wpd(prob_2nd, Vern9(), abstols, reltols, E0)
+```
+
+```julia
+plot(xlabel="Max. Energy Error", ylabel="Time (s)",
+     xscale=:log10, yscale=:log10,
+     title="Hénon-Heiles Energy Conservation (tspan=1000)")
+
+plot!(e_ek1_mu3, t_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
+plot!(e_ek1_mu5, t_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
+plot!(e_ek1_mu8, t_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dash)
+plot!(e_ek1_3, t_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
+plot!(e_ek1_5, t_ek1_5, label="EK1(5)", color=2, marker=:diamond)
+plot!(e_ek1_8, t_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
+plot!(e_kl8, t_kl8, label="KahanLi8", color=:gray, marker=:star5)
+plot!(e_ss10, t_ss10, label="SofSpa10", color=:gray, marker=:star5, linestyle=:dash)
+plot!(e_dprkn6, t_dprkn6, label="DPRKN6", color=:gray, marker=:utriangle, linestyle=:dot)
+plot!(e_vern9_mp, t_vern9_mp, label="Vern9 + ManifoldProjection", color=:gray,
+      marker=:square)
+plot!(e_vern9, t_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:dash)
+```
+
+```julia
+plot(xlabel="Max. Energy Error", ylabel="Number of f Evaluations",
+     xscale=:log10, yscale=:log10,
+     title="Hénon-Heiles Energy Conservation (tspan=1000)")
+
+plot!(e_ek1_mu3, n_ek1_mu3, label="EK1(3) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dashdot)
+plot!(e_ek1_mu5, n_ek1_mu5, label="EK1(5) + ManifoldUpdate", color=1, marker=:circle)
+plot!(e_ek1_mu8, n_ek1_mu8, label="EK1(8) + ManifoldUpdate", color=1, marker=:circle,
+      linestyle=:dash)
+plot!(e_ek1_3, n_ek1_3, label="EK1(3)", color=2, marker=:diamond, linestyle=:dashdot)
+plot!(e_ek1_5, n_ek1_5, label="EK1(5)", color=2, marker=:diamond)
+plot!(e_ek1_8, n_ek1_8, label="EK1(8)", color=2, marker=:diamond, linestyle=:dash)
+plot!(e_kl8, n_kl8, label="KahanLi8", color=:gray, marker=:star5)
+plot!(e_ss10, n_ss10, label="SofSpa10", color=:gray, marker=:star5, linestyle=:dash)
+plot!(e_dprkn6, n_dprkn6, label="DPRKN6", color=:gray, marker=:utriangle, linestyle=:dot)
+plot!(e_vern9_mp, n_vern9_mp, label="Vern9 + ManifoldProjection", color=:gray,
+      marker=:square)
+plot!(e_vern9, n_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:dash)
+```
+
+
+## Appendix
+```julia, echo=false
+include("utils.jl")
+appendix()
+```
