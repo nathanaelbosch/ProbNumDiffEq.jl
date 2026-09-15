@@ -11,6 +11,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     _K1, _K2 = cache.C_DxD[:, 1:d], cache.C_2DxD[1:D, 1:d]
 
     S = PSDMatrix(C.R[:, 1:d])
+    S_dense = cache.C_dxd[1:d, 1:d]
     m_tmp, C_tmp = mean(x_tmp), cov(x_tmp)
 
     m_i = copy(m)
@@ -24,8 +25,11 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         mul!(H, J, SolProj)
         fast_X_A_Xt!(S, C, H)
 
-        # m_i_new, C_i_new = update(x, Gaussian(z .+ (H * (m - m_i)), S), H)
-        K = _matmul!(_K2, C.R', _matmul!(_K1, C.R, H' / S))
+        _matmul!(_K1, C.R, H')
+        K = _matmul!(_K2, C.R', _K1)
+        _matmul!(S_dense, S.R', S.R)
+        S_chol = d == 1 ? S_dense[1] : cholesky!(Symmetric(S_dense))
+        rdiv!(K, S_chol)
         m_tmp .= m_i .- m
         mul!(z_tmp, H, m_tmp)
         z_tmp .-= z
