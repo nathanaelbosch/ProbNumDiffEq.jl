@@ -86,15 +86,31 @@ plot(ref_sol, idxs=(3, 4), title="Quadrupole Boson Solution", legend=false,
 <details><summary>Code:</summary>
 ```
 ```julia
+# `ManifoldUpdate` fires as a `DiscreteCallback`, which by default saves the state both
+# before and after its `affect!`; since `savevalues!` at the "before" position always
+# runs regardless of `save_positions` when `save_everystep=true`, both the raw and the
+# manifold-corrected state end up in `sol.u` at the same `t`. Keep only the last (i.e.
+# manifold-corrected) value per unique `t` so the error metric reflects the actual output.
+function last_per_t(sol)
+    n = length(sol.t)
+    return (sol.u[i] for i in 1:n if i == n || sol.t[i] != sol.t[i+1])
+end
+
 function adaptive_energy_wpd(prob, alg, abstols, reltols, E0, Hfunc; numruns=5, kwargs...)
     errors = Float64[]
     times = Float64[]
     nevals = Int[]
     for (abstol, reltol) in zip(abstols, reltols)
         kw = (; abstol, reltol, dense=false, maxiters=Int(1e7), kwargs...)
-        sol = solve(prob, alg; kw...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg abstol reltol exception = e
+            continue
+        end
         sol.retcode == SciMLBase.ReturnCode.Success || continue
-        push!(errors, maximum(abs(Hfunc(u) - E0) for u in sol.u))
+        push!(errors, maximum(abs(Hfunc(u) - E0) for u in last_per_t(sol)))
         push!(nevals, sol.stats.nf + sol.stats.nf2)
         solve(prob, alg; kw...)
         t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
@@ -109,9 +125,15 @@ function fixedstep_energy_wpd(prob, alg, dts, E0, Hfunc; numruns=5, kwargs...)
     nevals = Int[]
     for dt in dts
         kw = (; dt, adaptive=false, dense=false, maxiters=Int(1e7), kwargs...)
-        sol = solve(prob, alg; kw...)
+        local sol
+        try
+            sol = solve(prob, alg; kw...)
+        catch e
+            @warn "solve failed, skipping" alg dt exception = e
+            continue
+        end
         sol.retcode == SciMLBase.ReturnCode.Success || continue
-        push!(errors, maximum(abs(Hfunc(u) - E0) for u in sol.u))
+        push!(errors, maximum(abs(Hfunc(u) - E0) for u in last_per_t(sol)))
         push!(nevals, sol.stats.nf + sol.stats.nf2)
         solve(prob, alg; kw...)
         t = minimum(@elapsed(solve(prob, alg; kw...)) for _ in 1:numruns)
@@ -209,13 +231,7 @@ plot!(e_vern9, t_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:d
 </details>
 ```
 
-```
-Error: UndefVarError: `e_ek1_mu8` not defined in `Main.var"##WeaveSandBox#1
-46"`
-Suggestion: check for spelling errors or missing imports.
-```
-
-
+![](figures/quadruple-boson-energy_6_1.svg)
 
 ```@raw html
 <details><summary>Code:</summary>
@@ -241,13 +257,7 @@ plot!(e_vern9, n_vern9, label="Vern9", color=:gray, marker=:square, linestyle=:d
 </details>
 ```
 
-```
-Error: UndefVarError: `e_ek1_mu8` not defined in `Main.var"##WeaveSandBox#1
-46"`
-Suggestion: check for spelling errors or missing imports.
-```
-
-
+![](figures/quadruple-boson-energy_7_1.svg)
 
 
 
@@ -277,6 +287,7 @@ Platform Info:
 Threads: 16 default, 1 interactive, 16 GC (on 128 virtual cores)
 Environment:
   LD_LIBRARY_PATH = 
+  JULIA_PROJECT = benchmarks
 ```
 
 ```@raw html
@@ -338,7 +349,7 @@ Status `/home/nrbosch/.julia/dev/ProbNumDiffEq2/benchmarks/Manifest.toml`
   [6e696c72] AbstractPlutoDingetjes v1.4.1
   [1520ce14] AbstractTrees v0.4.5
   [7d9f7c33] Accessors v0.1.45
-  [79e6a3ab] Adapt v4.7.0
+⌃ [79e6a3ab] Adapt v4.7.0
   [66dad0bd] AliasTables v1.1.3
   [ec485272] ArnoldiMethod v0.4.0
   [c9d4266f] ArrayAllocators v0.3.0
