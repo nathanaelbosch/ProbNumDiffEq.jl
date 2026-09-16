@@ -137,8 +137,9 @@ function smooth_solution!(integ)
         dt_step = t[i] - t[i-1]
         make_transition_matrices!(cache, cache.prior, dt_step)
 
-        ss = (ss_idx < 1 || ss_idx > length(smoother_states)) ? nothing :
-             smoother_states[ss_idx]
+        ss =
+            (ss_idx < 1 || ss_idx > length(smoother_states)) ? nothing :
+            smoother_states[ss_idx]
         if !isnothing(ss)
             # Recompute Σ_pred (and hence K, S_U, inside _mbf_backward_step!) fresh from
             # the (possibly diffusion-recalibrated) filtered covariance, so it is always
@@ -289,12 +290,16 @@ function _mbf_backward_step!(
     new_U_Λ_blocks = similar(blocks(U_Λ))
 
     for bi in 1:d
-        _ss = isnothing(ss) ? nothing :
-              SmootherState(collect(view(ss.z, bi:bi)), ss.H.blocks[bi])
-        _x_filt_prev = Gaussian(view(x_filt_prev.μ, bi:d:D), PSDMatrix(x_filt_prev.Σ.R.blocks[bi]))
-        _x_smooth_prev = Gaussian(view(x_smooth_prev.μ, bi:d:D), PSDMatrix(x_smooth_prev.Σ.R.blocks[bi]))
-        _x_pred = isnothing(ss) ? nothing :
-                  Gaussian(view(x_pred.μ, bi:d:D), PSDMatrix(x_pred.Σ.R.blocks[bi]))
+        _ss =
+            isnothing(ss) ? nothing :
+            SmootherState(collect(view(ss.z, bi:bi)), ss.H.blocks[bi])
+        _x_filt_prev =
+            Gaussian(view(x_filt_prev.μ, bi:d:D), PSDMatrix(x_filt_prev.Σ.R.blocks[bi]))
+        _x_smooth_prev =
+            Gaussian(view(x_smooth_prev.μ, bi:d:D), PSDMatrix(x_smooth_prev.Σ.R.blocks[bi]))
+        _x_pred =
+            isnothing(ss) ? nothing :
+            Gaussian(view(x_pred.μ, bi:d:D), PSDMatrix(x_pred.Σ.R.blocks[bi]))
         _R = isnothing(R) ? nothing : PSDMatrix(R.R.blocks[bi])
 
         λ_bi_new, U_Λ_bi_new = _mbf_backward_step!(
@@ -342,16 +347,24 @@ function _hyperbolic_qr!(V::Matrix{T}) where {T}
         na = d - i + 1
 
         asq = zero(T)
-        for l in i:d; asq += top[l, i] * top[l, i]; end
+        for l in i:d
+            asq += top[l, i] * top[l, i]
+        end
         bsq = zero(T)
-        for l in 1:d; bsq += bot[l, i] * bot[l, i]; end
+        for l in 1:d
+            bsq += bot[l, i] * bot[l, i]
+        end
 
         α² = max(asq - bsq, zero(T))
         α = sqrt(α²)
 
         if α < eps(T) * d
-            for l in i:d; top[l, i] = zero(T); end
-            for l in 1:d; bot[l, i] = zero(T); end
+            for l in i:d
+                top[l, i] = zero(T)
+            end
+            for l in 1:d
+                bot[l, i] = zero(T)
+            end
             continue
         end
 
@@ -359,22 +372,38 @@ function _hyperbolic_qr!(V::Matrix{T}) where {T}
         β = one(T) / (α * (α - top[i, i]))
 
         v_h[1] = top[i, i] - α
-        for l in 2:na; v_h[l] = top[i + l - 1, i]; end
-        for l in 1:d; w_h[l] = bot[l, i]; end
+        for l in 2:na
+            v_h[l] = top[i+l-1, i]
+        end
+        for l in 1:d
+            w_h[l] = bot[l, i]
+        end
 
-        for j in (i + 1):d
+        for j in (i+1):d
             τ = zero(T)
-            for l in 1:na; τ += v_h[l] * top[i + l - 1, j]; end
-            for l in 1:d; τ -= w_h[l] * bot[l, j]; end
+            for l in 1:na
+                τ += v_h[l] * top[i+l-1, j]
+            end
+            for l in 1:d
+                τ -= w_h[l] * bot[l, j]
+            end
             τ *= β
 
-            for l in 1:na; top[i + l - 1, j] -= τ * v_h[l]; end
-            for l in 1:d; bot[l, j] -= τ * w_h[l]; end
+            for l in 1:na
+                top[i+l-1, j] -= τ * v_h[l]
+            end
+            for l in 1:d
+                bot[l, j] -= τ * w_h[l]
+            end
         end
 
         top[i, i] = α
-        for l in (i + 1):d; top[l, i] = zero(T); end
-        for l in 1:d; bot[l, i] = zero(T); end
+        for l in (i+1):d
+            top[l, i] = zero(T)
+        end
+        for l in 1:d
+            bot[l, i] = zero(T)
+        end
     end
     return top
 end
@@ -386,12 +415,16 @@ function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D)
     w = K' * λ - S_chol \ z
     λ .-= H' * w
 
-    # Λ update (sqrt form via QR)
+    # Λ update (sqrt form via QR).
+    # BK = I - K*H; the second stack block must be a factor M with M'M = S⁻¹. With the upper
+    # triangular Cholesky factor `S_U` (S = S_U'S_U) that is `S_U' \ H = S_U⁻ᵀH`, since
+    # (S_U⁻ᵀH)'(S_U⁻ᵀH) = H'S⁻¹H; using `S_U \ H = S_U⁻¹H` instead would give
+    # H'(S_U S_U')⁻¹H ≠ H'S⁻¹H (unless S_U is diagonal) and silently corrupt Λ.
     BK = -K * H
     @inbounds for j in 1:D
         BK[j, j] += 1
     end
-    Stack = [U_Λ * BK; S_chol.U \ H]
+    Stack = [U_Λ * BK; S_chol.U' \ H]
     U_Λ .= _positive_qr_r(Stack)
 end
 
@@ -418,7 +451,9 @@ function _mbf_measurement_covariance(H, Σ_pred::PSDMatrix, R)
     end
     S_chol = cholesky(Symmetric(S_mat), check=false)
     S_U = issuccess(S_chol) ? Matrix{T}(S_chol.U) : Matrix{T}(I, size(S_mat)...)
-    K = issuccess(S_chol) ? (S_chol \ (P_pred * H')')' : zeros(T, size(P_pred, 1), size(H, 1))
+    K =
+        issuccess(S_chol) ? (S_chol \ (P_pred * H')')' :
+        zeros(T, size(P_pred, 1), size(H, 1))
     return K, S_U
 end
 

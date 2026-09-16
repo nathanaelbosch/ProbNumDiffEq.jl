@@ -77,3 +77,35 @@ end
         @test dense_err < 1e6 * final_err
     end
 end
+
+@testset "Smoothed states match the backward-kernel (RTS) recursion" begin
+    # The √MBF smoother must compute the exact same posterior as the RTS recursion
+    # stored in `sol.backward_kernels` (both are exact for the same model), up to
+    # floating-point roundoff. This guards the covariance path: a previous version
+    # of the √MBF Λ update used `S_U \ H` (i.e. S_U⁻¹H) instead of `S_U' \ H`
+    # (S_U⁻ᵀH) in its QR stack, which silently corrupted the smoothed covariances
+    # by O(10%) while leaving the (λ-based) means essentially unaffected.
+    function rts_reference(sol)
+        x_smooth = [
+            ProbNumDiffEq.Gaussian(copy(x.μ), ProbNumDiffEq.PSDMatrix(copy(x.Σ.R)))
+            for x in sol.x_filt
+        ]
+        C_DxD = zero(sol.cache.C_DxD)
+        C_3DxD = zero(sol.cache.C_3DxD)
+        for i in (length(x_smooth)-1):-1:1
+            ProbNumDiffEq.marginalize!(x_smooth[i], x_smooth[i+1],
+                sol.backward_kernels[i]; C_DxD, C_3DxD)
+        end
+        return x_smooth
+    end
+
+    for alg in (EK1(order=3, smooth=true), EK0(order=3, smooth=true),
+        DiagonalEK1(order=3, smooth=true))
+        sol = solve(prob, alg, abstol=2e-2, reltol=2e-2)
+        ref = rts_reference(sol)
+        for i in eachindex(sol.t)
+            @test sol.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
+            @test Matrix(sol.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
+        end
+    end
+end
