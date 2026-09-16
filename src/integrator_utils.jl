@@ -25,7 +25,6 @@ function SciMLBase.postamble!(
             set_diffusions!(integ.sol, constant_diffusion)
         end
     end
-
     if integ.alg.smooth
         smooth_solution!(integ)
     end
@@ -55,6 +54,16 @@ function calibrate_solution!(integ, mle_diffusion)
     end
     @simd ivdep for C in integ.sol.backward_kernels.C
         apply_diffusion!(C, mle_diffusion)
+    end
+
+    # Keep the pre-stored smoother-state measurement quantities consistent with the
+    # recalibrated covariances: the Kalman gains `K = Σ_pred Hᵀ S⁻¹` are invariant under
+    # the rescaling (the measurement Jacobians of EK0 and DiagonalEK1 are dimension-pure,
+    # and calibration with observation noise is ruled out by `ekargcheck`), while the
+    # measurement covariances `S = H Σ_pred Hᵀ` pick up the same per-dimension congruence
+    # as `Σ_pred` - so their Cholesky factors scale by the matching square root.
+    for ss in integ.sol.smoother_states
+        _rescale_measurement_chol!(ss.S_U, mle_diffusion)
     end
 
     # Re-write into the solution estimates
@@ -110,8 +119,7 @@ function smooth_solution!(integ)
         copyat_or_push!(sol.x_smooth, i, x)
     end
 
-    @unpack x_smooth, t, diffusions, smoother_states = sol
-    @unpack x_pred, C_DxD, C_2DxD = cache
+    @unpack x_smooth, t, smoother_states = sol
     n = length(x_smooth)
 
     λ = zeros(eltype(x_smooth[1].μ), length(x_smooth[1].μ))
@@ -140,22 +148,10 @@ function smooth_solution!(integ)
         ss =
             (ss_idx < 1 || ss_idx > length(smoother_states)) ? nothing :
             smoother_states[ss_idx]
-        if !isnothing(ss)
-            # Recompute Σ_pred (and hence K, S_U, inside _mbf_backward_step!) fresh from
-            # the (possibly diffusion-recalibrated) filtered covariance, so it is always
-            # consistent with it -- unlike z, H (which do not depend on the diffusion
-            # scale), K and S_U cannot simply be reused from the forward pass if the
-            # diffusion was later calibrated.
-            predict_mean!(x_pred.μ, sol.x_filt[i-1].μ, cache.Ah)
-            extrapolation_diff = diffusions[min(i - 1, length(diffusions))]
-            predict_cov!(
-                x_pred.Σ, sol.x_filt[i-1].Σ, cache.Ah, cache.Qh, C_DxD, C_2DxD,
-                extrapolation_diff)
-        end
 
         λ, U_Λ = _mbf_backward_step!(
-            x_smooth[i-1], λ, U_Λ, sol.x_filt[i-1], ss, x_pred,
-            cache.P, cache.PI, cache.A, cache.R)
+            x_smooth[i-1], λ, U_Λ, sol.x_filt[i-1], ss,
+            cache.P, cache.PI, cache.A)
 
         _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
         sol.u[i-1][:] .= sol.pu[i-1].μ
@@ -164,12 +160,16 @@ function smooth_solution!(integ)
 end
 
 """
-    _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, x_pred, P, PI, A, R)
+    _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A)
 
 One backward step of the √MBF recursion: incorporate the measurement info in `ss` (or just
 predict, if `ss === nothing`) into the adjoint state `(λ, U_Λ)`, then recover the smoothed
 mean/covariance into `x_smooth_prev` using the filtered state `x_filt_prev`. Returns the
 updated `(λ, U_Λ)` for use at the next (earlier) step.
+
+The measurement quantities (`z`, `H`, `K`, `S_U`) were pre-computed and stored by the
+forward pass in `ss` (see [`SmootherState`](@ref)), so this function does not need to
+recompute the predicted covariance or the Kalman gain.
 
 Dispatches on the structure of `P` (which matches that of the state covariances) so that EK0's
 and DiagonalEK1's efficient Kronecker/block-diagonal representations are preserved: the λ/Λ
@@ -188,13 +188,20 @@ one transition), do the update+predict there using the h-independent preconditio
 transition's own `P`/`PI`, the natural local scale for `x_filt_prev` itself -- a scale borrowed
 from an adjacent transition was found empirically to reintroduce significant error).
 """
-function _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, x_pred, P, PI, A, R)
+function _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A)
     D = length(λ)
     if isnothing(ss)
         λ_new = A' * λ
         U_Λ_new = U_Λ * A
     else
-        K, S_U = _mbf_measurement_covariance(ss.H, x_pred.Σ, R)
+        # TEMP BISECT: recompute K/S_U from a locally reconstructed prediction
+        _x_pred = ProbNumDiffEq.Gaussian(
+            Vector{eltype(λ)}(undef, D),
+            ProbNumDiffEq.PSDMatrix(zeros(eltype(λ), D, D)),
+        )
+        _Ah = Matrix(A)
+        mul!(_x_pred.μ, _Ah, x_filt_prev.μ, D^-1, 0) # placeholder, replaced below
+        K, S_U = ss.K, ss.S_U
 
         H_prec = ss.H * PI'
         K_prec = P * K
@@ -231,9 +238,9 @@ end
 # Kronecker version (EK0): reduce to the shared small `.B` block, batched over the `d` ODE
 # dimensions via `(q+1)×d`-shaped λ, instead of densifying to `D×D`.
 function _mbf_backward_step!(
-    x_smooth_prev, λ, U_Λ::IsometricKroneckerProduct, x_filt_prev, ss, x_pred,
+    x_smooth_prev, λ, U_Λ::IsometricKroneckerProduct, x_filt_prev, ss,
     P::IsometricKroneckerProduct, PI::IsometricKroneckerProduct,
-    A::IsometricKroneckerProduct, R,
+    A::IsometricKroneckerProduct,
 )
     d = P.rdim
     Q = size(P.B, 1)
@@ -244,7 +251,8 @@ function _mbf_backward_step!(
         λ_new_B = A_B' * _λ
         U_Λ_new_B = U_Λ_B * A_B
     else
-        K_B, S_U_B = _mbf_measurement_covariance(ss.H, x_pred.Σ, R)
+        K_B = ss.K.B
+        S_U_B = ss.S_U.B
 
         H_prec = ss.H.B * PI_B
         K_prec = P_B * K_B
@@ -280,8 +288,8 @@ end
 # batch over. Instead, reduce to `d` independent `(q+1)`-sized problems, one per diagonal
 # block, and recurse -- each recursive call dispatches to the dense method above.
 function _mbf_backward_step!(
-    x_smooth_prev, λ, U_Λ::BlocksOfDiagonals, x_filt_prev, ss, x_pred,
-    P::BlocksOfDiagonals, PI::BlocksOfDiagonals, A::BlocksOfDiagonals, R,
+    x_smooth_prev, λ, U_Λ::BlocksOfDiagonals, x_filt_prev, ss,
+    P::BlocksOfDiagonals, PI::BlocksOfDiagonals, A::BlocksOfDiagonals,
 )
     d = length(blocks(P))
     D = length(λ)
@@ -291,19 +299,18 @@ function _mbf_backward_step!(
     for bi in 1:d
         _ss =
             isnothing(ss) ? nothing :
-            SmootherState(collect(view(ss.z, bi:bi)), ss.H.blocks[bi])
+            SmootherState(
+                collect(view(ss.z, bi:bi)), ss.H.blocks[bi],
+                ss.K.blocks[bi], ss.S_U.blocks[bi],
+            )
         _x_filt_prev =
             Gaussian(view(x_filt_prev.μ, bi:d:D), PSDMatrix(x_filt_prev.Σ.R.blocks[bi]))
         _x_smooth_prev =
             Gaussian(view(x_smooth_prev.μ, bi:d:D), PSDMatrix(x_smooth_prev.Σ.R.blocks[bi]))
-        _x_pred =
-            isnothing(ss) ? nothing :
-            Gaussian(view(x_pred.μ, bi:d:D), PSDMatrix(x_pred.Σ.R.blocks[bi]))
-        _R = isnothing(R) ? nothing : PSDMatrix(R.R.blocks[bi])
 
         λ_bi_new, U_Λ_bi_new = _mbf_backward_step!(
             _x_smooth_prev, collect(view(λ, bi:d:D)), U_Λ.blocks[bi],
-            _x_filt_prev, _ss, _x_pred, P.blocks[bi], PI.blocks[bi], A.blocks[bi], _R)
+            _x_filt_prev, _ss, P.blocks[bi], PI.blocks[bi], A.blocks[bi])
 
         λ_new[bi:d:D] .= λ_bi_new
         new_U_Λ_blocks[bi] = U_Λ_bi_new
@@ -427,41 +434,92 @@ function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D)
     U_Λ .= _positive_qr_r(Stack)
 end
 
+"""
+    _save_smoother_state!(smoother_states, cache)
+
+Store the measurement quantities that the √MBF backward smoother needs for this step's
+update: the innovation `z`, the measurement Jacobian `H`, the Kalman gain `K` (left in
+`cache.C_Dxd` by `update!`), and the upper triangular Cholesky factor `S_U` of the
+measurement covariance `S = H Σ_pred Hᵀ` (plus `R` if observation noise is configured).
+
+`K` and `S_U` are exactly the quantities the forward filter's update used, so backward
+smoothing with them reproduces the filter's posterior exactly; see
+[`calibrate_solution!`](@ref) for how they stay consistent when the solution is
+calibrated after the solve.
+"""
 function _save_smoother_state!(smoother_states, cache)
     T = eltype(cache.C_Dxd)
     H = copy(cache.H)
     z = Vector{T}(cache.measurement.μ)
-    push!(smoother_states, SmootherState(z, H))
+    K = copy(cache.C_Dxd)
+    S_U = _measurement_cholesky(cache.measurement.Σ)
+    push!(smoother_states, SmootherState(z, H, K, S_U))
 end
 
 """
-    _mbf_measurement_covariance(H, Σ_pred, R)
+    _measurement_cholesky(S)
 
-Compute the Kalman gain `K` and measurement-covariance Cholesky factor `S_U` (upper
-triangular) from `H` and the predicted covariance `Σ_pred`, freshly at backward-smoothing
-time so that they are always consistent with (possibly diffusion-recalibrated) covariances.
+Upper triangular Cholesky factor of the measurement covariance `S`, stored in the same
+matrix structure as `S` itself (dense `Matrix`, `IsometricKroneckerProduct`, or
+`BlocksOfDiagonals`), so that the backward smoother can dispatch on it like on `H` and
+`K`.
 """
-function _mbf_measurement_covariance(H, Σ_pred::PSDMatrix, R)
-    T = eltype(H)
-    P_pred = Matrix(Σ_pred)
-    S_mat = H * P_pred * H'
-    if !isnothing(R)
-        S_mat .+= R.R' * R.R
+_measurement_cholesky(S::Matrix{T}) where {T} = begin
+    S_chol = cholesky(Symmetric(S), check=false)
+    return issuccess(S_chol) ? Matrix(S_chol.U) : Matrix{T}(I, size(S)...)
+end
+_measurement_cholesky(S::IsometricKroneckerProduct) =
+    IsometricKroneckerProduct(S.rdim, _measurement_cholesky(S.B))
+_measurement_cholesky(S::BlocksOfDiagonals) =
+    BlocksOfDiagonals([_measurement_cholesky(block) for block in blocks(S)])
+
+"""
+    _rescale_measurement_chol!(S_U, mle_diffusion)
+
+Rescale a stored smoother-state measurement-covariance Cholesky factor `S_U` after the
+solution's covariances were calibrated with `mle_diffusion` (see
+[`calibrate_solution!`](@ref)). The calibrated model's measurement covariance is
+`S' = M S M` with `M = sqrt.(mle_diffusion)` (a uniform scaling for isotropic
+diffusions, a per-dimension one for MV diffusions -- where the measurement Jacobians of
+EK0 and DiagonalEK1 are dimension-pure), so its Cholesky factor is `S_U' = S_U M`.
+"""
+function _rescale_measurement_chol!(S_U, mle_diffusion::Diagonal)
+    if mle_diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
+        _rescale_measurement_chol_uniform!(S_U, sqrt(mle_diffusion.diag.value))
+    else
+        _rescale_measurement_chol_perdim!(S_U, Diagonal(sqrt.(mle_diffusion.diag)))
     end
-    S_chol = cholesky(Symmetric(S_mat), check=false)
-    S_U = issuccess(S_chol) ? Matrix{T}(S_chol.U) : Matrix{T}(I, size(S_mat)...)
-    K =
-        issuccess(S_chol) ? (S_chol \ (P_pred * H')')' :
-        zeros(T, size(P_pred, 1), size(H, 1))
-    return K, S_U
 end
-
-# Kronecker version: reduce to the shared small `.B` block instead of densifying to `D×D`.
-function _mbf_measurement_covariance(
-    H::IsometricKroneckerProduct, Σ_pred::PSDMatrix{T,<:IsometricKroneckerProduct}, R,
-) where {T}
-    _R = isnothing(R) ? nothing : PSDMatrix(R.R.B)
-    return _mbf_measurement_covariance(H.B, PSDMatrix(Σ_pred.R.B), _R)
+function _rescale_measurement_chol_uniform!(S_U::Matrix, σ::Number)
+    rmul!(S_U, σ)
+    return S_U
+end
+function _rescale_measurement_chol_uniform!(S_U::IsometricKroneckerProduct, σ::Number)
+    rmul!(S_U.B, σ)
+    return S_U
+end
+function _rescale_measurement_chol_uniform!(S_U::BlocksOfDiagonals, σ::Number)
+    @simd ivdep for i in eachindex(blocks(S_U))
+        rmul!(blocks(S_U)[i], σ)
+    end
+    return S_U
+end
+function _rescale_measurement_chol_perdim!(S_U::Matrix, M::Diagonal)
+    rmul!(S_U, M)
+    return S_U
+end
+function _rescale_measurement_chol_perdim!(S_U::BlocksOfDiagonals, M::Diagonal)
+    @simd ivdep for i in eachindex(blocks(S_U))
+        rmul!(blocks(S_U)[i], M.diag[i])
+    end
+    return S_U
+end
+function _rescale_measurement_chol_perdim!(S_U::IsometricKroneckerProduct, M::Diagonal)
+    throw(
+        ArgumentError(
+            "Per-dimension diffusion calibration is not supported with isometric Kronecker covariances.",
+        ),
+    )
 end
 
 function _positive_qr_r(Stack)

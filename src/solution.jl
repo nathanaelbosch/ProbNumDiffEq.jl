@@ -64,7 +64,8 @@ ProbODESolution{T,N}(
     typeof(pnstats),typeof(prob),typeof(alg),typeof(interp),typeof(cache),typeof(stats),
 }(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
-    smoother_states, pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
+    smoother_states, pnstats, prob, alg, interp, cache, dense, tslocation, stats,
+    retcode,
 )
 
 function ConstructionBase.constructorof(
@@ -130,7 +131,13 @@ function SciMLBase.build_solution(
     diffusions = typeof(diffusion_prototype)[]
 
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
-    smoother_states = SmootherState{uElType,typeof(cache.H)}[]
+    smoother_states =
+        SmootherState{
+            uElType,
+            typeof(cache.H),
+            typeof(cache.C_Dxd),
+            typeof(cache.measurement.Σ),
+        }[]
 
     interp = ODEFilterPosterior(
         t, x_filt, x_smooth, diffusions, cache, alg.smooth,

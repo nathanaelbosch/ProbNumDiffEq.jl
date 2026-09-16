@@ -1,23 +1,26 @@
 """
-    SmootherState{T,TH}
+    SmootherState{T,TH,TK,TS}
 
 Per-step forward-pass quantities needed for the √MBF backward smoother: the innovation
-`z` and the measurement Jacobian `H`. Both are independent of the diffusion/calibration
-scale, so they can be stored during the forward pass and reused as-is during backward
-smoothing (which runs after diffusion calibration has rescaled `x_filt`). The Kalman
-gain and measurement-covariance Cholesky factor are instead recomputed fresh during
-backward smoothing from the (possibly rescaled) filtered covariances, so they are always
-consistent with the covariances they are paired with.
+`z`, the measurement Jacobian `H`, the Kalman gain `K`, and the Cholesky factor `S_U` of
+the measurement covariance `S = H Σ_pred Hᵀ`. All four are the exact quantities that the
+forward filter's update step used, so they can be stored during the forward pass and
+reused as-is during backward smoothing. If the solution is recalibrated after the solve
+(see [`calibrate_solution!`](@ref)), the stored `S_U` factors are rescaled accordingly,
+while the gains `K = Σ_pred Hᵀ S⁻¹` are invariant under the rescaling.
 
-`H` keeps whatever structured type `cache.H` naturally has (dense `Matrix`,
-`IsometricKroneckerProduct` for EK0, or `BlocksOfDiagonals` for `DiagonalEK1`) so that
-backward smoothing can dispatch on it and exploit the same structure the forward pass
-does, instead of forcing an expensive dense `D×D` representation.
+`H` and `K` keep whatever structured type the cache uses (dense `Matrix`,
+`IsometricKroneckerProduct` for EK0, or `BlocksOfDiagonals` for DiagonalEK1) so that
+backward smoothing can dispatch on them and exploit the same structure the forward pass
+does, instead of forcing an expensive dense representation. `S_U` is stored in the same
+structure as the measurement covariance itself.
 """
-struct SmootherState{T,TH<:AbstractMatrix{T}}
+struct SmootherState{T,TH,TK,TS}
     z::Vector{T}
     H::TH
+    K::TK
+    S_U::TS
 end
 function Base.copy(s::SmootherState)
-    SmootherState(copy(s.z), copy(s.H))
+    SmootherState(copy(s.z), copy(s.H), copy(s.K), copy(s.S_U))
 end
