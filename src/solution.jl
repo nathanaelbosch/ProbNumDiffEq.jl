@@ -130,7 +130,7 @@ function SciMLBase.build_solution(
     diffusions = typeof(diffusion_prototype)[]
 
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
-    smoother_states = SmootherState{uElType}[]
+    smoother_states = SmootherState{uElType,typeof(cache.H)}[]
 
     interp = ODEFilterPosterior(
         t, x_filt, x_smooth, diffusions, cache, alg.smooth,

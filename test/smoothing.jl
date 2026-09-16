@@ -3,6 +3,7 @@ using Test
 using LinearAlgebra
 using Statistics
 using OrdinaryDiffEq
+using OrdinaryDiffEqFIRK: RadauIIA5
 import ODEProblemLibrary: prob_ode_lotkavolterra
 using Plots
 
@@ -59,24 +60,20 @@ end
         du[2] = p[1] * ((1 - u[1]^2) * u[2] - u[1])
     end
     vdp_prob = ODEProblem(vanderpol!, [2.0, 0.0], (0.0, 2.0), [1e5])
+    ref = solve(vdp_prob, RadauIIA5(), abstol=1e-14, reltol=1e-14)
 
     for order in [6, 7]
-        sol = solve(
-            vdp_prob, EK1(order=order, smooth=true),
-            dense=false, abstol=1e-10, reltol=1e-7)
-        n = length(sol.t)
-        # Smoothed means should be finite and reasonable
+        sol = solve(vdp_prob, EK1(order=order, smooth=true), abstol=1e-10, reltol=1e-7)
+        # Smoothed means/covariances should always be finite
         @test all(u -> all(isfinite, u), sol.u)
-        @test norm(mean(sol).u) < 1e10
-        # Smoothed covariances should be finite
         @test all(x -> all(isfinite, x.Σ.R), sol.x_smooth)
-        # The actual #393 regression: backward smoothing must not blow up the
-        # covariance relative to the filtered solution (which itself can carry
-        # legitimately huge Taylor-coefficient magnitudes at high derivative
-        # orders near a stiff transient -- that's not itself a bug).
-        @test all(
-            norm(sol.x_smooth[i].Σ.R) < 100 * max(norm(sol.x_filt[i].Σ.R), 1.0)
-            for i in 1:n
-        )
+        # The actual #393 regression: the dense (interpolated) smoothed mean used to
+        # blow up to ~1e75 or NaN at these orders; it should now track the reference
+        # solution about as closely as the filtered/final estimate does.
+        ts = range(vdp_prob.tspan..., length=1000)
+        dense_err = maximum(norm(mean(sol(t)) - ref(t)) for t in ts)
+        final_err = norm(sol[end] - ref[end])
+        @test dense_err < 1e-3
+        @test dense_err < 1e6 * final_err
     end
 end

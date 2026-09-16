@@ -94,8 +94,15 @@ values saved in `integ.sol.pu` and `integ.sol.u`.
 
 Uses the square-root Modified Bryson-Frazier (√MBF) smoother (Gibbs 2011), which propagates
 adjoint variables backward and only inverts the `d×d` measurement covariance (not the full
-`D×D` predicted state covariance as in the RTS smoother). Covariance recovery uses hyperbolic
-QR to guarantee positive semi-definiteness.
+`D×D` predicted state covariance as in the RTS smoother). The λ/Λ update and predict recursion
+is done in sqrt form in each step's local preconditioned coordinates for numerical stability.
+Covariance recovery uses a hyperbolic QR factorization to guarantee a positive semi-definite
+result, also computed in preconditioned coordinates.
+
+The actual per-step work is done by [`_mbf_backward_step!`](@ref), which dispatches on the
+structure of the state covariances (dense, EK0's Kronecker, or DiagonalEK1's block-diagonal),
+the same way [`predict_cov!`](@ref) and [`update!`](@ref) do -- so this loop doesn't need to
+know or care which algorithm produced the solution being smoothed.
 """
 function smooth_solution!(integ)
     @unpack cache, sol = integ
@@ -104,129 +111,224 @@ function smooth_solution!(integ)
     end
 
     @unpack x_smooth, t, diffusions, smoother_states = sol
-    @unpack d, q, x_pred, C_DxD, C_2DxD = cache
-    D = d * (q + 1)
+    @unpack x_pred, C_DxD, C_2DxD = cache
     n = length(x_smooth)
 
-    λ = zeros(eltype(x_smooth[1].μ), D)
-    λ_tmp = similar(λ)
-    U_Λ = zeros(eltype(λ), D, D)
-    U_Λ_tmp = similar(U_Λ)
+    λ = zeros(eltype(x_smooth[1].μ), length(x_smooth[1].μ))
+    # U_Λ needs to hold a general (non-diagonal) matrix once measurement info accumulates,
+    # so it must be zero-initialized from the state covariance's structure (dense/Kronecker/
+    # block-diagonal), not from `cache.P`/`PI` -- those are diagonal preconditioners even in
+    # the dense (EK1) case, and a `Diagonal`-typed `U_Λ` can't hold the general update result.
+    U_Λ = zero(x_smooth[1].Σ.R)
 
-    for i in n:-1:1
-        if i < n && iszero(t[i+1] - t[i])
-            copy!(x_smooth[i], x_smooth[i+1])
-            _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
-            sol.u[i][:] .= sol.pu[i].μ
+    # x_smooth[n] = x_filt[n] exactly: there are no future measurements to smooth with.
+    _gaussian_mul!(sol.pu[n], cache.SolProj, x_smooth[n])
+    sol.u[n][:] .= sol.pu[n].μ
+
+    for i in n:-1:2
+        if iszero(t[i] - t[i-1])
+            copy!(x_smooth[i-1], x_smooth[i])
+            _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
+            sol.u[i-1][:] .= sol.pu[i-1].μ
             continue
-        end
-
-        # Recover smoothed mean: m_s = m_f - P_f * λ
-        U_f = Matrix(sol.x_filt[i].Σ.R)
-        _mbf_recover_mean!(x_smooth[i].μ, U_f, λ)
-
-        # Recover smoothed covariance via hyperbolic QR
-        if i < n
-            _mbf_recover_cov!(x_smooth[i].Σ, U_f, U_Λ)
-        end
-
-        _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
-        sol.u[i][:] .= sol.pu[i].μ
-
-        if i == 1
-            break
         end
 
         ss_idx = i - 1
         dt_step = t[i] - t[i-1]
         make_transition_matrices!(cache, cache.prior, dt_step)
 
-        if ss_idx < 1 || ss_idx > length(smoother_states)
-            copyto!(λ_tmp, λ)
-            _matmul!(λ, cache.Ah', λ_tmp)
-            U_Λ .= U_Λ * Matrix(cache.Ah)
-            continue
+        ss = (ss_idx < 1 || ss_idx > length(smoother_states)) ? nothing :
+             smoother_states[ss_idx]
+        if !isnothing(ss)
+            # Recompute Σ_pred (and hence K, S_U, inside _mbf_backward_step!) fresh from
+            # the (possibly diffusion-recalibrated) filtered covariance, so it is always
+            # consistent with it -- unlike z, H (which do not depend on the diffusion
+            # scale), K and S_U cannot simply be reused from the forward pass if the
+            # diffusion was later calibrated.
+            predict_mean!(x_pred.μ, sol.x_filt[i-1].μ, cache.Ah)
+            extrapolation_diff = diffusions[min(i - 1, length(diffusions))]
+            predict_cov!(
+                x_pred.Σ, sol.x_filt[i-1].Σ, cache.Ah, cache.Qh, C_DxD, C_2DxD,
+                extrapolation_diff)
         end
-        ss = smoother_states[ss_idx]
 
-        # Recompute Σ_pred (and hence K, S_U) fresh from the (possibly diffusion-
-        # recalibrated) filtered covariance, so it is always consistent with it --
-        # unlike z, H (which do not depend on the diffusion scale), K and S_U cannot
-        # simply be reused from the forward pass if the diffusion was later calibrated.
-        predict_mean!(x_pred.μ, sol.x_filt[i-1].μ, cache.Ah)
-        extrapolation_diff = diffusions[min(i - 1, length(diffusions))]
-        predict_cov!(
-            x_pred.Σ, sol.x_filt[i-1].Σ, cache.Ah, cache.Qh, C_DxD, C_2DxD,
-            extrapolation_diff)
-        K, S_U = _mbf_measurement_covariance(ss.H, x_pred.Σ, cache.R)
+        λ, U_Λ = _mbf_backward_step!(
+            x_smooth[i-1], λ, U_Λ, sol.x_filt[i-1], ss, x_pred,
+            cache.P, cache.PI, cache.A, cache.R)
 
-        # √MBF adjoint update
-        _sqrt_mbf_update!(λ, U_Λ, K, S_U, ss.z, ss.H, D, d)
-
-        # √MBF predict: propagate backward through transition
-        Ah_mat = Matrix(cache.Ah)
-        copyto!(λ_tmp, λ)
-        λ .= Ah_mat' * λ_tmp
-        copyto!(U_Λ_tmp, U_Λ)
-        U_Λ .= U_Λ_tmp * Ah_mat
+        _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
+        sol.u[i-1][:] .= sol.pu[i-1].μ
     end
     return nothing
+end
+
+"""
+    _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, x_pred, P, PI, A, R)
+
+One backward step of the √MBF recursion: incorporate the measurement info in `ss` (or just
+predict, if `ss === nothing`) into the adjoint state `(λ, U_Λ)`, then recover the smoothed
+mean/covariance into `x_smooth_prev` using the filtered state `x_filt_prev`. Returns the
+updated `(λ, U_Λ)` for use at the next (earlier) step.
+
+Dispatches on the structure of `P` (which matches that of the state covariances) so that EK0's
+and DiagonalEK1's efficient Kronecker/block-diagonal representations are preserved: the λ/Λ
+recursion and covariance recovery only ever touch the small `(q+1)×(q+1)` blocks (batched over
+the `d` ODE dimensions for EK0, or looped independently for DiagonalEK1), never a dense `D×D`
+matrix -- without this, backward smoothing would cost `O(D^3) = O((d(q+1))^3)` instead of the
+`O(d)`-ish cost the rest of the package achieves for these algorithms.
+
+The λ/Λ update and predict steps involve matrix products (H, K, the transition matrix) applied
+repeatedly across many steps; doing this in physical coordinates re-introduces the same
+ill-conditioning that motivated preconditioning elsewhere in this codebase (IWP covariances
+span many orders of magnitude across derivative orders). So: precondition into this specific
+transition's local coordinates (`P`, `PI` depend on the step size and are only valid for this
+one transition), do the update+predict there using the h-independent preconditioned transition
+`A`, then unprecondition back to physical before recovering `x_smooth_prev` below (using this
+transition's own `P`/`PI`, the natural local scale for `x_filt_prev` itself -- a scale borrowed
+from an adjacent transition was found empirically to reintroduce significant error).
+"""
+function _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, x_pred, P, PI, A, R)
+    D = length(λ)
+    if isnothing(ss)
+        λ_new = A' * λ
+        U_Λ_new = U_Λ * A
+    else
+        K, S_U = _mbf_measurement_covariance(ss.H, x_pred.Σ, R)
+
+        H_prec = ss.H * PI'
+        K_prec = P * K
+        λ_prec = PI' * λ
+        U_Λ_prec = U_Λ * PI
+
+        _sqrt_mbf_update!(λ_prec, U_Λ_prec, K_prec, S_U, ss.z, H_prec, D)
+
+        λ_prec = A' * λ_prec
+        U_Λ_prec = U_Λ_prec * A
+
+        λ_new = P' * λ_prec
+        U_Λ_new = U_Λ_prec * P
+    end
+
+    # Recover smoothed mean/covariance using the now-updated λ, Λ (information from
+    # measurements {i, ..., n}).
+    U_f = Matrix(x_filt_prev.Σ.R)
+    _mbf_recover_mean!(x_smooth_prev.μ, U_f, λ_new)
+    U_f_prec = U_f * P'
+    U_Λ_prec_rec = U_Λ_new * PI
+    new_R_prec = _mbf_recover_cov(U_f_prec, U_Λ_prec_rec)
+    new_R = new_R_prec * PI'
+    # `new_R` is only upper triangular up to floating-point roundoff, which -- while tiny
+    # relative to the overall matrix -- can be large relative to the (possibly much
+    # smaller, measurement-shrunk) smoothed covariance entries. Naively dropping the
+    # lower-triangular part (as a plain truncation would) therefore changes `new_R'*new_R`
+    # non-negligibly; re-triangularize via QR instead, which preserves `R'R` exactly.
+    new_R = _positive_qr_r(new_R)
+    _copy_upper_to_R!(x_smooth_prev.Σ.R, new_R)
+
+    return λ_new, U_Λ_new
+end
+
+# Kronecker version (EK0): reduce to the shared small `.B` block, batched over the `d` ODE
+# dimensions via `(q+1)×d`-shaped λ, instead of densifying to `D×D`.
+function _mbf_backward_step!(
+    x_smooth_prev, λ, U_Λ::IsometricKroneckerProduct, x_filt_prev, ss, x_pred,
+    P::IsometricKroneckerProduct, PI::IsometricKroneckerProduct,
+    A::IsometricKroneckerProduct, R,
+)
+    d = P.rdim
+    Q = size(P.B, 1)
+    _λ = reshape_no_alloc(λ, d, Q)'
+    P_B, PI_B, A_B, U_Λ_B = P.B, PI.B, A.B, U_Λ.B
+
+    if isnothing(ss)
+        λ_new_B = A_B' * _λ
+        U_Λ_new_B = U_Λ_B * A_B
+    else
+        K_B, S_U_B = _mbf_measurement_covariance(ss.H, x_pred.Σ, R)
+
+        H_prec = ss.H.B * PI_B
+        K_prec = P_B * K_B
+        λ_prec = PI_B' * _λ
+        U_Λ_prec = U_Λ_B * PI_B
+        z_row = reshape_no_alloc(ss.z, d, 1)'
+
+        _sqrt_mbf_update!(λ_prec, U_Λ_prec, K_prec, S_U_B, z_row, H_prec, Q)
+
+        λ_prec = A_B' * λ_prec
+        U_Λ_prec = U_Λ_prec * A_B
+
+        λ_new_B = P_B' * λ_prec
+        U_Λ_new_B = U_Λ_prec * P_B
+    end
+
+    U_f_B = x_filt_prev.Σ.R.B
+    μ_smooth_view = reshape_no_alloc(x_smooth_prev.μ, d, Q)'
+    _mbf_recover_mean!(μ_smooth_view, U_f_B, λ_new_B)
+    U_f_prec = U_f_B * P_B'
+    U_Λ_prec_rec = U_Λ_new_B * PI_B
+    new_R_B = _mbf_recover_cov(U_f_prec, U_Λ_prec_rec) * PI_B'
+    new_R_B = _positive_qr_r(new_R_B)
+    copy!(x_smooth_prev.Σ.R.B, UpperTriangular(new_R_B))
+
+    λ_new = similar(λ)
+    reshape_no_alloc(λ_new, d, Q)' .= λ_new_B
+    return λ_new, IsometricKroneckerProduct(d, U_Λ_new_B)
+end
+
+# Block-diagonal version (DiagonalEK1): unlike EK0, each of the `d` ODE dimensions has its own
+# measurement Jacobian (and hence its own Kalman gain), so there is no shared small block to
+# batch over. Instead, reduce to `d` independent `(q+1)`-sized problems, one per diagonal
+# block, and recurse -- each recursive call dispatches to the dense method above.
+function _mbf_backward_step!(
+    x_smooth_prev, λ, U_Λ::BlocksOfDiagonals, x_filt_prev, ss, x_pred,
+    P::BlocksOfDiagonals, PI::BlocksOfDiagonals, A::BlocksOfDiagonals, R,
+)
+    d = length(blocks(P))
+    D = length(λ)
+    λ_new = similar(λ)
+    new_U_Λ_blocks = similar(blocks(U_Λ))
+
+    for bi in 1:d
+        _ss = isnothing(ss) ? nothing :
+              SmootherState(collect(view(ss.z, bi:bi)), ss.H.blocks[bi])
+        _x_filt_prev = Gaussian(view(x_filt_prev.μ, bi:d:D), PSDMatrix(x_filt_prev.Σ.R.blocks[bi]))
+        _x_smooth_prev = Gaussian(view(x_smooth_prev.μ, bi:d:D), PSDMatrix(x_smooth_prev.Σ.R.blocks[bi]))
+        _x_pred = isnothing(ss) ? nothing :
+                  Gaussian(view(x_pred.μ, bi:d:D), PSDMatrix(x_pred.Σ.R.blocks[bi]))
+        _R = isnothing(R) ? nothing : PSDMatrix(R.R.blocks[bi])
+
+        λ_bi_new, U_Λ_bi_new = _mbf_backward_step!(
+            _x_smooth_prev, collect(view(λ, bi:d:D)), U_Λ.blocks[bi],
+            _x_filt_prev, _ss, _x_pred, P.blocks[bi], PI.blocks[bi], A.blocks[bi], _R)
+
+        λ_new[bi:d:D] .= λ_bi_new
+        new_U_Λ_blocks[bi] = U_Λ_bi_new
+    end
+    return λ_new, BlocksOfDiagonals(new_U_Λ_blocks)
 end
 
 function _mbf_recover_mean!(μ_smooth, U_f::Matrix, λ)
     μ_smooth .-= U_f' * (U_f * λ)
 end
 
-function _mbf_recover_cov!(Σ_smooth::PSDMatrix, U_f::Matrix, U_Λ::Matrix)
-    # P_s = P_f - P_f*Λ*P_f = U_f' * (I - W*W') * U_f  with  W = U_f*U_Λ'
-    # _hyperbolic_qr! computes R with R'R = I - V'V, so pass V = W' = U_Λ*U_f'
+"""
+    _mbf_recover_cov(U_f, U_Λ)
+
+Recover the smoothed covariance square-root factor from the filtered covariance
+(`U_f`, upper triangular such that `Σ_filt = U_f'U_f`) and the MBF adjoint
+information matrix (`U_Λ`, such that `Λ = U_Λ'U_Λ`), i.e. `R` with
+`R'R = Σ_filt - Σ_filt*Λ*Σ_filt`. Writing `Σ_smooth = U_f' * (I - W*W') * U_f` with
+`W = U_f*U_Λ'`, this is computed via a hyperbolic QR factorization of `V = W'`, which
+guarantees a PSD result (unlike forming `Σ_filt - Σ_filt*Λ*Σ_filt` densely, which
+squares the condition number and can catastrophically cancel when the smoothed
+covariance is much smaller than the filtered one). Must be called with `U_f`, `U_Λ`
+in a locally well-scaled (preconditioned) coordinate system -- see the call site in
+`smooth_solution!`.
+"""
+function _mbf_recover_cov(U_f::Matrix, U_Λ::Matrix)
     V = U_Λ * U_f'
     R_M = _hyperbolic_qr!(V)
-    U_s = R_M * U_f
-    _copy_upper_to_R!(Σ_smooth.R, U_s)
-end
-
-function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, d)
-    S_chol = Cholesky(S_U, 'U', 0)
-
-    # λ update (BK-free form); z_code = h(m_pred), innovation = -z_code
-    w = K' * λ - S_chol \ z
-    λ .-= H' * w
-
-    # Λ update (sqrt form via QR)
-    BK = -K * H
-    @inbounds for j in 1:D
-        BK[j, j] += 1
-    end
-    Stack = [U_Λ * BK; S_chol.U \ H]
-    U_Λ .= _positive_qr_r(Stack)
-end
-
-function _save_smoother_state!(smoother_states, cache)
-    T = eltype(cache.C_Dxd)
-    H = Matrix{T}(cache.H)
-    z = Vector{T}(cache.measurement.μ)
-    push!(smoother_states, SmootherState(z, H))
-end
-
-"""
-    _mbf_measurement_covariance(H, Σ_pred, R)
-
-Compute the Kalman gain `K` and measurement-covariance Cholesky factor `S_U` (upper
-triangular) from `H` and the predicted covariance `Σ_pred`, freshly at backward-smoothing
-time so that they are always consistent with (possibly diffusion-recalibrated) covariances.
-"""
-function _mbf_measurement_covariance(H, Σ_pred::PSDMatrix, R)
-    T = eltype(H)
-    P_pred = Matrix(Σ_pred)
-    S_mat = H * P_pred * H'
-    if !isnothing(R)
-        S_mat .+= R.R' * R.R
-    end
-    S_chol = cholesky(Symmetric(S_mat), check=false)
-    S_U = issuccess(S_chol) ? Matrix{T}(S_chol.U) : Matrix{T}(I, size(S_mat)...)
-    K = issuccess(S_chol) ? (S_chol \ (P_pred * H')')' : zeros(T, size(P_pred, 1), size(H, 1))
-    return K, S_U
+    return R_M * U_f
 end
 
 function _hyperbolic_qr!(V::Matrix{T}) where {T}
@@ -256,7 +358,6 @@ function _hyperbolic_qr!(V::Matrix{T}) where {T}
         α = top[i, i] >= 0 ? -α : α
         β = one(T) / (α * (α - top[i, i]))
 
-        # u_top, u_bot (unscaled householder-like vectors for this hyperbolic reflection)
         v_h[1] = top[i, i] - α
         for l in 2:na; v_h[l] = top[i + l - 1, i]; end
         for l in 1:d; w_h[l] = bot[l, i]; end
@@ -278,6 +379,57 @@ function _hyperbolic_qr!(V::Matrix{T}) where {T}
     return top
 end
 
+function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D)
+    S_chol = Cholesky(S_U, 'U', 0)
+
+    # λ update (BK-free form); z_code = h(m_pred), innovation = -z_code
+    w = K' * λ - S_chol \ z
+    λ .-= H' * w
+
+    # Λ update (sqrt form via QR)
+    BK = -K * H
+    @inbounds for j in 1:D
+        BK[j, j] += 1
+    end
+    Stack = [U_Λ * BK; S_chol.U \ H]
+    U_Λ .= _positive_qr_r(Stack)
+end
+
+function _save_smoother_state!(smoother_states, cache)
+    T = eltype(cache.C_Dxd)
+    H = copy(cache.H)
+    z = Vector{T}(cache.measurement.μ)
+    push!(smoother_states, SmootherState(z, H))
+end
+
+"""
+    _mbf_measurement_covariance(H, Σ_pred, R)
+
+Compute the Kalman gain `K` and measurement-covariance Cholesky factor `S_U` (upper
+triangular) from `H` and the predicted covariance `Σ_pred`, freshly at backward-smoothing
+time so that they are always consistent with (possibly diffusion-recalibrated) covariances.
+"""
+function _mbf_measurement_covariance(H, Σ_pred::PSDMatrix, R)
+    T = eltype(H)
+    P_pred = Matrix(Σ_pred)
+    S_mat = H * P_pred * H'
+    if !isnothing(R)
+        S_mat .+= R.R' * R.R
+    end
+    S_chol = cholesky(Symmetric(S_mat), check=false)
+    S_U = issuccess(S_chol) ? Matrix{T}(S_chol.U) : Matrix{T}(I, size(S_mat)...)
+    K = issuccess(S_chol) ? (S_chol \ (P_pred * H')')' : zeros(T, size(P_pred, 1), size(H, 1))
+    return K, S_U
+end
+
+# Kronecker version: reduce to the shared small `.B` block instead of densifying to `D×D`.
+function _mbf_measurement_covariance(
+    H::IsometricKroneckerProduct, Σ_pred::PSDMatrix{T,<:IsometricKroneckerProduct}, R,
+) where {T}
+    _R = isnothing(R) ? nothing : PSDMatrix(R.R.B)
+    return _mbf_measurement_covariance(H.B, PSDMatrix(Σ_pred.R.B), _R)
+end
+
 function _positive_qr_r(Stack)
     R = Matrix(qr(Stack).R)
     @inbounds for i in axes(R, 1)
@@ -288,25 +440,9 @@ function _positive_qr_r(Stack)
     return R
 end
 
-function _copy_upper_to_R!(R, U_s)
-    if R isa IsometricKroneckerProduct
-        d = R.rdim
-        q1 = size(R.B, 1)
-        for j in 1:q1, i in 1:q1
-            R.B[i, j] = U_s[(i-1)*d+1, (j-1)*d+1]
-        end
-    elseif R isa BlocksOfDiagonals
-        d = length(blocks(R))
-        q1 = size(blocks(R)[1], 1)
-        for bi in 1:d
-            for j in 1:q1, i in 1:q1
-                blocks(R)[bi][i, j] = U_s[(i-1)*d+bi, (j-1)*d+bi]
-            end
-        end
-    else
-        n = size(U_s, 1)
-        copy!(R, UpperTriangular(view(U_s, 1:n, 1:n)))
-    end
+function _copy_upper_to_R!(R::Matrix, U_s)
+    n = size(U_s, 1)
+    copy!(R, UpperTriangular(view(U_s, 1:n, 1:n)))
 end
 
 "Inspired by `OrdinaryDiffEqCore.solution_match_cur_integrator!`"
