@@ -129,6 +129,13 @@ function smooth_solution!(integ)
     # the dense (EK1) case, and a `Diagonal`-typed `U_Λ` can't hold the general update result.
     U_Λ = zero(x_smooth[1].Σ.R)
 
+    # The dense (EK1) backward step works on full D×D matrices; preallocate its scratch
+    # buffers once and reuse them across all steps so that the backward recursion runs
+    # without per-step allocations. The structured (Kronecker / block-diagonal) paths only
+    # ever touch small (q+1)-sized blocks, so they don't need this.
+    scratch =
+        U_Λ isa Matrix ? _MBFDenseScratch(length(λ), size(cache.H, 1), eltype(λ)) : nothing
+
     # x_smooth[n] = x_filt[n] exactly: there are no future measurements to smooth with.
     _gaussian_mul!(sol.pu[n], cache.SolProj, x_smooth[n])
     sol.u[n][:] .= sol.pu[n].μ
@@ -151,7 +158,7 @@ function smooth_solution!(integ)
 
         λ, U_Λ = _mbf_backward_step!(
             x_smooth[i-1], λ, U_Λ, sol.x_filt[i-1], ss,
-            cache.P, cache.PI, cache.A)
+            cache.P, cache.PI, cache.A, scratch)
 
         _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
         sol.u[i-1][:] .= sol.pu[i-1].μ
@@ -159,8 +166,48 @@ function smooth_solution!(integ)
     return nothing
 end
 
+# Preallocated scratch buffers for the dense (EK1) backward step, created once per
+# `smooth_solution!` call and reused by every step; sized by (D, d) = (state dimension,
+# measurement dimension).
+struct _MBFDenseScratch{T}
+    U_Λ_prec::Matrix{T}
+    U_Λ_pred::Matrix{T}
+    U_Λ_new::Matrix{T}
+    Stack::Matrix{T}
+    R_M::Matrix{T}
+    R_f::Matrix{T}
+    U_f::Matrix{T}
+    U_f_prec::Matrix{T}
+    U_ΛK::Matrix{T}
+    H_prec::Matrix{T}
+    K_prec::Matrix{T}
+    λ_prec::Vector{T}
+    λ_pred::Vector{T}
+    λ_new::Vector{T}
+    w::Vector{T}
+    z_sol::Vector{T}
+    v_h::Vector{T}
+    w_h::Vector{T}
+    tau::Vector{T}
+    S_U_T::Matrix{T}
+end
+
+function _MBFDenseScratch(D::Integer, d::Integer, ::Type{T}) where {T}
+    return _MBFDenseScratch{T}(
+        Matrix{T}(undef, D, D), Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
+        Matrix{T}(undef, D + d, D),
+        Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
+        Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
+        Matrix{T}(undef, D, d), Matrix{T}(undef, d, D), Matrix{T}(undef, D, d),
+        zeros(T, D), zeros(T, D), zeros(T, D),
+        zeros(T, d), zeros(T, d),
+        zeros(T, D), zeros(T, D), zeros(T, D),
+        Matrix{T}(undef, d, d),
+    )
+end
+
 """
-    _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A)
+    _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A, scratch=nothing)
 
 One backward step of the √MBF recursion: incorporate the measurement info in `ss` (or just
 predict, if `ss === nothing`) into the adjoint state `(λ, U_Λ)`, then recover the smoothed
@@ -178,6 +225,10 @@ the `d` ODE dimensions for EK0, or looped independently for DiagonalEK1), never 
 matrix -- without this, backward smoothing would cost `O(D^3) = O((d(q+1))^3)` instead of the
 `O(d)`-ish cost the rest of the package achieves for these algorithms.
 
+For the dense (EK1) case, `scratch` (a [`_MBFDenseScratch`](@ref); built on the fly if not
+provided) holds preallocated buffers so that the `D×D` work runs without per-step
+allocations. The structured methods ignore it.
+
 The λ/Λ update and predict steps involve matrix products (H, K, the transition matrix) applied
 repeatedly across many steps; doing this in physical coordinates re-introduces the same
 ill-conditioning that motivated preconditioning elsewhere in this codebase (IWP covariances
@@ -190,47 +241,76 @@ from an adjacent transition was found empirically to reintroduce significant err
 """
 function _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A)
     D = length(λ)
+    d = isnothing(ss) ? D : size(ss.H, 1)
+    return _mbf_backward_step!(
+        x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A,
+        _MBFDenseScratch(D, d, eltype(λ)),
+    )
+end
+
+# `smooth_solution!` passes its (possibly `nothing`) scratch through; the structured
+# (Kronecker / block-diagonal) methods below ignore it and dispatch on `P`'s structure.
+function _mbf_backward_step!(
+    x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A, scratch,
+)
+    return _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A)
+end
+
+# The dense (EK1) implementation, allocation-free given a matching `scratch`.
+function _mbf_backward_step!(
+    x_smooth_prev, λ, U_Λ, x_filt_prev, ss,
+    P::Diagonal, PI::Diagonal, A::Matrix, sc::_MBFDenseScratch,
+)
+    D = length(λ)
+    StackTop = view(sc.Stack, 1:D, :)
+
     if isnothing(ss)
-        λ_new = A' * λ
-        U_Λ_new = U_Λ * A
+        copyto!(sc.λ_prec, λ)
+        mul!(sc.λ_new, transpose(A), sc.λ_prec)
+        copyto!(sc.U_Λ_prec, U_Λ)
+        mul!(sc.U_Λ_new, sc.U_Λ_prec, A)
     else
-        # TEMP BISECT: recompute K/S_U from a locally reconstructed prediction
-        _x_pred = ProbNumDiffEq.Gaussian(
-            Vector{eltype(λ)}(undef, D),
-            ProbNumDiffEq.PSDMatrix(zeros(eltype(λ), D, D)),
+        d = size(sc.H_prec, 1)
+        StackBot = view(sc.Stack, (D+1):(D+d), :)
+
+        # Precondition into this transition's local coordinates.
+        mul!(sc.H_prec, ss.H, transpose(PI))
+        mul!(sc.K_prec, P, ss.K)
+        mul!(sc.λ_prec, transpose(PI), λ)
+        mul!(sc.U_Λ_prec, U_Λ, PI)
+
+        _sqrt_mbf_update!(
+            sc.λ_prec, sc.U_Λ_prec, sc.K_prec, ss.S_U, ss.z, sc.H_prec, D, sc,
         )
-        _Ah = Matrix(A)
-        mul!(_x_pred.μ, _Ah, x_filt_prev.μ, D^-1, 0) # placeholder, replaced below
-        K, S_U = ss.K, ss.S_U
 
-        H_prec = ss.H * PI'
-        K_prec = P * K
-        λ_prec = PI' * λ
-        U_Λ_prec = U_Λ * PI
-
-        _sqrt_mbf_update!(λ_prec, U_Λ_prec, K_prec, S_U, ss.z, H_prec, D)
-
-        λ_prec = A' * λ_prec
-        U_Λ_prec = U_Λ_prec * A
-
-        λ_new = P' * λ_prec
-        U_Λ_new = U_Λ_prec * P
+        # Predict (still in preconditioned coordinates) and unprecondition.
+        mul!(sc.λ_pred, transpose(A), sc.λ_prec)
+        mul!(sc.λ_new, transpose(P), sc.λ_pred)
+        mul!(sc.U_Λ_pred, sc.U_Λ_prec, A)
+        mul!(sc.U_Λ_new, sc.U_Λ_pred, P)
     end
+    λ_new, U_Λ_new = sc.λ_new, sc.U_Λ_new
 
     # Recover smoothed mean/covariance using the now-updated λ, Λ (information from
     # measurements {i, ..., n}).
-    U_f = Matrix(x_filt_prev.Σ.R)
-    _mbf_recover_mean!(x_smooth_prev.μ, U_f, λ_new)
-    U_f_prec = U_f * P'
-    U_Λ_prec_rec = U_Λ_new * PI
-    # `new_R` is a valid square-root factor of the smoothed covariance
-    # (`new_R'new_R = Σ_s`) but generally a full (non-triangular) matrix. That is fine:
+    copy!(sc.U_f, x_filt_prev.Σ.R)
+    mul!(sc.λ_prec, sc.U_f, λ_new)
+    mul!(sc.λ_pred, transpose(sc.U_f), sc.λ_prec)
+    x_smooth_prev.μ .-= sc.λ_pred
+    mul!(sc.U_f_prec, sc.U_f, transpose(P))
+    mul!(sc.U_Λ_prec, U_Λ_new, PI)
+    mul!(sc.U_Λ_pred, sc.U_Λ_prec, transpose(sc.U_f_prec))
+    _hyperbolic_qr!(sc.R_M, sc.v_h, sc.w_h, sc.U_Λ_pred)
+    # `(R_M * U_f_prec) * PI' = R_M * U_f`, since `U_f * P' * PI' = U_f`: recover directly in
+    # physical coordinates with the physical filtered factor, saving a D×D product.
+    mul!(sc.R_f, sc.R_M, sc.U_f)
+    # `sc.R_f` is a valid square-root factor of the smoothed covariance
+    # (`sc.R_f'sc.R_f = Σ_s`) but generally a full (non-triangular) matrix. That is fine:
     # the package does not assume upper-triangular factors in general (e.g. `update!`
     # stores `Σ_pred.R * (I - K*H)'`), and all `PSDMatrix` operations (`Matrix`, `det`,
     # `logabsdet`, `diag`, QR stacks, ...) only rely on `R'R`. So we store the factor
     # as-is instead of paying for a per-step re-triangularizing QR.
-    new_R = _mbf_recover_cov(U_f_prec, U_Λ_prec_rec) * PI'
-    copy!(x_smooth_prev.Σ.R, new_R)
+    copy!(x_smooth_prev.Σ.R, sc.R_f)
 
     return λ_new, U_Λ_new
 end
@@ -344,11 +424,22 @@ end
 
 function _hyperbolic_qr!(V::Matrix{T}) where {T}
     d = size(V, 1)
-    top = Matrix{T}(I, d, d)
-    bot = V
-    v_h = Vector{T}(undef, d)
-    w_h = Vector{T}(undef, d)
+    return _hyperbolic_qr!(
+        Matrix{T}(I, d, d), Vector{T}(undef, d), Vector{T}(undef, d), V,
+    )
+end
 
+# In-place variant of [`_hyperbolic_qr!`](@ref) using the preallocated output matrix `top`
+# (initialized to I here) and work vectors `v_h`, `w_h`; destroys `V`.
+function _hyperbolic_qr!(
+    top::Matrix{T}, v_h::Vector{T}, w_h::Vector{T}, V::Matrix{T},
+) where {T}
+    d = size(V, 1)
+    fill!(top, zero(T))
+    @inbounds for i in 1:d
+        top[i, i] = one(T)
+    end
+    bot = V
     @inbounds for i in 1:d
         na = d - i + 1
 
@@ -432,6 +523,39 @@ function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D)
     end
     Stack = [U_Λ * BK; S_chol.U' \ H]
     U_Λ .= _positive_qr_r(Stack)
+end
+
+# Dense version writing into the preallocated buffers of `sc` (see `_MBFDenseScratch`),
+# so that the backward recursion runs without per-step allocations. Mathematically identical
+# to the method above (used by the structured paths, which only touch small blocks).
+function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, sc::_MBFDenseScratch)
+    # `S_U_T = S_U'` as a contiguous matrix so that the triangular solves below hit BLAS.
+    copyto!(sc.S_U_T, transpose(S_U))
+
+    # λ update (BK-free form); z_code = h(m_pred), innovation = -z_code
+    mul!(sc.w, transpose(K), λ)
+    copyto!(sc.z_sol, z)
+    ldiv!(LowerTriangular(sc.S_U_T), sc.z_sol)
+    ldiv!(UpperTriangular(S_U), sc.z_sol)
+    sc.w .-= sc.z_sol
+    mul!(λ, transpose(H), sc.w, -1.0, 1.0)
+
+    # Λ update (sqrt form via QR).
+    # The second stack block must be a factor M with M'M = S⁻¹. With the upper triangular
+    # Cholesky factor `S_U` (S = S_U'S_U) that is `S_U' \ H = S_U⁻ᵀH`, since
+    # (S_U⁻ᵀH)'(S_U⁻ᵀH) = H'S⁻¹H; using `S_U \ H = S_U⁻¹H` instead would give
+    # H'(S_U S_U')⁻¹H ≠ H'S⁻¹H (unless S_U is diagonal) and silently corrupt Λ.
+    # The first stack row `U_Λ * (I - K*H)` is computed as `U_Λ - (U_Λ*K)*H` to avoid
+    # materializing the D×D matrix `BK`.
+    mul!(sc.U_ΛK, U_Λ, K)
+    StackTop = view(sc.Stack, 1:D, :)
+    copyto!(StackTop, U_Λ)
+    mul!(StackTop, sc.U_ΛK, H, -1.0, 1.0)
+    StackBot = view(sc.Stack, (D+1):(D+size(H, 1)), :)
+    copyto!(StackBot, H)
+    ldiv!(LowerTriangular(sc.S_U_T), StackBot)
+    _positive_qr_r!(U_Λ, sc.Stack, sc.tau)
+    return nothing
 end
 
 """
@@ -530,6 +654,28 @@ function _positive_qr_r(Stack)
         end
     end
     return R
+end
+
+# In-place variant of [`_positive_qr_r`](@ref): factorizes `Stack` (destroying it) and writes
+# the R factor with positive diagonal into `R_dest` (zeros below the diagonal).
+function _positive_qr_r!(R_dest::Matrix, Stack::Matrix, tau::Vector)
+    D = size(Stack, 2)
+    if eltype(Stack) <: LinearAlgebra.BlasFloat
+        LinearAlgebra.LAPACK.geqrf!(Stack, tau)
+    else
+        # Generic fallback for e.g. ForwardDiff.Dual eltypes (allocating, but AD rarely
+        # smooths large systems).
+        Stack[1:D, 1:D] .= qr(Stack).R
+    end
+    @inbounds for i in 1:D
+        if Stack[i, i] < 0
+            @views Stack[i, 1:D] .*= -1
+        end
+    end
+    @inbounds for j in 1:D, i in 1:D
+        R_dest[i, j] = i <= j ? Stack[i, j] : zero(eltype(R_dest))
+    end
+    return R_dest
 end
 
 "Inspired by `OrdinaryDiffEqCore.solution_match_cur_integrator!`"

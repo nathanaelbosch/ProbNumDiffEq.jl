@@ -10,8 +10,8 @@ import Base:
     eltype, rand
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
-    UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
-    issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
+    UniformScaling, UpperTriangular, LowerTriangular, cholesky, cholesky!, diag, diagm,
+    dot, ishermitian, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 import Random: Random, AbstractRNG
