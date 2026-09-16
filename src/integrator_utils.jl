@@ -216,15 +216,14 @@ function _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, x_pred, P
     _mbf_recover_mean!(x_smooth_prev.μ, U_f, λ_new)
     U_f_prec = U_f * P'
     U_Λ_prec_rec = U_Λ_new * PI
-    new_R_prec = _mbf_recover_cov(U_f_prec, U_Λ_prec_rec)
-    new_R = new_R_prec * PI'
-    # `new_R` is only upper triangular up to floating-point roundoff, which -- while tiny
-    # relative to the overall matrix -- can be large relative to the (possibly much
-    # smaller, measurement-shrunk) smoothed covariance entries. Naively dropping the
-    # lower-triangular part (as a plain truncation would) therefore changes `new_R'*new_R`
-    # non-negligibly; re-triangularize via QR instead, which preserves `R'R` exactly.
-    new_R = _positive_qr_r(new_R)
-    _copy_upper_to_R!(x_smooth_prev.Σ.R, new_R)
+    # `new_R` is a valid square-root factor of the smoothed covariance
+    # (`new_R'new_R = Σ_s`) but generally a full (non-triangular) matrix. That is fine:
+    # the package does not assume upper-triangular factors in general (e.g. `update!`
+    # stores `Σ_pred.R * (I - K*H)'`), and all `PSDMatrix` operations (`Matrix`, `det`,
+    # `logabsdet`, `diag`, QR stacks, ...) only rely on `R'R`. So we store the factor
+    # as-is instead of paying for a per-step re-triangularizing QR.
+    new_R = _mbf_recover_cov(U_f_prec, U_Λ_prec_rec) * PI'
+    copy!(x_smooth_prev.Σ.R, new_R)
 
     return λ_new, U_Λ_new
 end
@@ -267,9 +266,9 @@ function _mbf_backward_step!(
     _mbf_recover_mean!(μ_smooth_view, U_f_B, λ_new_B)
     U_f_prec = U_f_B * P_B'
     U_Λ_prec_rec = U_Λ_new_B * PI_B
+    # Store the full (generally non-triangular) factor - see the dense method above.
     new_R_B = _mbf_recover_cov(U_f_prec, U_Λ_prec_rec) * PI_B'
-    new_R_B = _positive_qr_r(new_R_B)
-    copy!(x_smooth_prev.Σ.R.B, UpperTriangular(new_R_B))
+    copy!(x_smooth_prev.Σ.R.B, new_R_B)
 
     λ_new = similar(λ)
     reshape_no_alloc(λ_new, d, Q)' .= λ_new_B
@@ -473,11 +472,6 @@ function _positive_qr_r(Stack)
         end
     end
     return R
-end
-
-function _copy_upper_to_R!(R::Matrix, U_s)
-    n = size(U_s, 1)
-    copy!(R, UpperTriangular(view(U_s, 1:n, 1:n)))
 end
 
 "Inspired by `OrdinaryDiffEqCore.solution_match_cur_integrator!`"
