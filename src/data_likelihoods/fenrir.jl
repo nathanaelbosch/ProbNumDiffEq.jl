@@ -41,6 +41,15 @@ function fenrir_data_loglik(
     if !alg.smooth
         throw(ArgumentError("fenrir only works with smoothing. Set `smooth=true`."))
     end
+    if !alg.save_backward_kernels
+        throw(
+            ArgumentError(
+                "fenrir needs the backward kernels computed during the solve; " *
+                "set `save_backward_kernels=true` on the solver, e.g. " *
+                "`$(nameof(typeof(alg)))(order=$(num_derivatives(alg.prior) - 1), smooth=true, save_backward_kernels=true)`.",
+            ),
+        )
+    end
     tstops = union(data.t, get(kwargs, :tstops, []))
 
     integ = init(prob, alg, args...; tstops, kwargs...)

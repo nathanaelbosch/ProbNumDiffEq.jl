@@ -19,7 +19,7 @@ function compare_data_likelihoods(alg; kwargs...)
     filtering_ll = @test_nowarn PNDE.filtering_data_loglik(
         prob, remake(alg, smooth=false); kwargs...)
     fenrir_ll = PNDE.fenrir_data_loglik(
-        prob, remake(alg, smooth=true); kwargs...,
+        prob, remake(alg, smooth=true, save_backward_kernels=true); kwargs...,
     )
     @test dalton_ll ≈ filtering_ll rtol = 1e-6
     @test dalton_ll ≈ fenrir_ll rtol = 1e-6

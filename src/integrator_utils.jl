@@ -730,9 +730,11 @@ function DiffEqBase.savevalues!(
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
-        if integ.alg.smooth
+        if integ.alg.save_backward_kernels
             copyat_or_push!(
                 integ.sol.backward_kernels, i, integ.cache.backward_kernel)
+        end
+        if integ.alg.smooth
             _save_smoother_state!(integ.sol.smoother_states, integ.cache)
         end
     end

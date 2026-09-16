@@ -172,6 +172,8 @@ which scales cubically with the problem size._
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
+  `sol.backward_kernels` during the solve. Only needed by [`fenrir_data_loglik`](@ref); off by default.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -189,6 +191,7 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
+    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -196,14 +199,15 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
+        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         pn_observation_noise::RT=nothing,
         covariance_factorization::CF=covariance_structure(EK0, prior, diffusionmodel),
     ) where {PT,DT,IT,RT,CF} = begin
         ekargcheck(EK0; diffusionmodel, pn_observation_noise, covariance_factorization)
         new{PT,DT,IT,RT,CF}(
-            prior, diffusionmodel, smooth, initialization, pn_observation_noise,
-            covariance_factorization)
+            prior, diffusionmodel, smooth, save_backward_kernels, initialization,
+            pn_observation_noise, covariance_factorization)
     end
 end
 
@@ -228,6 +232,8 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
+  `sol.backward_kernels` during the solve. Only needed by [`fenrir_data_loglik`](@ref); off by default.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -251,6 +257,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
+    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -260,6 +267,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
+        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
         autodiff=AutoForwardDiff(),
@@ -287,6 +295,7 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             prior,
             diffusionmodel,
             smooth,
+            save_backward_kernels,
             initialization,
             pn_observation_noise,
             covariance_factorization,
@@ -323,6 +332,8 @@ the full [`EK1`](@ref) would be too expensive.
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
+  `sol.backward_kernels` during the solve. Only needed by [`fenrir_data_loglik`](@ref); off by default.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -344,6 +355,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
+    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -353,6 +365,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
+        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
         autodiff=AutoForwardDiff(),
@@ -384,6 +397,7 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             prior,
             diffusionmodel,
             smooth,
+            save_backward_kernels,
             initialization,
             pn_observation_noise,
             covariance_factorization,

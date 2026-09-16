@@ -125,8 +125,8 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
 
     # Backward kernels are only needed for Fenrir's own backward pass (fit_pnsolution_to_data!);
     # the main smoothing pass (smooth_solution!) uses the square-root MBF smoother instead,
-    # which does not need them.
-    if integ.alg.smooth
+    # which does not need them. They are opt-in via `save_backward_kernels=true`.
+    if integ.alg.save_backward_kernels
         @unpack C_DxD, backward_kernel = cache
         K = AffineNormalKernel(Ah, Qh)
         compute_backward_kernel!(

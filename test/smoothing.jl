@@ -99,8 +99,9 @@ end
         return x_smooth
     end
 
-    for alg in (EK1(order=3, smooth=true), EK0(order=3, smooth=true),
-        DiagonalEK1(order=3, smooth=true))
+    for alg in (EK1(order=3, smooth=true, save_backward_kernels=true),
+        EK0(order=3, smooth=true, save_backward_kernels=true),
+        DiagonalEK1(order=3, smooth=true, save_backward_kernels=true))
         sol = solve(prob, alg, abstol=2e-2, reltol=2e-2)
         ref = rts_reference(sol)
         for i in eachindex(sol.t)
