@@ -133,3 +133,22 @@ end
         end
     end
 end
+
+@testset "MBF smoother with calibrated static diffusion" begin
+    for Alg in (EK1, EK0, DiagonalEK1)
+        alg_mbf = Alg(
+            order=3, smooth=true, smoother=:mbf, save_backward_kernels=true,
+            diffusionmodel=FixedDiffusion())
+        alg_rts = Alg(
+            order=3, smooth=true, smoother=:rts, save_backward_kernels=true,
+            diffusionmodel=FixedDiffusion())
+        sol_mbf = solve(prob, alg_mbf, abstol=2e-2, reltol=2e-2)
+        sol_rts = solve(prob, alg_rts, abstol=2e-2, reltol=2e-2)
+        @test length(sol_mbf.t) == length(sol_rts.t)
+        for i in eachindex(sol_mbf.t)
+            @test sol_mbf.x_smooth[i].μ ≈ sol_rts.x_smooth[i].μ rtol = 1e-8 atol = 1e-10
+            @test Matrix(sol_mbf.x_smooth[i].Σ) ≈
+                  Matrix(sol_rts.x_smooth[i].Σ) rtol = 1e-8
+        end
+    end
+end

@@ -62,8 +62,10 @@ function calibrate_solution!(integ, mle_diffusion)
     # and calibration with observation noise is ruled out by `ekargcheck`), while the
     # measurement covariances `S = H Σ_pred Hᵀ` pick up the same per-dimension congruence
     # as `Σ_pred` - so their Cholesky factors scale by the matching square root.
+    mle_scale = _measurement_chol_scale(mle_diffusion)
     for ss in integ.sol.smoother_states
-        _rescale_measurement_chol!(ss.S_U, mle_diffusion)
+        ss === nothing && continue
+        _rescale_measurement_chol!(ss.S_U, mle_scale)
     end
 
     # Re-write into the solution estimates
@@ -114,7 +116,7 @@ Two implementations are available, selected by the solver's `smoother` argument:
   kernels that were computed (in preconditioned square-root form) by the forward pass.
 
 The actual per-step work is done by [`_mbf_backward_step!`](@ref) (MBF) or
-`marginalize!` (RTT), both dispatching on the structure of the state covariances (dense,
+`marginalize!` (RTS), both dispatching on the structure of the state covariances (dense,
 EK0's Kronecker, or DiagonalEK1's block-diagonal), the same way [`predict_cov!`](@ref) and
 [`update!`](@ref) do -- so the loops don't need to know or care which algorithm produced
 the solution being smoothed.
@@ -128,7 +130,7 @@ function smooth_solution!(integ)
     if integ.alg.smoother == :mbf
         _smooth_solution_mbf!(integ)
     else
-        _smooth_solution_rtt!(integ)
+        _smooth_solution_rts!(integ)
     end
     return nothing
 end
@@ -187,8 +189,8 @@ function _smooth_solution_mbf!(integ)
     return nothing
 end
 
-"RTT branch of [`smooth_solution!`](@ref); see there."
-function _smooth_solution_rtt!(integ)
+"RTS branch of [`smooth_solution!`](@ref); see there."
+function _smooth_solution_rts!(integ)
     @unpack cache, sol = integ
     @unpack x_smooth, t, backward_kernels = sol
     @unpack C_DxD, C_3DxD = cache
@@ -306,10 +308,14 @@ function _mbf_backward_step!(
     StackTop = view(sc.Stack, 1:D, :)
 
     if isnothing(ss)
-        copyto!(sc.λ_prec, λ)
-        mul!(sc.λ_new, transpose(A), sc.λ_prec)
-        copyto!(sc.U_Λ_prec, U_Λ)
-        mul!(sc.U_Λ_new, sc.U_Λ_prec, A)
+        # Pure predict (no measurement): λ_new = Φ'λ, U_Λ_new = U_Λ Φ, where
+        # the physical transition Φ = PI A P, so Φ' = P A' PI (diagonal P, PI).
+        mul!(sc.λ_prec, PI, λ)
+        mul!(sc.λ_pred, transpose(A), sc.λ_prec)
+        mul!(sc.λ_new, P, sc.λ_pred)
+        mul!(sc.U_Λ_prec, U_Λ, PI)
+        mul!(sc.U_Λ_pred, sc.U_Λ_prec, A)
+        mul!(sc.U_Λ_new, sc.U_Λ_pred, P)
     else
         d = size(sc.H_prec, 1)
         StackBot = view(sc.Stack, (D+1):(D+d), :)
@@ -368,8 +374,8 @@ function _mbf_backward_step!(
     P_B, PI_B, A_B, U_Λ_B = P.B, PI.B, A.B, U_Λ.B
 
     if isnothing(ss)
-        λ_new_B = A_B' * _λ
-        U_Λ_new_B = U_Λ_B * A_B
+        λ_new_B = P_B' * (A_B' * (PI_B' * _λ))
+        U_Λ_new_B = (U_Λ_B * PI_B) * A_B * P_B
     else
         K_B = ss.K.B
         S_U_B = ss.S_U.B
@@ -688,52 +694,49 @@ function _measurement_cholesky(S::BlocksOfDiagonals)
 end
 
 """
-    _rescale_measurement_chol!(S_U, mle_diffusion)
+    _measurement_chol_scale(mle_diffusion::Diagonal) -> Number or Diagonal
+
+Pre-compute the measurement-Cholesky scale factor `M = sqrt.(mle_diffusion)` once, so
+that the per-step [`_rescale_measurement_chol!`](@ref) loop avoids redundant allocations.
+Returns a scalar for isotropic (FillArrays-backed) diffusions, a `Diagonal` otherwise.
+"""
+_measurement_chol_scale(D::Diagonal{<:Number,<:FillArrays.Fill}) = sqrt(D.diag.value)
+_measurement_chol_scale(D::Diagonal) = Diagonal(sqrt.(D.diag))
+
+"""
+    _rescale_measurement_chol!(S_U, scale)
 
 Rescale a stored smoother-state measurement-covariance Cholesky factor `S_U` after the
-solution's covariances were calibrated with `mle_diffusion` (see
-[`calibrate_solution!`](@ref)). The calibrated model's measurement covariance is
-`S' = M S M` with `M = sqrt.(mle_diffusion)` (a uniform scaling for isotropic
-diffusions, a per-dimension one for MV diffusions -- where the measurement Jacobians of
-EK0 and DiagonalEK1 are dimension-pure), so its Cholesky factor is `S_U' = S_U M`.
+solution's covariances were calibrated (see [`calibrate_solution!`](@ref)). `scale` is
+the pre-computed output of [`_measurement_chol_scale`](@ref): a scalar for isotropic
+diffusions, a `Diagonal` for per-dimension ones (where the measurement Jacobians of
+EK0 and DiagonalEK1 are dimension-pure). The calibrated factor is `S_U' = S_U * scale`.
 """
-function _rescale_measurement_chol!(S_U, mle_diffusion::Diagonal)
-    if mle_diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
-        _rescale_measurement_chol_uniform!(S_U, sqrt(mle_diffusion.diag.value))
-    else
-        _rescale_measurement_chol_perdim!(S_U, Diagonal(sqrt.(mle_diffusion.diag)))
-    end
-end
-function _rescale_measurement_chol_uniform!(S_U::Matrix, σ::Number)
+function _rescale_measurement_chol!(S_U::Matrix, σ::Number)
     rmul!(S_U, σ)
     return S_U
 end
-function _rescale_measurement_chol_uniform!(S_U::IsometricKroneckerProduct, σ::Number)
+function _rescale_measurement_chol!(S_U::IsometricKroneckerProduct, σ::Number)
     rmul!(S_U.B, σ)
     return S_U
 end
-function _rescale_measurement_chol_uniform!(S_U::BlocksOfDiagonals, σ::Number)
+function _rescale_measurement_chol!(S_U::BlocksOfDiagonals, σ::Number)
     @simd ivdep for i in eachindex(blocks(S_U))
         rmul!(blocks(S_U)[i], σ)
     end
     return S_U
 end
-function _rescale_measurement_chol_perdim!(S_U::Matrix, M::Diagonal)
+function _rescale_measurement_chol!(S_U::Matrix, M::Diagonal)
     rmul!(S_U, M)
     return S_U
 end
-function _rescale_measurement_chol_perdim!(S_U::BlocksOfDiagonals, M::Diagonal)
+function _rescale_measurement_chol!(S_U::BlocksOfDiagonals, M::Diagonal)
     @simd ivdep for i in eachindex(blocks(S_U))
         rmul!(blocks(S_U)[i], M.diag[i])
     end
     return S_U
 end
-function _rescale_measurement_chol_perdim!(S_U::IsometricKroneckerProduct, M::Diagonal)
-    # Only reachable when `IsometricKroneckerCovariance` was constructed explicitly with a
-    # MV diffusion model: `covariance_structure` would pick `IsometricKroneckerCovariance`
-    # automatically only for scalar diffusions. The isometric representation keeps the
-    # per-dimension scaling in the `Σ_d` block shared across ODE dimensions, so it cannot
-    # represent the per-dimension rescale `S_U' = S_U * M` - fail loudly instead.
+function _rescale_measurement_chol!(S_U::IsometricKroneckerProduct, M::Diagonal)
     throw(
         ArgumentError(
             "Per-dimension diffusion calibration is not supported with isometric Kronecker covariances.",
