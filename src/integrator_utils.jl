@@ -101,17 +101,23 @@ end
 Smooth the solution saved in `integ.sol`, filling `integ.sol.x_smooth` and updating the
 values saved in `integ.sol.pu` and `integ.sol.u`.
 
-Uses the square-root Modified Bryson-Frazier (√MBF) smoother (Gibbs 2011), which propagates
-adjoint variables backward and only inverts the `d×d` measurement covariance (not the full
-`D×D` predicted state covariance as in the RTS smoother). The λ/Λ update and predict recursion
-is done in sqrt form in each step's local preconditioned coordinates for numerical stability.
-Covariance recovery uses a hyperbolic QR factorization to guarantee a positive semi-definite
-result.
+Two implementations are available, selected by the solver's `smoother` argument:
 
-The actual per-step work is done by [`_mbf_backward_step!`](@ref), which dispatches on the
-structure of the state covariances (dense, EK0's Kronecker, or DiagonalEK1's block-diagonal),
-the same way [`predict_cov!`](@ref) and [`update!`](@ref) do -- so this loop doesn't need to
-know or care which algorithm produced the solution being smoothed.
+- `:mbf` (default): the square-root Modified Bryson--Frazier (√MBF) smoother (Gibbs 2011),
+  which propagates adjoint variables backward and only inverts the `d×d` measurement
+  covariance (not the full `D×D` predicted state covariance as in the RTS smoother). The
+  λ/Λ update and predict recursion is done in sqrt form in each step's local preconditioned
+  coordinates for numerical stability; covariance recovery uses a hyperbolic QR
+  factorization to guarantee a positive semi-definite result. The per-step measurement
+  quantities are pre-stored by the forward pass in [`SmootherState`](@ref).
+- `:rts`: the classic Rauch--Tung--Striebel smoother, marginalizing the backward transition
+  kernels that were computed (in preconditioned square-root form) by the forward pass.
+
+The actual per-step work is done by [`_mbf_backward_step!`](@ref) (MBF) or
+`marginalize!` (RTT), both dispatching on the structure of the state covariances (dense,
+EK0's Kronecker, or DiagonalEK1's block-diagonal), the same way [`predict_cov!`](@ref) and
+[`update!`](@ref) do -- so the loops don't need to know or care which algorithm produced
+the solution being smoothed.
 """
 function smooth_solution!(integ)
     @unpack cache, sol = integ
@@ -119,6 +125,17 @@ function smooth_solution!(integ)
         copyat_or_push!(sol.x_smooth, i, x)
     end
 
+    if integ.alg.smoother == :mbf
+        _smooth_solution_mbf!(integ)
+    else
+        _smooth_solution_rtt!(integ)
+    end
+    return nothing
+end
+
+"MBF branch of [`smooth_solution!`](@ref); see there."
+function _smooth_solution_mbf!(integ)
+    @unpack cache, sol = integ
     @unpack x_smooth, t, smoother_states = sol
     n = length(x_smooth)
 
@@ -158,6 +175,27 @@ function smooth_solution!(integ)
 
         _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
         sol.u[i-1][:] .= sol.pu[i-1].μ
+    end
+    return nothing
+end
+
+"RTT branch of [`smooth_solution!`](@ref); see there."
+function _smooth_solution_rtt!(integ)
+    @unpack cache, sol = integ
+    @unpack x_smooth, t, backward_kernels = sol
+    @unpack C_DxD, C_3DxD = cache
+
+    @assert length(x_smooth) == length(backward_kernels) + 1
+
+    for i in (length(x_smooth)-1):-1:1
+        dt = t[i+1] - t[i]
+        if iszero(dt)
+            copy!(x_smooth[i], x_smooth[i+1])
+        else
+            marginalize!(x_smooth[i], x_smooth[i+1], backward_kernels[i]; C_DxD, C_3DxD)
+        end
+        _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
+        sol.u[i][:] .= sol.pu[i].μ
     end
     return nothing
 end
@@ -771,11 +809,11 @@ function DiffEqBase.savevalues!(
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
-        if integ.alg.save_backward_kernels
+        if integ.alg.smoother == :rts || integ.alg.save_backward_kernels
             copyat_or_push!(
                 integ.sol.backward_kernels, i, integ.cache.backward_kernel)
         end
-        if integ.alg.smooth
+        if integ.alg.smooth && integ.alg.smoother == :mbf
             _save_smoother_state!(integ.sol.smoother_states, integ.cache)
         end
     end

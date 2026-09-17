@@ -48,6 +48,12 @@ end
 @testset "Invalid solver configurations" begin
     prob = prob_ode_lotkavolterra
 
+    @testset "Invalid smoother" begin
+        @test_throws ArgumentError solve(prob, EK1(smoother=:nonsense))
+        @test_throws ArgumentError solve(prob, EK0(smoother=:nonsense))
+        @test_throws ArgumentError solve(prob, DiagonalEK1(smoother=:nonsense))
+    end
+
     # Global calibration + observation noise doesn't work
     @test_throws ArgumentError solve(
         prob, EK0(pn_observation_noise=1, diffusionmodel=FixedDiffusion()))

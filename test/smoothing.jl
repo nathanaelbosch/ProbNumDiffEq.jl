@@ -62,19 +62,26 @@ end
     vdp_prob = ODEProblem(vanderpol!, [2.0, 0.0], (0.0, 2.0), [1e5])
     ref = solve(vdp_prob, RadauIIA5(), abstol=1e-14, reltol=1e-14)
 
-    for order in [6, 7]
-        sol = solve(vdp_prob, EK1(order=order, smooth=true), abstol=1e-10, reltol=1e-7)
+    for order in [6, 7], smoother in [:mbf, :rts]
+        sol = solve(
+            vdp_prob, EK1(order=order, smooth=true, smoother=smoother),
+            abstol=1e-10, reltol=1e-7)
         # Smoothed means/covariances should always be finite
         @test all(u -> all(isfinite, u), sol.u)
         @test all(x -> all(isfinite, x.Σ.R), sol.x_smooth)
-        # The actual #393 regression: the dense (interpolated) smoothed mean used to
-        # blow up to ~1e75 or NaN at these orders; it should now track the reference
-        # solution about as closely as the filtered/final estimate does.
-        ts = range(vdp_prob.tspan..., length=1000)
-        dense_err = maximum(norm(mean(sol(t)) - ref(t)) for t in ts)
-        final_err = norm(sol[end] - ref[end])
-        @test dense_err < 1e-3
-        @test dense_err < 1e6 * final_err
+        if smoother == :mbf
+            # The √MBF regression: the dense (interpolated) smoothed mean used to blow up
+            # to ~1e75 or NaN at these orders; MBF now tracks the reference solution about
+            # as closely as the filtered/final estimate does. The :rts smoother instead
+            # keeps the #393 behavior of main: its smoothed covariances blow up beyond
+            # the filtered covariance scale at these orders, so the dense output is
+            # finite but inaccurate - the accuracy checks only apply to :mbf.
+            ts = range(vdp_prob.tspan..., length=1000)
+            dense_err = maximum(norm(mean(sol(t)) - ref(t)) for t in ts)
+            final_err = norm(sol[end] - ref[end])
+            @test dense_err < 1e-3
+            @test dense_err < 1e6 * final_err
+        end
     end
 end
 
@@ -99,9 +106,10 @@ end
         return x_smooth
     end
 
-    for alg in (EK1(order=3, smooth=true, save_backward_kernels=true),
-        EK0(order=3, smooth=true, save_backward_kernels=true),
-        DiagonalEK1(order=3, smooth=true, save_backward_kernels=true))
+    # Run both smoother implementations and check that they compute the same, exact
+    # posterior as the kernel-based RTS recursion.
+    for smoother in (:mbf, :rts), Alg in (EK1, EK0, DiagonalEK1)
+        alg = Alg(order=3, smooth=true, smoother=smoother, save_backward_kernels=true)
         sol = solve(prob, alg, abstol=2e-2, reltol=2e-2)
         ref = rts_reference(sol)
         for i in eachindex(sol.t)

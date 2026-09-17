@@ -123,10 +123,10 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
     predict_cov!(x_pred.Σ, xprev.Σ, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
-    # Backward kernels are only needed for Fenrir's own backward pass (fit_pnsolution_to_data!);
-    # the main smoothing pass (smooth_solution!) uses the square-root MBF smoother instead,
-    # which does not need them. They are opt-in via `save_backward_kernels=true`.
-    if integ.alg.save_backward_kernels
+    # Backward kernels are needed by the RTT smoother (`smoother=:rts`) and by Fenrir's own
+    # backward pass (fit_pnsolution_to_data!, opt-in via `save_backward_kernels=true`). The
+    # MBF smoother (smoother=:mbf) does not need them.
+    if integ.alg.smoother == :rts || integ.alg.save_backward_kernels
         @unpack C_DxD, backward_kernel = cache
         K = AffineNormalKernel(Ah, Qh)
         compute_backward_kernel!(
