@@ -117,4 +117,19 @@ end
             @test Matrix(sol.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
         end
     end
+
+    # The IOUP prior with `update_rate_parameter=true` changes its rate parameter at every
+    # step; the backward smoother must use the per-step values (snapshotted and restored
+    # with the smoother states), not the final one (#393-adjacent former bug).
+    for smoother in (:mbf, :rts)
+        alg = EK1(
+            order=3, smooth=true, smoother=smoother, save_backward_kernels=true,
+            prior=IOUP(3; update_rate_parameter=true))
+        sol = solve(prob, alg, abstol=2e-2, reltol=2e-2)
+        ref = rts_reference(sol)
+        for i in eachindex(sol.t)
+            @test sol.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
+            @test Matrix(sol.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
+        end
+    end
 end

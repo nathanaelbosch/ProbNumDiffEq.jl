@@ -167,6 +167,14 @@ function _smooth_solution_mbf!(integ)
 
         ss = smoother_states[i-1]
         dt_step = t[i] - t[i-1]
+        # Restore the rate parameter of this step's transition (IOUP with
+        # `update_rate_parameter=true`): `cache.prior` still holds the value of the last
+        # forward step, but the transition matrices of this step were computed with this
+        # step's value.
+        if (cache.prior isa IOUP && cache.prior.update_rate_parameter) &&
+           ss isa SmootherState
+            copyto!(cache.prior.rate_parameter, ss.rate_parameter)
+        end
         make_transition_matrices!(cache, cache.prior, dt_step)
 
         λ, U_Λ = _mbf_backward_step!(
@@ -412,7 +420,7 @@ function _mbf_backward_step!(
             isnothing(ss) ? nothing :
             SmootherState(
                 collect(view(ss.z, bi:bi)), ss.H.blocks[bi],
-                ss.K.blocks[bi], ss.S_U.blocks[bi],
+                ss.K.blocks[bi], ss.S_U.blocks[bi], ss.rate_parameter,
             )
         _x_filt_prev =
             Gaussian(view(x_filt_prev.μ, bi:d:D), PSDMatrix(x_filt_prev.Σ.R.blocks[bi]))
@@ -625,7 +633,15 @@ function _save_smoother_state!(smoother_states, cache)
     H = copy(cache.H)
     z = Vector{T}(cache.measurement.μ)
     K = copy(cache.C_Dxd)
-    push!(smoother_states, SmootherState(z, H, K, S_U))
+    # Snapshot the prior's rate parameter if it changes every step (IOUP with
+    # `update_rate_parameter=true`): `calc_J!` mutates the array on the cache's prior at
+    # the start of every step, so the backward pass needs a copy of this step's value.
+    rate = if (cache.prior isa IOUP && cache.prior.update_rate_parameter)
+        copy(cache.prior.rate_parameter)
+    else
+        nothing
+    end
+    push!(smoother_states, SmootherState(z, H, K, S_U, rate))
     return nothing
 end
 
