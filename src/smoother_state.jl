@@ -1,8 +1,9 @@
 """
     SmootherState{T,TH,TK,TS}
 
-Per-step forward-pass quantities needed for the √MBF backward smoother: the innovation
-`z`, the measurement Jacobian `H`, the Kalman gain `K`, and the Cholesky factor `S_U` of
+Per-step forward-pass quantities needed for the √MBF backward smoother: the measurement mean
+`z = h(x_pred)` (the filter's innovation is `-z`, since the update assumes zero measurements),
+the measurement Jacobian `H`, the Kalman gain `K`, and the Cholesky factor `S_U` of
 the measurement covariance `S = H Σ_pred Hᵀ`. All four are the exact quantities that the
 forward filter's update step used, so they can be stored during the forward pass and
 reused as-is during backward smoothing. If the solution is recalibrated after the solve
@@ -20,7 +21,4 @@ struct SmootherState{T,TH,TK,TS}
     H::TH
     K::TK
     S_U::TS
-end
-function Base.copy(s::SmootherState)
-    SmootherState(copy(s.z), copy(s.H), copy(s.K), copy(s.S_U))
 end
