@@ -132,11 +132,14 @@ function SciMLBase.build_solution(
 
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
     smoother_states =
-        SmootherState{
-            uElType,
-            typeof(cache.H),
-            typeof(cache.C_Dxd),
-            typeof(cache.measurement.Σ),
+        Union{
+            Nothing,
+            SmootherState{
+                uElType,
+                typeof(cache.H),
+                typeof(cache.C_Dxd),
+                typeof(cache.measurement.Σ),
+            },
         }[]
 
     interp = ODEFilterPosterior(

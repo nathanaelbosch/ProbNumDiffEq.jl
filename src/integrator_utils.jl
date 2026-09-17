@@ -574,11 +574,19 @@ smoothing with them reproduces the filter's posterior exactly; see
 calibrated after the solve.
 """
 function _save_smoother_state!(smoother_states, cache)
+    S_U = _measurement_cholesky(cache.measurement.Σ)
+    if S_U === nothing
+        # Degenerate step: the predicted covariance was (numerically) zero, so `update!`
+        # skipped the update. There is no measurement information to smooth with, so the
+        # backward pass at this step does a plain prediction (`ss === nothing` branch of
+        # `_mbf_backward_step!`).
+        push!(smoother_states, nothing)
+        return nothing
+    end
     T = eltype(cache.C_Dxd)
     H = copy(cache.H)
     z = Vector{T}(cache.measurement.μ)
     K = copy(cache.C_Dxd)
-    S_U = _measurement_cholesky(cache.measurement.Σ)
     push!(smoother_states, SmootherState(z, H, K, S_U))
     return nothing
 end
@@ -590,15 +598,40 @@ Upper triangular Cholesky factor of the measurement covariance `S`, stored in th
 matrix structure as `S` itself (dense `Matrix`, `IsometricKroneckerProduct`, or
 `BlocksOfDiagonals`), so that the backward smoother can dispatch on it like on `H` and
 `K`.
+
+If `S` is exactly zero (which means the predicted covariance was (numerically) zero too, so
+`update!` skipped the update) returns `nothing`: there is no measurement information to
+smooth with, and `_save_smoother_state!` stores a `nothing` smoother state for that step.
+Throws if `S` is not factorizable for any other reason, since `update!` has already
+factorized the same matrix by the time this is called.
 """
-_measurement_cholesky(S::Matrix{T}) where {T} = begin
-    S_chol = cholesky(Symmetric(S), check=false)
-    return issuccess(S_chol) ? Matrix(S_chol.U) : Matrix{T}(I, size(S)...)
+function _measurement_cholesky(S::Matrix{T}) where {T}
+    F = cholesky(Symmetric(S); check=false)
+    issuccess(F) && return Matrix(F.U)
+    # An exactly zero measurement covariance means the predicted covariance was (numer-
+    # ically) zero too, so `update!` skipped the update and no measurement information is
+    # available to smooth with. Signal that to `_save_smoother_state!`.
+    iszero(S) && return nothing
+    # `update!` has already factorized this exact matrix successfully by the time the
+    # smoother state is saved, so a failure here can only indicate a bug elsewhere - fail
+    # loudly instead of silently corrupting the Λ update with some made-up factor.
+    error(
+        "Cholesky factorization of the measurement covariance failed; " *
+        "cannot store the smoother state for backward smoothing.")
 end
-_measurement_cholesky(S::IsometricKroneckerProduct) =
-    IsometricKroneckerProduct(S.rdim, _measurement_cholesky(S.B))
-_measurement_cholesky(S::BlocksOfDiagonals) =
-    BlocksOfDiagonals([_measurement_cholesky(block) for block in blocks(S)])
+_measurement_cholesky(S::IsometricKroneckerProduct) = begin
+    S_U = _measurement_cholesky(S.B)
+    S_U === nothing ? nothing : IsometricKroneckerProduct(S.rdim, S_U)
+end
+function _measurement_cholesky(S::BlocksOfDiagonals)
+    chol_blocks = [_measurement_cholesky(block) for block in blocks(S)]
+    # A fully degenerate step (all blocks zero) signals "no measurement info"; the mixed case
+    # is unreachable in practice (`update!` would already have failed on the zero block).
+    all(isnothing, chol_blocks) && return nothing
+    any(isnothing, chol_blocks) && error(
+        "Partially degenerate measurement covariance; cannot store a smoother state.")
+    return BlocksOfDiagonals(chol_blocks)
+end
 
 """
     _rescale_measurement_chol!(S_U, mle_diffusion)
