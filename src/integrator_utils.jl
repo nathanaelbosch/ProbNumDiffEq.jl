@@ -157,22 +157,10 @@ function _smooth_solution_mbf!(integ)
     U_Λ = zero(x_smooth[1].Σ.R)
 
     # Preallocate scratch buffers once and reuse them across all backward steps.
-    T = eltype(λ)
-    scratch = if U_Λ isa Matrix
-        _MBFDenseScratch(length(λ), size(cache.H, 1), T)
-    elseif U_Λ isa IsometricKroneckerProduct
-        Q = size(U_Λ.B, 1)
-        _MBFDenseScratch(Q, size(cache.H.B, 1), U_Λ.rdim, T)
-    elseif U_Λ isa BlocksOfDiagonals
-        Q = size(blocks(U_Λ)[1], 1)
-        _MBFDenseScratch(Q, size(blocks(cache.H)[1], 1), T)
-    else
-        error("unsupported state covariance type: $(typeof(U_Λ))")
-    end
+    scratch = _mbf_scratch(U_Λ, cache)
 
     # x_smooth[n] = x_filt[n] exactly: there are no future measurements to smooth with.
-    _gaussian_mul!(sol.pu[n], cache.SolProj, x_smooth[n])
-    sol.u[n][:] .= sol.pu[n].μ
+    _store_smoothed!(sol, cache, n)
 
     # The backward loop restores per-step rate parameters into the cache's prior (IOUP with
     # `update_rate_parameter=true`); leave the cache at the forward-final value afterwards
@@ -246,7 +234,6 @@ struct _MBFDenseScratch{T,Tw<:AbstractVecOrMat{T}}
     Stack::Matrix{T}
     R_M::Matrix{T}
     R_f::Matrix{T}
-    U_f::Matrix{T}
     U_ΛK::Matrix{T}
     H_prec::Matrix{T}
     K_prec::Matrix{T}
@@ -261,33 +248,33 @@ struct _MBFDenseScratch{T,Tw<:AbstractVecOrMat{T}}
     S_U_T::Matrix{T}
 end
 
-function _MBFDenseScratch(D::Integer, d::Integer, ::Type{T}) where {T}
+# `wsize` is the shape of the measurement-space work vectors `w`/`z_sol`: `(d,)` for the
+# dense and block-diagonal paths, and `(d, d_ode)` for EK0's Kronecker path, which batches
+# the update over the `d_ode` ODE dimensions.
+function _MBFDenseScratch(D::Integer, d::Integer, ::Type{T}; wsize=(d,)) where {T}
     return _MBFDenseScratch(
         Matrix{T}(undef, D, D), Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
         Matrix{T}(undef, D + d, D),
         Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
-        Matrix{T}(undef, D, D),
         Matrix{T}(undef, D, d), Matrix{T}(undef, d, D), Matrix{T}(undef, D, d),
         zeros(T, D), zeros(T, D), zeros(T, D),
-        zeros(T, d), zeros(T, d),
+        zeros(T, wsize...), zeros(T, wsize...),
         zeros(T, D), zeros(T, D), zeros(T, D),
         Matrix{T}(undef, d, d),
     )
 end
 
-function _MBFDenseScratch(D::Integer, d::Integer, d_ode::Integer, ::Type{T}) where {T}
-    return _MBFDenseScratch(
-        Matrix{T}(undef, D, D), Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
-        Matrix{T}(undef, D + d, D),
-        Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
-        Matrix{T}(undef, D, D),
-        Matrix{T}(undef, D, d), Matrix{T}(undef, d, D), Matrix{T}(undef, D, d),
-        zeros(T, D), zeros(T, D), zeros(T, D),
-        zeros(T, d, d_ode), zeros(T, d, d_ode),
-        zeros(T, D), zeros(T, D), zeros(T, D),
-        Matrix{T}(undef, d, d),
-    )
-end
+# Allocate the scratch matching the state covariance's structure, dispatching the same way
+# `_mbf_backward_step!` does instead of branching on concrete types at the call site.
+_mbf_scratch(U_Λ::Matrix, cache) =
+    _MBFDenseScratch(size(U_Λ, 1), size(cache.H, 1), eltype(U_Λ))
+_mbf_scratch(U_Λ::IsometricKroneckerProduct, cache) =
+    _MBFDenseScratch(
+        size(U_Λ.B, 1), size(cache.H.B, 1), eltype(U_Λ);
+        wsize=(size(cache.H.B, 1), U_Λ.rdim))
+_mbf_scratch(U_Λ::BlocksOfDiagonals, cache) =
+    _MBFDenseScratch(
+        size(blocks(U_Λ)[1], 1), size(blocks(cache.H)[1], 1), eltype(U_Λ))
 
 """
     _mbf_backward_step!(x_smooth_prev, λ, U_Λ, x_filt_prev, ss, P, PI, A, sc)
@@ -334,57 +321,50 @@ transition's own `P`/`PI`, the natural local scale for `x_filt_prev` itself -- a
 from an adjacent transition was found empirically to reintroduce significant error).
 """
 
-# The dense (EK1) implementation, allocation-free given a matching `scratch`.
+# The dense (EK1) implementation. Given a matching `scratch` the only remaining
+# allocation per step is the LAPACK workspace inside `_positive_qr_r!`.
 function _mbf_backward_step!(
     x_smooth_prev, λ, U_Λ, x_filt_prev, ss,
     P::Diagonal, PI::Diagonal, A::Matrix, sc::_MBFDenseScratch,
 )
     D = length(λ)
-    StackTop = view(sc.Stack, 1:D, :)
 
-    if isnothing(ss)
-        # Pure predict (no measurement): λ_new = Φ'λ, U_Λ_new = U_Λ Φ, where
-        # the physical transition Φ = PI A P, so Φ' = P A' PI (diagonal P, PI).
-        mul!(sc.λ_prec, PI, λ)
-        mul!(sc.λ_pred, transpose(A), sc.λ_prec)
-        mul!(sc.λ_new, P, sc.λ_pred)
-        mul!(sc.U_Λ_prec, U_Λ, PI)
-        mul!(sc.U_Λ_pred, sc.U_Λ_prec, A)
-        mul!(sc.U_Λ_new, sc.U_Λ_pred, P)
-    else
-        d = size(sc.H_prec, 1)
-        StackBot = view(sc.Stack, (D+1):(D+d), :)
+    # Precondition into this transition's local coordinates.
+    _matmul!(sc.λ_prec, transpose(PI), λ)
+    _matmul!(sc.U_Λ_prec, U_Λ, PI)
 
-        # Precondition into this transition's local coordinates.
-        mul!(sc.H_prec, ss.H, transpose(PI))
-        mul!(sc.K_prec, P, ss.K)
-        mul!(sc.λ_prec, transpose(PI), λ)
-        mul!(sc.U_Λ_prec, U_Λ, PI)
-
+    # Incorporate this step's measurement, if there is one. Without it (`ss === nothing`,
+    # a degenerate step) the recursion is a pure predict and the preconditioned λ/Λ pass
+    # through unchanged.
+    if !isnothing(ss)
+        _matmul!(sc.H_prec, ss.H, transpose(PI))
+        _matmul!(sc.K_prec, P, ss.K)
         _sqrt_mbf_update!(
             sc.λ_prec, sc.U_Λ_prec, sc.K_prec, ss.S_U, ss.z, sc.H_prec, D, sc,
         )
-
-        # Predict (still in preconditioned coordinates) and unprecondition.
-        mul!(sc.λ_pred, transpose(A), sc.λ_prec)
-        mul!(sc.λ_new, transpose(P), sc.λ_pred)
-        mul!(sc.U_Λ_pred, sc.U_Λ_prec, A)
-        mul!(sc.U_Λ_new, sc.U_Λ_pred, P)
     end
+
+    # Predict (still in preconditioned coordinates) and unprecondition: the physical
+    # transition is Φ = PI A P, so λ_new = Φ'λ = P A' PI λ and U_Λ_new = U_Λ Φ.
+    _matmul!(sc.λ_pred, transpose(A), sc.λ_prec)
+    _matmul!(sc.λ_new, transpose(P), sc.λ_pred)
+    _matmul!(sc.U_Λ_pred, sc.U_Λ_prec, A)
+    _matmul!(sc.U_Λ_new, sc.U_Λ_pred, P)
     λ_new, U_Λ_new = sc.λ_new, sc.U_Λ_new
 
     # Recover smoothed mean/covariance using the now-updated λ, Λ (information from
     # measurements {i, ..., n}).
-    copy!(sc.U_f, x_filt_prev.Σ.R)
-    mul!(sc.λ_prec, sc.U_f, λ_new)
-    mul!(sc.λ_pred, transpose(sc.U_f), sc.λ_prec)
+    # `U_f` is only ever read below, so alias the filtered factor instead of copying it.
+    U_f = x_filt_prev.Σ.R
+    _matmul!(sc.λ_prec, U_f, λ_new)
+    _matmul!(sc.λ_pred, transpose(U_f), sc.λ_prec)
     x_smooth_prev.μ .-= sc.λ_pred
     # The recovery is done directly in physical coordinates: `V = U_Λ_new * U_f'` and
     # `R_f = R_M * U_f` (no P/PI scalings -- they would cancel exactly, since
     # `PI == P^{-1}`). This saves two D×D products per step.
-    mul!(sc.U_Λ_pred, U_Λ_new, transpose(sc.U_f))
+    _matmul!(sc.U_Λ_pred, U_Λ_new, transpose(U_f))
     _hyperbolic_qr!(sc.R_M, sc.v_h, sc.w_h, sc.U_Λ_pred)
-    mul!(sc.R_f, sc.R_M, sc.U_f)
+    _matmul!(sc.R_f, sc.R_M, U_f)
     # `sc.R_f` is a valid square-root factor of the smoothed covariance
     # (`sc.R_f'sc.R_f = Σ_s`) but generally a full (non-triangular) matrix. That is fine:
     # the package does not assume upper-triangular factors in general (e.g. `update!`
