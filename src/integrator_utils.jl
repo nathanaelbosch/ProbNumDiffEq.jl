@@ -632,7 +632,7 @@ function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, sc::_MBFDenseScratch)
 end
 
 """
-    _save_smoother_state!(smoother_states, i, cache)
+    _save_smoother_state!(smoother_states, cache)
 
 Store the measurement quantities that the √MBF backward smoother needs for this step's
 update: the measurement mean `z = h(x_pred)` (left in `cache.measurement.μ`; the filter's
@@ -646,13 +646,13 @@ smoothing with them reproduces the filter's posterior exactly; see
 [`calibrate_solution!`](@ref) for how they stay consistent when the solution is
 calibrated after the solve.
 
-`i` is the transition index (the step just taken goes from `sol.t[i]` to `sol.t[i+1]`,
-i.e. `i == integ.saveiter - 1` at the call site). Mirrors `copyat_or_push!` semantics
-(pushes at `i > length(smoother_states)`, overwrites otherwise) so the array stays
-aligned with `sol.t` (`length(smoother_states) == length(sol.t) - 1`) even when
-`savevalues!` reruns this block without an underlying save.
+Called once per saved step and appends one entry, which keeps the array aligned with
+`sol.t`: `smoother_states[j]` holds the transition `sol.t[j] -> sol.t[j+1]`, so
+`length(smoother_states) == length(sol.t) - 1`. The caller only runs this when
+`OrdinaryDiffEqCore._savevalues!` actually saved; runs without a save (e.g. the final
+step under `save_end=false`) belong to no stored transition and are skipped there.
 """
-function _save_smoother_state!(smoother_states, i, cache)
+function _save_smoother_state!(smoother_states, cache)
     if iszero(cache.x_pred.Σ.R) || iszero(cache.measurement.Σ)
         # Degenerate step: `update!` skipped the update (zero predicted covariance,
         # mirroring `update!`'s own early-exit condition), or the measurement covariance
@@ -660,11 +660,7 @@ function _save_smoother_state!(smoother_states, i, cache)
         # noise). Either way there is no measurement information to smooth with, so the
         # backward pass at this step does a plain prediction (`ss === nothing` branch of
         # `_mbf_backward_step!`).
-        if length(smoother_states) < i
-            push!(smoother_states, nothing)
-        else
-            smoother_states[i] = nothing
-        end
+        push!(smoother_states, nothing)
         return nothing
     end
     T = eltype(cache.C_Dxd)
@@ -680,12 +676,7 @@ function _save_smoother_state!(smoother_states, i, cache)
     else
         nothing
     end
-    ss = SmootherState(z, H, K, S_U, rate)
-    if length(smoother_states) < i
-        push!(smoother_states, ss)
-    else
-        smoother_states[i] = ss
-    end
+    push!(smoother_states, SmootherState(z, H, K, S_U, rate))
     return nothing
 end
 
@@ -844,9 +835,15 @@ function DiffEqBase.savevalues!(
 
     # Do whatever OrdinaryDiffEqCore would do
     out = OrdinaryDiffEqCore._savevalues!(integ, force_save, reduce_size)
+    # `_savevalues!` returns `(saved, savedexactly)`; `saved` is `true` exactly when it
+    # appended a new entry to `sol.t`. Without a save there is no solution index that the
+    # current state belongs to, so the custom saves below have to be skipped: otherwise
+    # they overwrite the last saved entry with the current (unsaved) state. This happens
+    # e.g. with `save_end=false`, where the final step is taken but never saved.
+    saved, _ = out
 
     # Save our custom stuff that we need for the posterior
-    if integ.opts.save_everystep
+    if saved && integ.opts.save_everystep
         i = integ.saveiter
         save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
         copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
@@ -862,8 +859,8 @@ function DiffEqBase.savevalues!(
         end
         if integ.alg.smooth && integ.alg.smoother == :mbf
             # smoother_states[j] holds the transition sol.t[j] -> sol.t[j+1], so the step
-            # just taken (ending at point i) is stored at i - 1.
-            _save_smoother_state!(integ.sol.smoother_states, i - 1, integ.cache)
+            # just taken (ending at the freshly saved point i) is appended at i - 1.
+            _save_smoother_state!(integ.sol.smoother_states, integ.cache)
         end
     end
 

@@ -85,6 +85,22 @@ end
     end
 end
 
+# Smooth a solution's saved filtering states with the classic RTS recursion over its
+# stored backward kernels; the reference the √MBF smoother has to reproduce.
+function rts_reference(sol)
+    x_smooth = [
+        ProbNumDiffEq.Gaussian(copy(x.μ), ProbNumDiffEq.PSDMatrix(copy(x.Σ.R)))
+        for x in sol.x_filt
+    ]
+    C_DxD = zero(sol.cache.C_DxD)
+    C_3DxD = zero(sol.cache.C_3DxD)
+    for i in (length(x_smooth)-1):-1:1
+        ProbNumDiffEq.marginalize!(x_smooth[i], x_smooth[i+1],
+            sol.backward_kernels[i]; C_DxD, C_3DxD)
+    end
+    return x_smooth
+end
+
 @testset "Smoothed states match the backward-kernel (RTS) recursion" begin
     # The √MBF smoother must compute the exact same posterior as the RTS recursion
     # stored in `sol.backward_kernels` (both are exact for the same model), up to
@@ -92,20 +108,6 @@ end
     # of the √MBF Λ update used `S_U \ H` (i.e. S_U⁻¹H) instead of `S_U' \ H`
     # (S_U⁻ᵀH) in its QR stack, which silently corrupted the smoothed covariances
     # by O(10%) while leaving the (λ-based) means essentially unaffected.
-    function rts_reference(sol)
-        x_smooth = [
-            ProbNumDiffEq.Gaussian(copy(x.μ), ProbNumDiffEq.PSDMatrix(copy(x.Σ.R)))
-            for x in sol.x_filt
-        ]
-        C_DxD = zero(sol.cache.C_DxD)
-        C_3DxD = zero(sol.cache.C_3DxD)
-        for i in (length(x_smooth)-1):-1:1
-            ProbNumDiffEq.marginalize!(x_smooth[i], x_smooth[i+1],
-                sol.backward_kernels[i]; C_DxD, C_3DxD)
-        end
-        return x_smooth
-    end
-
     # Run both smoother implementations and check that they compute the same, exact
     # posterior as the kernel-based RTS recursion.
     for smoother in (:mbf, :rts), Alg in (EK1, EK0, DiagonalEK1)
@@ -190,10 +192,42 @@ end
     @test all(x -> all(isfinite, x.Σ.R), sol.x_smooth)
 end
 
+# Field-wise comparison of two `SmootherState`s (which may be `nothing` for
+# degenerate steps); the struct has no `≈` method of its own.
+_ss_approx(a, b) =
+    a === nothing || b === nothing ? a === b :
+    a.z ≈ b.z && a.H ≈ b.H && a.K ≈ b.K && a.S_U ≈ b.S_U
+
 @testset "smoother_states stay index-aligned with the saved times" begin
     # (a) save_end=false: final savevalues! runs without an underlying save
     sol = solve(prob, EK1(); save_end=false)
     @test length(sol.smoother_states) == length(sol.t) - 1
+
+    # (a2) ...and the entries must hold the *saved* transitions, not the final
+    #      unsaved step's quantities. With identical stepping, everything that both
+    #      solves saved has to agree exactly.
+    sol_t = solve(prob, EK1(order=3), abstol=2e-2, reltol=2e-2)
+    sol_f = solve(prob, EK1(order=3), abstol=2e-2, reltol=2e-2; save_end=false)
+    n = length(sol_f.t)
+    @test sol_t.t[1:n] == sol_f.t
+    @test length(sol_f.smoother_states) == n - 1
+    @test all(
+        _ss_approx(sol_t.smoother_states[j], sol_f.smoother_states[j]) for j in 1:(n-1)
+    )
+    @test all(sol_t.x_filt[i].μ ≈ sol_f.x_filt[i].μ for i in 1:n)
+    @test all(sol_t.x_filt[i].Σ.R ≈ sol_f.x_filt[i].Σ.R for i in 1:n)
+    @test sol_t.diffusions[1:(n-1)] == sol_f.diffusions
+    # `x_smooth`/`pu` are *not* compared: the `save_end=false` posterior conditions on
+    # one measurement less (the final step was taken but not saved), so every smoothed
+    # state legitimately differs. What must hold is that the shortened backward pass is
+    # itself correct, i.e. still matches the RTS recursion over the saved states:
+    alg = EK1(order=3, smoother=:mbf, save_backward_kernels=true)
+    sol_k = solve(prob, alg, abstol=2e-2, reltol=2e-2; save_end=false)
+    ref = rts_reference(sol_k)
+    @test all(sol_k.x_smooth[i].μ ≈ ref[i].μ for i in eachindex(sol_k.t))
+    @test all(
+        Matrix(sol_k.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) for i in eachindex(sol_k.t)
+    )
 
     # (b) two discrete callbacks firing at every step (duplicate-time saves;
     #     each step produces one no-save custom run followed by force-saves)
