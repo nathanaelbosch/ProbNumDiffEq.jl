@@ -97,6 +97,14 @@ function set_diffusions!(solution::AbstractProbODESolution, diffusion)
     return nothing
 end
 
+# Project the smoothed state at index `i` into solution space and write it into the
+# solution's `pu`/`u` arrays.
+function _store_smoothed!(sol, cache, i)
+    _gaussian_mul!(sol.pu[i], cache.SolProj, sol.x_smooth[i])
+    sol.u[i][:] .= sol.pu[i].μ
+    return nothing
+end
+
 """
     smooth_solution!(integ)
 
@@ -178,8 +186,7 @@ function _smooth_solution_mbf!(integ)
     for i in n:-1:2
         if iszero(t[i] - t[i-1])
             copy!(x_smooth[i-1], x_smooth[i])
-            _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
-            sol.u[i-1][:] .= sol.pu[i-1].μ
+            _store_smoothed!(sol, cache, i - 1)
             continue
         end
 
@@ -199,8 +206,7 @@ function _smooth_solution_mbf!(integ)
             x_smooth[i-1], λ, U_Λ, sol.x_filt[i-1], ss,
             cache.P, cache.PI, cache.A, scratch)
 
-        _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
-        sol.u[i-1][:] .= sol.pu[i-1].μ
+        _store_smoothed!(sol, cache, i - 1)
     end
 
     if !isnothing(saved_rate_parameter)
@@ -225,8 +231,7 @@ function _smooth_solution_rts!(integ)
         else
             marginalize!(x_smooth[i], x_smooth[i+1], backward_kernels[i]; C_DxD, C_3DxD)
         end
-        _gaussian_mul!(sol.pu[i], cache.SolProj, x_smooth[i])
-        sol.u[i][:] .= sol.pu[i].μ
+        _store_smoothed!(sol, cache, i)
     end
     return nothing
 end
