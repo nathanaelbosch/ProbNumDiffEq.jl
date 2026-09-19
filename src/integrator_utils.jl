@@ -644,10 +644,24 @@ end
 Extract the upper triangular Cholesky factor of the measurement covariance from `C_dxd`,
 where `update!` computed it in-place via `cholesky!`. For 1×1 blocks (EK0, DiagonalEK1),
 `update!` uses a scalar shortcut that skips the in-place Cholesky, so the factor is `√S`.
+
+`C_dxd` holds the Cholesky factor in its upper triangle iff `update!` factorized it in
+place; Dual eltypes (and any other eltype where `make_hermitian_if_fowarddiff` copies)
+take the re-factorization branch below, since `update!` factorized a symmetrized copy
+instead and left the raw (unfactorized) measurement covariance in `C_dxd`.
 """
-_extract_measurement_chol(C_dxd::Matrix) =
+_extract_measurement_chol(C_dxd::Matrix{T}) where {T} =
     length(C_dxd) == 1 ? fill(sqrt(C_dxd[1, 1]), 1, 1) :
-    Matrix(UpperTriangular(C_dxd))
+    _extract_measurement_chol_dense(C_dxd, T)
+_extract_measurement_chol_dense(C_dxd::Matrix, ::Type) = Matrix(UpperTriangular(C_dxd))
+function _extract_measurement_chol_dense(
+    C_dxd::Matrix, ::Type{<:ForwardDiff.Dual})
+    F = cholesky(Symmetric(C_dxd), check=false)
+    issuccess(F) || error(
+        "Cholesky factorization of the measurement covariance failed; " *
+        "cannot store the smoother state for backward smoothing.")
+    return Matrix(F.U)
+end
 _extract_measurement_chol(C_dxd::IsometricKroneckerProduct) =
     IsometricKroneckerProduct(C_dxd.rdim, _extract_measurement_chol(C_dxd.B))
 _extract_measurement_chol(C_dxd::BlocksOfDiagonals) =

@@ -8,7 +8,7 @@ import SciMLStructures
 # using ReverseDiff
 # using Zygote
 
-import ODEProblemLibrary: prob_ode_fitzhughnagumo
+import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_lotkavolterra
 
 # Helper function to convert a regular ODE problem to MTK form with symbolic maps
 function make_mtk_problem(_prob)
@@ -77,4 +77,28 @@ end
     #     @test_broken Zygote.gradient(param_to_loss, prob.p) ≈ dldp
     #     @test_broken Zygote.gradient(startval_to_loss, prob.u0) ≈ dldu0
     # end
+end
+
+@testset "Smoothed means under AD: MBF vs RTS smoother (issue with `smooth=true`)" begin
+    # Regression test: `_extract_measurement_chol` used to read `cache.C_dxd` assuming
+    # `update!` had factorized it in place, which is false for ForwardDiff.Dual eltypes
+    # (see `make_hermitian_if_fowarddiff`). This corrupted the MBF smoother's saved
+    # Cholesky factors and hence the smoothed means under AD. EK1 with d>=2 is the
+    # affected configuration; EK0/DiagonalEK1 and d==1 EK1 use a scalar shortcut that is
+    # unaffected. Only smoothed means are checked here (not covariances): smoothed-
+    # covariance gradients have a separate, pre-existing issue (task 04).
+    prob = prob_ode_lotkavolterra
+
+    function smoothed_sum(u0, alg)
+        sol = solve(
+            remake(prob, u0=u0), alg, abstol=1e-6, reltol=1e-6, dense=false,
+            initializealg=SimpleInit())
+        return sum(norm.(sol.u[2:(end-1)]))
+    end
+    u0 = [1.0, 1.0]
+
+    g_mbf = ForwardDiff.gradient(u -> smoothed_sum(u, EK1(order=3)), u0)
+    g_rts = ForwardDiff.gradient(u -> smoothed_sum(u, EK1(order=3, smoother=:rts)), u0)
+
+    @test g_mbf ≈ g_rts rtol = 1e-4
 end
