@@ -153,6 +153,24 @@ end
     end
 end
 
+@testset "degenerate (zero-covariance) steps with observation noise" begin
+    prob = prob_ode_lotkavolterra
+    # check test/observation_noise.jl for the accepted pn_observation_noise format
+    # (Diagonal / Matrix / PSDMatrix are supported)
+    alg = EK1(
+        initialization=TaylorModeInit(3),
+        diffusionmodel=FixedDiffusion(0, false),          # zero initial diffusion, no calibration
+        pn_observation_noise=Diagonal(fill(0.1, 2)),
+        smooth=true,
+    )
+    sol = solve(prob, alg)
+    # The filter skipped every update (Σ_pred ≡ 0), so there is no measurement
+    # information to smooth with: every smoother state must be `nothing`.
+    @test all(ss -> ss === nothing, sol.smoother_states)   # currently fails: stores SmootherStates
+    @test all(x -> all(isfinite, x.μ), sol.x_smooth)
+    @test all(x -> all(isfinite, x.Σ.R), sol.x_smooth)
+end
+
 @testset "smoother_states stay index-aligned with the saved times" begin
     # (a) save_end=false: final savevalues! runs without an underlying save
     sol = solve(prob, EK1(); save_end=false)

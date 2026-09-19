@@ -619,9 +619,11 @@ aligned with `sol.t` (`length(smoother_states) == length(sol.t) - 1`) even when
 `savevalues!` reruns this block without an underlying save.
 """
 function _save_smoother_state!(smoother_states, i, cache)
-    if iszero(cache.measurement.Σ)
-        # Degenerate step: the predicted covariance was (numerically) zero, so `update!`
-        # skipped the update. There is no measurement information to smooth with, so the
+    if iszero(cache.x_pred.Σ.R) || iszero(cache.measurement.Σ)
+        # Degenerate step: `update!` skipped the update (zero predicted covariance,
+        # mirroring `update!`'s own early-exit condition), or the measurement covariance
+        # is exactly zero (e.g. `Σ_pred ≠ 0` but `H Σ_pred H' = 0` with no observation
+        # noise). Either way there is no measurement information to smooth with, so the
         # backward pass at this step does a plain prediction (`ss === nothing` branch of
         # `_mbf_backward_step!`).
         if length(smoother_states) < i
