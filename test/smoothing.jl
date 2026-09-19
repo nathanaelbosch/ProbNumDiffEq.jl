@@ -153,6 +153,25 @@ end
     end
 end
 
+@testset "MBF smoother with calibrated per-dimension static diffusion" begin
+    # FixedMVDiffusion only supports EK0; with it, EK0 switches from
+    # IsometricKroneckerCovariance to BlockDiagonalCovariance, so this exercises the
+    # BlocksOfDiagonals MBF path together with the per-dimension S_U rescaling.
+    alg_mbf = EK0(
+        order=3, smooth=true, smoother=:mbf,
+        diffusionmodel=FixedMVDiffusion(initial_diffusion=[0.5, 2.0]))
+    alg_rts = EK0(
+        order=3, smooth=true, smoother=:rts, save_backward_kernels=true,
+        diffusionmodel=FixedMVDiffusion(initial_diffusion=[0.5, 2.0]))
+    sol_mbf = solve(prob, alg_mbf, abstol=2e-2, reltol=2e-2)
+    sol_rts = solve(prob, alg_rts, abstol=2e-2, reltol=2e-2)
+    @test length(sol_mbf.t) == length(sol_rts.t)
+    for i in eachindex(sol_mbf.t)
+        @test sol_mbf.x_smooth[i].μ ≈ sol_rts.x_smooth[i].μ rtol = 1e-8 atol = 1e-10
+        @test Matrix(sol_mbf.x_smooth[i].Σ) ≈ Matrix(sol_rts.x_smooth[i].Σ) rtol = 1e-8
+    end
+end
+
 @testset "degenerate (zero-covariance) steps with observation noise" begin
     prob = prob_ode_lotkavolterra
     # check test/observation_noise.jl for the accepted pn_observation_noise format
