@@ -75,6 +75,17 @@ end
     end
 end
 
+"""
+    _needs_backward_kernels(alg)
+
+Whether the forward pass has to store backward transition kernels. They are consumed by
+the RTS smoother (`smoother=:rts`, and only when `smooth=true`) and by Fenrir's own
+backward pass, which opts in via `save_backward_kernels=true`. The MBF smoother
+(`smoother=:mbf`) reconstructs what it needs from the stored `SmootherState`s instead.
+"""
+_needs_backward_kernels(alg) =
+    (alg.smooth && alg.smoother == :rts) || alg.save_backward_kernels
+
 function ekargcheck(
     alg;
     smoother=:mbf,
