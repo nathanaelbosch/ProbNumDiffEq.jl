@@ -79,14 +79,14 @@ end
     # end
 end
 
-@testset "Smoothed means under AD: MBF vs RTS smoother (issue with `smooth=true`)" begin
+@testset "Smoothed means under AD: MBF and RTS smoothers agree" begin
     # Regression test: `_extract_measurement_chol` used to read `cache.C_dxd` assuming
     # `update!` had factorized it in place, which is false for ForwardDiff.Dual eltypes
     # (see `make_hermitian_if_fowarddiff`). This corrupted the MBF smoother's saved
     # Cholesky factors and hence the smoothed means under AD. EK1 with d>=2 is the
     # affected configuration; EK0/DiagonalEK1 and d==1 EK1 use a scalar shortcut that is
     # unaffected. Only smoothed means are checked here (not covariances): smoothed-
-    # covariance gradients have a separate, pre-existing issue (task 04).
+    # covariance gradients have a separate, pre-existing issue, see the testset below.
     prob = prob_ode_lotkavolterra
 
     function smoothed_sum(u0, alg)
@@ -103,7 +103,7 @@ end
     @test g_mbf ≈ g_rts rtol = 1e-4
 end
 
-@testset "Smoothed covariances under AD: NaN partials with :mbf (task 04)" begin
+@testset "Smoothed covariances under AD: NaN partials with :mbf (known limitation)" begin
     # `_hyperbolic_qr!` (used by the MBF backward step to recover the smoothed
     # covariance square-root factor) produces correct *values* under ForwardDiff.Dual
     # eltypes, but NaN *partials* for losses involving the smoothed covariances. This is

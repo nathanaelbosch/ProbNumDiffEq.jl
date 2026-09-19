@@ -70,6 +70,4 @@ end
         dense=false)
     OrdinaryDiffEq.solve!(integ_f)
     @test integ_s.cache.prior.rate_parameter ≈ integ_f.cache.prior.rate_parameter
-    # currently fails without the fix: integ_s ends up holding the first step's rate
-    # parameter instead of the forward-final one.
 end

@@ -185,7 +185,7 @@ end
     sol = solve(prob, alg)
     # The filter skipped every update (Σ_pred ≡ 0), so there is no measurement
     # information to smooth with: every smoother state must be `nothing`.
-    @test all(ss -> ss === nothing, sol.smoother_states)   # currently fails: stores SmootherStates
+    @test all(ss -> ss === nothing, sol.smoother_states)
     @test all(x -> all(isfinite, x.μ), sol.x_smooth)
     @test all(x -> all(isfinite, x.Σ.R), sol.x_smooth)
 end
