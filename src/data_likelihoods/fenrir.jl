@@ -38,8 +38,8 @@ function fenrir_data_loglik(
     data::NamedTuple{(:t, :u)},
     kwargs...,
 )
-    if !alg.smooth
-        throw(ArgumentError("fenrir only works with smoothing. Set `smooth=true`."))
+    if !alg.smooth || !alg.save_backward_kernels
+        alg = remake(alg; smooth=true, save_backward_kernels=true)
     end
     tstops = union(data.t, get(kwargs, :tstops, []))
 

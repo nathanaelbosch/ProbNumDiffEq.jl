@@ -77,11 +77,20 @@ end
 
 function ekargcheck(
     alg;
+    smoother=:mbf,
     diffusionmodel,
     pn_observation_noise,
     covariance_factorization,
     kwargs...,
 )
+    if !(smoother in (:rts, :mbf))
+        throw(
+            ArgumentError(
+                "`smoother` must be `:rts` (Rauch–Tung–Striebel backward kernels) or " *
+                "`:mbf` (square-root Modified Bryson–Frazier); got `$(repr(smoother))`.",
+            ),
+        )
+    end
     if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
        (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
         throw(
@@ -172,6 +181,23 @@ which scales cubically with the problem size._
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `smoother::Symbol`: Smoother implementation to use when `smooth=true`: `:mbf` (default; the
+  square-root Modified Bryson–Frazier smoother of Gibbs 2011) or `:rts` (the classic
+  Rauch–Tung–Striebel backward transition kernels).
+
+  For the very high solver orders that trigger #393-like numerical instability, the
+  `:rts` smoother can produce smoothed covariances that are unstable (finite but
+  inaccurate); `:mbf` is robust to this.
+
+  Under forward-mode AD, gradients involving the *smoothed covariances* may be NaN with
+  `:mbf` (hyperbolic-QR cancellation, an intrinsic ill-conditioning of the hyperbolic
+  rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
+  `smoother=:rts` if you need covariance gradients.
+- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
+  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
+  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
+  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
+  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -189,6 +215,8 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
+    smoother::Symbol
+    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -196,14 +224,19 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
+        smoother::Symbol=:mbf,
+        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         pn_observation_noise::RT=nothing,
         covariance_factorization::CF=covariance_structure(EK0, prior, diffusionmodel),
     ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(EK0; diffusionmodel, pn_observation_noise, covariance_factorization)
-        new{PT,DT,IT,RT,CF}(
-            prior, diffusionmodel, smooth, initialization, pn_observation_noise,
+        ekargcheck(
+            EK0; smoother, diffusionmodel, pn_observation_noise,
             covariance_factorization)
+        new{PT,DT,IT,RT,CF}(
+            prior, diffusionmodel, smooth, smoother, save_backward_kernels,
+            initialization,
+            pn_observation_noise, covariance_factorization)
     end
 end
 
@@ -228,6 +261,23 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `smoother::Symbol`: Smoother implementation to use when `smooth=true`: `:mbf` (default; the
+  square-root Modified Bryson–Frazier smoother of Gibbs 2011) or `:rts` (the classic
+  Rauch–Tung–Striebel backward transition kernels).
+
+  For the very high solver orders that trigger #393-like numerical instability, the
+  `:rts` smoother can produce smoothed covariances that are unstable (finite but
+  inaccurate); `:mbf` is robust to this.
+
+  Under forward-mode AD, gradients involving the *smoothed covariances* may be NaN with
+  `:mbf` (hyperbolic-QR cancellation, an intrinsic ill-conditioning of the hyperbolic
+  rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
+  `smoother=:rts` if you need covariance gradients.
+- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
+  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
+  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
+  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
+  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -251,6 +301,8 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
+    smoother::Symbol
+    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -260,6 +312,8 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
+        smoother::Symbol=:mbf,
+        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
         autodiff=AutoForwardDiff(),
@@ -269,7 +323,9 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         pn_observation_noise::RT=nothing,
         covariance_factorization::CF=covariance_structure(EK1, prior, diffusionmodel),
     ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(EK1; diffusionmodel, pn_observation_noise, covariance_factorization)
+        ekargcheck(
+            EK1; smoother, diffusionmodel, pn_observation_noise,
+            covariance_factorization)
         AD_choice, chunk_size, diff_type =
             _process_AD_choice(autodiff, chunk_size, diff_type)
         new{
@@ -287,6 +343,8 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             prior,
             diffusionmodel,
             smooth,
+            smoother,
+            save_backward_kernels,
             initialization,
             pn_observation_noise,
             covariance_factorization,
@@ -323,6 +381,23 @@ the full [`EK1`](@ref) would be too expensive.
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
 - `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `smoother::Symbol`: Smoother implementation to use when `smooth=true`: `:mbf` (default; the
+  square-root Modified Bryson–Frazier smoother of Gibbs 2011) or `:rts` (the classic
+  Rauch–Tung–Striebel backward transition kernels).
+
+  For the very high solver orders that trigger #393-like numerical instability, the
+  `:rts` smoother can produce smoothed covariances that are unstable (finite but
+  inaccurate); `:mbf` is robust to this.
+
+  Under forward-mode AD, gradients involving the *smoothed covariances* may be NaN with
+  `:mbf` (hyperbolic-QR cancellation, an intrinsic ill-conditioning of the hyperbolic
+  rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
+  `smoother=:rts` if you need covariance gradients.
+- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
+  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
+  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
+  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
+  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -344,6 +419,8 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     prior::PT
     diffusionmodel::DT
     smooth::Bool
+    smoother::Symbol
+    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -353,6 +430,8 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         prior::PT=IWP(order),
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
+        smoother::Symbol=:mbf,
+        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
         autodiff=AutoForwardDiff(),
@@ -366,7 +445,13 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             diffusionmodel,
         ),
     ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise, covariance_factorization)
+        ekargcheck(
+            DiagonalEK1;
+            smoother,
+            diffusionmodel,
+            pn_observation_noise,
+            covariance_factorization,
+        )
         AD_choice, chunk_size, diff_type =
             _process_AD_choice(autodiff, chunk_size, diff_type)
         new{
@@ -384,6 +469,8 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             prior,
             diffusionmodel,
             smooth,
+            smoother,
+            save_backward_kernels,
             initialization,
             pn_observation_noise,
             covariance_factorization,

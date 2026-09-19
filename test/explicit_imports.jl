@@ -23,8 +23,9 @@ NONPUBLIC_ACCESSES = (
     :FunctionWrappersWrappers,
     # ForwardDiff/DiffResults internals; flagged non-public but stable de-facto API.
     :Dual, :value, :derivative!, :jacobian, :jacobian!, :JacobianResult,
-    # Base/LinearAlgebra internals used in the fast linear algebra routines.
-    :ReshapedArray, :_reshape, :BlasFloat, :geqrt!,
+    # Base/LinearAlgebra internals used in the fast linear algebra routines and the
+    # smoother's in-place QR (LAPACK entry points; stable de-facto API).
+    :ReshapedArray, :_reshape, :BlasFloat, :geqrt!, :geqrf!,
     # Kronecker.jl internals used by IsometricKroneckerProduct.
     :getallfactors, :ldiv_vec_trick!,
     # FiniteHorizonGramians workspace allocation.
