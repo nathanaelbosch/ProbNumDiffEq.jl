@@ -142,7 +142,7 @@ function SciMLBase.build_solution(
         Union{
             Nothing,
             SmootherState{
-                uElType,
+                Vector{uElType},
                 typeof(cache.H),
                 typeof(cache.C_Dxd),
                 typeof(cache.measurement.Σ),

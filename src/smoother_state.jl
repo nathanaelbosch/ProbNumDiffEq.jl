@@ -17,14 +17,17 @@ at every step, so the backward pass has to restore the per-step value before rec
 the transition matrices with that step's step size. It is `nothing` for priors whose
 transitions only depend on the step size.
 
+`z` is a `Vector` as stored by the forward pass, but the block-diagonal backward step
+passes per-block slices (views) of it, so the field is left generic.
+
 `H` and `K` keep whatever structured type the cache uses (dense `Matrix`,
 `IsometricKroneckerProduct` for EK0, or `BlocksOfDiagonals` for DiagonalEK1) so that
 backward smoothing can dispatch on them and exploit the same structure the forward pass
 does, instead of forcing an expensive dense representation. `S_U` is stored in the same
 structure as the measurement covariance itself.
 """
-struct SmootherState{T,TH,TK,TS,TR}
-    z::Vector{T}
+struct SmootherState{Tz,TH,TK,TS,TR}
+    z::Tz
     H::TH
     K::TK
     S_U::TS

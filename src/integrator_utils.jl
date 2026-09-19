@@ -456,8 +456,8 @@ function _mbf_backward_step!(
         _ss =
             isnothing(ss) ? nothing :
             SmootherState(
-                collect(view(ss.z, bi:bi)), ss.H.blocks[bi],
-                ss.K.blocks[bi], ss.S_U.blocks[bi], ss.rate_parameter,
+                view(ss.z, bi:bi), ss.H.blocks[bi],
+                ss.K.blocks[bi], ss.S_U.blocks[bi], nothing,
             )
         _x_filt_prev =
             Gaussian(view(x_filt_prev.μ, bi:d:D), PSDMatrix(x_filt_prev.Σ.R.blocks[bi]))
@@ -465,7 +465,7 @@ function _mbf_backward_step!(
             Gaussian(view(x_smooth_prev.μ, bi:d:D), PSDMatrix(x_smooth_prev.Σ.R.blocks[bi]))
 
         λ_bi_new, U_Λ_bi_new = _mbf_backward_step!(
-            _x_smooth_prev, collect(view(λ, bi:d:D)), U_Λ.blocks[bi],
+            _x_smooth_prev, view(λ, bi:d:D), U_Λ.blocks[bi],
             _x_filt_prev, _ss, P.blocks[bi], PI.blocks[bi], A.blocks[bi], sc)
 
         λ_new[bi:d:D] .= λ_bi_new
