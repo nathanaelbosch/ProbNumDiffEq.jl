@@ -408,27 +408,20 @@ function _mbf_backward_step!(
     _λ = reshape_no_alloc(λ, d, Q)'
     P_B, PI_B, A_B, U_Λ_B = P.B, PI.B, A.B, U_Λ.B
 
-    if isnothing(ss)
-        λ_new_B = P_B' * (A_B' * (PI_B' * _λ))
-        U_Λ_new_B = (U_Λ_B * PI_B) * A_B * P_B
-    else
-        K_B = ss.K.B
-        S_U_B = ss.S_U.B
+    # Precondition into this transition's local coordinates. Both are fresh matrices, so
+    # `_sqrt_mbf_update!` can update them in place.
+    λ_prec = PI_B' * _λ
+    U_Λ_prec = U_Λ_B * PI_B
 
-        H_prec = ss.H.B * PI_B
-        K_prec = P_B * K_B
-        λ_prec = PI_B' * _λ
-        U_Λ_prec = U_Λ_B * PI_B
-        z_row = reshape_no_alloc(ss.z, d, 1)'
-
-        _sqrt_mbf_update!(λ_prec, U_Λ_prec, K_prec, S_U_B, z_row, H_prec, Q, sc)
-
-        λ_prec = A_B' * λ_prec
-        U_Λ_prec = U_Λ_prec * A_B
-
-        λ_new_B = P_B' * λ_prec
-        U_Λ_new_B = U_Λ_prec * P_B
+    if !isnothing(ss)
+        _sqrt_mbf_update!(
+            λ_prec, U_Λ_prec, P_B * ss.K.B, ss.S_U.B,
+            reshape_no_alloc(ss.z, d, 1)', ss.H.B * PI_B, Q, sc)
     end
+
+    # Predict (still in preconditioned coordinates) and unprecondition.
+    λ_new_B = P_B' * (A_B' * λ_prec)
+    U_Λ_new_B = (U_Λ_prec * A_B) * P_B
 
     U_f_B = x_filt_prev.Σ.R.B
     μ_smooth_view = reshape_no_alloc(x_smooth_prev.μ, d, Q)'
