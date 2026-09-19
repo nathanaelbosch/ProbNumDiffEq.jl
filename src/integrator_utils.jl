@@ -728,24 +728,10 @@ the pre-computed output of [`_measurement_chol_scale`](@ref): a scalar for isotr
 diffusions, a `Diagonal` for per-dimension ones (where the measurement Jacobians of
 EK0 and DiagonalEK1 are dimension-pure). The calibrated factor is `S_U' = S_U * scale`.
 """
-function _rescale_measurement_chol!(S_U::Matrix, σ::Number)
-    rmul!(S_U, σ)
-    return S_U
-end
-function _rescale_measurement_chol!(S_U::IsometricKroneckerProduct, σ::Number)
-    rmul!(S_U.B, σ)
-    return S_U
-end
-function _rescale_measurement_chol!(S_U::BlocksOfDiagonals, σ::Number)
-    @simd ivdep for i in eachindex(blocks(S_U))
-        rmul!(blocks(S_U)[i], σ)
-    end
-    return S_U
-end
-function _rescale_measurement_chol!(S_U::Matrix, M::Diagonal)
-    rmul!(S_U, M)
-    return S_U
-end
+# A scalar scale is just `rmul!`, for which every covariance structure already has a
+# method (`Matrix`, `IsometricKroneckerProduct`, `BlocksOfDiagonals`). So is a `Diagonal`
+# scale on a dense factor; only the block-diagonal case needs to pair blocks with entries.
+_rescale_measurement_chol!(S_U, scale) = (rmul!(S_U, scale); S_U)
 function _rescale_measurement_chol!(S_U::BlocksOfDiagonals, M::Diagonal)
     @simd ivdep for i in eachindex(blocks(S_U))
         rmul!(blocks(S_U)[i], M.diag[i])
@@ -760,18 +746,8 @@ function _rescale_measurement_chol!(S_U::IsometricKroneckerProduct, M::Diagonal)
     )
 end
 
-function _positive_qr_r(Stack)
-    R = Matrix(qr(Stack).R)
-    @inbounds for i in axes(R, 1)
-        if R[i, i] < 0
-            @views R[i, :] .*= -1
-        end
-    end
-    return R
-end
-
-# In-place variant of [`_positive_qr_r`](@ref): factorizes `Stack` (destroying it) and writes
-# the R factor with positive diagonal into `R_dest` (zeros below the diagonal).
+# Factorize `Stack` (destroying it) and write its R factor, normalized to a positive
+# diagonal, into `R_dest` (zeros below the diagonal).
 function _positive_qr_r!(R_dest::Matrix, Stack::Matrix, tau::Vector)
     D = size(Stack, 2)
     if eltype(Stack) <: LinearAlgebra.BlasFloat
