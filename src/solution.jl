@@ -132,9 +132,9 @@ function SciMLBase.build_solution(
 
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
     rate_parameter_type = if (cache.prior isa IOUP && cache.prior.update_rate_parameter)
-        # The rate parameter on the cache's prior is an `Array{uElType}` (d x d); the
-        # smoother snapshots a copy of it every step (see `_save_smoother_state!`).
-        Matrix{uElType}
+        # The smoother snapshots a copy of the prior's rate parameter every step
+        # (see `_save_smoother_state!`).
+        typeof(cache.prior.rate_parameter)
     else
         Nothing
     end
