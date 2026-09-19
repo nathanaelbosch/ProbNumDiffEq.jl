@@ -598,7 +598,7 @@ function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, sc::_MBFDenseScratch)
 end
 
 """
-    _save_smoother_state!(smoother_states, cache)
+    _save_smoother_state!(smoother_states, i, cache)
 
 Store the measurement quantities that the √MBF backward smoother needs for this step's
 update: the measurement mean `z = h(x_pred)` (left in `cache.measurement.μ`; the filter's
@@ -611,14 +611,24 @@ configured).
 smoothing with them reproduces the filter's posterior exactly; see
 [`calibrate_solution!`](@ref) for how they stay consistent when the solution is
 calibrated after the solve.
+
+`i` is the transition index (the step just taken goes from `sol.t[i]` to `sol.t[i+1]`,
+i.e. `i == integ.saveiter - 1` at the call site). Mirrors `copyat_or_push!` semantics
+(pushes at `i > length(smoother_states)`, overwrites otherwise) so the array stays
+aligned with `sol.t` (`length(smoother_states) == length(sol.t) - 1`) even when
+`savevalues!` reruns this block without an underlying save.
 """
-function _save_smoother_state!(smoother_states, cache)
+function _save_smoother_state!(smoother_states, i, cache)
     if iszero(cache.measurement.Σ)
         # Degenerate step: the predicted covariance was (numerically) zero, so `update!`
         # skipped the update. There is no measurement information to smooth with, so the
         # backward pass at this step does a plain prediction (`ss === nothing` branch of
         # `_mbf_backward_step!`).
-        push!(smoother_states, nothing)
+        if length(smoother_states) < i
+            push!(smoother_states, nothing)
+        else
+            smoother_states[i] = nothing
+        end
         return nothing
     end
     T = eltype(cache.C_Dxd)
@@ -634,7 +644,12 @@ function _save_smoother_state!(smoother_states, cache)
     else
         nothing
     end
-    push!(smoother_states, SmootherState(z, H, K, S_U, rate))
+    ss = SmootherState(z, H, K, S_U, rate)
+    if length(smoother_states) < i
+        push!(smoother_states, ss)
+    else
+        smoother_states[i] = ss
+    end
     return nothing
 end
 
@@ -807,7 +822,9 @@ function DiffEqBase.savevalues!(
                 integ.sol.backward_kernels, i, integ.cache.backward_kernel)
         end
         if integ.alg.smooth && integ.alg.smoother == :mbf
-            _save_smoother_state!(integ.sol.smoother_states, integ.cache)
+            # smoother_states[j] holds the transition sol.t[j] -> sol.t[j+1], so the step
+            # just taken (ending at point i) is stored at i - 1.
+            _save_smoother_state!(integ.sol.smoother_states, i - 1, integ.cache)
         end
     end
 

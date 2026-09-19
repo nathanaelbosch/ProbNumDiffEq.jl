@@ -152,3 +152,18 @@ end
         end
     end
 end
+
+@testset "smoother_states stay index-aligned with the saved times" begin
+    # (a) save_end=false: final savevalues! runs without an underlying save
+    sol = solve(prob, EK1(); save_end=false)
+    @test length(sol.smoother_states) == length(sol.t) - 1
+
+    # (b) two discrete callbacks firing at every step (duplicate-time saves;
+    #     each step produces one no-save custom run followed by force-saves)
+    cb = CallbackSet(
+        DiscreteCallback((u, t, integ) -> true, integ -> nothing),
+        DiscreteCallback((u, t, integ) -> true, integ -> nothing),
+    )
+    sol = solve(prob, EK1(); callback=cb)
+    @test length(sol.smoother_states) == length(sol.t) - 1
+end
