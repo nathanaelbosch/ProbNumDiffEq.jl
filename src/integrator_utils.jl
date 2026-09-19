@@ -839,7 +839,10 @@ function DiffEqBase.savevalues!(
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
-        if integ.alg.smoother == :rts || integ.alg.save_backward_kernels
+        # Only stored when consumed: by the RTS smoother (`smoother=:rts`, only when
+        # `smooth=true`) or by the independent `save_backward_kernels=true` opt-in.
+        if (integ.alg.smooth && integ.alg.smoother == :rts) ||
+           integ.alg.save_backward_kernels
             copyat_or_push!(
                 integ.sol.backward_kernels, i, integ.cache.backward_kernel)
         end

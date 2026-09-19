@@ -194,8 +194,8 @@ which scales cubically with the problem size._
   rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
   `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref), and always
-  used when `smoother=:rts`.
+  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref); also
+  computed automatically when `smoother=:rts` and `smooth=true`.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -272,8 +272,8 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
   rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
   `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref), and always
-  used when `smoother=:rts`.
+  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref); also
+  computed automatically when `smoother=:rts` and `smooth=true`.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -390,8 +390,8 @@ the full [`EK1`](@ref) would be too expensive.
   rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
   `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref), and always
-  used when `smoother=:rts`.
+  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref); also
+  computed automatically when `smoother=:rts` and `smooth=true`.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).

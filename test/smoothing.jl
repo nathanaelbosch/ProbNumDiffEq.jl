@@ -185,3 +185,21 @@ end
     sol = solve(prob, EK1(); callback=cb)
     @test length(sol.smoother_states) == length(sol.t) - 1
 end
+
+@testset "backward kernels are only computed when consumed" begin
+    prob = prob_ode_lotkavolterra
+
+    # :rts without smooth => nothing consumes the kernels: don't compute or store them
+    sol = solve(prob, EK1(smoother=:rts, smooth=false); dense=false)
+    @test length(sol.backward_kernels) == 0
+
+    # independent opt-in still works without smoothing
+    sol = solve(prob, EK1(save_backward_kernels=true, smooth=false); dense=false)
+    @test length(sol.backward_kernels) == length(sol.t) - 1
+
+    # and with smoothing (unchanged behavior)
+    sol = solve(prob, EK1(smoother=:rts, smooth=true); dense=false)
+    @test length(sol.backward_kernels) == length(sol.t) - 1
+    sol = solve(prob, EK1(smooth=true); dense=false)             # default :mbf
+    @test length(sol.backward_kernels) == 0
+end
