@@ -166,6 +166,15 @@ function _smooth_solution_mbf!(integ)
     _gaussian_mul!(sol.pu[n], cache.SolProj, x_smooth[n])
     sol.u[n][:] .= sol.pu[n].μ
 
+    # The backward loop restores per-step rate parameters into the cache's prior (IOUP with
+    # `update_rate_parameter=true`); leave the cache at the forward-final value afterwards
+    # rather than the earliest step's (the loop's last restoration), matching what a
+    # non-smoothed solve leaves behind, in case anything downstream inspects `cache.prior`
+    # post-solve.
+    saved_rate_parameter =
+        (cache.prior isa IOUP && cache.prior.update_rate_parameter) ?
+        copy(cache.prior.rate_parameter) : nothing
+
     for i in n:-1:2
         if iszero(t[i] - t[i-1])
             copy!(x_smooth[i-1], x_smooth[i])
@@ -193,6 +202,11 @@ function _smooth_solution_mbf!(integ)
         _gaussian_mul!(sol.pu[i-1], cache.SolProj, x_smooth[i-1])
         sol.u[i-1][:] .= sol.pu[i-1].μ
     end
+
+    if !isnothing(saved_rate_parameter)
+        copyto!(cache.prior.rate_parameter, saved_rate_parameter)
+    end
+
     return nothing
 end
 
