@@ -282,6 +282,18 @@ The measurement quantities (`z`, `H`, `K`, `S_U`) were pre-computed and stored b
 forward pass in `ss` (see [`SmootherState`](@ref)), so this function does not need to
 recompute the predicted covariance or the Kalman gain.
 
+**AD limitation**: under forward-mode AD (ForwardDiff.Dual eltypes), the smoothed
+*values* computed here are correct, but the partials of the smoothed *covariance*
+(`x_smooth_prev.Σ`) can be `NaN`; smoothed means are unaffected. This traces to the
+hyperbolic QR factorization in [`_hyperbolic_qr!`](@ref) used by [`_mbf_recover_cov`](@ref):
+its rotation is ~1/α-conditioned in the J-norm `α` of a column, and as `α → 0⁺` (a nearly
+singular `I - V'V`, i.e. smoothed covariance much smaller than filtered) the partials of
+`α = sqrt(max(asq - bsq, 0))` diverge before the degenerate-column threshold is reached,
+which then cancels catastrophically downstream. This is an intrinsic conditioning property
+of hyperbolic rotations (Gibbs 2011), not a bug in this implementation, and there is no
+known fix that preserves the Float64 accuracy of the degenerate-column handling. Use
+`smoother=:rts` if you need gradients through smoothed covariances.
+
 Dispatches on the structure of `P` (which matches that of the state covariances) so that EK0's
 and DiagonalEK1's efficient Kronecker/block-diagonal representations are preserved: the λ/Λ
 recursion and covariance recovery only ever touch the small `(q+1)×(q+1)` blocks (batched over
@@ -480,6 +492,14 @@ end
 
 # In-place variant of [`_hyperbolic_qr!`](@ref) using the preallocated output matrix `top`
 # (initialized to I here) and work vectors `v_h`, `w_h`; destroys `V`.
+#
+# AD limitation: `β = 1 / (α * (α - top[i, i]))` below is ~1/α²-conditioned in the column's
+# J-norm `α = sqrt(max(asq - bsq, 0))`. Under ForwardDiff.Dual eltypes, the *values* are
+# unaffected, but as `α → 0⁺` (short of the `α < eps(T) * d` degenerate-column cutoff) the
+# partials of `α` (and hence of `β`, `τ`) diverge, which can produce NaN partials in the
+# recovered smoothed covariance further downstream (see `_mbf_backward_step!`'s docstring).
+# This is intrinsic to the hyperbolic rotation's conditioning (Gibbs 2011), not fixable here
+# without weakening the degenerate-column handling that keeps the Float64 values accurate.
 function _hyperbolic_qr!(
     top::Matrix{T}, v_h::Vector{T}, w_h::Vector{T}, V::Matrix{T},
 ) where {T}

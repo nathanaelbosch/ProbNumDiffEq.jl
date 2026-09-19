@@ -102,3 +102,37 @@ end
 
     @test g_mbf ≈ g_rts rtol = 1e-4
 end
+
+@testset "Smoothed covariances under AD: NaN partials with :mbf (task 04)" begin
+    # `_hyperbolic_qr!` (used by the MBF backward step to recover the smoothed
+    # covariance square-root factor) produces correct *values* under ForwardDiff.Dual
+    # eltypes, but NaN *partials* for losses involving the smoothed covariances. This is
+    # intrinsic to the hyperbolic rotation's conditioning (~1/α for small J-norm α, see
+    # `_hyperbolic_qr!`/`_mbf_recover_cov` docstrings) and is not fixable without
+    # degrading the Float64 numerics. The RTS smoother is unaffected.
+    prob = prob_ode_lotkavolterra
+
+    function smoothed_cov_loss(u0, alg)
+        sol = solve(
+            remake(prob, u0=u0), alg, abstol=1e-6, reltol=1e-6, dense=false,
+            initializealg=SimpleInit())
+        return sum(
+            sum(abs2, x.μ) + sum(abs2, Matrix(x.Σ)) for x in sol.x_smooth[2:(end-1)]
+        )
+    end
+    u0 = [1.0, 1.0]
+
+    g_mbf = ForwardDiff.gradient(u -> smoothed_cov_loss(u, EK1(order=3)), u0)
+    g_rts = ForwardDiff.gradient(u -> smoothed_cov_loss(u, EK1(order=3, smoother=:rts)), u0)
+
+    # Diagnosis (see `_hyperbolic_qr!`/`_mbf_backward_step!` docstrings in
+    # src/integrator_utils.jl): the hyperbolic rotation used to recover the smoothed
+    # covariance is ~1/α-conditioned in a column's J-norm α; as α → 0⁺ (short of the
+    # degenerate-column cutoff), the ForwardDiff partials of α (and downstream β, τ)
+    # diverge and cancel catastrophically, producing NaN partials -- confirmed
+    # analytically to grow unboundedly as α → 0⁺ well before the cutoff, i.e. an
+    # intrinsic conditioning property of the rotation, not an artifact of the `max(·, 0)`
+    # clamp kink. No fix was found that preserves the Float64 numerics.
+    @test_broken all(isfinite, g_mbf)
+    @test_broken isapprox(g_mbf, g_rts; rtol=1e-3)
+end

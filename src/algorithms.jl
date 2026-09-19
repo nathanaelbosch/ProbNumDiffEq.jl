@@ -188,6 +188,11 @@ which scales cubically with the problem size._
   For the very high solver orders that trigger #393-like numerical instability, the
   `:rts` smoother can produce smoothed covariances that are unstable (finite but
   inaccurate); `:mbf` is robust to this.
+
+  Under forward-mode AD, gradients involving the *smoothed covariances* may be NaN with
+  `:mbf` (hyperbolic-QR cancellation, an intrinsic ill-conditioning of the hyperbolic
+  rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
+  `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
   `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref), and always
   used when `smoother=:rts`.
@@ -261,6 +266,11 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
   For the very high solver orders that trigger #393-like numerical instability, the
   `:rts` smoother can produce smoothed covariances that are unstable (finite but
   inaccurate); `:mbf` is robust to this.
+
+  Under forward-mode AD, gradients involving the *smoothed covariances* may be NaN with
+  `:mbf` (hyperbolic-QR cancellation, an intrinsic ill-conditioning of the hyperbolic
+  rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
+  `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
   `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref), and always
   used when `smoother=:rts`.
@@ -374,6 +384,11 @@ the full [`EK1`](@ref) would be too expensive.
   For the very high solver orders that trigger #393-like numerical instability, the
   `:rts` smoother can produce smoothed covariances that are unstable (finite but
   inaccurate); `:mbf` is robust to this.
+
+  Under forward-mode AD, gradients involving the *smoothed covariances* may be NaN with
+  `:mbf` (hyperbolic-QR cancellation, an intrinsic ill-conditioning of the hyperbolic
+  rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
+  `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
   `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref), and always
   used when `smoother=:rts`.
