@@ -615,20 +615,20 @@ function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, sc::_MBFDenseScratch)
     copyto!(sc.S_U_T, transpose(S_U))
 
     # λ update (BK-free form); see the docstring for the sign conventions
-    mul!(sc.w, transpose(K), λ)
+    _matmul!(sc.w, transpose(K), λ)
     copyto!(sc.z_sol, z)
     ldiv!(LowerTriangular(sc.S_U_T), sc.z_sol)
     ldiv!(UpperTriangular(S_U), sc.z_sol)
     sc.w .-= sc.z_sol
-    mul!(λ, transpose(H), sc.w, -1.0, 1.0)
+    _matmul!(λ, transpose(H), sc.w, -1.0, 1.0)
 
     # Λ update (sqrt form via QR of the stack; see the docstring for the S_U⁻ᵀH factor).
     # The first stack row `U_Λ * (I - K*H)` is computed as `U_Λ - (U_Λ*K)*H` to avoid
     # materializing the D×D matrix `BK`.
-    mul!(sc.U_ΛK, U_Λ, K)
+    _matmul!(sc.U_ΛK, U_Λ, K)
     StackTop = view(sc.Stack, 1:D, :)
     copyto!(StackTop, U_Λ)
-    mul!(StackTop, sc.U_ΛK, H, -1.0, 1.0)
+    _matmul!(StackTop, sc.U_ΛK, H, -1.0, 1.0)
     StackBot = view(sc.Stack, (D+1):(D+size(H, 1)), :)
     copyto!(StackBot, H)
     ldiv!(LowerTriangular(sc.S_U_T), StackBot)
