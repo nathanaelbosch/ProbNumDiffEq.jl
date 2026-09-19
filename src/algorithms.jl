@@ -194,8 +194,10 @@ which scales cubically with the problem size._
   rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
   `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref); also
-  computed automatically when `smoother=:rts` and `smooth=true`.
+  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
+  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
+  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
+  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -272,8 +274,10 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
   rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
   `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref); also
-  computed automatically when `smoother=:rts` and `smooth=true`.
+  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
+  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
+  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
+  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -390,8 +394,10 @@ the full [`EK1`](@ref) would be too expensive.
   rotation, not a bug -- see [`_hyperbolic_qr!`](@ref)); smoothed means are fine. Use
   `smoother=:rts` if you need covariance gradients.
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Needed by [`fenrir_data_loglik`](@ref); also
-  computed automatically when `smoother=:rts` and `smooth=true`.
+  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
+  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
+  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
+  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
