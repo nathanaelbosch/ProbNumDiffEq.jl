@@ -613,8 +613,7 @@ smoothing with them reproduces the filter's posterior exactly; see
 calibrated after the solve.
 """
 function _save_smoother_state!(smoother_states, cache)
-    S_U = _measurement_cholesky(cache.measurement.Σ)
-    if S_U === nothing
+    if iszero(cache.measurement.Σ)
         # Degenerate step: the predicted covariance was (numerically) zero, so `update!`
         # skipped the update. There is no measurement information to smooth with, so the
         # backward pass at this step does a plain prediction (`ss === nothing` branch of
@@ -626,6 +625,7 @@ function _save_smoother_state!(smoother_states, cache)
     H = copy(cache.H)
     z = Vector{T}(cache.measurement.μ)
     K = copy(cache.C_Dxd)
+    S_U = _extract_measurement_chol(cache.C_dxd)
     # Snapshot the prior's rate parameter if it changes every step (IOUP with
     # `update_rate_parameter=true`): `calc_J!` mutates the array on the cache's prior at
     # the start of every step, so the backward pass needs a copy of this step's value.
@@ -639,46 +639,19 @@ function _save_smoother_state!(smoother_states, cache)
 end
 
 """
-    _measurement_cholesky(S)
+    _extract_measurement_chol(C_dxd)
 
-Upper triangular Cholesky factor of the measurement covariance `S`, stored in the same
-matrix structure as `S` itself (dense `Matrix`, `IsometricKroneckerProduct`, or
-`BlocksOfDiagonals`), so that the backward smoother can dispatch on it like on `H` and
-`K`.
-
-If `S` is exactly zero (which means the predicted covariance was (numerically) zero too, so
-`update!` skipped the update) returns `nothing`: there is no measurement information to
-smooth with, and `_save_smoother_state!` stores a `nothing` smoother state for that step.
-Throws if `S` is not factorizable for any other reason, since `update!` has already
-factorized the same matrix by the time this is called.
+Extract the upper triangular Cholesky factor of the measurement covariance from `C_dxd`,
+where `update!` computed it in-place via `cholesky!`. For 1×1 blocks (EK0, DiagonalEK1),
+`update!` uses a scalar shortcut that skips the in-place Cholesky, so the factor is `√S`.
 """
-function _measurement_cholesky(S::Matrix{T}) where {T}
-    F = cholesky(Symmetric(S); check=false)
-    issuccess(F) && return Matrix(F.U)
-    # An exactly zero measurement covariance means the predicted covariance was (numer-
-    # ically) zero too, so `update!` skipped the update and no measurement information is
-    # available to smooth with. Signal that to `_save_smoother_state!`.
-    iszero(S) && return nothing
-    # `update!` has already factorized this exact matrix successfully by the time the
-    # smoother state is saved, so a failure here can only indicate a bug elsewhere - fail
-    # loudly instead of silently corrupting the Λ update with some made-up factor.
-    error(
-        "Cholesky factorization of the measurement covariance failed; " *
-        "cannot store the smoother state for backward smoothing.")
-end
-_measurement_cholesky(S::IsometricKroneckerProduct) = begin
-    S_U = _measurement_cholesky(S.B)
-    S_U === nothing ? nothing : IsometricKroneckerProduct(S.rdim, S_U)
-end
-function _measurement_cholesky(S::BlocksOfDiagonals)
-    chol_blocks = [_measurement_cholesky(block) for block in blocks(S)]
-    # A fully degenerate step (all blocks zero) signals "no measurement info"; the mixed case
-    # is unreachable in practice (`update!` would already have failed on the zero block).
-    all(isnothing, chol_blocks) && return nothing
-    any(isnothing, chol_blocks) && error(
-        "Partially degenerate measurement covariance; cannot store a smoother state.")
-    return BlocksOfDiagonals(chol_blocks)
-end
+_extract_measurement_chol(C_dxd::Matrix) =
+    length(C_dxd) == 1 ? fill(sqrt(C_dxd[1, 1]), 1, 1) :
+    Matrix(UpperTriangular(C_dxd))
+_extract_measurement_chol(C_dxd::IsometricKroneckerProduct) =
+    IsometricKroneckerProduct(C_dxd.rdim, _extract_measurement_chol(C_dxd.B))
+_extract_measurement_chol(C_dxd::BlocksOfDiagonals) =
+    BlocksOfDiagonals([_extract_measurement_chol(b) for b in blocks(C_dxd)])
 
 """
     _measurement_chol_scale(mle_diffusion::Diagonal) -> Number or Diagonal
