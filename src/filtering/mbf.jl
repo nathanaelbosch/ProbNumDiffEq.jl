@@ -1,7 +1,8 @@
-# Preallocated scratch buffers for the dense (EK1) backward step, created once per
-# `smooth_solution!` call and reused by every step; sized by (D, d) = (state dimension,
+# Preallocated scratch buffers for the backward step, created once per `smooth_solution!`
+# call and reused by every step; shared by all three structural paths (dense/EK1,
+# Kronecker/EK0, block-diagonal/DiagonalEK1) and sized by (D, d) = (state dimension,
 # measurement dimension).
-struct _MBFDenseScratch{T,Tw<:AbstractVecOrMat{T}}
+Base.@kwdef struct _MBFScratch{T,Tw<:AbstractVecOrMat{T}}
     U_Λ_prec::Matrix{T}
     U_Λ_pred::Matrix{T}
     U_Λ_new::Matrix{T}
@@ -25,29 +26,39 @@ end
 # `wsize` is the shape of the measurement-space work vectors `w`/`z_sol`: `(d,)` for the
 # dense and block-diagonal paths, and `(d, d_ode)` for EK0's Kronecker path, which batches
 # the update over the `d_ode` ODE dimensions.
-function _MBFDenseScratch(D::Integer, d::Integer, ::Type{T}; wsize=(d,)) where {T}
-    return _MBFDenseScratch(
-        Matrix{T}(undef, D, D), Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
-        Matrix{T}(undef, D + d, D),
-        Matrix{T}(undef, D, D), Matrix{T}(undef, D, D),
-        Matrix{T}(undef, D, d), Matrix{T}(undef, d, D), Matrix{T}(undef, D, d),
-        zeros(T, D), zeros(T, D), zeros(T, D),
-        zeros(T, wsize...), zeros(T, wsize...),
-        zeros(T, D), zeros(T, D), zeros(T, D),
-        Matrix{T}(undef, d, d),
+function _MBFScratch(D::Integer, d::Integer, ::Type{T}; wsize=(d,)) where {T}
+    return _MBFScratch(;
+        U_Λ_prec=Matrix{T}(undef, D, D),
+        U_Λ_pred=Matrix{T}(undef, D, D),
+        U_Λ_new=Matrix{T}(undef, D, D),
+        Stack=Matrix{T}(undef, D + d, D),
+        R_M=Matrix{T}(undef, D, D),
+        R_f=Matrix{T}(undef, D, D),
+        U_ΛK=Matrix{T}(undef, D, d),
+        H_prec=Matrix{T}(undef, d, D),
+        K_prec=Matrix{T}(undef, D, d),
+        λ_prec=zeros(T, D),
+        λ_pred=zeros(T, D),
+        λ_new=zeros(T, D),
+        w=zeros(T, wsize...),
+        z_sol=zeros(T, wsize...),
+        v_h=zeros(T, D),
+        w_h=zeros(T, D),
+        tau=zeros(T, D),
+        S_U_T=Matrix{T}(undef, d, d),
     )
 end
 
 # Allocate the scratch matching the state covariance's structure, dispatching the same way
 # `_mbf_backward_step!` does instead of branching on concrete types at the call site.
 _mbf_scratch(U_Λ::Matrix, cache) =
-    _MBFDenseScratch(size(U_Λ, 1), size(cache.H, 1), eltype(U_Λ))
+    _MBFScratch(size(U_Λ, 1), size(cache.H, 1), eltype(U_Λ))
 _mbf_scratch(U_Λ::IsometricKroneckerProduct, cache) =
-    _MBFDenseScratch(
+    _MBFScratch(
         size(U_Λ.B, 1), size(cache.H.B, 1), eltype(U_Λ);
         wsize=(size(cache.H.B, 1), U_Λ.rdim))
 _mbf_scratch(U_Λ::BlocksOfDiagonals, cache) =
-    _MBFDenseScratch(
+    _MBFScratch(
         size(blocks(U_Λ)[1], 1), size(blocks(cache.H)[1], 1), eltype(U_Λ))
 
 """
@@ -75,7 +86,7 @@ the `d` ODE dimensions for EK0, or looped independently for DiagonalEK1), never 
 matrix -- without this, backward smoothing would cost `O(D^3) = O((d(q+1))^3)` instead of the
 `O(d)`-ish cost the rest of the package achieves for these algorithms.
 
-`sc` is a [`_MBFDenseScratch`](@ref) holding preallocated buffers, created once by
+`sc` is a [`_MBFScratch`](@ref) holding preallocated buffers, created once by
 [`_smooth_solution_mbf!`](@ref) and reused across all backward steps.
 
 The λ/Λ update and predict steps involve matrix products (H, K, the transition matrix) applied
@@ -93,7 +104,7 @@ from an adjacent transition was found empirically to reintroduce significant err
 # allocation per step is the LAPACK workspace inside `_positive_qr_r!`.
 function _mbf_backward_step!(
     x_smooth_prev, λ, U_Λ, x_filt_prev, ss,
-    P::Diagonal, PI::Diagonal, A::Matrix, sc::_MBFDenseScratch,
+    P::Diagonal, PI::Diagonal, A::Matrix, sc::_MBFScratch,
 )
     D = length(λ)
 
@@ -149,7 +160,7 @@ end
 function _mbf_backward_step!(
     x_smooth_prev, λ, U_Λ::IsometricKroneckerProduct, x_filt_prev, ss,
     P::IsometricKroneckerProduct, PI::IsometricKroneckerProduct,
-    A::IsometricKroneckerProduct, sc::_MBFDenseScratch,
+    A::IsometricKroneckerProduct, sc::_MBFScratch,
 )
     d = P.rdim
     Q = size(P.B, 1)
@@ -191,7 +202,7 @@ end
 function _mbf_backward_step!(
     x_smooth_prev, λ, U_Λ::BlocksOfDiagonals, x_filt_prev, ss,
     P::BlocksOfDiagonals, PI::BlocksOfDiagonals, A::BlocksOfDiagonals,
-    sc::_MBFDenseScratch,
+    sc::_MBFScratch,
 )
     d = length(blocks(P))
     D = length(λ)
@@ -349,7 +360,7 @@ end
 
 Information-form update of the MBF adjoint state `(λ, U_Λ)` with the measurement quantities
 of one step (`K`, `S_U`, `z`, `H`), writing into the preallocated buffers of `sc`
-(a [`_MBFDenseScratch`](@ref)).
+(a [`_MBFScratch`](@ref)).
 
 λ update (BK-free form): with `z_code = h(m_pred)` and innovation `-z_code`,
 `λ ← λ - H' (K'λ - S⁻¹ z_code)`.
@@ -361,7 +372,7 @@ triangular solve with `S_U'` turns `S_U` into an inverted *lower* triangular fac
 instead using `M = S_U⁻¹ H` would give `H'(S_U S_U')⁻¹H ≠ H'S⁻¹H` (unless `S_U` is
 diagonal) and silently corrupt Λ.
 """
-function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, sc::_MBFDenseScratch)
+function _sqrt_mbf_update!(λ, U_Λ, K, S_U, z, H, D, sc::_MBFScratch)
     # `S_U_T = S_U'` as a contiguous matrix so that the triangular solves below hit BLAS.
     copyto!(sc.S_U_T, transpose(S_U))
 
