@@ -751,6 +751,16 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
     if integ.opts.save_end
         i = integ.saveiter
 
+        # `OrdinaryDiffEqCore.solution_endpoint_match_cur_integrator!` (called just before
+        # this, from `_postamble!`) may have appended a save point that the step's own
+        # `savevalues!` did not save. This happens when solving onto an existing time grid
+        # (`solve(prob, alg, u, t, k)`, used e.g. by DiffEqDevTools' timing loops): the
+        # `t`/`u` arrays are prefilled, so `_savevalues!`'s `integ.t !== sol.t[end]` check
+        # suppresses the save of the final step whose time already is the prefilled
+        # `sol.t[end]`. The per-step quantities of that step then still have to be
+        # appended here, or they end up out of sync with `sol.t`/`x_filt`.
+        appended_new_step = i > length(integ.sol.x_filt)
+
         copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
 
         copyat_or_push!(
@@ -759,10 +769,36 @@ function pn_solution_endpoint_match_cur_integrator!(integ)
             _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x),
         )
 
-        if !integ.opts.save_everystep && i > 1
+        if integ.opts.save_everystep && appended_new_step
+            _save_step_quantities!(integ, i)
+        elseif !integ.opts.save_everystep && i > 1
             save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
         end
     end
+end
+
+"""
+    _save_step_quantities!(integ, i)
+
+Save the per-step quantities of the step that just finished: its diffusion estimate and,
+if they are consumed later, the backward transition kernel and the smoother state.
+
+All three are one-per-step and hence indexed by the *transition* `sol.t[i-1] -> sol.t[i]`,
+i.e. `length(...) == length(sol.t) - 1`; `i` is the index of the save point that the step
+ended in. Called from `savevalues!` for every saved step, and from
+`pn_solution_endpoint_match_cur_integrator!` for a final step that only the endpoint match
+saved.
+"""
+function _save_step_quantities!(integ, i)
+    save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
+    # Only stored when consumed; see `_needs_backward_kernels`.
+    if _needs_backward_kernels(integ.alg)
+        copyat_or_push!(integ.sol.backward_kernels, i, integ.cache.backward_kernel)
+    end
+    if integ.alg.smooth && integ.alg.smoother == :mbf
+        _save_smoother_state!(integ.sol.smoother_states, integ.cache)
+    end
+    return nothing
 end
 
 """
@@ -799,21 +835,14 @@ function DiffEqBase.savevalues!(
     # Save our custom stuff that we need for the posterior
     if saved && integ.opts.save_everystep
         i = integ.saveiter
-        save_diffusion!(integ.sol, i, integ.cache.local_diffusion)
         copyat_or_push!(integ.sol.x_filt, i, integ.cache.x)
         _gaussian_mul!(integ.cache.pu_tmp, integ.cache.SolProj, integ.cache.x)
         copyat_or_push!(integ.sol.pu, i, integ.cache.pu_tmp)
 
-        # Only stored when consumed; see `_needs_backward_kernels`.
-        if _needs_backward_kernels(integ.alg)
-            copyat_or_push!(
-                integ.sol.backward_kernels, i, integ.cache.backward_kernel)
-        end
-        if integ.alg.smooth && integ.alg.smoother == :mbf
-            # smoother_states[j] holds the transition sol.t[j] -> sol.t[j+1], so the step
-            # just taken (ending at the freshly saved point i) is appended at i - 1.
-            _save_smoother_state!(integ.sol.smoother_states, integ.cache)
-        end
+        # The per-step quantities (diffusion, backward kernel, smoother state) are indexed
+        # by the transition sol.t[j] -> sol.t[j+1], so the step just taken (ending at the
+        # freshly saved point i) is appended at i - 1.
+        _save_step_quantities!(integ, i)
     end
 
     return out

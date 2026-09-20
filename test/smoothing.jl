@@ -239,6 +239,51 @@ _ss_approx(a, b) =
     @test length(sol.smoother_states) == length(sol.t) - 1
 end
 
+@testset "warm-start second solve keeps smoothing bookkeeping aligned" begin
+    # Re-solving onto an existing time grid (`solve(prob, alg, u, t, k)`, as used by
+    # DiffEqDevTools' timing loops) hands the integrator prefilled `t`/`u` arrays.
+    # `OrdinaryDiffEqCore._savevalues!` then skips the save of the final step, since its
+    # time already equals `sol.t[end]`; the endpoint match appends that point afterwards,
+    # so the per-step arrays have to be completed there as well.
+    sol = solve(prob, EK0(); abstol=1e-6, reltol=1e-3)
+
+    for smoother in (:mbf, :rts)
+        # Deliberately re-using `sol`'s arrays (and re-using them again in the second
+        # iteration), exactly like DiffEqDevTools' `numruns > 1` timing loop does.
+        sol2 = solve(prob, EK0(; smoother=smoother), sol.u, sol.t, sol.k; dense=true)
+        n = length(sol2.t)
+        @test length(sol2.x_filt) == n
+        @test length(sol2.x_smooth) == n
+        @test length(sol2.pu) == n
+        @test length(sol2.u) == n
+        @test length(sol2.diffusions) == n - 1
+        if smoother == :mbf
+            @test length(sol2.smoother_states) == n - 1
+        else
+            @test length(sol2.backward_kernels) == n - 1
+        end
+
+        # The posterior is sane: finite means, PSD covariances
+        @test all(all(isfinite, x.μ) for x in sol2.x_smooth)
+        @test all(
+            minimum(eigvals(Symmetric(Matrix(x.Σ)))) > -1e-10 for x in sol2.x_smooth
+        )
+    end
+
+    # ...and it is the correct posterior: identical to the RTS recursion over the
+    # backward kernels of the very same (warm-started) solve.
+    for smoother in (:mbf, :rts)
+        alg = EK0(; smoother=smoother, save_backward_kernels=true)
+        sol2 = solve(prob, alg, sol.u, sol.t, sol.k; dense=true)
+        @test length(sol2.backward_kernels) == length(sol2.t) - 1
+        ref = rts_reference(sol2)
+        for i in eachindex(sol2.t)
+            @test sol2.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
+            @test Matrix(sol2.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
+        end
+    end
+end
+
 @testset "backward kernels are only computed when consumed" begin
     prob = prob_ode_lotkavolterra
 
