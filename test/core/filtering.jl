@@ -9,6 +9,7 @@ import ProbNumDiffEq: IsometricKroneckerProduct, BlocksOfDiagonals
 import ProbNumDiffEq as PNDE
 using FillArrays
 import ProbNumDiffEq: logpdf
+import ForwardDiff
 
 @testset "PREDICT" begin
     # Setup
@@ -506,5 +507,77 @@ end
                 @test Matrix(K_backward.C) ≈ Λ
             end
         end
+    end
+end
+
+@testset "UPDATE stores the measurement Cholesky factor" begin
+    # Contract test: `update!` is the only place where the measurement covariance `S` is
+    # factorized, and when given an `S_chol_out` buffer (in the solver: the named cache
+    # field `cache.measurement_chol`) it writes the upper triangular factor there. The
+    # √MBF smoother reads that field instead of reconstructing the factor from `update!`'s
+    # scratch buffers; see `_save_smoother_state!`/`_extract_measurement_chol`.
+    d, q = 2, 2
+    D = d * (q + 1)
+
+    _P_p_R = Matrix(UpperTriangular(rand(q + 1, q + 1)))
+    _H = rand(1, q + 1)
+
+    @testset "Factorization: $_FAC" for _FAC in (
+        PNDE.DenseCovariance,
+        PNDE.BlockDiagonalCovariance,
+        PNDE.IsometricKroneckerCovariance,
+    )
+        FAC = _FAC{Float64}(d, q)
+
+        H = PNDE.to_factorized_matrix(FAC, IsometricKroneckerProduct(d, _H))
+        P_p_R = PNDE.to_factorized_matrix(FAC, IsometricKroneckerProduct(d, _P_p_R))
+        x_pred = Gaussian(rand(D), PSDMatrix(P_p_R))
+        measurement = Gaussian(rand(d), PSDMatrix(P_p_R * H'))
+
+        x_out = copy(x_pred)
+        S_chol_out = PNDE.factorized_zeros(FAC, d, d)
+        PNDE.update!(
+            x_out, x_pred, measurement, H,
+            PNDE.factorized_zeros(FAC, D, d),
+            PNDE.factorized_zeros(FAC, D, d),
+            PNDE.factorized_zeros(FAC, D, D),
+            PNDE.factorized_zeros(FAC, d, d),
+            zeros(d);
+            S_chol_out,
+        )
+
+        S_U = Matrix(cholesky(Symmetric(Matrix(measurement.Σ))).U)
+        @test Matrix(S_chol_out) ≈ S_U
+        # The lower triangle has to be zeroed out, not left over from a previous step
+        @test istriu(Matrix(S_chol_out))
+    end
+
+    @testset "ForwardDiff.Dual eltype" begin
+        # `make_hermitian_if_fowarddiff` makes `update!` factorize a *copy* for dual
+        # eltypes, so the scratch buffer never holds the factor; the contract has to hold
+        # here, too - values and partials.
+        dual(x) = ForwardDiff.Dual{Nothing}(x, rand())
+        FAC = PNDE.DenseCovariance{ForwardDiff.Dual{Nothing,Float64,1}}(d, q)
+
+        H = dual.(Matrix(IsometricKroneckerProduct(d, _H)))
+        P_p_R = dual.(Matrix(IsometricKroneckerProduct(d, _P_p_R)))
+        x_pred = Gaussian(dual.(rand(D)), PSDMatrix(P_p_R))
+        measurement = Gaussian(dual.(rand(d)), PSDMatrix(P_p_R * H'))
+
+        x_out = copy(x_pred)
+        S_chol_out = PNDE.factorized_zeros(FAC, d, d)
+        PNDE.update!(
+            x_out, x_pred, measurement, H,
+            PNDE.factorized_zeros(FAC, D, d),
+            PNDE.factorized_zeros(FAC, D, d),
+            PNDE.factorized_zeros(FAC, D, D),
+            PNDE.factorized_zeros(FAC, d, d),
+            zeros(ForwardDiff.Dual{Nothing,Float64,1}, d);
+            S_chol_out,
+        )
+
+        S_U = Matrix(cholesky(Symmetric(Matrix(measurement.Σ))).U)
+        @test ForwardDiff.value.(S_chol_out) ≈ ForwardDiff.value.(S_U)
+        @test ForwardDiff.partials.(S_chol_out, 1) ≈ ForwardDiff.partials.(S_U, 1)
     end
 end

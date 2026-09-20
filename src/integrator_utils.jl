@@ -622,8 +622,8 @@ Store the measurement quantities that the √MBF backward smoother needs for thi
 update: the measurement mean `z = h(x_pred)` (left in `cache.measurement.μ`; the filter's
 innovation is `0 - z`, since the update assumes zero measurements), the measurement Jacobian
 `H`, the Kalman gain `K` (left in `cache.C_Dxd` by `update!`), and the upper triangular
-Cholesky factor `S_U` of the measurement covariance (plus `R` if observation noise is
-configured).
+Cholesky factor `S_U` of the measurement covariance (written to `cache.measurement_chol` by
+`update!`; it includes `R` if observation noise is configured).
 
 `K` and `S_U` are exactly the quantities the forward filter's update used, so backward
 smoothing with them reproduces the filter's posterior exactly; see
@@ -651,7 +651,7 @@ function _save_smoother_state!(smoother_states, cache)
     H = copy(cache.H)
     z = Vector{T}(cache.measurement.μ)
     K = copy(cache.C_Dxd)
-    S_U = _extract_measurement_chol(cache.C_dxd)
+    S_U = _extract_measurement_chol(cache.measurement_chol)
     # Snapshot the prior's rate parameter if it changes every step (IOUP with
     # `update_rate_parameter=true`): `calc_J!` mutates the array on the cache's prior at
     # the start of every step, so the backward pass needs a copy of this step's value.
@@ -665,33 +665,13 @@ function _save_smoother_state!(smoother_states, cache)
 end
 
 """
-    _extract_measurement_chol(C_dxd)
+    _extract_measurement_chol(measurement_chol)
 
-Extract the upper triangular Cholesky factor of the measurement covariance from `C_dxd`,
-where `update!` computed it in-place via `cholesky!`. For 1×1 blocks (EK0, DiagonalEK1),
-`update!` uses a scalar shortcut that skips the in-place Cholesky, so the factor is `√S`.
-
-`C_dxd` holds the Cholesky factor in its upper triangle iff `update!` factorized it in
-place; Dual eltypes (and any other eltype where `make_hermitian_if_fowarddiff` copies)
-take the re-factorization branch below, since `update!` factorized a symmetrized copy
-instead and left the raw (unfactorized) measurement covariance in `C_dxd`.
+Take ownership of the upper triangular Cholesky factor of the measurement covariance that
+`update!` wrote into `cache.measurement_chol` (see the `S_chol_out` argument of
+[`update!`](@ref)), by copying it out of the cache buffer that the next step overwrites.
 """
-_extract_measurement_chol(C_dxd::Matrix{T}) where {T} =
-    length(C_dxd) == 1 ? fill(sqrt(C_dxd[1, 1]), 1, 1) :
-    _extract_measurement_chol_dense(C_dxd, T)
-_extract_measurement_chol_dense(C_dxd::Matrix, ::Type) = Matrix(UpperTriangular(C_dxd))
-function _extract_measurement_chol_dense(
-    C_dxd::Matrix, ::Type{<:ForwardDiff.Dual})
-    F = cholesky(Symmetric(C_dxd), check=false)
-    issuccess(F) || error(
-        "Cholesky factorization of the measurement covariance failed; " *
-        "cannot store the smoother state for backward smoothing.")
-    return Matrix(F.U)
-end
-_extract_measurement_chol(C_dxd::IsometricKroneckerProduct) =
-    IsometricKroneckerProduct(C_dxd.rdim, _extract_measurement_chol(C_dxd.B))
-_extract_measurement_chol(C_dxd::BlocksOfDiagonals) =
-    BlocksOfDiagonals([_extract_measurement_chol(b) for b in blocks(C_dxd)])
+_extract_measurement_chol(measurement_chol) = copy(measurement_chol)
 
 """
     _measurement_chol_scale(mle_diffusion::Diagonal) -> Number or Diagonal

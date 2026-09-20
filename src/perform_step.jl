@@ -133,9 +133,13 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
 
-    # Update state and save the ODE solution value
+    # Update state and save the ODE solution value.
+    # `S_chol_out=cache.measurement_chol` makes `update!` store the Cholesky factor of the
+    # measurement covariance it computes anyways; the √MBF smoother reads it from there
+    # (see `_save_smoother_state!`). The Kalman gain is left in `cache.C_Dxd`.
     x_filt, loglikelihood = update!(
-        x_filt, x_pred, cache.measurement, cache.H; cache, R=cache.R)
+        x_filt, x_pred, cache.measurement, cache.H;
+        cache, R=cache.R, S_chol_out=cache.measurement_chol)
     write_into_solution!(
         integ.u, x_filt.μ; cache, is_secondorder_ode=(integ.f isa DynamicalODEFunction))
 
