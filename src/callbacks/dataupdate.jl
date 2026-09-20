@@ -60,6 +60,8 @@ function DataUpdateCallback(
             _x = copy!(integ.cache.x_tmp, x)
             ll = _partial_block_update!(
                 x, _x, obs_indices, val, E0, observation_noise_cov)
+        elseif o != d && !(integ.cache.covariance_factorization isa DenseCovariance)
+            error("Partial observations only work with the EK1 and DiagonalEK1 right now")
         else
             H = M * E0
 
@@ -180,7 +182,6 @@ end
 _get_obs_noise_var(cov::Number, k::Int) = cov
 _get_obs_noise_var(cov::UniformScaling, k::Int) = cov.λ
 _get_obs_noise_var(cov::Diagonal, k::Int) = cov.diag[k]
-_get_obs_noise_var(cov::AbstractMatrix, k::Int) = cov[k, k]
 
 function make_obssized_cache(cache; o)
     if o == cache.d

@@ -62,6 +62,8 @@ function fenrir_data_loglik(
         LL, _, _ = fit_pnsolution_to_data!(
             sol, observation_noise_cov, data;
             obs_indices, proj_blocks=integ.cache.E0)
+    elseif o != d && !(integ.cache.covariance_factorization isa DenseCovariance)
+        error("Partial observations only work with the EK1 and DiagonalEK1 right now")
     else
         R = cov2psdmatrix(observation_noise_cov; d=o)
         R = to_factorized_matrix(integ.cache.covariance_factorization, R)
