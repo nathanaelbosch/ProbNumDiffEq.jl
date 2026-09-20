@@ -147,6 +147,12 @@ end
 function _smooth_solution_mbf!(integ)
     @unpack cache, sol = integ
     @unpack x_smooth, t, smoother_states = sol
+
+    # One smoother state per transition t[j] -> t[j+1]; the backward loop indexes
+    # `smoother_states[i-1]` directly, so a bookkeeping desync would otherwise surface as a
+    # raw `BoundsError`. Mirrors the equivalent guard in `_smooth_solution_rts!`.
+    @assert length(smoother_states) == length(x_smooth) - 1 "smoother_states must hold one entry per transition (t[j] → t[j+1]); got $(length(smoother_states)) for $(length(x_smooth)) smoothed states"
+
     n = length(x_smooth)
 
     λ = zeros(eltype(x_smooth[1].μ), length(x_smooth[1].μ))
