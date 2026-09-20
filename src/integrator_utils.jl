@@ -41,6 +41,17 @@ Calibrate the solution (`integ.sol`) with the specified `mle_diffusion` by (i) s
 values in `integ.sol.diffusions` to the `mle_diffusion` (see [`set_diffusions!`](@ref)),
 (ii) rescaling all filtering estimates such that they have the correct diffusion, and (iii)
 updating the solution estimates in `integ.sol.pu`.
+
+!!! warning "Call at most once per solution"
+    Step (ii) rescales the stored quantities **in place** -- the filtering covariances
+    `integ.sol.x_filt.Σ`, the backward-kernel covariances `integ.sol.backward_kernels.C`,
+    and the measurement Cholesky factors `SmootherState.S_U` in `integ.sol.smoother_states`
+    (see [`SmootherState`](@ref)) are all multiplied by the new diffusion, rather than
+    recomputed from an unscaled reference. The operation is therefore not idempotent: a
+    second call (or a manual diffusion rescale followed by a call) would apply the scaling
+    twice and silently corrupt the solution's uncertainties and the pre-stored smoother
+    states. There is exactly one call site, the `SciMLBase.postamble!` hook, which
+    runs once per solve and before [`smooth_solution!`](@ref); keep it that way.
 """
 function calibrate_solution!(integ, mle_diffusion)
 
