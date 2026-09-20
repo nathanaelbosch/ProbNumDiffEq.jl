@@ -104,12 +104,10 @@ end
 end
 
 @testset "Smoothed covariances under AD: NaN partials with :mbf (known limitation)" begin
-    # `_hyperbolic_qr!` (used by the MBF backward step to recover the smoothed
-    # covariance square-root factor) produces correct *values* under ForwardDiff.Dual
-    # eltypes, but NaN *partials* for losses involving the smoothed covariances. This is
-    # intrinsic to the hyperbolic rotation's conditioning (~1/α for small J-norm α, see
-    # `_hyperbolic_qr!`/`_mbf_recover_cov` docstrings) and is not fixable without
-    # degrading the Float64 numerics. The RTS smoother is unaffected.
+    # Known limitation of the default `:mbf` smoother: the hyperbolic QR used to recover
+    # the smoothed covariance gives correct *values* but NaN *partials* under
+    # ForwardDiff.Dual eltypes. See the comment at `_hyperbolic_qr!` in
+    # src/filtering/mbf.jl for the full explanation. The RTS smoother is unaffected.
     prob = prob_ode_lotkavolterra
 
     function smoothed_cov_loss(u0, alg)
@@ -125,14 +123,8 @@ end
     g_mbf = ForwardDiff.gradient(u -> smoothed_cov_loss(u, EK1(order=3)), u0)
     g_rts = ForwardDiff.gradient(u -> smoothed_cov_loss(u, EK1(order=3, smoother=:rts)), u0)
 
-    # Diagnosis (see `_hyperbolic_qr!`/`_mbf_backward_step!` docstrings in
-    # src/integrator_utils.jl): the hyperbolic rotation used to recover the smoothed
-    # covariance is ~1/α-conditioned in a column's J-norm α; as α → 0⁺ (short of the
-    # degenerate-column cutoff), the ForwardDiff partials of α (and downstream β, τ)
-    # diverge and cancel catastrophically, producing NaN partials -- confirmed
-    # analytically to grow unboundedly as α → 0⁺ well before the cutoff, i.e. an
-    # intrinsic conditioning property of the rotation, not an artifact of the `max(·, 0)`
-    # clamp kink. No fix was found that preserves the Float64 numerics.
+    # These stay `@test_broken` on purpose; the diagnosis is documented once, at
+    # `_hyperbolic_qr!` in src/filtering/mbf.jl.
     @test_broken all(isfinite, g_mbf)
     @test_broken isapprox(g_mbf, g_rts; rtol=1e-3)
 end

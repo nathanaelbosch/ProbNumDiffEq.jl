@@ -62,17 +62,11 @@ The measurement quantities (`z`, `H`, `K`, `S_U`) were pre-computed and stored b
 forward pass in `ss` (see [`SmootherState`](@ref)), so this function does not need to
 recompute the predicted covariance or the Kalman gain.
 
-**AD limitation**: under forward-mode AD (ForwardDiff.Dual eltypes), the smoothed
-*values* computed here are correct, but the partials of the smoothed *covariance*
-(`x_smooth_prev.Σ`) can be `NaN`; smoothed means are unaffected. This traces to the
-hyperbolic QR factorization in [`_hyperbolic_qr!`](@ref) used by [`_mbf_recover_cov`](@ref):
-its rotation is ~1/α-conditioned in the J-norm `α` of a column, and as `α → 0⁺` (a nearly
-singular `I - V'V`, i.e. smoothed covariance much smaller than filtered) the partials of
-`α = sqrt(max(asq - bsq, 0))` diverge before the degenerate-column threshold is reached,
-which then cancels catastrophically downstream. This is an intrinsic conditioning property
-of hyperbolic rotations (Gibbs 2011), not a bug in this implementation, and there is no
-known fix that preserves the Float64 accuracy of the degenerate-column handling. Use
-`smoother=:rts` if you need gradients through smoothed covariances.
+**AD limitation**: under forward-mode AD the smoothed *values* computed here are correct,
+but the partials of the smoothed *covariance* (`x_smooth_prev.Σ`) can be `NaN`; smoothed
+means are unaffected. Use `smoother=:rts` if you need gradients through smoothed
+covariances. The full explanation lives at [`_hyperbolic_qr!`](@ref), the source of the
+conditioning problem.
 
 Dispatches on the structure of `P` (which matches that of the state covariances) so that EK0's
 and DiagonalEK1's efficient Kronecker/block-diagonal representations are preserved: the λ/Λ
@@ -259,13 +253,23 @@ end
 # In-place variant of [`_hyperbolic_qr!`](@ref) using the preallocated output matrix `top`
 # (initialized to I here) and work vectors `v_h`, `w_h`; destroys `V`.
 #
-# AD limitation: `β = 1 / (α * (α - top[i, i]))` below is ~1/α²-conditioned in the column's
-# J-norm `α = sqrt(max(asq - bsq, 0))`. Under ForwardDiff.Dual eltypes, the *values* are
-# unaffected, but as `α → 0⁺` (short of the `α < eps(T) * d` degenerate-column cutoff) the
-# partials of `α` (and hence of `β`, `τ`) diverge, which can produce NaN partials in the
-# recovered smoothed covariance further downstream (see `_mbf_backward_step!`'s docstring).
-# This is intrinsic to the hyperbolic rotation's conditioning (Gibbs 2011), not fixable here
-# without weakening the degenerate-column handling that keeps the Float64 values accurate.
+# AD limitation (this is the one authoritative discussion: the `_mbf_backward_step!`
+# docstring and `test/autodiff.jl` point here, and the EK0/EK1/DiagonalEK1 docstrings and
+# the docs' "Smoothing and automatic differentiation" section carry only the user-facing
+# one-liner and the `smoother=:rts` workaround). Under forward-mode AD (ForwardDiff.Dual
+# eltypes) the *values* computed by the MBF smoother are correct and the smoothed means are
+# unaffected, but the partials of the smoothed *covariances* can be NaN. The cause sits
+# here: `β = 1 / (α * (α - top[i, i]))` below is ~1/α²-conditioned in the column's J-norm
+# `α = sqrt(max(asq - bsq, 0))`, and as `α → 0⁺` (a nearly singular `I - V'V`, i.e. a
+# smoothed covariance much smaller than the filtered one, and short of the
+# `α < eps(T) * d` degenerate-column cutoff) the partials of `α`, and hence of `β` and `τ`,
+# diverge and then cancel catastrophically in the recovered covariance downstream. The
+# divergence was confirmed analytically to set in well before the cutoff is reached, i.e.
+# it is an intrinsic conditioning property of hyperbolic rotations (Gibbs 2011) rather than
+# an artifact of the `max(·, 0)` clamp's kink or a bug in this implementation, and no fix
+# is known that preserves the Float64 accuracy of the degenerate-column handling. Users who
+# need gradients through smoothed covariances should pass `smoother=:rts`; the limitation
+# is pinned by the `@test_broken` pair in `test/autodiff.jl`.
 function _hyperbolic_qr!(
     top::Matrix{T}, v_h::Vector{T}, w_h::Vector{T}, V::Matrix{T},
 ) where {T}

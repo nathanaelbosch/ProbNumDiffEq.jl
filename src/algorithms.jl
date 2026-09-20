@@ -200,9 +200,9 @@ which scales cubically with the problem size._
   `:rts` smoother can produce smoothed covariances that are unstable (finite but
   inaccurate); `:mbf` is robust to this.
 
-  Under forward-mode AD, gradients involving the smoothed *covariances* may be `NaN`
-  with `:mbf`; smoothed means are unaffected. Use `smoother=:rts` if you need
-  covariance gradients.
+  Under forward-mode AD, gradients through the smoothed *covariances* can be `NaN` with
+  `:mbf` (smoothed means are unaffected); use `smoother=:rts` if you need them. See
+  [Smoothing and automatic differentiation](@ref smoothing_ad).
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
   `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
   `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
@@ -279,9 +279,9 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
   `:rts` smoother can produce smoothed covariances that are unstable (finite but
   inaccurate); `:mbf` is robust to this.
 
-  Under forward-mode AD, gradients involving the smoothed *covariances* may be `NaN`
-  with `:mbf`; smoothed means are unaffected. Use `smoother=:rts` if you need
-  covariance gradients.
+  Under forward-mode AD, gradients through the smoothed *covariances* can be `NaN` with
+  `:mbf` (smoothed means are unaffected); use `smoother=:rts` if you need them. See
+  [Smoothing and automatic differentiation](@ref smoothing_ad).
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
   `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
   `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
@@ -398,9 +398,9 @@ the full [`EK1`](@ref) would be too expensive.
   `:rts` smoother can produce smoothed covariances that are unstable (finite but
   inaccurate); `:mbf` is robust to this.
 
-  Under forward-mode AD, gradients involving the smoothed *covariances* may be `NaN`
-  with `:mbf`; smoothed means are unaffected. Use `smoother=:rts` if you need
-  covariance gradients.
+  Under forward-mode AD, gradients through the smoothed *covariances* can be `NaN` with
+  `:mbf` (smoothed means are unaffected); use `smoother=:rts` if you need them. See
+  [Smoothing and automatic differentiation](@ref smoothing_ad).
 - `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
   `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
   `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
