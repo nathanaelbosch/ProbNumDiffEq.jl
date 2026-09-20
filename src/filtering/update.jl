@@ -60,6 +60,15 @@ where ``\\sqrt{M}`` denotes the left square-root of a matrix M, i.e. ``M = \\sqr
 To prevent allocations, write into caches `K_cache` and `M_cache`, both of size `D × D`,
 and `S_cache` of same type as `measurement.Σ`.
 
+Outputs that other parts of the solver consume live at named positions:
+- the Kalman gain `K` is left in `K2_cache` (`cache.C_Dxd`), and
+- if an `S_chol_out` buffer is passed (`cache.measurement_chol`), the upper triangular
+  Cholesky factor of the measurement covariance `S` is copied into it. This is the only
+  place where `S` is factorized, so consumers such as the √MBF smoother must read the
+  factor from here instead of reconstructing it from the scratch buffers: `C_dxd` holds
+  the factorization only for some eltypes (see `make_hermitian_if_fowarddiff`), and the
+  1×1 case is handled by a scalar shortcut that skips `cholesky!` altogether.
+
 See also: [`update`](@ref).
 """
 function update!(
@@ -73,6 +82,7 @@ function update!(
     C_dxd::AbstractMatrix,
     C_d::AbstractArray;
     R::Union{Nothing,PSDMatrix}=nothing,
+    S_chol_out::Union{Nothing,AbstractMatrix}=nothing,
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
@@ -106,6 +116,7 @@ function update!(
 
     _S = make_hermitian_if_fowarddiff(_S)
     S_chol = length(_S) == 1 ? _S[1] : cholesky!(_S)
+    isnothing(S_chol_out) || _write_measurement_chol!(S_chol_out, S_chol)
     rdiv!(K, S_chol)
 
     loglikelihood = zero(eltype(K))
@@ -137,6 +148,23 @@ function update!(
 
     return x_out, loglikelihood
 end
+
+"""
+    _write_measurement_chol!(out, S_chol)
+
+Copy the upper triangular Cholesky factor of the measurement covariance into `out`.
+
+`S_chol` is whatever [`update!`](@ref) factorized `S` into: a `Cholesky` object in the
+general case, or the scalar `S` itself when the 1×1 shortcut was taken (then the factor
+is `√S`).
+"""
+_write_measurement_chol!(out::AbstractMatrix, S_chol::Cholesky) = copyto!(out, S_chol.U)
+function _write_measurement_chol!(out::AbstractMatrix, S::Number)
+    @assert length(out) == 1
+    out[1, 1] = sqrt(S)
+    return out
+end
+
 function pn_logpdf!(measurement, S_chol, tmpmean)
     μ = reshape(measurement.μ, :)
     Σ = S_chol
@@ -162,6 +190,7 @@ function update!(
     C_dxd::IsometricKroneckerProduct,
     C_d::AbstractVector;
     R::Union{Nothing,PSDMatrix{T,<:IsometricKroneckerProduct}}=nothing,
+    S_chol_out::Union{Nothing,IsometricKroneckerProduct}=nothing,
 ) where {T}
     D = length(x_out.μ)  # full_state_dim
     d = H.rdim           # ode_dimension_dim
@@ -190,6 +219,7 @@ function update!(
         _C_dxd,
         C_d,
         R=_R,
+        S_chol_out=isnothing(S_chol_out) ? nothing : S_chol_out.B,
     )
     return x_out, loglikelihood
 end
@@ -208,6 +238,7 @@ function update!(
     C_dxd::BlocksOfDiagonals,
     C_d::AbstractVector;
     R::Union{Nothing,PSDMatrix{T,<:BlocksOfDiagonals}}=nothing,
+    S_chol_out::Union{Nothing,BlocksOfDiagonals}=nothing,
 ) where {T}
     d = length(blocks(x_out.Σ.R))
     q = size(blocks(x_out.Σ.R)[1], 1) - 1
@@ -232,6 +263,7 @@ function update!(
             C_dxd.blocks[i],
             view(C_d, i:i);
             R=isnothing(R) ? nothing : PSDMatrix(blocks(R.R)[i]),
+            S_chol_out=isnothing(S_chol_out) ? nothing : S_chol_out.blocks[i],
         )
         ll += _ll
     end
@@ -239,8 +271,8 @@ function update!(
 end
 
 # Short-hand with cache
-function update!(x_out, x, measurement, H; cache, R=nothing)
+function update!(x_out, x, measurement, H; cache, R=nothing, S_chol_out=nothing)
     @unpack K1, m_tmp, C_DxD, C_dxd, C_Dxd, C_d = cache
     K2 = C_Dxd
-    return update!(x_out, x, measurement, H, K1, K2, C_DxD, C_dxd, C_d; R)
+    return update!(x_out, x, measurement, H, K1, K2, C_DxD, C_dxd, C_d; R, S_chol_out)
 end

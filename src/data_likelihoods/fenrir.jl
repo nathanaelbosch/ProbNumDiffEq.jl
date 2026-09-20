@@ -38,8 +38,13 @@ function fenrir_data_loglik(
     data::NamedTuple{(:t, :u)},
     kwargs...,
 )
-    if !alg.smooth
-        throw(ArgumentError("fenrir only works with smoothing. Set `smooth=true`."))
+    # Fenrir runs its own backward pass over `sol.backward_kernels` (see
+    # `fit_pnsolution_to_data!`), so those have to be stored, which `smooth=true` together
+    # with `smoother=:rts` does. `:rts` also keeps the forward pass from *also* storing MBF
+    # smoother states every step: nothing here consumes them, since `step!` is used below
+    # instead of `solve!` to skip smoothing.
+    if !alg.smooth || alg.smoother != :rts
+        alg = remake(alg; smooth=true, smoother=:rts)
     end
     tstops = union(data.t, get(kwargs, :tstops, []))
 

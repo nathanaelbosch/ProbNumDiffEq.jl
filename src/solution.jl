@@ -31,8 +31,8 @@ It contains filtering and smoothing state estimates which enables plots with unc
 sampling, and dense evaluation.
 """
 struct ProbODESolution{
-    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,bkType,PN,P,A,IType,
-    CType,DE,
+    T,N,uType,puType,uType2,DType,tType,rateType,xType,diffType,bkType,ssType,PN,P,A,
+    IType,CType,DE,
 } <: AbstractProbODESolution{T,N,uType}
     u::uType
     pu::puType
@@ -44,6 +44,7 @@ struct ProbODESolution{
     x_smooth::xType
     diffusions::diffType
     backward_kernels::bkType
+    smoother_states::ssType
     pnstats::PN
     prob::P
     alg::A
@@ -56,23 +57,24 @@ struct ProbODESolution{
 end
 ProbODESolution{T,N}(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
-    pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
+    smoother_states, pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
 ) where {T,N} = ProbODESolution{
     T,N,typeof(u),typeof(pu),typeof(u_analytic),typeof(errors),typeof(t),typeof(k),
-    typeof(x_filt),typeof(diffusions),typeof(backward_kernels),typeof(pnstats),
-    typeof(prob),typeof(alg),typeof(interp),typeof(cache),typeof(stats),
+    typeof(x_filt),typeof(diffusions),typeof(backward_kernels),typeof(smoother_states),
+    typeof(pnstats),typeof(prob),typeof(alg),typeof(interp),typeof(cache),typeof(stats),
 }(
     u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions, backward_kernels,
-    pnstats, prob, alg, interp, cache, dense, tslocation, stats, retcode,
+    smoother_states, pnstats, prob, alg, interp, cache, dense, tslocation, stats,
+    retcode,
 )
 
 function ConstructionBase.constructorof(
     ::Type{
         ProbODESolution{T,N,uType,puType,uType2,DType,tType,rateType,xType,
-            diffType,bkType,PN,P,A,IType,
+            diffType,bkType,ssType,PN,P,A,IType,
             CType,DE}},
 ) where {T,N,uType,puType,uType2,DType,tType,rateType,xType,
-    diffType,bkType,PN,P,A,IType,
+    diffType,bkType,ssType,PN,P,A,IType,
     CType,DE}
     ProbODESolution{T,N}
 end
@@ -80,8 +82,8 @@ end
 function SciMLBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
-        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, retcode,
+        sol.diffusions, sol.backward_kernels, sol.smoother_states, sol.pnstats, sol.prob,
+        sol.alg, sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, retcode,
     )
 end
 
@@ -129,6 +131,20 @@ function SciMLBase.build_solution(
     diffusions = typeof(diffusion_prototype)[]
 
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
+    # The smoother snapshots the prior's per-step parameters every step
+    # (see `_save_smoother_state!` and `_step_rates`); `Nothing` for time-invariant priors.
+    rate_parameter_type = typeof(_step_rates(cache.prior))
+    smoother_states =
+        Union{
+            Nothing,
+            SmootherState{
+                Vector{uElType},
+                typeof(cache.H),
+                typeof(cache.C_Dxd),
+                typeof(cache.measurement.Σ),
+                rate_parameter_type,
+            },
+        }[]
 
     interp = ODEFilterPosterior(
         t, x_filt, x_smooth, diffusions, cache, alg.smooth,
@@ -145,7 +161,7 @@ function SciMLBase.build_solution(
     pnstats = PNStats(zero(uElType))
     return ProbODESolution{T,N}(
         u, pu, u_analytic, errors, t, k, x_filt, x_smooth, diffusions,
-        backward_kernels, pnstats, prob, alg, interp, cache,
+        backward_kernels, smoother_states, pnstats, prob, alg, interp, cache,
         dense, 0, stats, retcode,
     )
 end
@@ -157,8 +173,8 @@ function SciMLBase.build_solution(
 ) where {T,N}
     return ProbODESolution{T,N}(
         sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
-        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode,
+        sol.diffusions, sol.backward_kernels, sol.smoother_states, sol.pnstats, sol.prob,
+        sol.alg, sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode,
     )
 end
 

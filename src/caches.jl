@@ -53,6 +53,11 @@ mutable struct EKCache{
     K1::matType
     G1::matType
     Smat::HType
+    # `update!` writes the upper triangular Cholesky factor of the measurement covariance
+    # `S` here (see `update!`'s `S_chol_out` argument); the √MBF smoother reads it to build
+    # its smoother states. The Kalman gain `K` is likewise left in `C_Dxd` by `update!`
+    # (it is passed as the `K2_cache`/gain-output argument).
+    measurement_chol::matType
     C_d::vecType
     C_dxd::matType
     C_dxD::matType
@@ -136,7 +141,7 @@ function OrdinaryDiffEqCore.alg_cache(
         )
     end
     prior = remake(alg.prior; elType=uElType, dim=d)
-    if (prior isa IOUP) && prior.update_rate_parameter
+    if _updates_rate_parameter(prior)
         if !(prior.rate_parameter isa Missing)
             throw(
                 ArgumentError(
@@ -199,6 +204,8 @@ function OrdinaryDiffEqCore.alg_cache(
     G = factorized_similar(FAC, D, D)
     Smat = factorized_similar(FAC, d, d)
 
+    measurement_chol = factorized_zeros(FAC, d, d)
+
     C_d = similar(Array{uElType}, d)
     C_dxd = factorized_similar(FAC, d, d)
     C_dxD = factorized_similar(FAC, d, D)
@@ -253,7 +260,7 @@ function OrdinaryDiffEqCore.alg_cache(
         u, u_pred, u_filt, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
-        H, du, ddu, K, G, Smat,
+        H, du, ddu, K, G, Smat, measurement_chol,
         C_d, C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,
         backward_kernel,
         initdiff, initdiff * NaN, initdiff * NaN,

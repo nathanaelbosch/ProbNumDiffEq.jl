@@ -38,7 +38,7 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     # Similar to OrdinaryDiffEqCore.do_newJ
     if integ.iter <= 1
         return true
-    elseif cache.prior isa IOUP && cache.prior.update_rate_parameter
+    elseif _updates_rate_parameter(cache.prior)
         return true
     elseif repeat_step
         return false
@@ -86,7 +86,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
 
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
-        if cache.prior isa IOUP && cache.prior.update_rate_parameter
+        if _updates_rate_parameter(cache.prior)
             OrdinaryDiffEqDifferentiation.calc_J!(
                 cache.prior.rate_parameter,
                 integ,
@@ -123,7 +123,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
         isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
     predict_cov!(x_pred.Σ, xprev.Σ, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
 
-    if integ.alg.smooth
+    if _needs_backward_kernels(integ.alg)
         @unpack C_DxD, backward_kernel = cache
         K = AffineNormalKernel(Ah, Qh)
         compute_backward_kernel!(
@@ -133,9 +133,13 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     # Compute measurement covariance only now; likelihood computation is currently broken
     compute_measurement_covariance!(cache)
 
-    # Update state and save the ODE solution value
+    # Update state and save the ODE solution value.
+    # `S_chol_out=cache.measurement_chol` makes `update!` store the Cholesky factor of the
+    # measurement covariance it computes anyways; the √MBF smoother reads it from there
+    # (see `_save_smoother_state!`). The Kalman gain is left in `cache.C_Dxd`.
     x_filt, loglikelihood = update!(
-        x_filt, x_pred, cache.measurement, cache.H; cache, R=cache.R)
+        x_filt, x_pred, cache.measurement, cache.H;
+        cache, R=cache.R, S_chol_out=cache.measurement_chol)
     write_into_solution!(
         integ.u, x_filt.μ; cache, is_secondorder_ode=(integ.f isa DynamicalODEFunction))
 

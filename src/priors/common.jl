@@ -53,6 +53,37 @@ See [`AbstractGaussMarkovProcess`](@ref) for more details on Gauss-Markov proces
 num_derivatives(p::AbstractGaussMarkovProcess) = p.num_derivatives
 
 """
+    _updates_rate_parameter(p::AbstractGaussMarkovProcess)
+
+Return whether the process updates internal parameters at every solver step.
+
+Most priors are time-invariant, so their transition matrices depend only on the step size
+and this returns `false`. The only exception is the [`IOUP`](@ref) prior with
+`update_rate_parameter=true`, whose rate parameter is re-estimated (Rosenbrock-style) at
+every step; anything that needs to reconstruct a past step's transition has to keep track
+of the per-step values (see [`_step_rates`](@ref) and [`_restore_step_rates!`](@ref)).
+"""
+_updates_rate_parameter(p::AbstractGaussMarkovProcess) = false
+
+"""
+    _step_rates(p::AbstractGaussMarkovProcess)
+
+Snapshot the process's per-step parameters, or `nothing` if it has none.
+
+The snapshot owns its data, so it stays valid when the solver overwrites the process's
+parameters in the next step. Restore it with [`_restore_step_rates!`](@ref).
+"""
+_step_rates(p::AbstractGaussMarkovProcess) = nothing
+
+"""
+    _restore_step_rates!(p::AbstractGaussMarkovProcess, rates)
+
+Restore per-step parameters previously snapshotted with [`_step_rates`](@ref) into `p`,
+and return `p`. A `nothing` snapshot is a no-op.
+"""
+_restore_step_rates!(p::AbstractGaussMarkovProcess, ::Nothing) = p
+
+"""
     discretize(p::AbstractGaussMarkovProcess, step_size::Real)
 
 Compute the transition matrices of the process for a given step size.

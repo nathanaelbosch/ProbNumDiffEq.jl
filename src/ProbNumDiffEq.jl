@@ -10,8 +10,8 @@ import Base:
     eltype, rand
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
-    UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
-    issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
+    UniformScaling, UpperTriangular, LowerTriangular, cholesky, cholesky!, diag, diagm,
+    dot, ishermitian, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 import Random: Random, AbstractRNG
@@ -100,6 +100,8 @@ abstract type AbstractODEFilterCache <: OrdinaryDiffEqCore.OrdinaryDiffEqCache e
 include("gaussians.jl")
 export Gaussian
 
+include("smoother_state.jl")
+
 include("priors/common.jl")
 include("priors/iwp.jl")
 include("priors/ltisde.jl")
@@ -136,6 +138,7 @@ include("filtering/markov_kernel.jl")
 include("filtering/predict.jl")
 include("filtering/update.jl")
 include("filtering/smooth.jl")
+include("filtering/mbf.jl")
 include("measurement_models.jl")
 include("derivative_utils.jl")
 include("perform_step.jl")

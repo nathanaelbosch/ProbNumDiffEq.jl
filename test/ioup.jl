@@ -3,6 +3,7 @@ using LinearAlgebra
 using OrdinaryDiffEq
 using Random
 using Test
+import ODEProblemLibrary: prob_ode_lotkavolterra
 
 α = 1e-1
 A = [-α -2π; 2π -α]
@@ -51,4 +52,22 @@ end
         err = norm(ref.u[end] - sol.u[end])
         @test err < 6e-6
     end
+end
+
+@testset "MBF backward pass leaves the IOUP rate parameter at its forward-final value" begin
+    # NOTE: `sol.cache` (a.k.a. `sol.interp.cache`) is a *separate* cache object built by
+    # `SciMLBase.build_solution`, never mutated during stepping/smoothing -- it always
+    # keeps its zero-initialized `rate_parameter`. The cache that `_smooth_solution_mbf!`
+    # actually mutates is `integ.cache`, so this checks that one directly via `init`/
+    # `solve!` instead of going through the high-level `solve` / `sol.cache`.
+    lvprob = prob_ode_lotkavolterra
+    integ_s = OrdinaryDiffEq.init(
+        lvprob, EK1(prior=IOUP(3, update_rate_parameter=true), smooth=true); dense=false,
+    )
+    OrdinaryDiffEq.solve!(integ_s)
+    integ_f = OrdinaryDiffEq.init(
+        lvprob, EK1(prior=IOUP(3, update_rate_parameter=true), smooth=false);
+        dense=false)
+    OrdinaryDiffEq.solve!(integ_f)
+    @test integ_s.cache.prior.rate_parameter ≈ integ_f.cache.prior.rate_parameter
 end
