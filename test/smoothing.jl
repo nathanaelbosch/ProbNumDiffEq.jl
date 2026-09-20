@@ -109,12 +109,16 @@ end
     # (S_U⁻ᵀH) in its QR stack, which silently corrupted the smoothed covariances
     # by O(10%) while leaving the (λ-based) means essentially unaffected.
     # Run both smoother implementations and check that they compute the same, exact
-    # posterior as the kernel-based RTS recursion.
-    for smoother in (:mbf, :rts), Alg in (EK1, EK0, DiagonalEK1)
-        alg = Alg(order=3, smooth=true, smoother=smoother, save_backward_kernels=true)
-        sol = solve(prob, alg, abstol=2e-2, reltol=2e-2)
-        ref = rts_reference(sol)
-        for i in eachindex(sol.t)
+    # posterior as the kernel-based RTS recursion. Only the `:rts` solve stores the
+    # backward kernels, so the reference comes from a separate `:rts` solve; the smoother
+    # choice affects the backward pass only, so both solves take the exact same steps.
+    for Alg in (EK1, EK0, DiagonalEK1)
+        kwargs = (; order=3, smooth=true)
+        sol_rts = solve(prob, Alg(; kwargs..., smoother=:rts), abstol=2e-2, reltol=2e-2)
+        sol_mbf = solve(prob, Alg(; kwargs..., smoother=:mbf), abstol=2e-2, reltol=2e-2)
+        ref = rts_reference(sol_rts)
+        @test length(sol_mbf.t) == length(sol_rts.t)
+        for sol in (sol_rts, sol_mbf), i in eachindex(ref)
             @test sol.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
             @test Matrix(sol.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
         end
@@ -123,13 +127,12 @@ end
     # The IOUP prior with `update_rate_parameter=true` changes its rate parameter at every
     # step; the backward smoother must use the per-step values (snapshotted and restored
     # with the smoother states), not the final one (#393-adjacent former bug).
-    for smoother in (:mbf, :rts)
-        alg = EK1(
-            order=3, smooth=true, smoother=smoother, save_backward_kernels=true,
-            prior=IOUP(3; update_rate_parameter=true))
-        sol = solve(prob, alg, abstol=2e-2, reltol=2e-2)
-        ref = rts_reference(sol)
-        for i in eachindex(sol.t)
+    let kwargs = (; order=3, smooth=true, prior=IOUP(3; update_rate_parameter=true))
+        sol_rts = solve(prob, EK1(; kwargs..., smoother=:rts), abstol=2e-2, reltol=2e-2)
+        sol_mbf = solve(prob, EK1(; kwargs..., smoother=:mbf), abstol=2e-2, reltol=2e-2)
+        ref = rts_reference(sol_rts)
+        @test length(sol_mbf.t) == length(sol_rts.t)
+        for sol in (sol_rts, sol_mbf), i in eachindex(ref)
             @test sol.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
             @test Matrix(sol.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
         end
@@ -139,11 +142,9 @@ end
 @testset "MBF smoother with calibrated static diffusion" begin
     for Alg in (EK1, EK0, DiagonalEK1)
         alg_mbf = Alg(
-            order=3, smooth=true, smoother=:mbf, save_backward_kernels=true,
-            diffusionmodel=FixedDiffusion())
+            order=3, smooth=true, smoother=:mbf, diffusionmodel=FixedDiffusion())
         alg_rts = Alg(
-            order=3, smooth=true, smoother=:rts, save_backward_kernels=true,
-            diffusionmodel=FixedDiffusion())
+            order=3, smooth=true, smoother=:rts, diffusionmodel=FixedDiffusion())
         sol_mbf = solve(prob, alg_mbf, abstol=2e-2, reltol=2e-2)
         sol_rts = solve(prob, alg_rts, abstol=2e-2, reltol=2e-2)
         @test length(sol_mbf.t) == length(sol_rts.t)
@@ -163,7 +164,7 @@ end
         order=3, smooth=true, smoother=:mbf,
         diffusionmodel=FixedMVDiffusion(initial_diffusion=[0.5, 2.0]))
     alg_rts = EK0(
-        order=3, smooth=true, smoother=:rts, save_backward_kernels=true,
+        order=3, smooth=true, smoother=:rts,
         diffusionmodel=FixedMVDiffusion(initial_diffusion=[0.5, 2.0]))
     sol_mbf = solve(prob, alg_mbf, abstol=2e-2, reltol=2e-2)
     sol_rts = solve(prob, alg_rts, abstol=2e-2, reltol=2e-2)
@@ -221,13 +222,14 @@ _ss_approx(a, b) =
     # one measurement less (the final step was taken but not saved), so every smoothed
     # state legitimately differs. What must hold is that the shortened backward pass is
     # itself correct, i.e. still matches the RTS recursion over the saved states:
-    alg = EK1(order=3, smoother=:mbf, save_backward_kernels=true)
-    sol_k = solve(prob, alg, abstol=2e-2, reltol=2e-2; save_end=false)
-    ref = rts_reference(sol_k)
-    @test all(sol_k.x_smooth[i].μ ≈ ref[i].μ for i in eachindex(sol_k.t))
-    @test all(
-        Matrix(sol_k.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) for i in eachindex(sol_k.t)
-    )
+    sol_k_rts = solve(
+        prob, EK1(order=3, smoother=:rts), abstol=2e-2, reltol=2e-2; save_end=false)
+    sol_k = solve(
+        prob, EK1(order=3, smoother=:mbf), abstol=2e-2, reltol=2e-2; save_end=false)
+    ref = rts_reference(sol_k_rts)
+    @test length(sol_k.t) == length(sol_k_rts.t)
+    @test all(sol_k.x_smooth[i].μ ≈ ref[i].μ for i in eachindex(ref))
+    @test all(Matrix(sol_k.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) for i in eachindex(ref))
 
     # (b) two discrete callbacks firing at every step (duplicate-time saves;
     #     each step produces one no-save custom run followed by force-saves)
@@ -271,33 +273,37 @@ end
     end
 
     # ...and it is the correct posterior: identical to the RTS recursion over the
-    # backward kernels of the very same (warm-started) solve.
-    for smoother in (:mbf, :rts)
-        alg = EK0(; smoother=smoother, save_backward_kernels=true)
-        sol2 = solve(prob, alg, sol.u, sol.t, sol.k; dense=true)
-        @test length(sol2.backward_kernels) == length(sol2.t) - 1
-        ref = rts_reference(sol2)
-        for i in eachindex(sol2.t)
-            @test sol2.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
-            @test Matrix(sol2.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
-        end
+    # backward kernels of an equally warm-started `:rts` solve. Only `:rts` stores those
+    # kernels, so the reference is built from that solve and then compared against both.
+    sol_rts = solve(prob, EK0(; smoother=:rts), sol.u, sol.t, sol.k; dense=true)
+    @test length(sol_rts.backward_kernels) == length(sol_rts.t) - 1
+    ref = rts_reference(sol_rts)
+    for i in eachindex(ref)
+        @test sol_rts.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
+        @test Matrix(sol_rts.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
+    end
+
+    sol_mbf = solve(prob, EK0(; smoother=:mbf), sol.u, sol.t, sol.k; dense=true)
+    @test length(sol_mbf.t) == length(sol_rts.t)
+    for i in eachindex(ref)
+        @test sol_mbf.x_smooth[i].μ ≈ ref[i].μ rtol = 1e-8 atol = 1e-10
+        @test Matrix(sol_mbf.x_smooth[i].Σ) ≈ Matrix(ref[i].Σ) rtol = 1e-8
     end
 end
 
 @testset "backward kernels are only computed when consumed" begin
     prob = prob_ode_lotkavolterra
 
-    # :rts without smooth => nothing consumes the kernels: don't compute or store them
+    # The kernels are stored exactly when the RTS smoother consumes them, i.e. for
+    # `smooth=true` together with `smoother=:rts`:
+    sol = solve(prob, EK1(smoother=:rts, smooth=true); dense=false)
+    @test length(sol.backward_kernels) == length(sol.t) - 1
+
+    # :rts without smoothing => nothing consumes the kernels: don't compute or store them
     sol = solve(prob, EK1(smoother=:rts, smooth=false); dense=false)
     @test length(sol.backward_kernels) == 0
 
-    # independent opt-in still works without smoothing
-    sol = solve(prob, EK1(save_backward_kernels=true, smooth=false); dense=false)
-    @test length(sol.backward_kernels) == length(sol.t) - 1
-
-    # and with smoothing (unchanged behavior)
-    sol = solve(prob, EK1(smoother=:rts, smooth=true); dense=false)
-    @test length(sol.backward_kernels) == length(sol.t) - 1
+    # ...and neither does the default :mbf smoother, which uses the smoother states
     sol = solve(prob, EK1(smooth=true); dense=false)             # default :mbf
     @test length(sol.backward_kernels) == 0
 end

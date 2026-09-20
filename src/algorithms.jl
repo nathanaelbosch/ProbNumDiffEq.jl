@@ -79,12 +79,10 @@ end
     _needs_backward_kernels(alg)
 
 Whether the forward pass has to store backward transition kernels. They are consumed by
-the RTS smoother (`smoother=:rts`, and only when `smooth=true`) and by Fenrir's own
-backward pass, which opts in via `save_backward_kernels=true`. The MBF smoother
+the RTS smoother, i.e. when `smooth=true` and `smoother=:rts`. The MBF smoother
 (`smoother=:mbf`) reconstructs what it needs from the stored `SmootherState`s instead.
 """
-_needs_backward_kernels(alg) =
-    (alg.smooth && alg.smoother == :rts) || alg.save_backward_kernels
+_needs_backward_kernels(alg) = alg.smooth && alg.smoother == :rts
 
 function ekargcheck(
     alg;
@@ -203,11 +201,6 @@ which scales cubically with the problem size._
   Under forward-mode AD, gradients through the smoothed *covariances* can be `NaN` with
   `:mbf` (smoothed means are unaffected); use `smoother=:rts` if you need them. See
   [Smoothing and automatic differentiation](@ref smoothing_ad).
-- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
-  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
-  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
-  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -226,7 +219,6 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
     diffusionmodel::DT
     smooth::Bool
     smoother::Symbol
-    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -235,7 +227,6 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
         smoother::Symbol=:mbf,
-        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         pn_observation_noise::RT=nothing,
         covariance_factorization::CF=covariance_structure(EK0, prior, diffusionmodel),
@@ -244,8 +235,7 @@ struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
             EK0; smoother, diffusionmodel, pn_observation_noise,
             covariance_factorization)
         new{PT,DT,IT,RT,CF}(
-            prior, diffusionmodel, smooth, smoother, save_backward_kernels,
-            initialization,
+            prior, diffusionmodel, smooth, smoother, initialization,
             pn_observation_noise, covariance_factorization)
     end
 end
@@ -282,11 +272,6 @@ so if you're solving a high-dimensional non-stiff problem you might want to give
   Under forward-mode AD, gradients through the smoothed *covariances* can be `NaN` with
   `:mbf` (smoothed means are unaffected); use `smoother=:rts` if you need them. See
   [Smoothing and automatic differentiation](@ref smoothing_ad).
-- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
-  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
-  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
-  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -311,7 +296,6 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     diffusionmodel::DT
     smooth::Bool
     smoother::Symbol
-    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -322,7 +306,6 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
         smoother::Symbol=:mbf,
-        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
         autodiff=AutoForwardDiff(),
@@ -353,7 +336,6 @@ struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             diffusionmodel,
             smooth,
             smoother,
-            save_backward_kernels,
             initialization,
             pn_observation_noise,
             covariance_factorization,
@@ -401,11 +383,6 @@ the full [`EK1`](@ref) would be too expensive.
   Under forward-mode AD, gradients through the smoothed *covariances* can be `NaN` with
   `:mbf` (smoothed means are unaffected); use `smoother=:rts` if you need them. See
   [Smoothing and automatic differentiation](@ref smoothing_ad).
-- `save_backward_kernels::Bool`: Compute and save the backward (RTS transition) kernels in
-  `sol.backward_kernels` during the solve. Consumed by the `:rts` smoother when
-  `smooth=true`; otherwise this is opt-in, for direct access to `sol.backward_kernels`.
-  [`fenrir_data_loglik`](@ref) enables it automatically when needed, so you don't have to
-  set it yourself just to use that function.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
    See also: [Priors](@ref).
@@ -428,7 +405,6 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
     diffusionmodel::DT
     smooth::Bool
     smoother::Symbol
-    save_backward_kernels::Bool
     initialization::IT
     pn_observation_noise::RT
     covariance_factorization::CF
@@ -439,7 +415,6 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
         diffusionmodel::DT=DynamicDiffusion(),
         smooth=true,
         smoother::Symbol=:mbf,
-        save_backward_kernels=false,
         initialization::IT=TaylorModeInit(num_derivatives(prior)),
         chunk_size=Val{0}(),
         autodiff=AutoForwardDiff(),
@@ -478,7 +453,6 @@ struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
             diffusionmodel,
             smooth,
             smoother,
-            save_backward_kernels,
             initialization,
             pn_observation_noise,
             covariance_factorization,
