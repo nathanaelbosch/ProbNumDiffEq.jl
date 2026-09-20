@@ -56,9 +56,17 @@ function fenrir_data_loglik(
 
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
     o = length(data.u[1])
-    R = cov2psdmatrix(observation_noise_cov; d=o)
-    R = to_factorized_matrix(integ.cache.covariance_factorization, R)
-    LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
+    d = integ.cache.d
+    if o != d && integ.cache.covariance_factorization isa BlockDiagonalCovariance
+        obs_indices = _partial_obs_indices(observation_matrix, d)
+        LL, _, _ = fit_pnsolution_to_data!(
+            sol, observation_noise_cov, data;
+            obs_indices, proj_blocks=integ.cache.E0)
+    else
+        R = cov2psdmatrix(observation_noise_cov; d=o)
+        R = to_factorized_matrix(integ.cache.covariance_factorization, R)
+        LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
+    end
 
     return LL
 end
@@ -122,6 +130,54 @@ function fit_pnsolution_to_data!(
         end
     end
     @assert data_idx == 0 # to make sure we went through all the data
+
+    return LL, sol.t, x_posterior
+end
+
+function fit_pnsolution_to_data!(
+    sol::AbstractProbODESolution,
+    observation_noise_cov,
+    data::NamedTuple{(:t, :u)};
+    obs_indices::Vector{Int},
+    proj_blocks::BlocksOfDiagonals,
+)
+    @unpack cache, backward_kernels = sol
+    @unpack x_tmp, C_DxD, C_3DxD = cache
+
+    LL = zero(eltype(sol.prob.p))
+
+    x_posterior = copy(sol.x_filt)
+
+    if sol.t[end] in data.t
+        _x = copy!(cache.x_tmp, x_posterior[end])
+        ll = _partial_block_update!(
+            x_posterior[end], _x, obs_indices, data.u[end],
+            proj_blocks, observation_noise_cov)
+        LL += ll
+    end
+
+    data_idx = length(data.u) - 1
+    for i in (length(x_posterior)-1):-1:1
+        if sol.t[i] == sol.t[i+1]
+            copy!(x_posterior[i], x_posterior[i+1])
+            continue
+        end
+
+        K = backward_kernels[i]
+        marginalize!(x_posterior[i], x_posterior[i+1], K; C_DxD, C_3DxD)
+
+        if data_idx > 0 && sol.t[i] == data.t[data_idx]
+            _x = copy!(cache.x_tmp, x_posterior[i])
+            ll = _partial_block_update!(
+                x_posterior[i], _x, obs_indices, data.u[data_idx],
+                proj_blocks, observation_noise_cov)
+            if !isinf(ll)
+                LL += ll
+            end
+            data_idx -= 1
+        end
+    end
+    @assert data_idx == 0
 
     return LL, sol.t, x_posterior
 end
