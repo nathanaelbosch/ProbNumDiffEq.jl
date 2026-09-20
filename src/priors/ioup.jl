@@ -52,6 +52,11 @@ IOUP(num_derivatives; update_rate_parameter) = begin
     IOUP(num_derivatives, missing; update_rate_parameter)
 end
 
+_updates_rate_parameter(p::IOUP) = p.update_rate_parameter
+_step_rates(p::IOUP) = _updates_rate_parameter(p) ? copy(p.rate_parameter) : nothing
+_restore_step_rates!(p::IOUP, rates::AbstractArray) =
+    (copyto!(p.rate_parameter, rates); p)
+
 remake(
     p::IOUP{T};
     elType=T,

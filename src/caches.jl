@@ -141,7 +141,7 @@ function OrdinaryDiffEqCore.alg_cache(
         )
     end
     prior = remake(alg.prior; elType=uElType, dim=d)
-    if (prior isa IOUP) && prior.update_rate_parameter
+    if _updates_rate_parameter(prior)
         if !(prior.rate_parameter isa Missing)
             throw(
                 ArgumentError(

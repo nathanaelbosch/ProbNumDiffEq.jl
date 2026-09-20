@@ -131,13 +131,9 @@ function SciMLBase.build_solution(
     diffusions = typeof(diffusion_prototype)[]
 
     backward_kernels = StructArray{typeof(cache.backward_kernel)}(undef, 0)
-    rate_parameter_type = if (cache.prior isa IOUP && cache.prior.update_rate_parameter)
-        # The smoother snapshots a copy of the prior's rate parameter every step
-        # (see `_save_smoother_state!`).
-        typeof(cache.prior.rate_parameter)
-    else
-        Nothing
-    end
+    # The smoother snapshots the prior's per-step parameters every step
+    # (see `_save_smoother_state!` and `_step_rates`); `Nothing` for time-invariant priors.
+    rate_parameter_type = typeof(_step_rates(cache.prior))
     smoother_states =
         Union{
             Nothing,
