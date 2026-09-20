@@ -95,17 +95,21 @@ function _partial_obs_indices(M::AbstractMatrix, d::Int)
         row = view(M, k, :)
         nz = findall(!iszero, row)
         if length(nz) != 1 || row[nz[1]] != 1
-            throw(ArgumentError(
-                "Partial observations with `DiagonalEK1` require a dimension-selection " *
-                "observation matrix (each row must select exactly one dimension). " *
-                "Got a row that mixes dimensions or has a non-unit scaling."))
+            throw(
+                ArgumentError(
+                    "Partial observations with `DiagonalEK1` require a dimension-selection " *
+                    "observation matrix (each row must select exactly one dimension). " *
+                    "Got a row that mixes dimensions or has a non-unit scaling."),
+            )
         end
         indices[k] = nz[1]
     end
     if length(unique(indices)) != o
-        throw(ArgumentError(
-            "Partial observations with `DiagonalEK1` require each observed dimension " *
-            "to appear exactly once. Got repeated dimensions."))
+        throw(
+            ArgumentError(
+                "Partial observations with `DiagonalEK1` require each observed dimension " *
+                "to appear exactly once. Got repeated dimensions."),
+        )
     end
     return indices
 end
@@ -158,7 +162,7 @@ function _partial_block_update!(
             PSDMatrix(x_pred.Σ.R.blocks[i]))
 
         mul!(z_k, H_k, view(x_pred.μ, i:d:length(x_pred.μ)))
-        val_range = ((k - 1) * obs_per_dim + 1):(k * obs_per_dim)
+        val_range = ((k-1)*obs_per_dim+1):(k*obs_per_dim)
         z_k .-= view(val, val_range)
 
         r_k = _get_obs_noise_var(observation_noise_cov, k)
