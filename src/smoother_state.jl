@@ -1,5 +1,5 @@
 """
-    SmootherState{T,TH,TK,TS,TR}
+    SmootherState{Tz,TH,TK,TS,TR}
 
 Per-step forward-pass quantities needed for the √MBF backward smoother: the measurement mean
 `z = h(x_pred)` (the filter's innovation is `-z`, since the update assumes zero measurements),

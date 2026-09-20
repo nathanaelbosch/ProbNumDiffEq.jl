@@ -135,9 +135,7 @@ function _mbf_backward_step!(
     # measurements {i, ..., n}).
     # `U_f` is only ever read below, so alias the filtered factor instead of copying it.
     U_f = x_filt_prev.Σ.R
-    _matmul!(sc.λ_prec, U_f, λ_new)
-    _matmul!(sc.λ_pred, transpose(U_f), sc.λ_prec)
-    x_smooth_prev.μ .-= sc.λ_pred
+    _mbf_recover_mean!(x_smooth_prev.μ, U_f, λ_new, sc)
     # The recovery is done directly in physical coordinates: `V = U_Λ_new * U_f'` and
     # `R_f = R_M * U_f` (no P/PI scalings -- they would cancel exactly, since
     # `PI == P^{-1}`). This saves two D×D products per step.
@@ -231,8 +229,26 @@ function _mbf_backward_step!(
     return λ_new, BlocksOfDiagonals(new_U_Λ_blocks)
 end
 
+"""
+    _mbf_recover_mean!(μ_smooth, U_f, λ, [sc])
+
+Recover the smoothed mean in place from the filtered mean (already in `μ_smooth`), the
+filtered covariance factor `U_f` (upper triangular with `Σ_filt = U_f'U_f`) and the MBF
+adjoint mean `λ`, i.e. `μ_smooth -= Σ_filt * λ = U_f' * (U_f * λ)`.
+
+Passing a [`_MBFScratch`](@ref) `sc` runs the two products through its preallocated
+length-`D` buffers, which the dense path does to keep the backward step allocation-free.
+The Kronecker path batches over the ODE dimensions, so its `λ` is a `(q+1)×d` matrix that
+does not fit those buffers and it uses the allocating method instead.
+"""
 function _mbf_recover_mean!(μ_smooth, U_f::Matrix, λ)
     μ_smooth .-= U_f' * (U_f * λ)
+end
+function _mbf_recover_mean!(μ_smooth, U_f, λ, sc::_MBFScratch)
+    _matmul!(sc.λ_prec, U_f, λ)
+    _matmul!(sc.λ_pred, transpose(U_f), sc.λ_prec)
+    μ_smooth .-= sc.λ_pred
+    return μ_smooth
 end
 
 """
