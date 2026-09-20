@@ -21,12 +21,20 @@ Base.@kwdef struct _MBFScratch{T,Tw<:AbstractVecOrMat{T}}
     w_h::Vector{T}
     tau::Vector{T}
     S_U_T::Matrix{T}
+    # Batched `D×nbatch` counterparts of `λ_prec`/`λ_pred`/`λ_new`, for EK0's Kronecker
+    # path only; `D×0` (i.e. empty) for the dense and block-diagonal paths.
+    λ_prec_B::Matrix{T}
+    λ_pred_B::Matrix{T}
+    λ_new_B::Matrix{T}
 end
 
-# `wsize` is the shape of the measurement-space work vectors `w`/`z_sol`: `(d,)` for the
-# dense and block-diagonal paths, and `(d, d_ode)` for EK0's Kronecker path, which batches
-# the update over the `d_ode` ODE dimensions.
-function _MBFScratch(D::Integer, d::Integer, ::Type{T}; wsize=(d,)) where {T}
+# `nbatch` is the number of ODE dimensions the step is batched over: `0` for the dense and
+# block-diagonal paths, which work on one `D`-sized problem at a time, and `d_ode` for EK0's
+# Kronecker path, whose `D` is the small `(q+1)` block size and which shares that block
+# across all `d_ode` ODE dimensions. It widens the measurement-space work vectors
+# `w`/`z_sol` to `d×d_ode` matrices and switches on the batched λ buffers.
+function _MBFScratch(D::Integer, d::Integer, ::Type{T}; nbatch::Integer=0) where {T}
+    wsize = nbatch == 0 ? (d,) : (d, nbatch)
     return _MBFScratch(;
         U_Λ_prec=Matrix{T}(undef, D, D),
         U_Λ_pred=Matrix{T}(undef, D, D),
@@ -46,6 +54,9 @@ function _MBFScratch(D::Integer, d::Integer, ::Type{T}; wsize=(d,)) where {T}
         w_h=zeros(T, D),
         tau=zeros(T, D),
         S_U_T=Matrix{T}(undef, d, d),
+        λ_prec_B=zeros(T, D, nbatch),
+        λ_pred_B=zeros(T, D, nbatch),
+        λ_new_B=zeros(T, D, nbatch),
     )
 end
 
@@ -55,8 +66,7 @@ _mbf_scratch(U_Λ::Matrix, cache) =
     _MBFScratch(size(U_Λ, 1), size(cache.H, 1), eltype(U_Λ))
 _mbf_scratch(U_Λ::IsometricKroneckerProduct, cache) =
     _MBFScratch(
-        size(U_Λ.B, 1), size(cache.H.B, 1), eltype(U_Λ);
-        wsize=(size(cache.H.B, 1), U_Λ.rdim))
+        size(U_Λ.B, 1), size(cache.H.B, 1), eltype(U_Λ); nbatch=U_Λ.rdim)
 _mbf_scratch(U_Λ::BlocksOfDiagonals, cache) =
     _MBFScratch(
         size(blocks(U_Λ)[1], 1), size(blocks(cache.H)[1], 1), eltype(U_Λ))
@@ -136,25 +146,23 @@ function _mbf_backward_step!(
     # `U_f` is only ever read below, so alias the filtered factor instead of copying it.
     U_f = x_filt_prev.Σ.R
     _mbf_recover_mean!(x_smooth_prev.μ, U_f, λ_new, sc)
-    # The recovery is done directly in physical coordinates: `V = U_Λ_new * U_f'` and
-    # `R_f = R_M * U_f` (no P/PI scalings -- they would cancel exactly, since
-    # `PI == P^{-1}`). This saves two D×D products per step.
-    _matmul!(sc.U_Λ_pred, U_Λ_new, transpose(U_f))
-    _hyperbolic_qr!(sc.R_M, sc.v_h, sc.w_h, sc.U_Λ_pred)
-    _matmul!(sc.R_f, sc.R_M, U_f)
-    # `sc.R_f` is a valid square-root factor of the smoothed covariance
-    # (`sc.R_f'sc.R_f = Σ_s`) but generally a full (non-triangular) matrix. That is fine:
-    # the package does not assume upper-triangular factors in general (e.g. `update!`
-    # stores `Σ_pred.R * (I - K*H)'`), and all `PSDMatrix` operations (`Matrix`, `det`,
-    # `logabsdet`, `diag`, QR stacks, ...) only rely on `R'R`. So we store the factor
-    # as-is instead of paying for a per-step re-triangularizing QR.
-    copy!(x_smooth_prev.Σ.R, sc.R_f)
+    # The recovery is done directly in physical coordinates (no P/PI scalings -- they would
+    # cancel exactly, since `PI == P^{-1}`). This saves two D×D products per step.
+    _mbf_recover_cov!(x_smooth_prev.Σ.R, U_f, U_Λ_new, sc)
 
     return λ_new, U_Λ_new
 end
 
 # Kronecker version (EK0): reduce to the shared small `.B` block, batched over the `d` ODE
 # dimensions via `(q+1)×d`-shaped λ, instead of densifying to `D×D`.
+#
+# Like the dense method this runs entirely out of `sc` (the `(q+1)`-sized block buffers plus
+# the batched `λ_*_B` ones). The dense method hands its results back in scratch buffers; here
+# the recursion's carriers are instead the incoming `λ` and `U_Λ` themselves, which are
+# written at the very end -- both are consumed in the first two lines below, and both are
+# owned by `_smooth_solution_mbf!`, which only ever passes the returned pair back in. That
+# avoids keeping a second full-length `λ` and a second `IsometricKroneckerProduct` around
+# just to return them.
 function _mbf_backward_step!(
     x_smooth_prev, λ, U_Λ::IsometricKroneckerProduct, x_filt_prev, ss,
     P::IsometricKroneckerProduct, PI::IsometricKroneckerProduct,
@@ -165,32 +173,35 @@ function _mbf_backward_step!(
     _λ = reshape_no_alloc(λ, d, Q)'
     P_B, PI_B, A_B, U_Λ_B = P.B, PI.B, A.B, U_Λ.B
 
-    # Precondition into this transition's local coordinates. Both are fresh matrices, so
+    # Precondition into this transition's local coordinates. Both are scratch buffers, so
     # `_sqrt_mbf_update!` can update them in place.
-    λ_prec = PI_B' * _λ
-    U_Λ_prec = U_Λ_B * PI_B
+    _matmul!(sc.λ_prec_B, transpose(PI_B), _λ)
+    _matmul!(sc.U_Λ_prec, U_Λ_B, PI_B)
 
     if !isnothing(ss)
+        _matmul!(sc.H_prec, ss.H.B, PI_B)
+        _matmul!(sc.K_prec, P_B, ss.K.B)
         _sqrt_mbf_update!(
-            λ_prec, U_Λ_prec, P_B * ss.K.B, ss.S_U.B,
-            reshape_no_alloc(ss.z, d, 1)', ss.H.B * PI_B, Q, sc)
+            sc.λ_prec_B, sc.U_Λ_prec, sc.K_prec, ss.S_U.B,
+            reshape_no_alloc(ss.z, d, 1)', sc.H_prec, Q, sc)
     end
 
     # Predict (still in preconditioned coordinates) and unprecondition.
-    λ_new_B = P_B' * (A_B' * λ_prec)
-    U_Λ_new_B = (U_Λ_prec * A_B) * P_B
+    _matmul!(sc.λ_pred_B, transpose(A_B), sc.λ_prec_B)
+    _matmul!(sc.λ_new_B, transpose(P_B), sc.λ_pred_B)
+    _matmul!(sc.U_Λ_pred, sc.U_Λ_prec, A_B)
+    _matmul!(sc.U_Λ_new, sc.U_Λ_pred, P_B)
 
     U_f_B = x_filt_prev.Σ.R.B
     μ_smooth_view = reshape_no_alloc(x_smooth_prev.μ, d, Q)'
-    _mbf_recover_mean!(μ_smooth_view, U_f_B, λ_new_B)
+    _mbf_recover_mean!(μ_smooth_view, U_f_B, sc.λ_new_B, sc)
     # Same as above: recover directly in physical coordinates -- the P/PI scalings cancel
     # exactly, so `U_Λ_B * PI_B` and `U_f_B * P_B'` (and the trailing `* PI_B'`) are not needed.
-    new_R_B = _mbf_recover_cov(x_filt_prev.Σ.R.B, U_Λ_new_B)
-    copy!(x_smooth_prev.Σ.R.B, new_R_B)
+    _mbf_recover_cov!(x_smooth_prev.Σ.R.B, U_f_B, sc.U_Λ_new, sc)
 
-    λ_new = similar(λ)
-    reshape_no_alloc(λ_new, d, Q)' .= λ_new_B
-    return λ_new, IsometricKroneckerProduct(d, U_Λ_new_B)
+    _λ .= sc.λ_new_B
+    copy!(U_Λ_B, sc.U_Λ_new)
+    return λ, U_Λ
 end
 
 # Block-diagonal version (DiagonalEK1): unlike EK0, each of the `d` ODE dimensions has its own
@@ -230,32 +241,35 @@ function _mbf_backward_step!(
 end
 
 """
-    _mbf_recover_mean!(μ_smooth, U_f, λ, [sc])
+    _mbf_recover_mean!(μ_smooth, U_f, λ, sc)
 
 Recover the smoothed mean in place from the filtered mean (already in `μ_smooth`), the
 filtered covariance factor `U_f` (upper triangular with `Σ_filt = U_f'U_f`) and the MBF
 adjoint mean `λ`, i.e. `μ_smooth -= Σ_filt * λ = U_f' * (U_f * λ)`.
 
-Passing a [`_MBFScratch`](@ref) `sc` runs the two products through its preallocated
-length-`D` buffers, which the dense path does to keep the backward step allocation-free.
-The Kronecker path batches over the ODE dimensions, so its `λ` is a `(q+1)×d` matrix that
-does not fit those buffers and it uses the allocating method instead.
+The two products run through the preallocated buffers of the [`_MBFScratch`](@ref) `sc`, so
+that the backward step allocates nothing: the length-`D` ones for a vector `λ` (dense and
+block-diagonal paths), and the `(q+1)×d_ode` ones for the Kronecker path's `λ`, which is
+batched over the ODE dimensions.
 """
-function _mbf_recover_mean!(μ_smooth, U_f::Matrix, λ)
-    μ_smooth .-= U_f' * (U_f * λ)
-end
-function _mbf_recover_mean!(μ_smooth, U_f, λ, sc::_MBFScratch)
+function _mbf_recover_mean!(μ_smooth, U_f, λ::AbstractVector, sc::_MBFScratch)
     _matmul!(sc.λ_prec, U_f, λ)
     _matmul!(sc.λ_pred, transpose(U_f), sc.λ_prec)
     μ_smooth .-= sc.λ_pred
     return μ_smooth
 end
+function _mbf_recover_mean!(μ_smooth, U_f, λ::AbstractMatrix, sc::_MBFScratch)
+    _matmul!(sc.λ_prec_B, U_f, λ)
+    _matmul!(sc.λ_pred_B, transpose(U_f), sc.λ_prec_B)
+    μ_smooth .-= sc.λ_pred_B
+    return μ_smooth
+end
 
 """
-    _mbf_recover_cov(U_f, U_Λ)
+    _mbf_recover_cov!(R_dest, U_f, U_Λ, sc)
 
-Recover the smoothed covariance square-root factor from the filtered covariance
-(`U_f`, upper triangular such that `Σ_filt = U_f'U_f`) and the MBF adjoint
+Recover the smoothed covariance square-root factor into `R_dest` from the filtered
+covariance (`U_f`, upper triangular such that `Σ_filt = U_f'U_f`) and the MBF adjoint
 information matrix (`U_Λ`, such that `Λ = U_Λ'U_Λ`), i.e. `R` with
 `R'R = Σ_filt - Σ_filt*Λ*Σ_filt`. Writing `Σ_smooth = U_f' * (I - W*W') * U_f` with
 `W = U_f*U_Λ'`, this is computed via a hyperbolic QR factorization of `V = W'`, which
@@ -263,22 +277,27 @@ guarantees a PSD result (unlike forming `Σ_filt - Σ_filt*Λ*Σ_filt` densely, 
 squares the condition number and can catastrophically cancel when the smoothed
 covariance is much smaller than the filtered one). `U_f` is a factor of the filtered
 covariance and `U_Λ` of the adjoint information matrix, both in the same coordinates.
+
+All intermediates live in the [`_MBFScratch`](@ref) `sc` (whose `U_Λ_pred` buffer is
+clobbered, as the hyperbolic QR works in place on `V`).
+
+The result is a valid square-root factor of the smoothed covariance (`R_dest'R_dest = Σ_s`)
+but generally a full (non-triangular) matrix. That is fine: the package does not assume
+upper-triangular factors in general (e.g. `update!` stores `Σ_pred.R * (I - K*H)'`), and all
+`PSDMatrix` operations (`Matrix`, `det`, `logabsdet`, `diag`, QR stacks, ...) only rely on
+`R'R`. So we store the factor as-is instead of paying for a per-step re-triangularizing QR.
 """
-function _mbf_recover_cov(U_f::Matrix, U_Λ::Matrix)
-    V = U_Λ * U_f'
-    R_M = _hyperbolic_qr!(V)
-    return R_M * U_f
+function _mbf_recover_cov!(R_dest, U_f, U_Λ, sc::_MBFScratch)
+    _matmul!(sc.U_Λ_pred, U_Λ, transpose(U_f))
+    _hyperbolic_qr!(sc.R_M, sc.v_h, sc.w_h, sc.U_Λ_pred)
+    _matmul!(sc.R_f, sc.R_M, U_f)
+    copy!(R_dest, sc.R_f)
+    return R_dest
 end
 
-function _hyperbolic_qr!(V::Matrix{T}) where {T}
-    d = size(V, 1)
-    return _hyperbolic_qr!(
-        Matrix{T}(I, d, d), Vector{T}(undef, d), Vector{T}(undef, d), V,
-    )
-end
-
-# In-place variant of [`_hyperbolic_qr!`](@ref) using the preallocated output matrix `top`
-# (initialized to I here) and work vectors `v_h`, `w_h`; destroys `V`.
+# Hyperbolic QR of `V` (see [`_mbf_recover_cov!`](@ref)), writing its factor into the
+# preallocated output matrix `top` (initialized to I here) with the help of the preallocated
+# work vectors `v_h`, `w_h`; destroys `V`.
 #
 # AD limitation (this is the one authoritative discussion: the `_mbf_backward_step!`
 # docstring and `test/autodiff.jl` point here, and the EK0/EK1/DiagonalEK1 docstrings and
