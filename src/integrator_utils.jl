@@ -49,7 +49,6 @@ function calibrate_solution!(integ, mle_diffusion)
     set_diffusions!(integ.sol, mle_diffusion * integ.cache.default_diffusion)
 
     # Rescale all filtering estimates to have the correct diffusion
-    @assert mle_diffusion isa Diagonal
     @simd ivdep for C in integ.sol.x_filt.Σ
         apply_diffusion!(C, mle_diffusion)
     end
@@ -71,17 +70,13 @@ Set the contents of `solution.diffusions` to the provided `diffusion`, overwriti
 diffusion estimates that are in there. Typically, `diffusion` is either a global quasi-MLE
 or the specified initial diffusion value if no calibration is desired.
 """
-function set_diffusions!(solution::AbstractProbODESolution, diffusion)
-    if diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
-        @simd ivdep for i in eachindex(solution.diffusions)
-            solution.diffusions[i] = copy(diffusion)
-        end
-    elseif diffusion isa Diagonal{<:Number,<:Vector}
-        @simd ivdep for d in solution.diffusions
-            copy!(d, diffusion)
-        end
-    else
-        throw(ArgumentError("unexpected diffusion type $(typeof(diffusion))"))
+function set_diffusions!(solution::AbstractProbODESolution, diffusion::Number)
+    fill!(solution.diffusions, diffusion)
+    return nothing
+end
+function set_diffusions!(solution::AbstractProbODESolution, diffusion::Diagonal)
+    @simd ivdep for d in solution.diffusions
+        copy!(d, diffusion)
     end
     return nothing
 end
@@ -145,7 +140,7 @@ end
     save_diffusion!(sol, i, diffusion)
 
 `copyat_or_push!` for `sol.diffusions`, which needs to replace entries instead of copying
-into them: the scalar diffusions are `Fill`-backed `Diagonal`s and cannot be mutated.
+into them: scalar diffusions are `Number`s and cannot be mutated.
 """
 function save_diffusion!(sol, i, diffusion)
     if i <= length(sol.diffusions)

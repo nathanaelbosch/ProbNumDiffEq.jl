@@ -68,12 +68,8 @@ import ProbNumDiffEq: logpdf
         end
 
         @testset "predict! with PSDMatrix and diffusion" begin
-            for diffusion in (rand(), rand() * Eye(d), rand() * I(d), Diagonal(rand(d)))
-                if _FAC == PNDE.IsometricKroneckerCovariance &&
-                   !(
-                    diffusion isa Number ||
-                    diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
-                )
+            for diffusion in (rand(), rand() * I(d), Diagonal(rand(d)))
+                if _FAC == PNDE.IsometricKroneckerCovariance && !(diffusion isa Number)
                     continue
                 end
                 _diffusions = diffusion isa Number ? diffusion * Ones(d) : diffusion.diag
@@ -482,13 +478,9 @@ end
 
             @testset "smooth via backward kernels with diffusion $diffusion" for diffusion in
                                                                                  (
-                rand(), rand() * Eye(d), rand() * I(d), Diagonal(rand(d)),
+                rand(), rand() * I(d), Diagonal(rand(d)),
             )
-                if _FAC == PNDE.IsometricKroneckerCovariance &&
-                   !(
-                    diffusion isa Number ||
-                    diffusion isa Diagonal{<:Number,<:FillArrays.Fill}
-                )
+                if _FAC == PNDE.IsometricKroneckerCovariance && !(diffusion isa Number)
                     continue
                 end
                 _diffusions =
