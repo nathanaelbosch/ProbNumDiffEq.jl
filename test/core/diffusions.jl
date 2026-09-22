@@ -19,7 +19,7 @@ T = Float64
 )
 
     # Test the initial diffusion
-    diffusion = PNDE.initial_diffusion(diffusionmodel, d, q, T)
+    diffusion = PNDE.initial_diffusion(diffusionmodel, d, T)
     @assert size(diffusion) == (d, d)
     @assert diffusion isa Diagonal
     if !(diffusionmodel isa FixedMVDiffusion || diffusionmodel isa DynamicMVDiffusion)

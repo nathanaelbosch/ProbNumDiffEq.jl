@@ -6,9 +6,6 @@ isdynamic(diffusion::AbstractStaticDiffusion) = false
 isstatic(diffusion::AbstractDynamicDiffusion) = false
 isdynamic(diffusion::AbstractDynamicDiffusion) = true
 
-estimate_global_diffusion(diffusion::AbstractDynamicDiffusion, d, q, Eltype) =
-    error("Not possible or not implemented")
-
 """
     DynamicDiffusion()
 
@@ -18,7 +15,7 @@ Time-varying, isotropic diffusion, which is quasi-maximum-likelihood-estimated a
 particular also when solving stiff systems.
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
-initial_diffusion(::DynamicDiffusion, d, q, Eltype) = one(Eltype) * Eye(d)
+initial_diffusion(::DynamicDiffusion, d, Eltype) = one(Eltype) * Eye(d)
 estimate_local_diffusion(::DynamicDiffusion, integ) = local_scalar_diffusion(integ.cache)
 
 """
@@ -37,7 +34,7 @@ separately.
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
-initial_diffusion(::DynamicMVDiffusion, d, q, Eltype) = Diagonal(ones(Eltype, d))
+initial_diffusion(::DynamicMVDiffusion, d, Eltype) = Diagonal(ones(Eltype, d))
 estimate_local_diffusion(::DynamicMVDiffusion, integ) =
     local_diagonal_diffusion(integ.cache)
 
@@ -57,7 +54,7 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
     calibrate::Bool = true
 end
-initial_diffusion(diffusionmodel::FixedDiffusion, d, q, Eltype) =
+initial_diffusion(diffusionmodel::FixedDiffusion, d, Eltype) =
     diffusionmodel.initial_diffusion * one(Eltype) * Eye(d)
 estimate_local_diffusion(::FixedDiffusion, integ) = local_scalar_diffusion(integ.cache)
 
@@ -80,7 +77,7 @@ Base.@kwdef struct FixedMVDiffusion{T} <: AbstractStaticDiffusion
     initial_diffusion::T = 1.0
     calibrate::Bool = true
 end
-function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, q, Eltype)
+function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
     initdiff = diffusionmodel.initial_diffusion
     if initdiff isa Number
         return initdiff * one(Eltype) * I(d)

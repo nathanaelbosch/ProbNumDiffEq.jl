@@ -107,7 +107,6 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
 
     _gaussian_mul!(x, P, copy!(x_tmp, x))
 
-    preds = []
     filts = [copy(x)]
     backward_kernels = []
 
@@ -117,7 +116,6 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
         u = view(u, :) # just in case the problem is matrix-valued
 
         predict!(x_pred, x, A, Q, cache.C_DxD, cache.C_2DxD, cache.default_diffusion)
-        push!(preds, copy(x_pred))
 
         K = AffineNormalKernel(A, Q)
         compute_backward_kernel!(
