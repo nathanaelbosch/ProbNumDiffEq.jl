@@ -176,6 +176,23 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                 @test xs.u isa AbstractArray{<:AbstractArray}
                 @test_nowarn msol
                 @test_nowarn plot(msol)
+
+                @test msol isa ProbNumDiffEq.SciMLBase.AbstractODESolution
+                @test fieldnames(typeof(msol)) == (:probsol,)
+                @test msol.probsol === sol
+                @test msol.u === sol.u
+                @test msol.t === sol.t
+                @test msol.prob === sol.prob
+                @test msol.retcode == sol.retcode
+                @test :u in propertynames(msol)
+                @test msol(sol.t[2]) == sol.u[2]
+                @test msol[:, end] == sol.u[end]
+
+                errors = Dict(:final => 0.1)
+                msol2 = ProbNumDiffEq.SciMLBase.build_solution(msol, sol.u, errors)
+                @test msol2 isa ProbNumDiffEq.MeanProbODESolution
+                @test msol2.errors === errors
+                @test msol2.u_analytic === sol.u
             end
         end
     end
