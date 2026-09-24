@@ -206,3 +206,26 @@ end
         @test alloc(sol_long, sol_long.t[5000]) <= alloc(sol_short, sol_short.t[50]) + 256
     end
 end
+
+@testset "Rebuilding a solution with new fields" begin
+    prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0], (0.0, 1.0))
+    sol = solve(prob, EK0())
+
+    sol2 = ProbNumDiffEq.SciMLBase.solution_new_retcode(sol, ReturnCode.Failure)
+    @test sol2.retcode == ReturnCode.Failure
+    @test sol.retcode == ReturnCode.Success
+    @test typeof(sol2) == typeof(sol)
+    @test sol2.x_filt === sol.x_filt
+
+    # `u_analytic` and `errors` change type, so the type parameters must follow
+    @test isnothing(sol.u_analytic)
+    u_analytic = [[exp(-t)] for t in sol.t]
+    errors = Dict(:final => 0.1)
+    sol3 = ProbNumDiffEq.SciMLBase.build_solution(sol, u_analytic, errors)
+    @test sol3 isa ProbNumDiffEq.ProbODESolution
+    @test sol3.u_analytic === u_analytic
+    @test sol3.errors === errors
+    @test typeof(sol3).parameters[5] == typeof(u_analytic)
+    @test typeof(sol3).parameters[6] == typeof(errors)
+    @test sol3(0.5) == sol(0.5)
+end

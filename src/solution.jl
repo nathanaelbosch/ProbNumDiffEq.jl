@@ -77,13 +77,8 @@ function ConstructionBase.constructorof(
     ProbODESolution{T,N}
 end
 
-function SciMLBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
-    return ProbODESolution{T,N}(
-        sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
-        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, retcode,
-    )
-end
+SciMLBase.solution_new_retcode(sol::ProbODESolution, retcode) =
+    ConstructionBase.setproperties(sol; retcode)
 
 # Used to build the initial empty solution in OrdinaryDiffEqCore.__init
 function SciMLBase.build_solution(
@@ -150,17 +145,8 @@ function SciMLBase.build_solution(
     )
 end
 
-function SciMLBase.build_solution(
-    sol::ProbODESolution{T,N},
-    u_analytic,
-    errors,
-) where {T,N}
-    return ProbODESolution{T,N}(
-        sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
-        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode,
-    )
-end
+SciMLBase.build_solution(sol::ProbODESolution, u_analytic, errors) =
+    ConstructionBase.setproperties(sol; u_analytic, errors)
 
 ########################################################################################
 # Compat with classic ODE solutions, to enable analysis with DiffEqDevTools.jl
