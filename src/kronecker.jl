@@ -181,20 +181,11 @@ _matmul!(A::IKP, B::IKP, c::Number) = begin
     return A
 end
 
-"""
-Allocation-free reshape
-Found here: https://discourse.julialang.org/t/convert-array-into-matrix-in-place/55624/5
-"""
-reshape_no_alloc(a, dims::Tuple) =
-    invoke(Base._reshape, Tuple{AbstractArray,typeof(dims)}, a, dims)
-reshape_no_alloc(a, dims...) = reshape_no_alloc(a, Tuple(dims))
-reshape_no_alloc(a::Missing, dims::Tuple) = missing
-
 function _prepare_inputs_for_vectrick(A, x, v)
     M = A.B
     a, b = size(M)
-    V = reshape_no_alloc(transpose(v), (length(v) ÷ b, b)) |> transpose
-    X = reshape_no_alloc(transpose(x), (length(x) ÷ a, a)) |> transpose
+    V = reshape(transpose(v), (length(v) ÷ b, b)) |> transpose
+    X = reshape(transpose(x), (length(x) ÷ a, a)) |> transpose
     return A.B, X, V
 end
 
@@ -268,8 +259,8 @@ end
 function Kronecker.ldiv_vec_trick!(x::AbstractVector, A::IKP, v::AbstractVector)
     M = A.B
     a, b = size(M)
-    V = reshape_no_alloc(transpose(v), (length(v) ÷ a, a)) |> transpose
-    X = reshape_no_alloc(transpose(x), (length(x) ÷ b, b)) |> transpose
+    V = reshape(transpose(v), (length(v) ÷ a, a)) |> transpose
+    X = reshape(transpose(x), (length(x) ÷ b, b)) |> transpose
     copyto!(X, M \ V)
     return x
 end
