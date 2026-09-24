@@ -106,6 +106,8 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     filts = [copy(x)]
     backward_kernels = []
 
+    H = cache.E0 * PI
+
     # Filter through the data forwards
     for (i, (t, u)) in enumerate(zip(ts, us))
         (u isa RecursiveArrayTools.ArrayPartition) && (u = u.x[2]) # for 2ndOrderODEs
@@ -118,7 +120,6 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
             backward_kernel, x_pred, x, K; C_DxD, diffusion=cache.default_diffusion)
         push!(backward_kernels, copy(backward_kernel))
 
-        H = cache.E0 * PI
         measurement.μ .= H * x_pred.μ .- u
         _matmul!(C_Dxd, x_pred.Σ.R, H')
         _matmul!(measurement.Σ, C_Dxd', C_Dxd)
