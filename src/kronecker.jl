@@ -1,37 +1,40 @@
 @doc raw"""
-    IsometricKroneckerProduct(left_factor_dim::Int64, left_factor::AbstractMatrix)
+    IsometricKroneckerProduct(right_factor_dim::Int64, left_factor::AbstractMatrix)
 
-Kronecker product of an identity and a generic matrix:
+Kronecker product of a generic matrix `B` and an identity matrix `I_d`:
 ```math
 \begin{aligned}
 K = B \otimes I_d
 \end{aligned}
 ```
 
+`B` is the left Kronecker factor and `I_d` the right one. It is stored in the field `B`,
+and `d` in the field `rdim`.
+
 # Arguments
-- `right_factor_dim::Int64`: Dimension `d` of the left identity kronecker factor.
-- `left_factor::AbstractMatrix`: Right Kronecker factor.
+- `right_factor_dim::Int64`: Dimension `d` of the right identity Kronecker factor `I_d`.
+- `left_factor::AbstractMatrix`: Left Kronecker factor `B`. An `AbstractVector` is
+  interpreted as a single-column matrix.
 """
-struct RightIsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
+struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
        Kronecker.AbstractKroneckerProduct{T}
     rdim::Int64
     B::TB
-    function RightIsometricKroneckerProduct(
+    function IsometricKroneckerProduct(
         right_factor_dim::Int64,
         left_factor::AbstractMatrix{T},
     ) where {T}
         return new{T,typeof(left_factor)}(right_factor_dim, left_factor)
     end
 end
-RightIsometricKroneckerProduct(rdim::Integer, B::AbstractVector) =
-    RightIsometricKroneckerProduct(rdim, reshape(B, :, 1))
-RightIsometricKroneckerProduct(M::AbstractMatrix) = throw(
+IsometricKroneckerProduct(right_factor_dim::Integer, left_factor::AbstractVector) =
+    IsometricKroneckerProduct(right_factor_dim, reshape(left_factor, :, 1))
+IsometricKroneckerProduct(M::AbstractMatrix) = throw(
     ArgumentError(
-        "Can not create RightIsometricKroneckerProduct from the provided matrix of type $(typeof(M))",
+        "Can not create IsometricKroneckerProduct from the provided matrix of type $(typeof(M))",
     ),
 )
 
-const IsometricKroneckerProduct = RightIsometricKroneckerProduct
 const IKP = IsometricKroneckerProduct
 
 Kronecker.getmatrices(K::IKP) = (K.B, Eye(K.rdim))
