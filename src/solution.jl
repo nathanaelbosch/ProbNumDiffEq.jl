@@ -338,16 +338,17 @@ function interpolate(
 )
     @unpack d, q = cache
 
+    isnan(tval) && throw(ArgumentError("Cannot evaluate the solution at t=NaN"))
     if tval < t[1]
         error("Invalid t<t0")
     end
-    if tval in t
-        idx = sum(t .<= tval)
-        @assert t[idx] == tval
+    # Index of the last grid point `t[idx] <= tval`; `t` is sorted. `lt=<` makes the
+    # comparison match `<=` (and `==`) also for signed zeros, unlike the default `isless`.
+    idx = searchsortedlast(t, tval; lt=(<))
+    if t[idx] == tval
         return smoothed ? x_smooth[idx] : x_filt[idx]
     end
 
-    idx = sum(t .<= tval)
     prev_t = t[idx]
     prev_rv = x_filt[idx]
     diffusion = diffusions[minimum((idx, end))]
