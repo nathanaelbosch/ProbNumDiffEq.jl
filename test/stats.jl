@@ -49,3 +49,10 @@ end
     sol = solve(prob, alg, save_everystep=alg.smooth, dense=alg.smooth)
     @test sol.stats.nf == f_counter[1]
 end
+
+@testset "PNStats printing" begin
+    s = ProbNumDiffEq.PNStats(-12.345)
+    str = sprint(show, MIME("text/plain"), s)
+    @test occursin("Log-likelihood:", str)
+    @test occursin("-12.345", str)
+end

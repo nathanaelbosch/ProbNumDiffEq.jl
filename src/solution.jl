@@ -14,7 +14,7 @@ mutable struct PNStats{LL}
 end
 function Base.show(io::IO, ::MIME"text/plain", s::PNStats)
     println(io, summary(s))
-    @printf io "%-50s %-d\n" "Log-likelihood:" s.log_likelihood
+    @printf io "%-50s %-g\n" "Log-likelihood:" s.log_likelihood
 end
 
 ########################################################################################
