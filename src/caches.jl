@@ -34,8 +34,6 @@ mutable struct EKCache{
     E2::EType
     # Mutable stuff
     u::uType
-    u_pred::uType
-    u_filt::uType
     tmp::uType
     atmp::uNoUnitsType
     x::xType
@@ -51,11 +49,8 @@ mutable struct EKCache{
     du::duType
     ddu::dduType
     K1::matType
-    G1::matType
-    Smat::HType
     C_d::vecType
     C_dxd::matType
-    C_dxD::matType
     C_Dxd::matType
     C_DxD::matType
     C_2DxD::matType
@@ -67,6 +62,7 @@ mutable struct EKCache{
     err_tmp::duType
     log_likelihood::llType
     dt_last::dtType
+    # du1, uf, jac_config are unused here but OrdinaryDiffEqDifferentiation.calc_J! reads them by name
     du1::rateType
     uf::UF
     jac_config::JC
@@ -196,12 +192,9 @@ function OrdinaryDiffEqCore.alg_cache(
     )
 
     K = factorized_similar(FAC, D, d)
-    G = factorized_similar(FAC, D, D)
-    Smat = factorized_similar(FAC, d, d)
 
     C_d = similar(Array{uElType}, d)
     C_dxd = factorized_similar(FAC, d, d)
-    C_dxD = factorized_similar(FAC, d, D)
     C_Dxd = factorized_similar(FAC, D, d)
     C_DxD = factorized_similar(FAC, D, D)
     C_2DxD = factorized_similar(FAC, 2D, D)
@@ -213,8 +206,6 @@ function OrdinaryDiffEqCore.alg_cache(
         PSDMatrix(factorized_similar(FAC, 2D, D)),
     )
 
-    u_pred = copy(u)
-    u_filt = copy(u)
     tmp = copy(u)
     xprev = copy(x0)
     x_pred = copy(x0)
@@ -250,11 +241,11 @@ function OrdinaryDiffEqCore.alg_cache(
         d, q, FAC, prior, A, Q, Ah, Qh, F, L, FHG_method, FHG_cache, diffmodel,
         measurement_model, R, Proj, SolProj,
         P, PI, E0, E1, E2,
-        u, u_pred, u_filt, tmp, atmp,
+        u, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
-        H, du, ddu, K, G, Smat,
-        C_d, C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD,
+        H, du, ddu, K,
+        C_d, C_dxd, C_Dxd, C_DxD, C_2DxD, C_3DxD,
         backward_kernel,
         initdiff, initdiff * NaN, initdiff * NaN,
         err_tmp, ll, dt, du1, uf, jac_config,

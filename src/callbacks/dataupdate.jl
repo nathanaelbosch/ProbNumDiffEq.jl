@@ -52,7 +52,7 @@ function DataUpdateCallback(
         o = length(val)
         d = integ.cache.d
 
-        @unpack x, E0, m_tmp, G1 = integ.cache
+        @unpack x, E0, m_tmp = integ.cache
         M = observation_matrix
         H = M * E0
 

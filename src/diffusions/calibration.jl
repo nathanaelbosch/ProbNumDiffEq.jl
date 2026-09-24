@@ -47,7 +47,7 @@ For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 function estimate_global_diffusion(::FixedDiffusion, integ)
-    @unpack d, measurement, m_tmp, Smat = integ.cache
+    @unpack d, measurement, m_tmp = integ.cache
     v, S = measurement.μ, measurement.Σ
     _v, _S = m_tmp.μ, m_tmp.Σ
 
@@ -121,7 +121,7 @@ For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 function local_scalar_diffusion(cache)
-    @unpack d, R, H, Qh, measurement, m_tmp, Smat, C_Dxd, C_d, C_dxd = cache
+    @unpack d, R, H, Qh, measurement, m_tmp, C_Dxd, C_d, C_dxd = cache
     z = measurement.μ
     HQH = let
         _matmul!(C_Dxd, Qh.R, H')
