@@ -23,11 +23,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
 
     # Use a jac or autodiff to initialize on ddu0
     if f isa ODEFunction && integ.alg.initialization.init_on_ddu
-        _f = if f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
-            ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
-        else
-            f
-        end
+        _f = _unwrap_f(f)
 
         dfdt = copy(u)
         ForwardDiff.derivative!(dfdt, (du, t) -> _f(du, u, p, t), du, t)

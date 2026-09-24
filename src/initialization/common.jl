@@ -99,6 +99,24 @@ end
 ClassicSolverInit(alg::SciMLBase.AbstractODEAlgorithm) = ClassicSolverInit(; alg)
 
 """
+    _unwrap_f(f)
+
+Strip the `FunctionWrappersWrapper` that OrdinaryDiffEq puts around `f.f`, so that `f` can
+be called with arguments of other element types (e.g. `ForwardDiff.Dual` or `Taylor1`).
+
+If `f` is an `ODEFunction` whose `f.f` is a `FunctionWrappersWrapper`, returns a new
+`ODEFunction` of the unwrapped function that keeps only `mass_matrix`; all other fields
+(e.g. `jac`, `jac_prototype`) are dropped. Otherwise returns `f` unchanged.
+"""
+function _unwrap_f(f)
+    if f isa ODEFunction &&
+       f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
+        return ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
+    end
+    return f
+end
+
+"""
     initial_update!(integ, cache[, init::InitializationScheme])
 
 Improve the initial state estimate by updating either on exact derivatives or values
