@@ -50,3 +50,26 @@ using Test
     CV, BV = rand(T, 2), rand(T, 3)
     @test _matmul!(CV, A, BV) == mul!(CV, A, BV)
 end
+
+@testset "getupperright! and triangularize!" begin
+    for (m, n) in ((12, 6), (6, 6))
+        A = rand(m, n)
+        R = ProbNumDiffEq.getupperright!(copy(A))
+        @test R isa UpperTriangular
+        @test size(R) == (min(m, n), n)
+        @test R == triu(A[1:min(m, n), :])
+
+        # no allocations after warm-up
+        _A = copy(A)
+        ProbNumDiffEq.getupperright!(_A)
+        @test (@allocated ProbNumDiffEq.getupperright!(_A)) == 0
+    end
+
+    for T in (Float64, BigFloat)
+        A = rand(T, 12, 6)
+        R_ref = qr(A).R
+        R = ProbNumDiffEq.triangularize!(copy(A); cachemat=zeros(T, 6, 6))
+        @test abs.(R) ≈ abs.(R_ref)
+        @test R' * R ≈ A' * A
+    end
+end
