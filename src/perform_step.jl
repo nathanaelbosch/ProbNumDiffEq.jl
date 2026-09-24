@@ -96,6 +96,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
         end
 
         make_transition_matrices!(cache, cache.prior, dt)
+        cache.dt_last = dt
     end
 
     # Predict the mean
