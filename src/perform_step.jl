@@ -165,11 +165,10 @@ Jacobians are computed either with the supplied `f.jac`, or via automatic differ
 as in OrdinaryDiffEqCore.jl.
 """
 function evaluate_ode!(integ, x_pred, t)
-    @unpack f, p, dt = integ
-    @unpack du, measurement, R, H = integ.cache
+    @unpack p = integ
+    @unpack measurement, H = integ.cache
 
     z = integ.cache.measurement
-    z_tmp = integ.cache.m_tmp
 
     integ.cache.measurement_model(z.μ, x_pred.μ, p, t)
     integ.stats.nf += 1

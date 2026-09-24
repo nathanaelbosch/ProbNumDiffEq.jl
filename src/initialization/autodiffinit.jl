@@ -1,12 +1,6 @@
 function initial_update!(integ, cache, init::AutodiffInitializationScheme)
     @unpack u, f, p, t = integ
-    @unpack d, q, q, x, Proj = cache
-    D = d * (q + 1)
-
-    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, measurement = cache
-    if size(K1, 2) != d
-        K1 = K1[:, 1:d]
-    end
+    @unpack d, q, x, Proj = cache
 
     if f isa ODEFunction &&
        f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
@@ -87,34 +81,6 @@ function forwarddiff_oop_vectorfield_derivative_iteration(f_n, f_0)
     function df(u)
         J = ForwardDiff.jacobian(f_n, u)
         return J * f_0(u)
-    end
-    return df
-end
-
-# Curently unused but potentially a future upgrade to the version above:
-function iip_forwarddiff_get_derivatives!(
-    out, init::ForwardDiffInit, u, f::SciMLBase.AbstractODEFunction{true}, p, t)
-    q = init.order
-    d = length(u)
-    _f(du, u) = f(du, u, p, t)
-
-    out[1:d] .= u
-    @views _f(out[(d+1):2d], u)
-
-    f_n = _f
-    for o in 2:q
-        f_n = forwarddiff_iip_vectorfield_derivative_iteration(f_n, _f)
-        @views f_n(out[(o*d+1):((o+1)*d)], u)
-    end
-
-    return out
-end
-
-function forwarddiff_iip_vectorfield_derivative_iteration(f_n, f_0)
-    function df(du, u)
-        J = ForwardDiff.jacobian(f_n, du, u)
-        f_0(du, u)
-        _matmul!(du, J, du)
     end
     return df
 end

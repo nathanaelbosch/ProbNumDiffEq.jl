@@ -168,7 +168,7 @@ function OrdinaryDiffEqCore.alg_cache(
 
     # Diffusion Model
     diffmodel = alg.diffusionmodel
-    initdiff = initial_diffusion(diffmodel, d, q, uEltypeNoUnits)
+    initdiff = initial_diffusion(diffmodel, d, uEltypeNoUnits)
     apply_diffusion!(x0.Σ, initdiff)
 
     # Measurement model related things
