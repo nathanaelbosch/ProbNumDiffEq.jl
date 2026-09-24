@@ -248,6 +248,20 @@ struct ODEFilterPosterior{T1,T2,T3,T4,T5,T6} <: AbstractODEFilterPosterior
 end
 SciMLBase.interp_summary(interp::ODEFilterPosterior) = "ODE Filter Posterior"
 
+function _projection(interp::ODEFilterPosterior, ::Type{deriv}) where {deriv}
+    q = interp.cache.q
+    dv = deriv.parameters[1]
+    return if deriv == Val{0}
+        interp.cache.SolProj
+    elseif dv <= q
+        interp.cache.Proj(dv)
+    else
+        throw(
+            ArgumentError("We can only provide derivatives up to $q but you requested $dv"),
+        )
+    end
+end
+
 function (interp::ODEFilterPosterior)(
     t::Real,
     idxs::Nothing,
@@ -255,15 +269,7 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    q = interp.cache.q
-    dv = deriv.parameters[1]
-    proj = if deriv == Val{0}
-        interp.cache.SolProj
-    elseif dv <= q
-        interp.cache.Proj(dv)
-    else
-        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
-    end
+    proj = _projection(interp, deriv)
     x = interpolate(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
@@ -276,20 +282,7 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    q = interp.cache.q
-    dv = deriv.parameters[1]
-    proj = if deriv == Val{0}
-        interp.cache.SolProj
-    elseif dv <= q
-        interp.cache.Proj(dv)
-    else
-        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
-    end
-    x = interpolate(
-        t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
-        smoothed=interp.smooth)
-    u = proj * x
-    return Gaussian(u.μ[idxs], diag(u.Σ)[idxs])
+    return interp(t, nothing, deriv, p, continuity)[idxs]
 end
 function (interp::ODEFilterPosterior)(
     t::Real,
@@ -298,19 +291,7 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    q = interp.cache.q
-    dv = deriv.parameters[1]
-    proj = if deriv == Val{0}
-        interp.cache.SolProj
-    elseif dv <= q
-        interp.cache.Proj(dv)
-    else
-        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
-    end
-    x = interpolate(
-        t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
-        smoothed=interp.smooth)
-    u = proj * x
+    u = interp(t, nothing, deriv, p, continuity)
     P = zeros(Bool, length(idxs), length(u))
     for (i, idx) in enumerate(idxs)
         P[i, idx] = 1
