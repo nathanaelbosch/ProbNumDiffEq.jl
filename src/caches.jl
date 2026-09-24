@@ -145,7 +145,8 @@ function OrdinaryDiffEqCore.alg_cache(
     end
 
     A, Q, Ah, Qh, P, PI = initialize_transition_matrices(FAC, prior, dt)
-    F, L = to_sde(prior)
+    sde = to_sde(prior)
+    F, L = drift(sde), dispersion(sde)
     F, L = to_factorized_matrix(FAC, F), to_factorized_matrix(FAC, L)
     FHG_method, FHG_cache = if !(prior isa IWP)
         m = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
