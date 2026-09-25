@@ -16,6 +16,10 @@ struct SimpleInit <: InitializationScheme end
 
 Exact initialization via Taylor-mode automatic differentiation up to order `order`.
 
+The `order` is a required argument and must be at least 1; usually it is set to the order
+of the prior, e.g. `EK1(order=3, initialization=TaylorModeInit(3))`. Calling
+`TaylorModeInit()` without an order throws an `ArgumentError`.
+
 **This is the recommended initialization method!**
 
 It uses [TaylorIntegration.jl](https://perezhz.github.io/TaylorIntegration.jl/latest/)
@@ -39,14 +43,20 @@ struct TaylorModeInit <: AutodiffInitializationScheme
         new(order)
     end
 end
-TaylorModeInit() = begin
-    throw(ArgumentError("order must be specified"))
-end
+TaylorModeInit() = throw(
+    ArgumentError(
+        "`TaylorModeInit` requires an `order` argument, e.g. `TaylorModeInit(3)`",
+    ),
+)
 
 """
     ForwardDiffInit(order)
 
 Exact initialization via ForwardDiff.jl up to order `order`.
+
+The `order` is a required argument and must be at least 1; usually it is set to the order
+of the prior, e.g. `EK1(order=3, initialization=ForwardDiffInit(3))`. Calling
+`ForwardDiffInit()` without an order throws an `ArgumentError`.
 
 **Warning:** This does not scale well to high orders!
 For orders > 3, [`TaylorModeInit`](@ref) most likely performs better.
@@ -60,9 +70,11 @@ struct ForwardDiffInit <: AutodiffInitializationScheme
         new(order)
     end
 end
-ForwardDiffInit() = begin
-    throw(ArgumentError("order must be specified"))
-end
+ForwardDiffInit() = throw(
+    ArgumentError(
+        "`ForwardDiffInit` requires an `order` argument, e.g. `ForwardDiffInit(3)`",
+    ),
+)
 
 """
     ClassicSolverInit(; alg, init_on_ddu=false)
@@ -97,6 +109,24 @@ Base.@kwdef struct ClassicSolverInit{ALG} <: InitializationScheme
     init_on_ddu::Bool = false
 end
 ClassicSolverInit(alg::SciMLBase.AbstractODEAlgorithm) = ClassicSolverInit(; alg)
+
+"""
+    _unwrap_f(f)
+
+Strip the `FunctionWrappersWrapper` that OrdinaryDiffEq puts around `f.f`, so that `f` can
+be called with arguments of other element types (e.g. `ForwardDiff.Dual` or `Taylor1`).
+
+If `f` is an `ODEFunction` whose `f.f` is a `FunctionWrappersWrapper`, returns a new
+`ODEFunction` of the unwrapped function that keeps only `mass_matrix`; all other fields
+(e.g. `jac`, `jac_prototype`) are dropped. Otherwise returns `f` unchanged.
+"""
+function _unwrap_f(f)
+    if f isa ODEFunction &&
+       f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
+        return ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
+    end
+    return f
+end
 
 """
     initial_update!(integ, cache[, init::InitializationScheme])

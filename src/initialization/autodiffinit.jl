@@ -2,10 +2,7 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
     @unpack u, f, p, t = integ
     @unpack d, q, x, Proj = cache
 
-    if f isa ODEFunction &&
-       f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
-        f = ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
-    end
+    f = _unwrap_f(f)
 
     f_derivatives = get_derivatives(init, u, f, p, t)
     integ.stats.nf += init.order

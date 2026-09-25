@@ -3,10 +3,7 @@ function initial_update!(integ, cache, init::SimpleInit)
     @unpack x, d, Proj = cache
     du = integ.uprev
 
-    if f isa ODEFunction &&
-       f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
-        f = ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
-    end
+    f = _unwrap_f(f)
 
     # This is hacky and should definitely be removed. But it also works so 🤷
     MM = if f.mass_matrix isa UniformScaling
