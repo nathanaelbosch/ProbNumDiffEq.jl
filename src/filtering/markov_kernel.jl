@@ -258,10 +258,14 @@ function compute_backward_kernel!(
     d = K.A.rdim     # ode_dimension_dim
     Q = D ÷ d        # n_derivatives_dim
     _Kout =
-        AffineNormalKernel(Kout.A.B, reshape_no_alloc(Kout.b, d, Q)', PSDMatrix(Kout.C.R.B))
-    _x_pred = Gaussian(reshape_no_alloc(xpred.μ, d, Q)', PSDMatrix(xpred.Σ.R.B))
-    _x = Gaussian(reshape_no_alloc(x.μ, d, Q)', PSDMatrix(x.Σ.R.B))
-    _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, d, Q)', PSDMatrix(K.C.R.B))
+        AffineNormalKernel(Kout.A.B, reshape(Kout.b, d, Q)', PSDMatrix(Kout.C.R.B))
+    _x_pred = Gaussian(reshape(xpred.μ, d, Q)', PSDMatrix(xpred.Σ.R.B))
+    _x = Gaussian(reshape(x.μ, d, Q)', PSDMatrix(x.Σ.R.B))
+    _K = AffineNormalKernel(
+        K.A.B,
+        ismissing(K.b) ? missing : reshape(K.b, d, Q)',
+        PSDMatrix(K.C.R.B),
+    )
     _C_DxD = C_DxD.B
 
     return compute_backward_kernel!(
