@@ -67,7 +67,7 @@ end
         adaptive=false, dt=DT,
         dense=false,
     )
-    @test_broken compare_data_likelihoods(
+    compare_data_likelihoods(
         DiagonalEK1();
         observation_matrix=H,
         observation_noise_cov=σ^2,
