@@ -17,6 +17,7 @@ function DiffEqBase.initialize!(
     check_secondorderode(integ)
     check_densesmooth(integ)
     check_saveiter(integ)
+    check_local_diagonal_diffusion(integ)
 
     integ.kshortsize = 1
     resize!(integ.k, integ.kshortsize)
@@ -49,13 +50,13 @@ function make_new_transitions(integ, cache, repeat_step)::Bool
     end
 end
 
-function write_into_solution!(u, μ; cache::EKCache, is_secondorder_ode=false)
-    if is_secondorder_ode
-        _matmul!(view(u.x[2], :), cache.E0, μ)
-        _matmul!(view(u.x[1], :), cache.E1, μ)
-    else
-        _matmul!(view(u, :), cache.E0, μ)
-    end
+# Dispatch on the ODE function, not on `u`: first-order problems can also have an
+# `ArrayPartition` state, so `u isa ArrayPartition` does not imply a second-order ODE.
+write_into_solution!(u, μ, ::SciMLBase.AbstractODEFunction; cache::EKCache) =
+    _matmul!(view(u, :), cache.E0, μ)
+function write_into_solution!(u, μ, ::DynamicalODEFunction; cache::EKCache)
+    _matmul!(view(u.x[2], :), cache.E0, μ)
+    _matmul!(view(u.x[1], :), cache.E1, μ)
 end
 
 """
@@ -96,12 +97,12 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
         end
 
         make_transition_matrices!(cache, cache.prior, dt)
+        cache.dt_last = dt
     end
 
     # Predict the mean
     predict_mean!(x_pred.μ, xprev.μ, Ah)
-    write_into_solution!(
-        integ.u, x_pred.μ; cache, is_secondorder_ode=(integ.f isa DynamicalODEFunction))
+    write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
 
     # Measure
     evaluate_ode!(integ, x_pred, tnew)
@@ -136,8 +137,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     # Update state and save the ODE solution value
     x_filt, loglikelihood = update!(
         x_filt, x_pred, cache.measurement, cache.H; cache, R=cache.R)
-    write_into_solution!(
-        integ.u, x_filt.μ; cache, is_secondorder_ode=(integ.f isa DynamicalODEFunction))
+    write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
 
     cache.log_likelihood = loglikelihood
     integ.sol.pnstats.log_likelihood += cache.log_likelihood

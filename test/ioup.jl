@@ -52,3 +52,21 @@ end
         @test err < 6e-6
     end
 end
+
+@testset "Transition matrices are reused only for an unchanged step size" begin
+    # tspan is not a multiple of dt, so the last step is shorter and must recompute
+    _prob = ODEProblem(f, u0, (0.0, 0.95))
+    for alg in (EK1(order=3, smooth=false), EK1(prior=IOUP(3, -1.0), smooth=false))
+        integ = init(_prob, alg; adaptive=false, dt=0.1, dense=false)
+        forced = init(_prob, alg; adaptive=false, dt=0.1, dense=false)
+        while integ.t < _prob.tspan[2]
+            forced.cache.dt_last = NaN  # NaN never equals dt, so this always recomputes
+            step!(forced)
+            step!(integ)
+            @test integ.cache.dt_last == integ.dt
+            @test integ.cache.x.μ == forced.cache.x.μ
+            @test Matrix(integ.cache.x.Σ) == Matrix(forced.cache.x.Σ)
+        end
+        @test integ.t == forced.t == _prob.tspan[2]
+    end
+end
