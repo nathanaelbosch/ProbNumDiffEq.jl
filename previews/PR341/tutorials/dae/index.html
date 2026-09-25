@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Differential Algebraic Equations · ProbNumDiffEq.jl</title><meta name="title" content="Differential Algebraic Equations · ProbNumDiffEq.jl"/><meta property="og:title" content="Differential Algebraic Equations · ProbNumDiffEq.jl"/><meta property="twitter:title" content="Differential Algebraic Equations · ProbNumDiffEq.jl"/><meta name="description" content="Documentation for ProbNumDiffEq.jl."/><meta property="og:description" content="Documentation for ProbNumDiffEq.jl."/><meta property="twitter:description" content="Documentation for ProbNumDiffEq.jl."/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/citations.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">ProbNumDiffEq.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../dynamical_odes/">Second Order ODEs and Energy Preservation</a></li><li class="is-active"><a class="tocitem" href>Differential Algebraic Equations</a><ul class="internal"><li><a class="tocitem" href="#Solving-mass-matrix-DAEs-with-the-EK1"><span>Solving mass-matrix DAEs with the <code>EK1</code></span></a></li><li><a class="tocitem" href="#Solving-an-Index-3-DAE-directly"><span>Solving an Index-3 DAE directly</span></a></li></ul></li><li><a class="tocitem" href="../exponential_integrators/">Probabilistic Exponential Integrators</a></li><li><a class="tocitem" href="../ode_parameter_inference/">Parameter Inference</a></li></ul></li><li><span class="tocitem">Solvers and Options</span><ul><li><a class="tocitem" href="../../solvers/">Solvers</a></li><li><a class="tocitem" href="../../priors/">Priors</a></li><li><a class="tocitem" href="../../initialization/">Initialization</a></li><li><a class="tocitem" href="../../diffusions/">Diffusion models and calibration</a></li></ul></li><li><a class="tocitem" href="../../likelihoods/">Data Likelihoods</a></li><li><span class="tocitem">Benchmarks</span><ul><li><a class="tocitem" href="../../benchmarks/multi-language-wrappers/">Multi-Language Wrapper Benchmark</a></li><li><input class="collapse-toggle" id="menuitem-5-2" type="checkbox"/><label class="tocitem" for="menuitem-5-2"><span class="docs-label">Non-stiff ODEs</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../benchmarks/lotkavolterra/">Lotka-Volterra</a></li><li><a class="tocitem" href="../../benchmarks/hodgkinhuxley/">Hodgkin-Huxley</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5-3" type="checkbox"/><label class="tocitem" for="menuitem-5-3"><span class="docs-label">Stiff ODEs</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../benchmarks/vanderpol/">Van der Pol</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5-4" type="checkbox"/><label class="tocitem" for="menuitem-5-4"><span class="docs-label">Second-order ODEs</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../benchmarks/pleiades/">Pleiades</a></li></ul></li><li><input class="collapse-toggle" id="menuitem-5-5" type="checkbox"/><label class="tocitem" for="menuitem-5-5"><span class="docs-label">Differential-Algebraic Equations (DAEs)</span><i class="docs-chevron"></i></label><ul class="collapsed"><li><a class="tocitem" href="../../benchmarks/orego/">OREGO</a></li><li><a class="tocitem" href="../../benchmarks/rober/">ROBER</a></li></ul></li></ul></li><li><span class="tocitem">Internals</span><ul><li><a class="tocitem" href="../../filtering/">Filtering and Smoothing</a></li><li><a class="tocitem" href="../../implementation/">Implementation via OrdinaryDiffEq.jl</a></li></ul></li><li><a class="tocitem" href="../../references/">References</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Differential Algebraic Equations</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Differential Algebraic Equations</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/nathanaelbosch/ProbNumDiffEq.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/main/docs/src/tutorials/dae.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Solving-DAEs-with-Probabilistic-Numerics"><a class="docs-heading-anchor" href="#Solving-DAEs-with-Probabilistic-Numerics">Solving DAEs with Probabilistic Numerics</a><a id="Solving-DAEs-with-Probabilistic-Numerics-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-DAEs-with-Probabilistic-Numerics" title="Permalink"></a></h1><p>ProbNumDiffEq.jl provides probabilistic numerical solvers for <em>differential algebraic equations</em> (DAEs). Currently, we recommend using the semi-implicit <code>EK1</code> algorithm.</p><div class="admonition is-info" id="Note-f765f72e26e2d675"><header class="admonition-header">Note<a class="admonition-anchor" href="#Note-f765f72e26e2d675" title="Permalink"></a></header><div class="admonition-body"><p>For a more general tutorial on DAEs check out the <a href="https://diffeq.sciml.ai/stable/tutorials/dae_example/">DifferentialEquations.jl DAE tutorial</a>.</p></div></div><h2 id="Solving-mass-matrix-DAEs-with-the-EK1"><a class="docs-heading-anchor" href="#Solving-mass-matrix-DAEs-with-the-EK1">Solving mass-matrix DAEs with the <code>EK1</code></a><a id="Solving-mass-matrix-DAEs-with-the-EK1-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-mass-matrix-DAEs-with-the-EK1" title="Permalink"></a></h2><p>First, define the DAE (here the ROBER problem) as an ODE problem with singular mass matrix:</p><pre><code class="language-julia hljs">using ProbNumDiffEq, Plots, LinearAlgebra, OrdinaryDiffEq, ModelingToolkit, LinearAlgebra
+
+function rober(du, u, p, t)
+    y₁, y₂, y₃ = u
+    k₁, k₂, k₃ = p
+    du[1] = -k₁ * y₁ + k₃ * y₂ * y₃
+    du[2] = k₁ * y₁ - k₃ * y₂ * y₃ - k₂ * y₂^2
+    du[3] = y₁ + y₂ + y₃ - 1
+    nothing
+end
+M = [1 0 0
+     0 1 0
+     0 0 0]
+f = ODEFunction(rober, mass_matrix=M)
+prob_mm = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e5), (0.04, 3e7, 1e4))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr38_2" style="color:#56b6c2">ODEProblem</span> with uType <span class="sgr38_2" style="color:#56b6c2">Vector{Float64}</span> and tType <span class="sgr38_2" style="color:#56b6c2">Float64</span>. In-place: <span class="sgr38_2" style="color:#56b6c2">true</span>
+Non-trivial mass matrix: <span class="sgr38_2" style="color:#56b6c2">true</span>
+timespan: (0.0, 100000.0)
+u0: 3-element Vector{Float64}:
+ 1.0
+ 0.0
+ 0.0</code></pre><p>We can solve this problem directly with the <code>EK1</code>:</p><pre><code class="language-julia hljs">sol = solve(prob_mm, EK1(), reltol=1e-8, abstol=1e-8)
+plot(
+    sol,
+    xscale=:log10,
+    tspan=(1e-6, 1e5),
+    layout=(3, 1),
+    legend=false,
+    ylabel=[&quot;u₁(t)&quot; &quot;u₂(t)&quot; &quot;u₃(t)&quot;],
+    xlabel=[&quot;&quot; &quot;&quot; &quot;t&quot;],
+    denseplot=false,
+)</code></pre><img src="fbc99d6f.svg" alt="Example block output"/><p>Looks good!</p><h2 id="Solving-an-Index-3-DAE-directly"><a class="docs-heading-anchor" href="#Solving-an-Index-3-DAE-directly">Solving an Index-3 DAE directly</a><a id="Solving-an-Index-3-DAE-directly-1"></a><a class="docs-heading-anchor-permalink" href="#Solving-an-Index-3-DAE-directly" title="Permalink"></a></h2><p>The following is based on the <a href="https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/">&quot;Automatic Index Reduction of DAEs&quot;</a> tutorial by <a href="https://docs.sciml.ai/ModelingToolkit/stable/">ModelingToolkit.jl</a>, which demonstrates how the classic <code>Rodas4</code> solver fails to solve a DAE due to the fact that it is of index 3; which is why ModelingToolkit&#39;s automatic index reduction is so useful.</p><p><strong>It turns out that our probabilistic numerical solvers can directly solve the index-3 DAE!</strong></p><p>First, define the pendulum problem as in the tutorial:</p><pre><code class="language-julia hljs">function pendulum!(du, u, p, t)
+    x, dx, y, dy, T = u
+    g, L = p
+    du[1] = dx
+    du[2] = T * x
+    du[3] = dy
+    du[4] = T * y - g
+    du[5] = x^2 + y^2 - L^2
+end
+pendulum_fun! = ODEFunction(pendulum!, mass_matrix=Diagonal([1, 1, 1, 1, 0]))
+u0 = [1.0, 0, 0, 0, 0];
+p = [9.8, 1];
+tspan = (0, 5.0);
+pendulum_prob = ODEProblem(pendulum_fun!, u0, tspan, p)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi"><span class="sgr38_2" style="color:#56b6c2">ODEProblem</span> with uType <span class="sgr38_2" style="color:#56b6c2">Vector{Float64}</span> and tType <span class="sgr38_2" style="color:#56b6c2">Float64</span>. In-place: <span class="sgr38_2" style="color:#56b6c2">true</span>
+Non-trivial mass matrix: <span class="sgr38_2" style="color:#56b6c2">true</span>
+timespan: (0.0, 5.0)
+u0: 5-element Vector{Float64}:
+ 1.0
+ 0.0
+ 0.0
+ 0.0
+ 0.0</code></pre><p>We can try to solve it directly with one of the classic mass-matrix DAE solvers from OrdinaryDiffEq.jl:</p><pre><code class="language-julia hljs">solve(pendulum_prob, Rodas4())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">retcode: Unstable
+Interpolation: specialized 4rd order &quot;free&quot; stiffness-aware interpolation
+t: 5-element Vector{Float64}:
+ 0.0
+ 1.0e-6
+ 1.1e-5
+ 3.806859541877657e-5
+ 4.5496933032029966e-5
+u: 5-element Vector{Vector{Float64}}:
+ [1.0, 0.0, 0.0, 0.0, 0.0]
+ [1.0, 0.0, -4.899999999999997e-12, -9.799999999999994e-6, 0.0]
+ [1.0, -5.282199999999992e-16, -5.928999999999995e-10, -0.00010779999999999988, -9.04785641150889e-11]
+ [1.0, -2.2119452819316723e-13, -7.101167990076622e-9, -0.00037307223510401005, -2.651533791865963e-8]
+ [1.0, -3.1661973720383655e-12, -1.0142857485072981e-8, -0.00044586994371389327, -2.9596714810803877e-6]</code></pre><p>It does not work! This is because of the <em>index</em> of the DAE; see for example <a href="https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/#Understanding-DAE-Index">this explanation from the tutorial</a>.</p><p>Does this also hold for the <code>EK1</code> solver? Let&#39;s find out:</p><pre><code class="language-julia hljs">sol = solve(pendulum_prob, EK1())</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">retcode: Success
+Interpolation: ODE Filter Posterior
+t: 637-element Vector{Float64}:
+ 0.0
+ 1.0e-6
+ 1.1e-5
+ 6.293457247564385e-5
+ 0.0001717966902698356
+ 0.00041700284549204755
+ 0.001043224623113885
+ 0.0023835910941641687
+ 0.003763856534047043
+ 0.005191196217624695
+ ⋮
+ 4.907553725698676
+ 4.924636353074359
+ 4.9411967014972324
+ 4.95668039898637
+ 4.970681486255768
+ 4.981792730511177
+ 4.990762595647369
+ 4.998031888191015
+ 5.0
+u: 637-element Vector{Vector{Float64}}:
+ [1.0, 0.0, 0.0, 0.0, 0.0]
+ [1.0, -2.4320527589833776e-18, -4.8999999999373206e-12, -9.800000000000003e-6, -3.870438350247696e-16]
+ [1.0, 1.779329265947601e-14, -5.929000004468873e-10, -0.00010780000000000091, -3.0178908529874883e-12]
+ [0.9999999999999998, -3.705258613763331e-12, -1.9407725978901355e-8, -0.0006167588102611186, -1.3036994235702973e-9]
+ [0.9999999999999896, 1.231734351558704e-11, -1.4461910374133314e-7, -0.001683607564645096, -3.158050706805358e-8]
+ [0.9999999999996371, -9.147857460683334e-11, -8.520677279956897e-7, -0.0040866278858198955, -4.845676031758449e-7]
+ [0.9999999999857808, -1.891233463103192e-9, -5.332756312011546e-6, -0.010223601306518774, -7.83009088217851e-6]
+ [0.9999999996124844, -5.726676209454051e-8, -2.7839381844867827e-5, -0.023359192721600835, -9.45339864680247e-5]
+ [0.9999999975906804, -3.4755243956250846e-7, -6.941641839844382e-5, -0.0368857940178753, -0.00037351357964688953]
+ [0.9999999912816985, -1.2748040564497867e-6, -0.00013204773764628023, -0.05087372282090536, -0.0009815961712321248]
+ ⋮
+ [0.9901651613957098, -0.23172735115694545, -0.13990337266694583, -1.6405123591693411, -4.115166337579525]
+ [0.9855712161386252, -0.3083616993192879, -0.16926127369263747, -1.795912092376441, -4.980213518414672]
+ [0.9797518017566736, -0.3967501726849769, -0.20021590560182462, -1.9415667671742471, -5.894755669328316]
+ [0.9728831662637859, -0.4927520327194497, -0.23129710247383958, -2.072072459058729, -6.816526114467944]
+ [0.9653111301491414, -0.5912124320760092, -0.26110234215619854, -2.184252881590318, -7.704686847211488]
+ [0.9582752681971104, -0.6774847635078917, -0.28584702809597784, -2.268603444057187, -8.445920248663054]
+ [0.9518735971071052, -0.7524892742760094, -0.3064909010545698, -2.3332438885829054, -9.067471577304934]
+ [0.9461805448181262, -0.8168252614310116, -0.32363929847919043, -2.383121166331972, -9.58619264314162]
+ [0.9445584480218617, -0.834794040825908, -0.3283433240601558, -2.3962124390909865, -9.728925871084446]</code></pre><p>Nope! The <code>EK1</code> is able to solve the index-3 DAE directly. Pretty cool!</p><pre><code class="language-julia hljs">plot(sol)</code></pre><img src="ef3030ef.svg" alt="Example block output"/><h3 id="Is-index-reduction-still-worth-it?"><a class="docs-heading-anchor" href="#Is-index-reduction-still-worth-it?">Is index-reduction still worth it?</a><a id="Is-index-reduction-still-worth-it?-1"></a><a class="docs-heading-anchor-permalink" href="#Is-index-reduction-still-worth-it?" title="Permalink"></a></h3><p>The point of the <a href="https://docs.sciml.ai/ModelingToolkit/stable/examples/modelingtoolkitize_index_reduction/">&quot;Automatic Index Reduction of DAEs&quot;</a> tutorial is to demonstrate ModelingToolkit&#39;s utility for automatic index reduction, which enables the classic implicit Runge-Kutta solvers such as <code>Rodas5</code> to solve this DAE. Let&#39;s see if that still helps in this context here.</p><p>First, <code>modelingtoolkitize</code> the problem:</p><pre><code class="language-julia hljs">traced_sys = modelingtoolkitize(pendulum_prob)</code></pre><p class="math-container">\[ \begin{align}
+\frac{\mathrm{d} \mathtt{x_1}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_2}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_2}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_1}\left( t \right) \mathtt{x_5}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_3}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_4}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_4}\left( t \right)}{\mathrm{d}t} &amp;=  - \mathtt{\alpha_1} + \mathtt{x_3}\left( t \right) \mathtt{x_5}\left( t \right) \\
+0 &amp;= \left( \mathtt{x_1}\left( t \right) \right)^{2} + \left( \mathtt{x_3}\left( t \right) \right)^{2} - \mathtt{\alpha_2}^{2}
+\end{align}
+ \]</p><p>(how cool is this latex output ?!?)</p><p>Next, lower the DAE index and simplify it with ModelingToolkit&#39;s <code>dae_index_lowering</code> and <code>structural_simplify</code>:</p><pre><code class="language-julia hljs">simplified_sys = structural_simplify(dae_index_lowering(traced_sys))</code></pre><p class="math-container">\[ \begin{align}
+\frac{\mathrm{d} \mathtt{x_1}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_2}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_2}\left( t \right)}{\mathrm{d}t} &amp;= \mathtt{x_1}\left( t \right) \mathtt{x_5}\left( t \right) \\
+\frac{\mathrm{d} \mathtt{x_4}\left( t \right)}{\mathrm{d}t} &amp;=  - \mathtt{\alpha_1} + \mathtt{x_3}\left( t \right) \mathtt{x_5}\left( t \right) \\
+0 &amp;= 2 \left( \mathtt{x_4}\left( t \right) \right)^{2} + 2 \left( \mathtt{x_2}\left( t \right) \right)^{2} + 2 \left( \mathtt{x_1}\left( t \right) \right)^{2} \mathtt{x_5}\left( t \right) + 2 \mathtt{x_3}\left( t \right) \left(  - \mathtt{\alpha_1} + \mathtt{x_3}\left( t \right) \mathtt{x_5}\left( t \right) \right) \\
+0 &amp;= 2 \mathtt{x_4}\left( t \right) \mathtt{x_3}\left( t \right) + 2 \mathtt{x_1}\left( t \right) \mathtt{x_2}\left( t \right)
+\end{align}
+ \]</p><p>Let&#39;s build two different ODE problems, and check how well we can solve each:</p><pre><code class="language- hljs">prob_index3 = ODEProblem(complete(traced_sys), Pair[], tspan)
+prob_index1 = ODEProblem(simplified_sys, Pair[], tspan)
+
+sol3 = solve(prob_index3, EK1())
+sol1 = solve(prob_index1, EK1())
+
+truesol = solve(prob_index1, Rodas4(), abstol=1e-10, reltol=1e-10)
+
+sol1_final_error = norm(sol1.u[end] - truesol.u[end])
+sol1_f_evals     = sol1.stats.nf
+sol3_final_error = norm(sol3.u[end] - truesol.u[end])
+sol3_f_evals     = sol3.stats.nf
+@info &quot;Results&quot; sol1_final_error sol1_f_evals sol3_final_error sol3_f_evals</code></pre><p>The error for the index-1 DAE solve is <em>much</em> lower. Thus it seems that, even if the index-3 DAE could also be solved directly, index lowering might still be beneficial when solving DAEs with the <code>EK1</code>!</p><h3 id="References"><a class="docs-heading-anchor" href="#References">References</a><a id="References-1"></a><a class="docs-heading-anchor-permalink" href="#References" title="Permalink"></a></h3><div class="citation noncanonical"><dl><dt>[1]</dt><dd><div>N. Bosch, F. Tronarp and P. Hennig. <a href="https://proceedings.mlr.press/v151/bosch22a.html"><em>Pick-and-Mix Information Operators for Probabilistic ODE                   Solvers</em></a>. In: <em>Proceedings of The 25th International Conference on Artificial                   Intelligence and Statistics</em>, Vol. 151 of <em>Proceedings of Machine Learning Research</em>, edited by G. Camps-Valls, F. J. Ruiz and I. Valera (PMLR, 28–30 Mar 2022); pp. 10015–10027.</div></dd></dl></div></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../dynamical_odes/">« Second Order ODEs and Energy Preservation</a><a class="docs-footer-nextpage" href="../exponential_integrators/">Probabilistic Exponential Integrators »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.11.0 on <span class="colophon-date" title="Tuesday 13 May 2025 06:33">Tuesday 13 May 2025</span>. Using Julia version 1.11.5.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
