@@ -263,12 +263,9 @@ function compute_backward_kernel!(
     _x = Gaussian(reshape_no_alloc(x.μ, d, Q)', PSDMatrix(x.Σ.R.B))
     _K = AffineNormalKernel(K.A.B, reshape_no_alloc(K.b, d, Q)', PSDMatrix(K.C.R.B))
     _C_DxD = C_DxD.B
-    _diffusion =
-        diffusion isa Number ? diffusion :
-        diffusion isa IsometricKroneckerProduct ? diffusion.B : diffusion
 
     return compute_backward_kernel!(
-        _Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=_diffusion)
+        _Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
 end
 
 function compute_backward_kernel!(

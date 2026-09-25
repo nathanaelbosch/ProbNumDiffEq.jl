@@ -15,7 +15,7 @@ Time-varying, isotropic diffusion, which is quasi-maximum-likelihood-estimated a
 particular also when solving stiff systems.
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
-initial_diffusion(::DynamicDiffusion, d, Eltype) = one(Eltype) * Eye(d)
+initial_diffusion(::DynamicDiffusion, d, Eltype) = one(Eltype)
 estimate_local_diffusion(::DynamicDiffusion, integ) = local_scalar_diffusion(integ.cache)
 
 """
@@ -55,7 +55,7 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
     calibrate::Bool = true
 end
 initial_diffusion(diffusionmodel::FixedDiffusion, d, Eltype) =
-    diffusionmodel.initial_diffusion * one(Eltype) * Eye(d)
+    diffusionmodel.initial_diffusion * one(Eltype)
 estimate_local_diffusion(::FixedDiffusion, integ) = local_scalar_diffusion(integ.cache)
 
 """
@@ -95,6 +95,14 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
         )
     end
 end
-estimate_local_diffusion(::FixedMVDiffusion, integ) =
-    integ.alg isa EK0 ? local_diagonal_diffusion(integ.cache) :
-    local_scalar_diffusion(integ.cache)
+function estimate_local_diffusion(::FixedMVDiffusion, integ)
+    if integ.alg isa EK0
+        return local_diagonal_diffusion(integ.cache)
+    else
+        # The local diffusion is stored as a `Diagonal` for multivariate models, so the
+        # scalar estimate is written into every entry.
+        σ² = local_scalar_diffusion(integ.cache)
+        fill!(integ.cache.local_diffusion.diag, σ²)
+        return integ.cache.local_diffusion
+    end
+end

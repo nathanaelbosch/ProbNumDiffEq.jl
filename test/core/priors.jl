@@ -7,7 +7,6 @@ using FiniteHorizonGramians
 using Statistics
 using Plots
 using SimpleUnPack
-using FillArrays
 
 h = 0.1
 
@@ -136,7 +135,7 @@ end
         Ah, Qh = PNDE.discretize(prior, h)
         @test AH_22_IBM ≈ Ah
 
-        for Γ in (σ^2, σ^2 * Eye(d))
+        for Γ in (σ^2,)
             @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(Qh, Γ))
         end
     end
@@ -145,7 +144,7 @@ end
         A, Q = PNDE.preconditioned_discretize(prior)
         @test AH_22_PRE ≈ Matrix(A)
 
-        for Γ in (σ^2, σ^2 * Eye(d))
+        for Γ in (σ^2,)
             @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, Γ))
         end
     end
@@ -160,7 +159,7 @@ end
 
             @test AH_22_PRE ≈ A
 
-            for Γ in (σ^2, σ^2 * Eye(d))
+            for Γ in (σ^2,)
                 @test QH_22_PRE ≈ Matrix(PNDE.apply_diffusion(Q, Γ))
             end
             if FAC != PNDE.IsometricKroneckerCovariance
@@ -181,7 +180,7 @@ end
             make_transition_matrices!(cache, prior, h)
             @test AH_22_IBM ≈ cache.Ah
 
-            for Γ in (σ^2, σ^2 * Eye(d))
+            for Γ in (σ^2,)
                 @test QH_22_IBM ≈ Matrix(PNDE.apply_diffusion(cache.Qh, Γ))
             end
             if FAC != PNDE.IsometricKroneckerCovariance

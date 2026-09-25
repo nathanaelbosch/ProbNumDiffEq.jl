@@ -2,7 +2,6 @@ using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
 using Test
 using LinearAlgebra
-using FillArrays
 
 d, q = 2, 3
 T = Float64
@@ -20,10 +19,11 @@ T = Float64
 
     # Test the initial diffusion
     diffusion = PNDE.initial_diffusion(diffusionmodel, d, T)
-    @assert size(diffusion) == (d, d)
-    @assert diffusion isa Diagonal
-    if !(diffusionmodel isa FixedMVDiffusion || diffusionmodel isa DynamicMVDiffusion)
-        @assert diffusion isa Diagonal{T,<:Fill}
+    if diffusionmodel isa FixedMVDiffusion || diffusionmodel isa DynamicMVDiffusion
+        @test diffusion isa Diagonal{T,Vector{T}}
+        @test size(diffusion) == (d, d)
+    else
+        @test diffusion isa T
     end
 
     # Test applying the diffusion

@@ -56,12 +56,12 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
     new_mle_diffusion = if integ.success_iter == 0
         diffusion_increment
     else
-        current_mle_diffusion = integ.cache.global_diffusion.diag.value
+        current_mle_diffusion = integ.cache.global_diffusion
         current_mle_diffusion +
         (diffusion_increment - current_mle_diffusion) / integ.success_iter
     end
 
-    integ.cache.global_diffusion = new_mle_diffusion * Eye(d)
+    integ.cache.global_diffusion = new_mle_diffusion
     return integ.cache.global_diffusion
 end
 
@@ -107,9 +107,9 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
 end
 
 @doc raw"""
-    local_scalar_diffusion(integ)
+    local_scalar_diffusion(cache)
 
-Compute the local scalar quasi-MLE diffusion estimate.
+Compute and return the local scalar quasi-MLE diffusion estimate as a `Number`.
 
 Corresponds to
 ```math
@@ -128,8 +128,7 @@ function local_scalar_diffusion(cache)
         _matmul!(C_dxd, C_Dxd', C_Dxd)
     end
     σ² = invquad(z, HQH; v_cache=C_d, M_cache=C_dxd) / d
-    cache.local_diffusion = σ² * Eye(d)
-    return cache.local_diffusion
+    return σ²
 end
 
 @doc raw"""
