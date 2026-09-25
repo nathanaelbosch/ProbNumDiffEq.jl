@@ -14,7 +14,7 @@ mutable struct PNStats{LL}
 end
 function Base.show(io::IO, ::MIME"text/plain", s::PNStats)
     println(io, summary(s))
-    @printf io "%-50s %-d\n" "Log-likelihood:" s.log_likelihood
+    @printf io "%-50s %-g\n" "Log-likelihood:" s.log_likelihood
 end
 
 ########################################################################################
@@ -77,13 +77,8 @@ function ConstructionBase.constructorof(
     ProbODESolution{T,N}
 end
 
-function SciMLBase.solution_new_retcode(sol::ProbODESolution{T,N}, retcode) where {T,N}
-    return ProbODESolution{T,N}(
-        sol.u, sol.pu, sol.u_analytic, sol.errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
-        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, retcode,
-    )
-end
+SciMLBase.solution_new_retcode(sol::ProbODESolution, retcode) =
+    ConstructionBase.setproperties(sol; retcode)
 
 # Used to build the initial empty solution in OrdinaryDiffEqCore.__init
 function SciMLBase.build_solution(
@@ -150,72 +145,36 @@ function SciMLBase.build_solution(
     )
 end
 
-function SciMLBase.build_solution(
-    sol::ProbODESolution{T,N},
-    u_analytic,
-    errors,
-) where {T,N}
-    return ProbODESolution{T,N}(
-        sol.u, sol.pu, u_analytic, errors, sol.t, sol.k, sol.x_filt, sol.x_smooth,
-        sol.diffusions, sol.backward_kernels, sol.pnstats, sol.prob, sol.alg,
-        sol.interp, sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode,
-    )
-end
+SciMLBase.build_solution(sol::ProbODESolution, u_analytic, errors) =
+    ConstructionBase.setproperties(sol; u_analytic, errors)
 
 ########################################################################################
 # Compat with classic ODE solutions, to enable analysis with DiffEqDevTools.jl
 ########################################################################################
 """
-    MeanProbODESolution
+    MeanProbODESolution(sol::ProbODESolution)
 
-The mean of a probabilistic numerical ODE solution.
+The mean of a probabilistic numerical ODE solution, as returned by `mean(sol)`.
 
 Since it is the mean and does never return Gaussians, it can basically be treated as if it
 were a classic ODE solution and is well-compatible with e.g. DiffEqDevtools.jl.
+It is a thin wrapper around the `ProbODESolution` stored in its only field `probsol`; all
+other properties (`u`, `t`, `prob`, `errors`, ...) are forwarded to it.
 """
-mutable struct MeanProbODESolution{
-    T,N,uType,uType2,DType,tType,rateType,P,A,IType,CType,DE,PSolType,
-} <: SciMLBase.AbstractODESolution{T,N,uType}
-    u::uType
-    u_analytic::uType2
-    errors::DType
-    t::tType
-    k::rateType
-    prob::P
-    alg::A
-    interp::IType
-    cache::CType
-    dense::Bool
-    tslocation::Int
-    stats::DE
-    retcode::ReturnCode.T
-    probsol::PSolType
+struct MeanProbODESolution{T,N,uType,S<:ProbODESolution{T,N,uType}} <:
+       SciMLBase.AbstractODESolution{T,N,uType}
+    probsol::S
 end
-MeanProbODESolution{T,N}(
-    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, stats, retcode,
-    probsol,
-) where {T,N} = MeanProbODESolution{
-    T,N,typeof(u),typeof(u_analytic),typeof(errs),typeof(t),typeof(k),typeof(prob),
-    typeof(alg),typeof(interp),typeof(cache),typeof(stats),typeof(probsol)}(
-    u, u_analytic, errs, t, k, prob, alg, interp, cache, dense, tsl, stats, retcode,
-    probsol,
-)
 
-SciMLBase.build_solution(sol::MeanProbODESolution{T,N}, u_analytic, errors) where {T,N} =
-    MeanProbODESolution{T,N}(
-        sol.u, u_analytic, errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp, sol.cache,
-        sol.dense, sol.tslocation, sol.stats, sol.retcode, sol.probsol)
+Base.getproperty(sol::MeanProbODESolution, s::Symbol) =
+    s === :probsol ? getfield(sol, :probsol) : getproperty(getfield(sol, :probsol), s)
+Base.propertynames(sol::MeanProbODESolution, private::Bool=false) =
+    (:probsol, propertynames(getfield(sol, :probsol), private)...)
 
-function mean(sol::ProbODESolution{T,N}) where {T,N}
-    return MeanProbODESolution{
-        T,N,typeof(sol.u),typeof(sol.u_analytic),typeof(sol.errors),typeof(sol.t),
-        typeof(sol.k),typeof(sol.prob),typeof(sol.alg),typeof(sol.interp),typeof(sol.cache),
-        typeof(sol.stats),typeof(sol),
-    }(
-        sol.u, sol.u_analytic, sol.errors, sol.t, sol.k, sol.prob, sol.alg, sol.interp,
-        sol.cache, sol.dense, sol.tslocation, sol.stats, sol.retcode, sol,
-    )
-end
+SciMLBase.build_solution(sol::MeanProbODESolution, u_analytic, errors) =
+    MeanProbODESolution(SciMLBase.build_solution(sol.probsol, u_analytic, errors))
+
+mean(sol::ProbODESolution) = MeanProbODESolution(sol)
 
 function (sol::MeanProbODESolution)(
     t::Number, (::Type{deriv})=Val{0}; idxs=nothing, continuity=:left) where {deriv}
@@ -248,6 +207,20 @@ struct ODEFilterPosterior{T1,T2,T3,T4,T5,T6} <: AbstractODEFilterPosterior
 end
 SciMLBase.interp_summary(interp::ODEFilterPosterior) = "ODE Filter Posterior"
 
+function _projection(interp::ODEFilterPosterior, ::Type{deriv}) where {deriv}
+    q = interp.cache.q
+    dv = deriv.parameters[1]
+    return if deriv == Val{0}
+        interp.cache.SolProj
+    elseif dv <= q
+        interp.cache.Proj(dv)
+    else
+        throw(
+            ArgumentError("We can only provide derivatives up to $q but you requested $dv"),
+        )
+    end
+end
+
 function (interp::ODEFilterPosterior)(
     t::Real,
     idxs::Nothing,
@@ -255,15 +228,7 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    q = interp.cache.q
-    dv = deriv.parameters[1]
-    proj = if deriv == Val{0}
-        interp.cache.SolProj
-    elseif dv <= q
-        interp.cache.Proj(dv)
-    else
-        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
-    end
+    proj = _projection(interp, deriv)
     x = interpolate(
         t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
         smoothed=interp.smooth)
@@ -276,20 +241,7 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    q = interp.cache.q
-    dv = deriv.parameters[1]
-    proj = if deriv == Val{0}
-        interp.cache.SolProj
-    elseif dv <= q
-        interp.cache.Proj(dv)
-    else
-        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
-    end
-    x = interpolate(
-        t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
-        smoothed=interp.smooth)
-    u = proj * x
-    return Gaussian(u.μ[idxs], diag(u.Σ)[idxs])
+    return interp(t, nothing, deriv, p, continuity)[idxs]
 end
 function (interp::ODEFilterPosterior)(
     t::Real,
@@ -298,19 +250,7 @@ function (interp::ODEFilterPosterior)(
     p,
     continuity,
 ) where {deriv}
-    q = interp.cache.q
-    dv = deriv.parameters[1]
-    proj = if deriv == Val{0}
-        interp.cache.SolProj
-    elseif dv <= q
-        interp.cache.Proj(dv)
-    else
-        throw(ArgumentError("We can only provide derivatives up to $q but you requested $dv"))
-    end
-    x = interpolate(
-        t, interp.ts, interp.x_filt, interp.x_smooth, interp.diffusions, interp.cache;
-        smoothed=interp.smooth)
-    u = proj * x
+    u = interp(t, nothing, deriv, p, continuity)
     P = zeros(Bool, length(idxs), length(u))
     for (i, idx) in enumerate(idxs)
         P[i, idx] = 1
@@ -338,16 +278,17 @@ function interpolate(
 )
     @unpack d, q = cache
 
+    isnan(tval) && throw(ArgumentError("Cannot evaluate the solution at t=NaN"))
     if tval < t[1]
         error("Invalid t<t0")
     end
-    if tval in t
-        idx = sum(t .<= tval)
-        @assert t[idx] == tval
+    # Index of the last grid point `t[idx] <= tval`; `t` is sorted. `lt=<` makes the
+    # comparison match `<=` (and `==`) also for signed zeros, unlike the default `isless`.
+    idx = searchsortedlast(t, tval; lt=(<))
+    if t[idx] == tval
         return smoothed ? x_smooth[idx] : x_filt[idx]
     end
 
-    idx = sum(t .<= tval)
     prev_t = t[idx]
     prev_rv = x_filt[idx]
     diffusion = diffusions[minimum((idx, end))]

@@ -176,7 +176,73 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                 @test xs.u isa AbstractArray{<:AbstractArray}
                 @test_nowarn msol
                 @test_nowarn plot(msol)
+
+                @test msol isa ProbNumDiffEq.SciMLBase.AbstractODESolution
+                @test fieldnames(typeof(msol)) == (:probsol,)
+                @test msol.probsol === sol
+                @test msol.u === sol.u
+                @test msol.t === sol.t
+                @test msol.prob === sol.prob
+                @test msol.retcode == sol.retcode
+                @test :u in propertynames(msol)
+                @test msol(sol.t[2]) == sol.u[2]
+                @test msol[:, end] == sol.u[end]
+
+                errors = Dict(:final => 0.1)
+                msol2 = ProbNumDiffEq.SciMLBase.build_solution(msol, sol.u, errors)
+                @test msol2 isa ProbNumDiffEq.MeanProbODESolution
+                @test msol2.errors === errors
+                @test msol2.u_analytic === sol.u
             end
         end
     end
+end
+
+@testset "Dense evaluation cost does not scale with the number of saved points" begin
+    prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0], (0.0, 1.0))
+    @testset "$alg" for alg in (EK0(), EK1())
+        sol_short = solve(prob, alg; adaptive=false, dt=1e-2)
+        sol_long = solve(prob, alg; adaptive=false, dt=1e-4)
+        @test length(sol_long.t) > 10^4
+
+        # Grid points (including signed zero at t0) return the stored states
+        @test sol_long(sol_long.t[5000]) == sol_long.pu[5000]
+        @test sol_long(-0.0) == sol_long.pu[1]
+        @test sol_long(1.0) == sol_long.pu[end]
+        @test_throws ArgumentError sol_long(NaN)
+        ts_nan = copy(sol_short.t)
+        ts_nan[2] = NaN
+        @test_throws ArgumentError ProbNumDiffEq.sample_states(
+            ts_nan, sol_short.x_filt, sol_short.diffusions, sol_short.t, sol_short.cache)
+
+        alloc(sol, t) = @allocated sol(t)
+        for sol in (sol_short, sol_long), t in (0.5 + 1e-7, 0.5)
+            alloc(sol, t) # warm-up
+        end
+        @test alloc(sol_long, 0.5 + 1e-7) <= alloc(sol_short, 0.5 + 1e-7) + 256
+        @test alloc(sol_long, sol_long.t[5000]) <= alloc(sol_short, sol_short.t[50]) + 256
+    end
+end
+
+@testset "Rebuilding a solution with new fields" begin
+    prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0], (0.0, 1.0))
+    sol = solve(prob, EK0())
+
+    sol2 = ProbNumDiffEq.SciMLBase.solution_new_retcode(sol, ReturnCode.Failure)
+    @test sol2.retcode == ReturnCode.Failure
+    @test sol.retcode == ReturnCode.Success
+    @test typeof(sol2) == typeof(sol)
+    @test sol2.x_filt === sol.x_filt
+
+    # `u_analytic` and `errors` change type, so the type parameters must follow
+    @test isnothing(sol.u_analytic)
+    u_analytic = [[exp(-t)] for t in sol.t]
+    errors = Dict(:final => 0.1)
+    sol3 = ProbNumDiffEq.SciMLBase.build_solution(sol, u_analytic, errors)
+    @test sol3 isa ProbNumDiffEq.ProbODESolution
+    @test sol3.u_analytic === u_analytic
+    @test sol3.errors === errors
+    @test typeof(sol3).parameters[5] == typeof(u_analytic)
+    @test typeof(sol3).parameters[6] == typeof(errors)
+    @test sol3(0.5) == sol(0.5)
 end

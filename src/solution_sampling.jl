@@ -25,6 +25,7 @@ function sample(sol::ProbODESolution, n::Int=1)
 end
 function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1)
     @assert length(diffusions) + 1 == length(difftimes)
+    any(isnan, ts) && throw(ArgumentError("Cannot sample states at t=NaN"))
 
     @unpack A, Q, d, q = cache
     D = d * (q + 1)
@@ -40,7 +41,7 @@ function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1)
     for i in (length(xs)-1):-1:1
         dt = ts[i+1] - ts[i]
 
-        i_diffusion = sum(difftimes .<= ts[i])
+        i_diffusion = searchsortedlast(difftimes, ts[i]; lt=(<))
         diffusion = diffusions[min(i_diffusion, length(diffusions))]
 
         make_transition_matrices!(cache, dt)
