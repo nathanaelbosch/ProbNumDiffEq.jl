@@ -195,7 +195,8 @@ function test_make_transition_matrices(prior, Atrue, Qtrue)
     @testset "Test `make_transition_matrices!`" begin
         A, Q, Ah, Qh, P, PI = PNDE.initialize_transition_matrices(
             PNDE.DenseCovariance{Float64}(d, q), prior, h)
-        F, L = PNDE.to_sde(prior)
+        sde = PNDE.to_sde(prior)
+        F, L = PNDE.drift(sde), PNDE.dispersion(sde)
         FHG_method = FiniteHorizonGramians.ExpAndGram{eltype(F),13}()
         FHG_cache = FiniteHorizonGramians.alloc_mem(F, L, FHG_method)
 

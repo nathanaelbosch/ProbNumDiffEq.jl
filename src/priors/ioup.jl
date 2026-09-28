@@ -111,7 +111,7 @@ function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:AbstractVector
     F[(end-d+1):end, (end-d+1):end] = Diagonal(r)
 end
 function update_sde_drift!(F::AbstractMatrix, prior::IOUP{<:Any,<:Number})
-    d, q = dim(prior), num_derivatives(prior)
+    d = dim(prior)
     r = prior.rate_parameter
     F[(end-d+1):end, (end-d+1):end] = Diagonal(Fill(r, d))
 end

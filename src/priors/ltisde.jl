@@ -19,10 +19,6 @@ end
 drift(sde::LTISDE) = sde.F
 dispersion(sde::LTISDE) = sde.L
 
-iterate(sde::LTISDE) = sde.F, true
-iterate(sde::LTISDE, s) = s ? (sde.L, false) : nothing
-length(sde::LTISDE) = 2
-
 """
     discretize(p::LTISDE, step_size::Real)
 
