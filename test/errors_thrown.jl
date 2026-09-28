@@ -63,4 +63,13 @@ end
     # Multivariate diffusion with non-diagonal diffusion model
     @test_throws ArgumentError solve(
         prob, EK0(diffusionmodel=FixedMVDiffusion(initial_diffusion=rand(2, 2))))
+
+    # Local diagonal diffusion estimate needs block-diagonal covariances or a plain EK0
+    @test_throws ArgumentError solve(
+        prob,
+        DiagonalEK1(
+            covariance_factorization=DenseCovariance,
+            diffusionmodel=DynamicMVDiffusion(),
+        ),
+    )
 end

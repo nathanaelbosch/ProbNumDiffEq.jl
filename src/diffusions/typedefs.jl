@@ -23,7 +23,7 @@ estimate_local_diffusion(::DynamicDiffusion, integ) = local_scalar_diffusion(int
 
 Time-varying, diagonal diffusion, which is quasi-maximum-likelihood-estimated at each step.
 
-**Only works with the [`EK0`](@ref)!**
+**Supported by the [`EK0`](@ref) and the [`DiagonalEK1`](@ref), not by the [`EK1`](@ref).**
 
 A multi-variate version of [`DynamicDiffusion`](@ref), where instead of an isotropic matrix,
 a diagonal matrix is estimated. This can be helpful to get more expressive posterior
@@ -63,7 +63,9 @@ estimate_local_diffusion(::FixedDiffusion, integ) = local_scalar_diffusion(integ
 
 Time-fixed, diagonal diffusion, which is quasi-maximum-likelihood-estimated at each step.
 
-**Only works with the [`EK0`](@ref)!**
+**Supported by the [`EK0`](@ref) and the [`DiagonalEK1`](@ref). The [`EK1`](@ref) supports
+it only with `calibrate=false`.** With the `DiagonalEK1` and the `EK1`, the local error
+estimate for adaptive step size selection uses a scalar local diffusion estimate.
 
 A multi-variate version of [`FixedDiffusion`](@ref), where instead of an isotropic matrix,
 a diagonal matrix is estimated. This can be helpful to get more expressive posterior

@@ -38,10 +38,10 @@ ProbNumDiffEq.jl provides a few different choices for how to model and estimate 
 
 Or more compactly:
 
-|              | Isotropic:                 | Diagonal (only for the [`EK0`](@ref)) |
-|--------------|----------------------------|---------------------------------------|
-| Time-varying | [`DynamicDiffusion`](@ref) | [`DynamicMVDiffusion`](@ref)          |
-| Time-fixed   | [`FixedDiffusion`](@ref)   | [`FixedMVDiffusion`](@ref)            |
+|              | Isotropic:                 | Diagonal (see the docstrings below for supported solvers) |
+|--------------|----------------------------|-----------------------------------------------------------|
+| Time-varying | [`DynamicDiffusion`](@ref) | [`DynamicMVDiffusion`](@ref)                              |
+| Time-fixed   | [`FixedDiffusion`](@ref)   | [`FixedMVDiffusion`](@ref)                                |
 
 
 For more details on diffusions and calibration, check out this paper [bosch20capos](@cite).
