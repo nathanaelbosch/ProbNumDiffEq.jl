@@ -45,6 +45,16 @@ h = 0.1
     end
 end
 
+@testset "IWP transition matrix is upper triangular with entries dt^k/k!" begin
+    for q in 1:6, dt in (0.01, 0.5, 3.7), T in (Float64, BigFloat)
+        A, _ = PNDE.discretize_1d(PNDE.IWP{T}(1, q), dt)
+        @test A isa Matrix{T}
+        for i in 1:(q+1), j in 1:(q+1)
+            @test A[i, j] == (j >= i ? T(dt^(j - i) / factorial(j - i)) : zero(T))
+        end
+    end
+end
+
 @testset "Test IWP (d=2,q=2)" begin
     d, q = 2, 2
 

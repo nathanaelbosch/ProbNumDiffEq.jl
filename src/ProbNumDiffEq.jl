@@ -32,7 +32,6 @@ const WOperator = SciMLOperators.WOperator # to fix an Aqua.jl undefined export 
 import ConstructionBase
 using OrdinaryDiffEqCore: OrdinaryDiffEqCore
 using OrdinaryDiffEqDifferentiation: OrdinaryDiffEqDifferentiation
-using ToeplitzMatrices: TriangularToeplitz
 using FastBroadcast: @..
 using StaticArrayInterface: StaticArrayInterface
 using TaylorSeries: Taylor1, differentiate, evaluate, order
