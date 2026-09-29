@@ -63,3 +63,43 @@ function smooth(
     x_curr_smoothed = Gaussian(smoothed_mean, smoothed_cov)
     return x_curr_smoothed, G
 end
+
+# Kronecker version
+function smooth(
+    x_curr::SRGaussian{T,<:IsometricKroneckerProduct},
+    x_next_smoothed::SRGaussian{T,<:IsometricKroneckerProduct},
+    Ah::IsometricKroneckerProduct,
+    Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
+) where {T,S}
+    d = Ah.rdim
+    Q = length(x_curr.μ) ÷ d
+    _x_curr = Gaussian(reshape(x_curr.μ, d, Q)', PSDMatrix(x_curr.Σ.R.B))
+    _x_next = Gaussian(reshape(x_next_smoothed.μ, d, Q)', PSDMatrix(x_next_smoothed.Σ.R.B))
+    _x, _G = smooth(_x_curr, _x_next, Ah.B, PSDMatrix(Qh.R.B))
+    x = Gaussian(vec(permutedims(_x.μ)), PSDMatrix(IsometricKroneckerProduct(d, _x.Σ.R)))
+    return x, IsometricKroneckerProduct(d, _G)
+end
+
+# BlocksOfDiagonals version
+function smooth(
+    x_curr::SRGaussian{T,<:BlocksOfDiagonals},
+    x_next_smoothed::SRGaussian{T,<:BlocksOfDiagonals},
+    Ah::BlocksOfDiagonals,
+    Qh::PSDMatrix{S,<:BlocksOfDiagonals},
+) where {T,S}
+    d = nblocks(Ah)
+    μ = similar(x_curr.μ)
+    R_blocks, G_blocks = similar(blocks(Ah)), similar(blocks(Ah))
+    @views for i in eachindex(blocks(Ah))
+        _x, _G = smooth(
+            Gaussian(x_curr.μ[i:d:end], PSDMatrix(x_curr.Σ.R.blocks[i])),
+            Gaussian(x_next_smoothed.μ[i:d:end], PSDMatrix(x_next_smoothed.Σ.R.blocks[i])),
+            Ah.blocks[i],
+            PSDMatrix(Qh.R.blocks[i]),
+        )
+        μ[i:d:end] .= _x.μ
+        R_blocks[i] = _x.Σ.R
+        G_blocks[i] = _G
+    end
+    return Gaussian(μ, PSDMatrix(BlocksOfDiagonals(R_blocks))), BlocksOfDiagonals(G_blocks)
+end

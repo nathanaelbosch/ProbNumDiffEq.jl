@@ -500,3 +500,85 @@ end
         end
     end
 end
+
+@testset "Structured predict_cov and smooth ($T)" for T in (Float64, BigFloat)
+    d, q = 3, 2
+    D = d * (q + 1)
+    uppertri(n) = Matrix(UpperTriangular(rand(T, n, n)) + I)
+    dense_psd(M::PSDMatrix) = PSDMatrix(Matrix(M.R))
+
+    m, m_s = rand(T, D), rand(T, D)
+    structured_inputs = (
+        IsometricKroneckerProduct => (
+            PSDMatrix(IsometricKroneckerProduct(d, uppertri(q + 1))),
+            PSDMatrix(IsometricKroneckerProduct(d, uppertri(q + 1))),
+            IsometricKroneckerProduct(d, rand(T, q + 1, q + 1)),
+            PSDMatrix(IsometricKroneckerProduct(d, uppertri(q + 1))),
+        ),
+        BlocksOfDiagonals => (
+            PSDMatrix(BlocksOfDiagonals([uppertri(q + 1) for _ in 1:d])),
+            PSDMatrix(BlocksOfDiagonals([uppertri(q + 1) for _ in 1:d])),
+            BlocksOfDiagonals([rand(T, q + 1, q + 1) for _ in 1:d]),
+            PSDMatrix(BlocksOfDiagonals([uppertri(q + 1) for _ in 1:d])),
+        ),
+    )
+    @testset "$M" for (M, (P, P_s, A, Q)) in structured_inputs
+        x_curr, x_next = Gaussian(m, P), Gaussian(m_s, P_s)
+        x_curr_dense, x_next_dense =
+            Gaussian(m, dense_psd(P)), Gaussian(m_s, dense_psd(P_s))
+        A_dense, Q_dense = Matrix(A), dense_psd(Q)
+
+        @testset "predict_cov" begin
+            P_p = PNDE.predict_cov(P, A, Q)
+            @test P_p.R isa M
+            @test Matrix(P_p) ≈ Matrix(PNDE.predict_cov(dense_psd(P), A_dense, Q_dense))
+
+            x_p = PNDE.predict(x_curr, A, Q)
+            @test x_p.μ ≈ A_dense * m
+            @test x_p.Σ.R isa M
+        end
+
+        @testset "smooth" begin
+            x_s, G = PNDE.smooth(x_curr, x_next, A, Q)
+            x_s_dense, G_dense = PNDE.smooth(x_curr_dense, x_next_dense, A_dense, Q_dense)
+            @test x_s.Σ.R isa M
+            @test G isa M
+            @test eltype(x_s.μ) == T
+            @test x_s.μ ≈ x_s_dense.μ
+            @test Matrix(x_s.Σ) ≈ Matrix(x_s_dense.Σ)
+            @test Matrix(G) ≈ G_dense
+        end
+
+        @testset "smooth with a zero-covariance next state" begin
+            x_next_zero = Gaussian(m_s, PSDMatrix(zero(P_s.R)))
+            x_next_zero_dense = Gaussian(m_s, PSDMatrix(zeros(T, D, D)))
+            x_s, _ = PNDE.smooth(x_curr, x_next_zero, A, Q)
+            x_s_dense, _ = PNDE.smooth(x_curr_dense, x_next_zero_dense, A_dense, Q_dense)
+            @test x_s.Σ.R isa M
+            @test x_s.μ ≈ x_s_dense.μ
+            @test Matrix(x_s.Σ) ≈ Matrix(x_s_dense.Σ)
+        end
+    end
+end
+
+@testset "Dense output keeps the covariance structure" begin
+    f!(du, u, p, t) = (du .= -u)
+    prob = ODEProblem(f!, [1.0, 2.0, 3.0], (0.0, 1.0))
+    @testset "$alg" for (alg, M) in (
+        EK0() => IsometricKroneckerProduct,
+        EK0(diffusionmodel=DynamicMVDiffusion()) => BlocksOfDiagonals,
+        DiagonalEK1() => BlocksOfDiagonals,
+    )
+        sol = solve(prob, alg)
+        t_between = (sol.t[2] + sol.t[3]) / 2
+        t_after = sol.t[end] + 0.1
+        interp(t) = PNDE.interpolate(
+            t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions, sol.interp.cache;
+            smoothed=true)
+        @test interp(sol.t[2]).Σ.R isa M
+        @test interp(t_between).Σ.R isa M
+        @test interp(t_after).Σ.R isa M
+        @test typeof(sol(t_between)) == typeof(sol(sol.t[2])) == typeof(sol(t_after))
+        @test sol(t_between).Σ.R isa M
+    end
+end
