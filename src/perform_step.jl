@@ -17,6 +17,7 @@ function DiffEqBase.initialize!(
     check_secondorderode(integ)
     check_densesmooth(integ)
     check_saveiter(integ)
+    check_forward_in_time(integ)
     check_local_diagonal_diffusion(integ)
 
     integ.kshortsize = 1

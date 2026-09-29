@@ -29,6 +29,39 @@ function check_saveiter(integ)
     @assert integ.saveiter == 1
 end
 """
+    check_forward_in_time(integ)
+
+Throw an `ArgumentError` if the time span runs backward in time, which is not supported.
+"""
+function check_forward_in_time(integ)
+    t0, tend = integ.sol.prob.tspan
+    if tend < t0
+        throw(
+            ArgumentError(
+                "The time span $((t0, tend)) runs backward in time. " *
+                "ProbNumDiffEq.jl only supports integration forward in time.",
+            ),
+        )
+    end
+end
+"""
+    check_nonnegative_dt(dt)
+
+Throw an `ArgumentError` for a negative (initial) step size, i.e. a solve backward in time.
+Needed in addition to `check_forward_in_time`, since fixed-step solves with a negative `dt`
+already fail while building the cache.
+"""
+function check_nonnegative_dt(dt)
+    if dt < zero(dt)
+        throw(
+            ArgumentError(
+                "Negative step sizes (here `dt = $dt`) are not supported. " *
+                "ProbNumDiffEq.jl only supports integration forward in time.",
+            ),
+        )
+    end
+end
+"""
     check_local_diagonal_diffusion(integ)
 
 Throw an `ArgumentError` if the diffusion model needs `local_diagonal_diffusion` but `H`

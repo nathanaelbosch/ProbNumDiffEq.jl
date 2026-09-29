@@ -32,6 +32,15 @@ end
     @test_throws ErrorException solve(prob, EK0(smooth=false), saveat=[1.0, 2.0])
 end
 
+@testset "Backward-in-time solves are not supported" begin
+    f(du, u, p, t) = (du .= -u)
+    prob = ODEProblem(f, [1.0], (1.0, 0.0))
+    @testset "$(nameof(typeof(alg)))" for alg in (EK0(), EK1(), DiagonalEK1())
+        @test_throws ArgumentError solve(prob, alg)
+        @test_throws ArgumentError solve(prob, alg; adaptive=false, dt=-0.1)
+    end
+end
+
 @testset "Invalid prior" begin
     prob = prob_ode_lotkavolterra
     @test_throws DimensionMismatch solve(prob, EK0(prior=IWP(dim=3, num_derivatives=2)))
