@@ -2,6 +2,7 @@
 using Test
 using ProbNumDiffEq
 import ODEProblemLibrary: prob_ode_lotkavolterra
+using LinearAlgebra: Diagonal
 
 @testset "Fixed-timestep requires dt" begin
     prob = prob_ode_lotkavolterra
@@ -72,4 +73,22 @@ end
             diffusionmodel=DynamicMVDiffusion(),
         ),
     )
+end
+
+@testset "Non-diagonal mass matrix with block-diagonal covariances" begin
+    vf(du, u, p, t) = (du .= -u)
+    M = [1.0 0.5; 0.5 1.0]
+    prob = ODEProblem(ODEFunction(vf, mass_matrix=M), [1.0, 1.0], (0.0, 1.0))
+    @test_throws ArgumentError solve(prob, DiagonalEK1())
+    @test_throws ArgumentError solve(prob, EK0(diffusionmodel=DynamicMVDiffusion()))
+    @test_throws ArgumentError solve(prob, EK0(diffusionmodel=FixedMVDiffusion()))
+    # A diagonal mass matrix works, as long as it is passed as a `Diagonal`
+    prob_diag = ODEProblem(
+        ODEFunction(vf, mass_matrix=Diagonal([1.0, 2.0])), [1.0, 1.0], (0.0, 1.0))
+    @test solve(prob_diag, DiagonalEK1()).retcode == ReturnCode.Success
+    prob_diag_dense = ODEProblem(
+        ODEFunction(vf, mass_matrix=[1.0 0.0; 0.0 2.0]), [1.0, 1.0], (0.0, 1.0))
+    @test_throws ArgumentError solve(prob_diag_dense, DiagonalEK1())
+    # The dense `EK1` supports non-diagonal mass matrices
+    @test solve(prob, EK1()).retcode == ReturnCode.Success
 end

@@ -112,6 +112,17 @@ function OrdinaryDiffEqCore.alg_cache(
                 "Try using the `EK1` instead."),
         )
     end
+    if FAC isa BlockDiagonalCovariance &&
+       !(f.mass_matrix isa Union{UniformScaling,Diagonal})
+        throw(
+            ArgumentError(
+                "The selected algorithm uses a block-diagonal covariance factorization, " *
+                "which requires the measurement matrix `M * E1` to be block-diagonal. " *
+                "This only holds for a `UniformScaling` or `Diagonal` mass matrix `M`, " *
+                "but the provided mass matrix is a `$(nameof(typeof(f.mass_matrix)))`. " *
+                "Try passing the mass matrix as a `Diagonal`, or use the `EK1` instead."),
+        )
+    end
 
     matType = typeof(factorized_similar(FAC, d, d))
 
