@@ -70,7 +70,7 @@ end
 
 Updates the multivariate global quasi-MLE diffusion estimate on the current measuremnt.
 
-**This only works with the EK0!**
+Used for `FixedMVDiffusion(calibrate=true)`, which the `EK0` and the `DiagonalEK1` support.
 
 The global quasi-MLE diffusion estimate Corresponds to
 ```math
@@ -136,7 +136,9 @@ end
 
 Compute the local diagonal quasi-MLE diffusion estimate.
 
-**This only works with the EK0!**
+Only valid if the measurement of each ODE dimension depends on that dimension's state
+alone, i.e. `H` does not couple dimensions. This holds for the `EK0` and the `DiagonalEK1`;
+`check_per_dimension_diffusion` enforces it at initialization.
 
 Corresponds to
 ```math
@@ -169,7 +171,8 @@ function local_diagonal_diffusion(cache)
         end
         tmp
     else
-        @warn "This is not yet implemented efficiently; TODO"
+        # TODO: This computes the full `H * Q * H'` only to take its diagonal; compute
+        # only the diagonal entries instead.
         diag(X_A_Xt(Qh, H))
     end
 

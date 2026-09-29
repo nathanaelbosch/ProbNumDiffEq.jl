@@ -116,14 +116,14 @@ ClassicSolverInit(alg::SciMLBase.AbstractODEAlgorithm) = ClassicSolverInit(; alg
 Strip the `FunctionWrappersWrapper` that OrdinaryDiffEq puts around `f.f`, so that `f` can
 be called with arguments of other element types (e.g. `ForwardDiff.Dual` or `Taylor1`).
 
-If `f` is an `ODEFunction` whose `f.f` is a `FunctionWrappersWrapper`, returns a new
-`ODEFunction` of the unwrapped function that keeps only `mass_matrix`; all other fields
-(e.g. `jac`, `jac_prototype`) are dropped. Otherwise returns `f` unchanged.
+If `f` is an `ODEFunction` whose `f.f` is a `FunctionWrappersWrapper`, returns
+`SciMLBase.unwrapped_f(f)`: the same `ODEFunction` with only `f.f` unwrapped, and all other
+fields (e.g. `jac`, `mass_matrix`) unchanged. Otherwise returns `f` unchanged.
 """
 function _unwrap_f(f)
     if f isa ODEFunction &&
        f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper
-        return ODEFunction(SciMLBase.unwrapped_f(f), mass_matrix=f.mass_matrix)
+        return SciMLBase.unwrapped_f(f)
     end
     return f
 end

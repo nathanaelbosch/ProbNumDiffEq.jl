@@ -276,8 +276,6 @@ function interpolate(
     cache;
     smoothed,
 )
-    @unpack d, q = cache
-
     isnan(tval) && throw(ArgumentError("Cannot evaluate the solution at t=NaN"))
     if tval < t[1]
         error("Invalid t<t0")

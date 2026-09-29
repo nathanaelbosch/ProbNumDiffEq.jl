@@ -92,6 +92,7 @@ function OrdinaryDiffEqCore.alg_cache(
     if u isa Number
         error("We currently don't support scalar-valued problems")
     end
+    check_nonnegative_dt(dt)
 
     is_secondorder_ode = f isa DynamicalODEFunction
 
@@ -110,6 +111,17 @@ function OrdinaryDiffEqCore.alg_cache(
                 "The selected algorithm uses an efficient Kronecker-factorized " *
                 "implementation which is incompatible with the provided mass matrix. " *
                 "Try using the `EK1` instead."),
+        )
+    end
+    if FAC isa BlockDiagonalCovariance &&
+       !(f.mass_matrix isa Union{UniformScaling,Diagonal})
+        throw(
+            ArgumentError(
+                "The selected algorithm uses a block-diagonal covariance factorization, " *
+                "which requires the measurement matrix `M * E1` to be block-diagonal. " *
+                "This only holds for a `UniformScaling` or `Diagonal` mass matrix `M`, " *
+                "but the provided mass matrix is a `$(nameof(typeof(f.mass_matrix)))`. " *
+                "Try passing the mass matrix as a `Diagonal`, or use the `EK1` instead."),
         )
     end
 

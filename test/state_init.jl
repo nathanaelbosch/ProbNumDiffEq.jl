@@ -3,6 +3,7 @@ using ProbNumDiffEq
 using OrdinaryDiffEq
 using LinearAlgebra
 using Test
+import SciMLBase
 
 import ODEProblemLibrary: prob_ode_fitzhughnagumo, prob_ode_pleiades
 
@@ -150,4 +151,20 @@ end
     @test_nowarn ClassicSolverInit(alg=Tsit5())
     @test_nowarn ClassicSolverInit(Tsit5())
     @test_throws MethodError ClassicSolverInit(3)
+end
+
+@testset "Unwrapping the vector field keeps the other fields" begin
+    vf(du, u, p, t) = (du .= -u)
+    vf_jac(J, u, p, t) = (J .= -I(2))
+    M = Diagonal([1.0, 1.0])
+    prob = ODEProblem(ODEFunction(vf; jac=vf_jac, mass_matrix=M), [1.0, 2.0], (0.0, 1.0))
+    integ = init(prob, EK1(order=3))
+    f = ProbNumDiffEq._unwrap_f(integ.f)
+    @test !(f.f isa SciMLBase.FunctionWrappersWrappers.FunctionWrappersWrapper)
+    @test f.jac !== nothing
+    @test f.mass_matrix == M
+    for initialization in (TaylorModeInit(3), ForwardDiffInit(3), SimpleInit())
+        sol = solve(prob, EK1(order=3; initialization))
+        @test sol.retcode == ReturnCode.Success
+    end
 end
