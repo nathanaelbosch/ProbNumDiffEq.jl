@@ -133,7 +133,8 @@ function discretize_1d(p::IWP{elType}, dt::Real) where {elType}
     v = 0:q
 
     f = factorial.(v)
-    A_breve = TriangularToeplitz(dt .^ v ./ f, :U)
+    a = dt .^ v ./ f
+    A_breve = [j >= i ? a[j-i+1] : zero(eltype(a)) for i in 1:(q+1), j in 1:(q+1)]
 
     e = (2 * q + 1 .- v .- v')
     fr = reverse(f)
