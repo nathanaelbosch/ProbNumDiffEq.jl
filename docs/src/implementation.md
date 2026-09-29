@@ -37,11 +37,11 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
 ## Building on DiffEqBase.jl
 
 - **`DiffEqBase.__init`** is currently overloaded to transform OOP problems into IIP problems (in `./src/solve.jl`).
-- **The solution object:** `ProbODESolution <: AbstractProbODESolution <: DiffEqBase.AbstractODESolution`
+- **The solution object:** `ProbODESolution <: AbstractProbODESolution <: SciMLBase.AbstractODESolution`
   - `./src/solution.jl` implements the main parts.
-    Note that the main constructor `DiffEqBase.build_solution` is called by `OrdinaryDiffEq.__init`, so OrdinaryDiffEq.jl has control over its inputs.
-  - `MeanProbODESolution <: DiffEqBase.AbstractODESolution` is a wrapper that allows handling the mean of a probabilistic ODE solution the same way one would handle any "standard" ODE solution, by just ignoring the covariances.
-  - `AbstractODEFilterPosterior <: DiffEqBase.AbstractDiffEqInterpolation` handles the interpolation.
+    Note that the main constructor `SciMLBase.build_solution` is called by `OrdinaryDiffEq.__init`, so OrdinaryDiffEq.jl has control over its inputs.
+  - `MeanProbODESolution <: SciMLBase.AbstractODESolution` is a wrapper that allows handling the mean of a probabilistic ODE solution the same way one would handle any "standard" ODE solution, by just ignoring the covariances.
+  - `AbstractODEFilterPosterior <: SciMLBase.AbstractDiffEqInterpolation` handles the interpolation.
   - *Plot recipe* in `./ext/RecipesBaseExt.jl`
   - *Sampling* in `./src/solution_sampling.jl`
 - `DiffEqBase.prepare_alg(::EK1{0})`; closely follows a similar function implemented in OrdinaryDiffEq.jl `./src/alg_utils.jl`

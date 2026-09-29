@@ -18,7 +18,6 @@ function sample_states(sol::ProbODESolution, n::Int=1)
     return sample_states(sol.t, sol.x_filt, sol.diffusions, sol.t, sol.cache, n)
 end
 function sample(sol::ProbODESolution, n::Int=1)
-    @unpack d, q = sol.cache
     sample_path = sample_states(sol, n)
     ys = cat(map(x -> (sol.cache.SolProj * x')', eachslice(sample_path; dims=3))...; dims=3)
     return ys
@@ -82,7 +81,6 @@ function dense_sample_states(sol::ProbODESolution, n::Int=1; density=1000)
 end
 function dense_sample(sol::ProbODESolution, n::Int=1; density=1000)
     samples, times = dense_sample_states(sol, n; density=density)
-    @unpack d, q = sol.cache
     ys = cat(map(x -> (sol.cache.SolProj * x')', eachslice(samples; dims=3))...; dims=3)
     return ys, times
 end

@@ -70,7 +70,10 @@ end
 
 Updates the multivariate global quasi-MLE diffusion estimate on the current measuremnt.
 
-**This only works with the EK0!**
+Used by the `EK0` and the `DiagonalEK1`; the `EK1` does not support calibrated multivariate
+global diffusions. The estimate uses ``[S_i]_{11}`` for all dimensions, so it assumes that
+the measurement covariance is a multiple of the identity, as for the `EK0` without a mass
+matrix.
 
 The global quasi-MLE diffusion estimate Corresponds to
 ```math
@@ -136,7 +139,8 @@ end
 
 Compute the local diagonal quasi-MLE diffusion estimate.
 
-**This only works with the EK0!**
+Requires the measurement matrix `H` to be block-diagonal, `E1` or `E2`; this is checked at
+initialization by `check_local_diagonal_diffusion`.
 
 Corresponds to
 ```math
@@ -169,7 +173,8 @@ function local_diagonal_diffusion(cache)
         end
         tmp
     else
-        @warn "This is not yet implemented efficiently; TODO"
+        # TODO: This computes the full `H * Q * H'` only to take its diagonal; compute
+        # only the diagonal entries instead.
         diag(X_A_Xt(Qh, H))
     end
 
