@@ -5,6 +5,7 @@ using LinearAlgebra
 using OrdinaryDiffEq
 using Statistics
 using ODEProblemLibrary: prob_ode_lotkavolterra
+import SciMLBase
 
 @testset "Solution" begin
     prob1 = prob_ode_lotkavolterra
@@ -177,7 +178,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                 @test_nowarn msol
                 @test_nowarn plot(msol)
 
-                @test msol isa ProbNumDiffEq.SciMLBase.AbstractODESolution
+                @test msol isa SciMLBase.AbstractODESolution
                 @test fieldnames(typeof(msol)) == (:probsol,)
                 @test msol.probsol === sol
                 @test msol.u === sol.u
@@ -189,7 +190,7 @@ using ODEProblemLibrary: prob_ode_lotkavolterra
                 @test msol[:, end] == sol.u[end]
 
                 errors = Dict(:final => 0.1)
-                msol2 = ProbNumDiffEq.SciMLBase.build_solution(msol, sol.u, errors)
+                msol2 = SciMLBase.build_solution(msol, sol.u, errors)
                 @test msol2 isa ProbNumDiffEq.MeanProbODESolution
                 @test msol2.errors === errors
                 @test msol2.u_analytic === sol.u
@@ -228,7 +229,7 @@ end
     prob = ODEProblem((du, u, p, t) -> (du .= -u), [1.0], (0.0, 1.0))
     sol = solve(prob, EK0())
 
-    sol2 = ProbNumDiffEq.SciMLBase.solution_new_retcode(sol, ReturnCode.Failure)
+    sol2 = SciMLBase.solution_new_retcode(sol, ReturnCode.Failure)
     @test sol2.retcode == ReturnCode.Failure
     @test sol.retcode == ReturnCode.Success
     @test typeof(sol2) == typeof(sol)
@@ -238,7 +239,7 @@ end
     @test isnothing(sol.u_analytic)
     u_analytic = [[exp(-t)] for t in sol.t]
     errors = Dict(:final => 0.1)
-    sol3 = ProbNumDiffEq.SciMLBase.build_solution(sol, u_analytic, errors)
+    sol3 = SciMLBase.build_solution(sol, u_analytic, errors)
     @test sol3 isa ProbNumDiffEq.ProbODESolution
     @test sol3.u_analytic === u_analytic
     @test sol3.errors === errors
