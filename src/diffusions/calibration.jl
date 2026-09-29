@@ -70,10 +70,7 @@ end
 
 Updates the multivariate global quasi-MLE diffusion estimate on the current measuremnt.
 
-Used by the `EK0` and the `DiagonalEK1`; the `EK1` does not support calibrated multivariate
-global diffusions. The estimate uses ``[S_i]_{11}`` for all dimensions, so it assumes that
-the measurement covariance is a multiple of the identity, as for the `EK0` without a mass
-matrix.
+Used for `FixedMVDiffusion(calibrate=true)`, which the `EK0` and the `DiagonalEK1` support.
 
 The global quasi-MLE diffusion estimate Corresponds to
 ```math
@@ -139,8 +136,9 @@ end
 
 Compute the local diagonal quasi-MLE diffusion estimate.
 
-Requires the measurement matrix `H` to be block-diagonal, `E1` or `E2`; this is checked at
-initialization by `check_local_diagonal_diffusion`.
+Only valid if the measurement of each ODE dimension depends on that dimension's state
+alone, i.e. `H` does not couple dimensions. This holds for the `EK0` and the `DiagonalEK1`;
+`check_per_dimension_diffusion` enforces it at initialization.
 
 Corresponds to
 ```math

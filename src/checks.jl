@@ -62,12 +62,12 @@ function check_nonnegative_dt(dt)
     end
 end
 """
-    check_local_diagonal_diffusion(integ)
+    check_per_dimension_diffusion(integ)
 
-Throw an `ArgumentError` if the diffusion model needs `local_diagonal_diffusion` but `H`
-is not block-diagonal, `E1` or `E2`.
+Throw an `ArgumentError` if the diffusion model estimates a separate diffusion per ODE
+dimension, but the measurement model couples the dimensions.
 """
-function check_local_diagonal_diffusion(integ)
+function check_per_dimension_diffusion(integ)
     @unpack diffusionmodel, covariance_factorization = integ.cache
     # Mirrors when `perform_step!` calls `estimate_local_diffusion`, and which diffusion
     # models then use `local_diagonal_diffusion`
@@ -76,16 +76,17 @@ function check_local_diagonal_diffusion(integ)
             diffusionmodel isa DynamicMVDiffusion ||
             (diffusionmodel isa FixedMVDiffusion && integ.alg isa EK0)
         )
-    # `local_diagonal_diffusion` needs `H` to be block-diagonal, or `E1` / `E2`
+    # `H` does not couple dimensions if it is block-diagonal, or `E1` / `E2` for the `EK0`
     supports_local_diagonal_diffusion =
         covariance_factorization isa BlockDiagonalCovariance ||
         (integ.alg isa EK0 && integ.f.mass_matrix == I)
     if uses_local_diagonal_diffusion && !supports_local_diagonal_diffusion
         throw(
             ArgumentError(
-                "The local diagonal diffusion estimate of `$(nameof(typeof(diffusionmodel)))` " *
-                "requires either the `BlockDiagonalCovariance` factorization, or the `EK0` " *
-                "without a mass matrix. Use `BlockDiagonalCovariance` (the default for " *
+                "`$(nameof(typeof(diffusionmodel)))` estimates a separate diffusion per ODE " *
+                "dimension, which requires a measurement model that does not couple the " *
+                "dimensions: either the `BlockDiagonalCovariance` factorization, or the " *
+                "`EK0` without a mass matrix. Use `BlockDiagonalCovariance` (the default for " *
                 "`DiagonalEK1`, and for `EK0` with an `IWP` prior), or a scalar diffusion " *
                 "model like `DynamicDiffusion`.",
             ),
