@@ -57,3 +57,11 @@ T = Float64
         # and then do something with the result
     end
 end
+
+@testset "Dense `apply_diffusion` with a multivariate diffusion" begin
+    R = rand(T, d * (q + 1), d * (q + 1))
+    σ² = rand(T, d)
+    Q = PNDE.apply_diffusion(PSDMatrix(R), Diagonal(σ²))
+    @test Q.R == R * kron(I(q + 1), Diagonal(sqrt.(σ²)))
+    @test Q.R ≈ R * kron(Matrix(I(q + 1)), diagm(sqrt.(σ²)))
+end
