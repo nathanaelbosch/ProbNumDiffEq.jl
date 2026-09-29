@@ -345,6 +345,16 @@ Base.isequal(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
 ==(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
     length(A.blocks) == length(B.blocks) && all(map(==, A.blocks, B.blocks))
 
+# Copies whole blocks; the generic fallback would read entry by entry
+function Base.Matrix(B::BlocksOfDiagonals{T}) where {T}
+    d = nblocks(B)
+    M = zeros(T, size(B))
+    for (i, Bi) in enumerate(blocks(B))
+        @views M[i:d:end, i:d:end] .= Bi
+    end
+    return M
+end
+
 function Base.vcat(M1::BlocksOfDiagonals, M2::BlocksOfDiagonals)
     @assert nblocks(M1) == nblocks(M2)
     return BlocksOfDiagonals([vcat(B1, B2) for (B1, B2) in zip(blocks(M1), blocks(M2))])

@@ -1,6 +1,6 @@
 using ProbNumDiffEq
 import ProbNumDiffEq as PNDE
-import ProbNumDiffEq: BlocksOfDiagonals, _matmul!, nblocks
+import ProbNumDiffEq: BlocksOfDiagonals, _matmul!, nblocks, PSDMatrix
 using LinearAlgebra
 import BlockArrays
 using Test
@@ -110,4 +110,24 @@ D = d1 * d2
     @test tttm([A; B]) == [AM; BM]
     @test tttm([A B]) == [AM BM]
     @test_broken [A B; B A] isa PNDE.BlocksOfDiagonals
+
+    # `Matrix` matches the entry-by-entry definition
+    entrywise(M) = [M[i, j] for i in axes(M, 1), j in axes(M, 2)]
+    @test Matrix(A) isa Matrix{T}
+    @test Matrix(A) == entrywise(A)
+    @test Matrix([A; B]) == entrywise([A; B])
+    @test Matrix([A B]) == entrywise([A B])
+
+    # `predict` with `BlocksOfDiagonals` factors and dense ones
+    # (`C` was overwritten above, so the dense matrices are made again)
+    AM, BM, CM = Matrix.((A, B, C))
+    μ1 = rand(T, D)
+    Q, QM = PSDMatrix(C), PSDMatrix(CM)
+    @test PNDE.predict_cov(PSDMatrix(A), B, Q).R == qr([Matrix(A * B'); CM]).R
+    @test PNDE.predict_cov(PSDMatrix(AM), B, Q).R == qr([AM * B'; CM]).R
+    x_bod = PNDE.Gaussian(μ1, PSDMatrix(A))
+    x_dense = PNDE.Gaussian(μ1, PSDMatrix(AM))
+    xp_bod, xp_dense = PNDE.predict(x_bod, B, Q), PNDE.predict(x_dense, BM, QM)
+    @test xp_bod.μ ≈ xp_dense.μ
+    @test Matrix(xp_bod.Σ) ≈ Matrix(xp_dense.Σ)
 end
