@@ -107,6 +107,23 @@ D = d1 * d2
     @test _matmul!(x, A, v) ≈ _matmul!(x, AM, v)
     @test _matmul!(x, A, v, alpha, beta) ≈ _matmul!(x, AM, v, alpha, beta)
 
+    # Products with dense matrices, also with non-square blocks and adjoint inputs
+    M = rand(T, size(A, 2), 4)
+    N = rand(T, 4, size(A, 2))
+    @test A * M ≈ AM * M
+    @test A' * M ≈ AM' * M
+    @test A * N' ≈ AM * N'
+    @test mul!(zeros(T, size(A, 1), 4), A, M) ≈ AM * M
+    E = BlocksOfDiagonals([rand(T, 1, d1) for _ in 1:d2])
+    Y = rand(T, d2, 4)
+    @test E * M ≈ Matrix(E) * M
+    @test E * N' ≈ Matrix(E) * N'
+    @test E' * Y isa Matrix{T}
+    @test E' * Y ≈ Matrix(E)' * Y
+    # these use the block-wise methods, not the generic entry-by-entry product
+    @test which(mul!, typeof.((M, A, M))).module === PNDE
+    @test which(mul!, typeof.((M, A', M))).module === PNDE
+
     @test tttm([A; B]) == [AM; BM]
     @test tttm([A B]) == [AM BM]
     @test_broken [A B; B A] isa PNDE.BlocksOfDiagonals
