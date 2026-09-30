@@ -18,6 +18,7 @@ and `d` in the field `rdim`.
 """
 struct IsometricKroneckerProduct{T<:Number,TB<:AbstractMatrix} <:
        Kronecker.AbstractKroneckerProduct{T}
+    # The Kronecker.jl supertype gives structured fallbacks for methods not defined here
     rdim::Int64
     B::TB
     function IsometricKroneckerProduct(

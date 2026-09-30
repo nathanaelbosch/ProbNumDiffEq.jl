@@ -39,6 +39,7 @@ discretize(F::IsometricKroneckerProduct, L::IsometricKroneckerProduct, dt::Real)
     return A, Q
 end
 
+# Currently not used by the solvers; kept as a reference for tests and custom priors
 function matrix_fraction_decomposition(
     drift::IsometricKroneckerProduct,
     dispersion::IsometricKroneckerProduct,
