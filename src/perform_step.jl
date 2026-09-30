@@ -144,7 +144,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     integ.sol.pnstats.log_likelihood += cache.log_likelihood
 
     # Update the global diffusion MLE (if applicable)
-    if !isdynamic(cache.diffusionmodel)
+    if isstatic(cache.diffusionmodel) && cache.diffusionmodel.calibrate
         estimate_global_diffusion(cache.diffusionmodel, integ)
     end
 
