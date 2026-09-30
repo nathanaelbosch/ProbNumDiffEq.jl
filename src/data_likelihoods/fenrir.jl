@@ -41,6 +41,7 @@ function fenrir_data_loglik(
     if !alg.smooth
         throw(ArgumentError("fenrir only works with smoothing. Set `smooth=true`."))
     end
+    check_observation_noise_cov(observation_noise_cov)
     tstops = union(data.t, get(kwargs, :tstops, []))
 
     integ = init(prob, alg, args...; tstops, kwargs...)
@@ -83,20 +84,21 @@ function fit_pnsolution_to_data!(
     x_posterior = copy(sol.x_filt) # the object to be filled
     state2data_projmat = proj * cache.SolProj
 
-    # First update on the last data point
-    if sol.t[end] in data.t
+    # First update on the last data point, if it lies at the end of the solution
+    data_idx = length(data.u)
+    if sol.t[end] == data.t[data_idx]
         _, ll = measure_and_update!(
             x_posterior[end],
-            data.u[end],
+            data.u[data_idx],
             state2data_projmat,
             observation_noise_cov,
             _cache,
         )
         LL += ll
+        data_idx -= 1
     end
 
     # Now iterate backwards
-    data_idx = length(data.u) - 1
     for i in (length(x_posterior)-1):-1:1
         # logic closely related to ProbNumDiffEq.jl's `smooth_solution!`
         if sol.t[i] == sol.t[i+1]
@@ -115,9 +117,7 @@ function fit_pnsolution_to_data!(
                 observation_noise_cov,
                 _cache,
             )
-            if !isinf(ll)
-                LL += ll
-            end
+            LL += ll
             data_idx -= 1
         end
     end

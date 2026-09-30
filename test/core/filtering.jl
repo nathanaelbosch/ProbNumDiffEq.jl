@@ -361,6 +361,33 @@ end
     end
 end
 
+@testset "UPDATE log-likelihood with a multi-dimensional Kronecker covariance" begin
+    # `S ⊗ I_d` has the log-determinant `d * logdet(S)`
+    d, q1 = 3, 4
+    FAC = PNDE.IsometricKroneckerCovariance{Float64}(d, q1 - 1)
+    D = d * q1
+    P_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q1, q1))))
+    H = IsometricKroneckerProduct(d, rand(1, q1))
+    SR = IsometricKroneckerProduct(d, Matrix(qr(P_R.B * H.B').R))
+    m_p = rand(D)
+    z = H * m_p
+
+    x_pred = Gaussian(m_p, PSDMatrix(P_R))
+    x_out = copy(x_pred)
+    _, ll = ProbNumDiffEq.update!(
+        x_out,
+        x_pred,
+        Gaussian(z, PSDMatrix(SR)),
+        H,
+        PNDE.factorized_zeros(FAC, D, d),
+        PNDE.factorized_zeros(FAC, D, d),
+        PNDE.factorized_zeros(FAC, D, D),
+        PNDE.factorized_zeros(FAC, d, d),
+        zeros(d),
+    )
+    @test ll ≈ logpdf(Gaussian(z, Matrix(SR'SR)), zeros(d))
+end
+
 @testset "SMOOTH" begin
     # Setup
     d = 5

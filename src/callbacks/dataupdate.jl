@@ -44,10 +44,21 @@ function DataUpdateCallback(
     save_positions=(false, false),
     kwargs...,
 )
+    check_observation_noise_cov(observation_noise_cov)
     function affect!(integ)
         times, values = data.t, data.u
         idx = findfirst(isequal(integ.t), times)
         val = values[idx]
+
+        # Callbacks are initialized before the solver's state, so at `t0` the state is not
+        # set yet. The initial value is known exactly though, so the data point leaves the
+        # state unchanged and only contributes its likelihood under `N(M u0, R)`.
+        if integ.iter == 0
+            ll = initial_data_loglik(
+                integ.u, val, observation_matrix, observation_noise_cov)
+            isnothing(loglikelihood) || (loglikelihood.ll += ll)
+            return nothing
+        end
 
         o = length(val)
         d = integ.cache.d
@@ -82,6 +93,23 @@ function DataUpdateCallback(
     end
     return PresetTimeCallback(data.t, affect!; save_positions, kwargs...)
 end
+
+function initial_data_loglik(u0, val, M, observation_noise_cov)
+    (u0 isa RecursiveArrayTools.ArrayPartition) && (u0 = u0.x[2]) # for 2ndOrderODEs
+    R = Matrix(cov2psdmatrix(observation_noise_cov; d=length(val)))
+    return logpdf(Gaussian(M * vec(u0), R), val)
+end
+
+function check_observation_noise_cov(cov)
+    if !_is_positive(cov)
+        throw(ArgumentError("The observation noise covariance must be positive definite."))
+    end
+end
+_is_positive(cov::Number) = cov > 0
+_is_positive(cov::UniformScaling) = cov.λ > 0
+_is_positive(cov::Diagonal) = all(>(0), cov.diag)
+# Dense covariances are checked by the Cholesky factorization in `cov2psdmatrix`
+_is_positive(cov) = true
 
 make_obscov_sqrt(PR::AbstractMatrix, H::AbstractMatrix, RR::AbstractMatrix) =
     qr!([PR * H'; RR]).R

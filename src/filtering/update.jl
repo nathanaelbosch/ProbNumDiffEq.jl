@@ -79,7 +79,10 @@ function update!(
     @assert P_p isa PSDMatrix || P_p isa Matrix
     # The following is not ideal as `iszero` allocates
     # But, it is necessary to make the classic solver init stable
-    if (P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p))
+    # With observation noise `R`, the measurement covariance is regular and the standard
+    # update below applies even if the state is known exactly
+    if isnothing(R) &&
+       ((P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p)))
         copy!(x_out, x_pred)
         if iszero(z)
             return x_out, convert(eltype(z), Inf)
@@ -144,7 +147,8 @@ function pn_logpdf!(measurement, S_chol, tmpmean)
     d = length(μ)
     z = ldiv!(Σ, copy!(tmpmean, μ))
 
-    return -0.5 * μ'z - 0.5 * d * log(2π) - 0.5 * logdet(Σ)
+    # With a Kronecker covariance `S ⊗ I`, `μ` stacks `d ÷ size(S, 1)` independent columns
+    return -0.5 * μ'z - 0.5 * d * log(2π) - 0.5 * (d ÷ size(Σ, 1)) * logdet(Σ)
 end
 
 # Kronecker version
