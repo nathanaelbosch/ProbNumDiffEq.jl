@@ -74,12 +74,12 @@ Used for `FixedMVDiffusion(calibrate=true)`, which requires block-diagonal covar
 
 The global quasi-MLE diffusion estimate Corresponds to
 ```math
-[\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{11},
+[\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{jj},
 ```
 where ``z_i, S_i`` are taken the predicted observations from each step.
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
-[\hat{Σ}^2_n]_{jj} = [\hat{Σ}^2_{n-1}]_{jj} + ([z_n]_j^2 / [S_n]_{11}, - [\hat{Σ}^2_{n-1}]_{jj}) / n.
+[\hat{Σ}^2_n]_{jj} = [\hat{Σ}^2_{n-1}]_{jj} + ([z_n]_j^2 / [S_n]_{jj} - [\hat{Σ}^2_{n-1}]_{jj}) / n.
 ```
 
 For more background information
@@ -88,9 +88,9 @@ For more background information
 function estimate_global_diffusion(::FixedMVDiffusion, integ)
     @unpack d, q, measurement, local_diffusion, C_d = integ.cache
     v, S = measurement.μ, measurement.Σ
-    # @assert diag(S) |> unique |> length == 1
     diffusion_increment = let
-        @.. C_d = v^2 / S[1, 1]
+        diag!(C_d, S)
+        @.. C_d = v^2 / C_d
         Diagonal(C_d)
     end
 
