@@ -24,7 +24,7 @@ apply_diffusion(
 ) where {T} = begin
     d = size(diffusion, 1)
     q = size(Q, 1) ÷ d - 1
-    return PSDMatrix(Q.R * sqrt.(Kronecker.kronecker(Eye(q + 1), diffusion)))
+    return PSDMatrix(Q.R * kron(Eye(q + 1), sqrt.(diffusion)))
 end
 
 """

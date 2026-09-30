@@ -52,7 +52,7 @@ function sample_states(ts, xs, diffusions, difftimes, cache, n::Int=1)
             x_prev_p = xs[i]
 
             prev_sample_p, _ =
-                smooth(x_prev_p, Gaussian(sample_p, PSDMatrix(zeros(D, D))), Ah, Qh)
+                smooth(x_prev_p, Gaussian(sample_p, PSDMatrix(zero(x_prev_p.Σ.R))), Ah, Qh)
 
             # sample_path[i, :, j] .= PI*prev_sample_p.μ
             sample_path[i, :, j] .= _rand(prev_sample_p)[:]

@@ -245,6 +245,20 @@ for _mul! in (:mul!, :_matmul!)
     end
 end
 
+# Block-wise, instead of LinearAlgebra's entry-by-entry fallback
+function _blockwise_mul!(C::AbstractMatrix, A_blocks, B::AbstractMatrix)
+    d = length(A_blocks)
+    @assert size(C, 1) == d * size(A_blocks[1], 1) && size(B, 1) == d * size(A_blocks[1], 2)
+    for (i, Ai) in enumerate(A_blocks)
+        mul!(view(C, i:d:size(C, 1), :), Ai, view(B, i:d:size(B, 1), :))
+    end
+    return C
+end
+mul!(C::AbstractMatrix, A::BlocksOfDiagonals, B::AbstractMatrix) =
+    _blockwise_mul!(C, blocks(A), B)
+mul!(C::AbstractMatrix, A::Adjoint{<:Number,<:BlocksOfDiagonals}, B::AbstractMatrix) =
+    _blockwise_mul!(C, adjoint.(blocks(parent(A))), B)
+
 LinearAlgebra.rmul!(B::BlocksOfDiagonals, n::Number) = begin
     @simd ivdep for i in eachindex(B.blocks)
         rmul!(B.blocks[i], n)
@@ -344,6 +358,16 @@ Base.isequal(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
     length(A.blocks) == length(B.blocks) && all(map(isequal, A.blocks, B.blocks))
 ==(A::BlocksOfDiagonals, B::BlocksOfDiagonals) =
     length(A.blocks) == length(B.blocks) && all(map(==, A.blocks, B.blocks))
+
+# Copies whole blocks; the generic fallback would read entry by entry
+function Base.Matrix(B::BlocksOfDiagonals{T}) where {T}
+    d = nblocks(B)
+    M = zeros(T, size(B))
+    for (i, Bi) in enumerate(blocks(B))
+        @views M[i:d:end, i:d:end] .= Bi
+    end
+    return M
+end
 
 function Base.vcat(M1::BlocksOfDiagonals, M2::BlocksOfDiagonals)
     @assert nblocks(M1) == nblocks(M2)

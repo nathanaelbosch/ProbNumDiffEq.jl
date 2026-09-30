@@ -10,7 +10,7 @@ See also the non-allocating square-root version [`predict!`](@ref).
 """
 predict(x::Gaussian, A::AbstractMatrix, Q::AbstractMatrix) =
     Gaussian(predict_mean(x.μ, A), predict_cov(x.Σ, A, Q))
-predict_mean(μ::AbstractVector, A::AbstractMatrix) = A * μ
+predict_mean(μ::AbstractVecOrMat, A::AbstractMatrix) = A * μ
 predict_cov(Σ::AbstractMatrix, A::AbstractMatrix, Q::AbstractMatrix) = A * Σ * A' + Q
 predict_cov(Σ::PSDMatrix, A::AbstractMatrix, Q::PSDMatrix) =
     PSDMatrix(qr([Σ.R * A'; Q.R]).R)
@@ -21,6 +21,16 @@ predict_cov(
 ) where {T} = begin
     P_pred_breve = predict_cov(PSDMatrix(Σ.R.B), A.B, PSDMatrix(Q.R.B))
     return PSDMatrix(IsometricKroneckerProduct(Σ.R.rdim, P_pred_breve.R))
+end
+predict_cov(
+    Σ::PSDMatrix{T,<:BlocksOfDiagonals},
+    A::BlocksOfDiagonals,
+    Q::PSDMatrix{S,<:BlocksOfDiagonals},
+) where {T,S} = begin
+    R_blocks = map(blocks(Σ.R), blocks(A), blocks(Q.R)) do Σ_R_i, A_i, Q_R_i
+        predict_cov(PSDMatrix(Σ_R_i), A_i, PSDMatrix(Q_R_i)).R
+    end
+    return PSDMatrix(BlocksOfDiagonals(R_blocks))
 end
 
 """
