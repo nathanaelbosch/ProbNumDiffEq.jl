@@ -23,7 +23,8 @@ estimate_local_diffusion(::DynamicDiffusion, integ) = local_scalar_diffusion(int
 
 Time-varying, diagonal diffusion, which is quasi-maximum-likelihood-estimated at each step.
 
-**Supported by the [`EK0`](@ref) and the [`DiagonalEK1`](@ref), not by the [`EK1`](@ref).**
+**Supported by the [`EK0`](@ref) with the [`IWP`](@ref) prior (the default) and by the
+[`DiagonalEK1`](@ref).** Other setups throw an `ArgumentError`.
 
 A multi-variate version of [`DynamicDiffusion`](@ref), where instead of an isotropic matrix,
 a diagonal matrix is estimated. This can be helpful to get more expressive posterior
@@ -61,11 +62,14 @@ estimate_local_diffusion(::FixedDiffusion, integ) = local_scalar_diffusion(integ
 """
     FixedMVDiffusion(; initial_diffusion=1.0, calibrate=true)
 
-Time-fixed, diagonal diffusion, which is quasi-maximum-likelihood-estimated at each step.
+Time-fixed, diagonal diffusion. With `calibrate=true` it is
+quasi-maximum-likelihood-estimated from the whole solve.
 
-**Supported by the [`EK0`](@ref) and the [`DiagonalEK1`](@ref). The [`EK1`](@ref) supports
-it only with `calibrate=false`.** With the `DiagonalEK1` and the `EK1`, the local error
-estimate for adaptive step size selection uses a scalar local diffusion estimate.
+**With `calibrate=true`, supported by the [`EK0`](@ref) with the [`IWP`](@ref) prior (the
+default) and by the [`DiagonalEK1`](@ref).** With `calibrate=false`, the given
+`initial_diffusion` is used as is, and every solver supports it. Only the `EK0` with the
+`IWP` prior uses a per-dimension diffusion in the local error estimate for adaptive step
+size selection; all other setups use a scalar estimate there.
 
 A multi-variate version of [`FixedDiffusion`](@ref), where instead of an isotropic matrix,
 a diagonal matrix is estimated. This can be helpful to get more expressive posterior
@@ -98,7 +102,7 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
     end
 end
 function estimate_local_diffusion(::FixedMVDiffusion, integ)
-    if integ.alg isa EK0
+    if integ.alg isa EK0 && integ.cache.covariance_factorization isa BlockDiagonalCovariance
         return local_diagonal_diffusion(integ.cache)
     else
         # The local diffusion is stored as a `Diagonal` for multivariate models, so the

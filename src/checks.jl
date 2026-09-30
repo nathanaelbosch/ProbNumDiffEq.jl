@@ -61,35 +61,3 @@ function check_nonnegative_dt(dt)
         )
     end
 end
-"""
-    check_per_dimension_diffusion(integ)
-
-Throw an `ArgumentError` if the diffusion model estimates a separate diffusion per ODE
-dimension, but the measurement model couples the dimensions.
-"""
-function check_per_dimension_diffusion(integ)
-    @unpack diffusionmodel, covariance_factorization = integ.cache
-    # Mirrors when `perform_step!` calls `estimate_local_diffusion`, and which diffusion
-    # models then use `local_diagonal_diffusion`
-    uses_local_diagonal_diffusion =
-        (integ.opts.adaptive || isdynamic(diffusionmodel)) && (
-            diffusionmodel isa DynamicMVDiffusion ||
-            (diffusionmodel isa FixedMVDiffusion && integ.alg isa EK0)
-        )
-    # `H` does not couple dimensions if it is block-diagonal, or `E1` / `E2` for the `EK0`
-    supports_local_diagonal_diffusion =
-        covariance_factorization isa BlockDiagonalCovariance ||
-        (integ.alg isa EK0 && integ.f.mass_matrix == I)
-    if uses_local_diagonal_diffusion && !supports_local_diagonal_diffusion
-        throw(
-            ArgumentError(
-                "`$(nameof(typeof(diffusionmodel)))` estimates a separate diffusion per ODE " *
-                "dimension, which requires a measurement model that does not couple the " *
-                "dimensions: either the `BlockDiagonalCovariance` factorization, or the " *
-                "`EK0` without a mass matrix. Use `BlockDiagonalCovariance` (the default for " *
-                "`DiagonalEK1`, and for `EK0` with an `IWP` prior), or a scalar diffusion " *
-                "model like `DynamicDiffusion`.",
-            ),
-        )
-    end
-end

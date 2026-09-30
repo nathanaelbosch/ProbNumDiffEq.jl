@@ -82,6 +82,30 @@ function ekargcheck(
     covariance_factorization,
     kwargs...,
 )
+    if diffusionmodel isa Union{DynamicMVDiffusion,FixedMVDiffusion} &&
+       covariance_factorization <: IsometricKroneckerCovariance
+        throw(
+            ArgumentError(
+                "A per-dimension diffusion like `$(nameof(typeof(diffusionmodel)))` cannot be " *
+                "represented with the Kronecker-factorized `IsometricKroneckerCovariance`. " *
+                "Use `BlockDiagonalCovariance` (the default for the `EK0` with a " *
+                "multivariate diffusion) or a scalar diffusion model."),
+        )
+    end
+    estimates_per_dimension =
+        diffusionmodel isa DynamicMVDiffusion ||
+        (diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate)
+    if estimates_per_dimension && !(covariance_factorization <: BlockDiagonalCovariance)
+        throw(
+            ArgumentError(
+                "`$(nameof(typeof(diffusionmodel)))` estimates a separate diffusion per ODE " *
+                "dimension, which is only supported with block-diagonal covariances: " *
+                "for the `EK0` with an `IWP` prior, and for the `DiagonalEK1`. " *
+                "Use a scalar diffusion model like `DynamicDiffusion` or `FixedDiffusion` " *
+                "instead, or `FixedMVDiffusion(diffusion, false)` to use a given " *
+                "per-dimension diffusion without calibration."),
+        )
+    end
     if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
        (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
         throw(
@@ -89,21 +113,6 @@ function ekargcheck(
                 "Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually.",
             ),
         )
-    end
-    if alg == EK1
-        if diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate
-            throw(
-                ArgumentError(
-                    "The `EK1` algorithm does not support automatic global calibration of multivariate diffusion models. Either use a scalar diffusion model, or set `calibrate=false` and calibrate manually by optimizing `sol.pnstats.log_likelihood`. Or use a different solve, like `EK0` or `DiagonalEK1`.",
-                ),
-            )
-        elseif diffusionmodel isa DynamicMVDiffusion
-            throw(
-                ArgumentError(
-                    "The `EK1` algorithm does not support automatic calibration of local multivariate diffusion models. Either use a scalar diffusion model, or use a different solve, like `EK0` or `DiagonalEK1`.",
-                ),
-            )
-        end
     end
     if !(isnothing(pn_observation_noise) || ismissing(pn_observation_noise))
         if covariance_factorization == IsometricKroneckerCovariance && !(

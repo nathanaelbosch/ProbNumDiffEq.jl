@@ -57,23 +57,34 @@ end
     @test_throws ArgumentError solve(
         prob, EK0(pn_observation_noise=1, diffusionmodel=FixedMVDiffusion()))
 
-    # EK1 + Multivariate diffusion doesn't work:
-    @test_throws ArgumentError solve(
-        prob, EK1(diffusionmodel=FixedMVDiffusion()))
-    @test_throws ArgumentError solve(
-        prob, EK1(diffusionmodel=DynamicMVDiffusion()))
-
     # Multivariate diffusion with non-diagonal diffusion model
     @test_throws ArgumentError solve(
         prob, EK0(diffusionmodel=FixedMVDiffusion(initial_diffusion=rand(2, 2))))
+end
 
-    # Local diagonal diffusion estimate needs block-diagonal covariances or a plain EK0
+@testset "Per-dimension diffusion estimates need block-diagonal covariances" begin
+    prob = prob_ode_lotkavolterra
+    @testset "$D" for D in (DynamicMVDiffusion(), FixedMVDiffusion())
+        @test_throws ArgumentError solve(prob, EK1(diffusionmodel=D))
+        @test_throws ArgumentError solve(prob, EK0(prior=IOUP(3, -1), diffusionmodel=D))
+        @test_throws ArgumentError solve(
+            prob, EK0(covariance_factorization=DenseCovariance, diffusionmodel=D))
+        @test_throws ArgumentError solve(
+            prob, DiagonalEK1(covariance_factorization=DenseCovariance, diffusionmodel=D))
+        @test_throws ArgumentError solve(
+            prob,
+            EK0(covariance_factorization=IsometricKroneckerCovariance, diffusionmodel=D),
+        )
+    end
+    # An uncalibrated `FixedMVDiffusion` is a given diffusion and works with every solver
+    D = FixedMVDiffusion([1.0, 2.0], false)
+    @test solve(prob, EK1(diffusionmodel=D)).retcode == ReturnCode.Success
+    @test solve(prob, EK0(prior=IOUP(3, -1), diffusionmodel=D)).retcode ==
+          ReturnCode.Success
+    # A Kronecker covariance cannot hold a per-dimension diffusion at all
     @test_throws ArgumentError solve(
         prob,
-        DiagonalEK1(
-            covariance_factorization=DenseCovariance,
-            diffusionmodel=DynamicMVDiffusion(),
-        ),
+        EK0(covariance_factorization=IsometricKroneckerCovariance, diffusionmodel=D),
     )
 end
 
