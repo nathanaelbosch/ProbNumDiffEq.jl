@@ -259,6 +259,15 @@ mul!(C::AbstractMatrix, A::BlocksOfDiagonals, B::AbstractMatrix) =
 mul!(C::AbstractMatrix, A::Adjoint{<:Number,<:BlocksOfDiagonals}, B::AbstractMatrix) =
     _blockwise_mul!(C, adjoint.(blocks(parent(A))), B)
 
+diag!(v::AbstractVector, M::BlocksOfDiagonals) = begin
+    @assert length(v) == nblocks(M)
+    @assert size(blocks(M)[1]) == (1, 1)
+    @simd ivdep for i in eachindex(blocks(M))
+        v[i] = blocks(M)[i][1]
+    end
+    return v
+end
+
 LinearAlgebra.rmul!(B::BlocksOfDiagonals, n::Number) = begin
     @simd ivdep for i in eachindex(B.blocks)
         rmul!(B.blocks[i], n)

@@ -70,16 +70,16 @@ end
 
 Updates the multivariate global quasi-MLE diffusion estimate on the current measuremnt.
 
-Used for `FixedMVDiffusion(calibrate=true)`, which the `EK0` and the `DiagonalEK1` support.
+Used for `FixedMVDiffusion(calibrate=true)`, which requires block-diagonal covariances.
 
 The global quasi-MLE diffusion estimate Corresponds to
 ```math
-[\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{11},
+[\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{jj},
 ```
 where ``z_i, S_i`` are taken the predicted observations from each step.
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
-[\hat{Σ}^2_n]_{jj} = [\hat{Σ}^2_{n-1}]_{jj} + ([z_n]_j^2 / [S_n]_{11}, - [\hat{Σ}^2_{n-1}]_{jj}) / n.
+[\hat{Σ}^2_n]_{jj} = [\hat{Σ}^2_{n-1}]_{jj} + ([z_n]_j^2 / [S_n]_{jj} - [\hat{Σ}^2_{n-1}]_{jj}) / n.
 ```
 
 For more background information
@@ -88,9 +88,9 @@ For more background information
 function estimate_global_diffusion(::FixedMVDiffusion, integ)
     @unpack d, q, measurement, local_diffusion, C_d = integ.cache
     v, S = measurement.μ, measurement.Σ
-    # @assert diag(S) |> unique |> length == 1
     diffusion_increment = let
-        @.. C_d = v^2 / S[1, 1]
+        diag!(C_d, S)
+        @.. C_d = v^2 / C_d
         Diagonal(C_d)
     end
 
@@ -136,9 +136,7 @@ end
 
 Compute the local diagonal quasi-MLE diffusion estimate.
 
-Only valid if the measurement of each ODE dimension depends on that dimension's state
-alone, i.e. `H` does not couple dimensions. This holds for the `EK0` and the `DiagonalEK1`;
-`check_per_dimension_diffusion` enforces it at initialization.
+Only valid for block-diagonal covariances, where `H` does not couple the dimensions.
 
 Corresponds to
 ```math
@@ -150,32 +148,17 @@ For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
 function local_diagonal_diffusion(cache)
-    @unpack d, q, H, Qh, measurement, m_tmp = cache
-    tmp = m_tmp.μ
-    @unpack local_diffusion = cache
-
+    @unpack d, H, Qh, measurement, m_tmp, local_diffusion = cache
     z = measurement.μ
-    # HQH = H * unfactorize(Qh) * H'
-    # @assert HQH |> diag |> unique |> length == 1
-    # c1 = view(_matmul!(cache.C_Dxd, Qh.R, H'), :, 1)
-    # Q_11 = dot(c1, c1)
-
-    Q_11 = if Qh.R isa BlocksOfDiagonals
-        for i in 1:d
-            c1 = _matmul!(
-                view(cache.C_Dxd.blocks[i], :, 1:1),
-                Qh.R.blocks[i],
-                view(H.blocks[i], 1:1, :)',
-            )
-            tmp[i] = dot(c1, c1)
-        end
-        tmp
-    else
-        # TODO: This computes the full `H * Q * H'` only to take its diagonal; compute
-        # only the diagonal entries instead.
-        diag(X_A_Xt(Qh, H))
+    HQH_diag = m_tmp.μ
+    for i in 1:d
+        c1 = _matmul!(
+            view(cache.C_Dxd.blocks[i], :, 1:1),
+            Qh.R.blocks[i],
+            view(H.blocks[i], 1:1, :)',
+        )
+        HQH_diag[i] = dot(c1, c1)
     end
-
-    @. local_diffusion.diag = z^2 / Q_11
+    @. local_diffusion.diag = z^2 / HQH_diag
     return local_diffusion
 end

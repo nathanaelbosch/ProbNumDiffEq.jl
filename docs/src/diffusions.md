@@ -38,10 +38,16 @@ ProbNumDiffEq.jl provides a few different choices for how to model and estimate 
 
 Or more compactly:
 
-|              | Isotropic:                 | Diagonal (see the docstrings below for supported solvers) |
-|--------------|----------------------------|-----------------------------------------------------------|
-| Time-varying | [`DynamicDiffusion`](@ref) | [`DynamicMVDiffusion`](@ref)                              |
-| Time-fixed   | [`FixedDiffusion`](@ref)   | [`FixedMVDiffusion`](@ref)                                |
+|              | Isotropic:                 | Diagonal:                    |
+|--------------|----------------------------|------------------------------|
+| Time-varying | [`DynamicDiffusion`](@ref) | [`DynamicMVDiffusion`](@ref) |
+| Time-fixed   | [`FixedDiffusion`](@ref)   | [`FixedMVDiffusion`](@ref)   |
+
+The isotropic diffusions work with every solver.
+The diagonal diffusions estimate one diffusion per ODE dimension, which is only supported
+by the [`EK0`](@ref) with the [`IWP`](@ref) prior (the default) and by the [`DiagonalEK1`](@ref).
+The exception is an uncalibrated `FixedMVDiffusion(diffusion, false)`, which is not estimated
+and works with every solver.
 
 
 For more details on diffusions and calibration, check out this paper [bosch20capos](@cite).
