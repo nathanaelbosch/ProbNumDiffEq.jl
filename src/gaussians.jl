@@ -60,6 +60,7 @@ unwhiten(Σ::UniformScaling, z) = sqrt(Σ.λ) * z
 
 sqmahal(P::Gaussian, x) = norm(whiten(P.Σ, x - P.μ))^2
 
+# Part of the `Gaussian` distribution interface; not all of these are used internally
 rand(P::Gaussian) = rand(Random.default_rng(), P)
 rand(RNG::AbstractRNG, P::Gaussian) = P.μ + unwhiten(P.Σ, randn(RNG, typeof(P.μ)))
 rand(RNG::AbstractRNG, P::Gaussian{Vector{T}}) where {T} =
