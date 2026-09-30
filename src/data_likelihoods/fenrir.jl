@@ -22,9 +22,9 @@ so use at your own risk!
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
   the matrix which maps the ODE state to the measurements; typically a projection matrix.
-  Partial observations (`o < d`) are supported with the `EK1` and `DiagonalEK1`; the
-  `DiagonalEK1` requires a dimension-selection observation matrix, i.e. each row must
-  have exactly one nonzero entry (any scaling is fine)
+  Partial observations (`o < d`) are supported with the `EK1` and `DiagonalEK1`; with
+  the `DiagonalEK1`, non-diagonal observation matrices must select dimensions, i.e. each
+  row must have exactly one nonzero entry (any scaling is fine)
 - `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
 
 # Reference
@@ -49,24 +49,10 @@ function fenrir_data_loglik(
 
     integ = init(prob, alg, args...; tstops, kwargs...)
 
-    # Validate the observation model and determine how the data will be fit upfront,
-    # such that unsupported inputs fail before the ODE solve is run
-    o = length(data.u[1])
-    d = integ.cache.d
-    fac = integ.cache.covariance_factorization
-    if o != d && !(fac isa DenseCovariance) && !(fac isa BlockDiagonalCovariance)
-        error(
-            "Partial observations require a `DenseCovariance` or " *
-            "`BlockDiagonalCovariance` covariance structure (like the `EK1` or " *
-            "`DiagonalEK1`); they are not supported with the isometric-kronecker " *
-            "structure right now",
-        )
-    end
-    obs_indices = if o != d && fac isa BlockDiagonalCovariance
-        _partial_obs_indices(observation_matrix, d)
-    else
-        nothing
-    end
+    # Build the observation model before the solve, such that unsupported inputs fail early
+    H, R = observation_model(
+        integ.cache, observation_matrix, observation_noise_cov;
+        o=length(data.u[1]), proj=integ.cache.SolProj)
 
     T = prob.tspan[2] - prob.tspan[1]
     step!(integ, T, false) # basically `solve!` but this prevents smoothing
@@ -78,18 +64,7 @@ function fenrir_data_loglik(
     end
 
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
-    if !isnothing(obs_indices)
-        LL, _, _ = fit_pnsolution_to_data!(
-            sol, observation_noise_cov, data;
-            obs_indices,
-            obs_matrix=observation_matrix,
-            proj_blocks=integ.cache.E0,
-        )
-    else
-        R = cov2psdmatrix(observation_noise_cov; d=o)
-        R = to_factorized_matrix(fac, R)
-        LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
-    end
+    LL, _, _ = fit_pnsolution_to_data!(sol, R, data; H)
 
     return LL
 end
@@ -98,21 +73,16 @@ function fit_pnsolution_to_data!(
     sol::AbstractProbODESolution,
     observation_noise_cov::PSDMatrix,
     data::NamedTuple{(:t, :u)};
-    proj=I,
+    H,
 )
     @unpack cache, backward_kernels = sol
-    @unpack A, Q, x_tmp, x_tmp2, m_tmp, C_DxD, C_3DxD = cache
+    @unpack C_DxD, C_3DxD = cache
 
     LL = zero(eltype(sol.prob.p))
 
-    o = length(data.u[1])
-    d = cache.d
-    @unpack x_tmp, m_tmp = cache
-    _cache = make_obssized_cache(cache; o)
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
+    _cache = make_obssized_cache(cache; o=length(data.u[1]))
 
     x_posterior = copy(sol.x_filt) # the object to be filled
-    state2data_projmat = proj * cache.SolProj
 
     # First update on the last data point, if it lies at the end of the solution
     data_idx = length(data.u)
@@ -120,7 +90,7 @@ function fit_pnsolution_to_data!(
         _, ll = measure_and_update!(
             x_posterior[end],
             data.u[data_idx],
-            state2data_projmat,
+            H,
             observation_noise_cov,
             _cache,
         )
@@ -143,7 +113,7 @@ function fit_pnsolution_to_data!(
             _, ll = measure_and_update!(
                 x_posterior[i],
                 data.u[data_idx],
-                state2data_projmat,
+                H,
                 observation_noise_cov,
                 _cache,
             )
@@ -152,55 +122,6 @@ function fit_pnsolution_to_data!(
         end
     end
     @assert data_idx == 0 # to make sure we went through all the data
-
-    return LL, sol.t, x_posterior
-end
-
-function fit_pnsolution_to_data!(
-    sol::AbstractProbODESolution,
-    observation_noise_cov,
-    data::NamedTuple{(:t, :u)};
-    obs_indices::Vector{Int},
-    obs_matrix::AbstractMatrix,
-    proj_blocks::BlocksOfDiagonals,
-)
-    @unpack cache, backward_kernels = sol
-    @unpack C_DxD, C_3DxD = cache
-
-    LL = zero(eltype(sol.prob.p))
-
-    x_posterior = copy(sol.x_filt)
-
-    if sol.t[end] in data.t
-        _x = copy!(cache.x_tmp, x_posterior[end])
-        ll = _partial_block_update!(
-            x_posterior[end], _x, obs_indices, obs_matrix, data.u[end],
-            proj_blocks, observation_noise_cov)
-        LL += ll
-    end
-
-    data_idx = length(data.u) - 1
-    for i in (length(x_posterior)-1):-1:1
-        if sol.t[i] == sol.t[i+1]
-            copy!(x_posterior[i], x_posterior[i+1])
-            continue
-        end
-
-        K = backward_kernels[i]
-        marginalize!(x_posterior[i], x_posterior[i+1], K; C_DxD, C_3DxD)
-
-        if data_idx > 0 && sol.t[i] == data.t[data_idx]
-            _x = copy!(cache.x_tmp, x_posterior[i])
-            ll = _partial_block_update!(
-                x_posterior[i], _x, obs_indices, obs_matrix, data.u[data_idx],
-                proj_blocks, observation_noise_cov)
-            if !isinf(ll)
-                LL += ll
-            end
-            data_idx -= 1
-        end
-    end
-    @assert data_idx == 0
 
     return LL, sol.t, x_posterior
 end

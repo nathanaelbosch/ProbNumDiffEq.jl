@@ -207,30 +207,33 @@ function update!(
     C_dxd::BlocksOfDiagonals,
     C_d::AbstractVector;
     R::Union{Nothing,PSDMatrix{T,<:BlocksOfDiagonals}}=nothing,
+    obs_dims=eachindex(blocks(x_out.Σ.R)),
 ) where {T}
     d = length(blocks(x_out.Σ.R))
-    q = size(blocks(x_out.Σ.R)[1], 1) - 1
+    o = length(obs_dims)
 
+    # Block `k` of the measurement observes block `obs_dims[k]` of the state; the state
+    # blocks that are not observed are left untouched
     ll = zero(eltype(x_out.μ))
-    @views for i in eachindex(blocks(x_out.Σ.R))
+    @views for (k, i) in enumerate(obs_dims)
         _, _ll = update!(
             Gaussian(x_out.μ[i:d:end],
                 PSDMatrix(x_out.Σ.R.blocks[i])),
             Gaussian(x_pred.μ[i:d:end],
                 PSDMatrix(x_pred.Σ.R.blocks[i])),
-            Gaussian(measurement.μ[i:d:end],
+            Gaussian(measurement.μ[k:o:end],
                 if measurement.Σ isa PSDMatrix
-                    PSDMatrix(measurement.Σ.R.blocks[i])
+                    PSDMatrix(measurement.Σ.R.blocks[k])
                 else
-                    measurement.Σ.blocks[i]
+                    measurement.Σ.blocks[k]
                 end),
-            H.blocks[i],
-            K1_cache.blocks[i],
-            K2_cache.blocks[i],
-            M_cache.blocks[i],
-            C_dxd.blocks[i],
-            view(C_d, i:i);
-            R=isnothing(R) ? nothing : PSDMatrix(blocks(R.R)[i]),
+            H.blocks[k],
+            K1_cache.blocks[k],
+            K2_cache.blocks[k],
+            M_cache.blocks[k],
+            C_dxd.blocks[k],
+            view(C_d, k:k);
+            R=isnothing(R) ? nothing : PSDMatrix(blocks(R.R)[k]),
         )
         ll += _ll
     end
