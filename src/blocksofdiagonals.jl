@@ -386,3 +386,5 @@ function Base.hcat(M1::BlocksOfDiagonals, M2::BlocksOfDiagonals)
     @assert nblocks(M1) == nblocks(M2)
     return BlocksOfDiagonals([hcat(B1, B2) for (B1, B2) in zip(blocks(M1), blocks(M2))])
 end
+
+const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}

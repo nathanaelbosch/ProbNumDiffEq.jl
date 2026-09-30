@@ -101,44 +101,27 @@ function marginalize_cov!(
 end
 
 function marginalize_cov!(
-    Σ_out::PSDMatrix{T,<:IsometricKroneckerProduct},
-    Σ_curr::PSDMatrix{T,<:IsometricKroneckerProduct},
-    K::AffineNormalKernel{
-        <:AbstractMatrix,
-        <:Any,
-        <:PSDMatrix{S,<:IsometricKroneckerProduct},
-    };
+    Σ_out::KroneckerPSD{T},
+    Σ_curr::KroneckerPSD{T},
+    K::AffineNormalKernel{<:AbstractMatrix,<:Any,<:KroneckerPSD{S}};
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
 ) where {T,S}
-    _Σ_out = PSDMatrix(Σ_out.R.B)
-    _Σ_curr = PSDMatrix(Σ_curr.R.B)
-    _K = AffineNormalKernel(K.A.B, K.b, PSDMatrix(K.C.R.B))
-    _D = size(_Σ_out, 1)
-    _C_DxD = C_DxD.B
-    _C_3DxD = C_3DxD.B
-    return marginalize_cov!(_Σ_out, _Σ_curr, _K; C_DxD=_C_DxD, C_3DxD=_C_3DxD)
+    # The covariance does not depend on `K.b`, and reshaping it would allocate
+    _K = AffineNormalKernel(K.A, K.C)
+    on_kronecker_factors(
+        marginalize_cov!, Σ_out.R.rdim, Σ_out, Σ_curr, _K; C_DxD, C_3DxD)
+    return Σ_out
 end
-
 function marginalize_cov!(
-    Σ_out::PSDMatrix{T,<:BlocksOfDiagonals},
-    Σ_curr::PSDMatrix{T,<:BlocksOfDiagonals},
-    K::AffineNormalKernel{
-        <:AbstractMatrix,
-        <:Any,
-        <:PSDMatrix{S,<:BlocksOfDiagonals},
-    };
+    Σ_out::BlocksOfDiagonalsPSD{T},
+    Σ_curr::BlocksOfDiagonalsPSD{T},
+    K::AffineNormalKernel{<:AbstractMatrix,<:Any,<:BlocksOfDiagonalsPSD{S}};
     C_DxD::AbstractMatrix,
     C_3DxD::AbstractMatrix,
 ) where {T,S}
-    @simd ivdep for i in eachindex(blocks(Σ_out.R))
-        _Σ_out = PSDMatrix(Σ_out.R.blocks[i])
-        _Σ_curr = PSDMatrix(Σ_curr.R.blocks[i])
-        _K = AffineNormalKernel(K.A.blocks[i], K.b, PSDMatrix(K.C.R.blocks[i]))
-        _C_DxD = C_DxD.blocks[i]
-        _C_3DxD = C_3DxD.blocks[i]
-        marginalize_cov!(_Σ_out, _Σ_curr, _K; C_DxD=_C_DxD, C_3DxD=_C_3DxD)
-    end
+    foreach_diagonal_block(
+        marginalize_cov!, nblocks(Σ_out.R), Σ_out, Σ_curr, K; C_DxD, C_3DxD)
     return Σ_out
 end
 
@@ -235,90 +218,34 @@ function compute_backward_kernel!(
 end
 
 function compute_backward_kernel!(
-    Kout::KT1,
+    Kout::AffineNormalKernel{
+        <:IsometricKroneckerProduct,
+        <:AbstractVector,
+        <:KroneckerPSD{T},
+    },
     xpred::SRGaussian{T,<:IsometricKroneckerProduct},
     x::SRGaussian{T,<:IsometricKroneckerProduct},
-    K::KT2;
+    K::AffineNormalKernel{<:IsometricKroneckerProduct,<:Any,<:KroneckerPSD{T}};
     C_DxD::AbstractMatrix,
     diffusion::Union{Number,Diagonal}=1,
-) where {
-    T,
-    KT1<:AffineNormalKernel{
-        <:IsometricKroneckerProduct,
-        <:AbstractVector,
-        <:PSDMatrix{T,<:IsometricKroneckerProduct},
-    },
-    KT2<:AffineNormalKernel{
-        <:IsometricKroneckerProduct,
-        <:Any,
-        <:PSDMatrix{T,<:IsometricKroneckerProduct},
-    },
-}
-    D = length(x.μ)  # full_state_dim
-    d = K.A.rdim     # ode_dimension_dim
-    Q = D ÷ d        # n_derivatives_dim
-    _Kout =
-        AffineNormalKernel(Kout.A.B, reshape(Kout.b, d, Q)', PSDMatrix(Kout.C.R.B))
-    _x_pred = Gaussian(reshape(xpred.μ, d, Q)', PSDMatrix(xpred.Σ.R.B))
-    _x = Gaussian(reshape(x.μ, d, Q)', PSDMatrix(x.Σ.R.B))
-    _K = AffineNormalKernel(
-        K.A.B,
-        ismissing(K.b) ? missing : reshape(K.b, d, Q)',
-        PSDMatrix(K.C.R.B),
-    )
-    _C_DxD = C_DxD.B
-
-    return compute_backward_kernel!(
-        _Kout, _x_pred, _x, _K; C_DxD=_C_DxD, diffusion=diffusion)
+) where {T}
+    on_kronecker_factors(
+        compute_backward_kernel!, K.A.rdim, Kout, xpred, x, K; C_DxD, diffusion)
+    return Kout
 end
-
 function compute_backward_kernel!(
-    Kout::KT1,
+    Kout::AffineNormalKernel{
+        <:BlocksOfDiagonals,
+        <:AbstractVector,
+        <:BlocksOfDiagonalsPSD{T},
+    },
     xpred::SRGaussian{T,<:BlocksOfDiagonals},
     x::SRGaussian{T,<:BlocksOfDiagonals},
-    K::KT2;
+    K::AffineNormalKernel{<:BlocksOfDiagonals,<:Any,<:BlocksOfDiagonalsPSD{T}};
     C_DxD::AbstractMatrix,
     diffusion::Union{Number,Diagonal}=1,
-) where {
-    T,
-    KT1<:AffineNormalKernel{
-        <:BlocksOfDiagonals,
-        <:AbstractVector,
-        <:PSDMatrix{T,<:BlocksOfDiagonals},
-    },
-    KT2<:AffineNormalKernel{
-        <:BlocksOfDiagonals,
-        <:Any,
-        <:PSDMatrix{T,<:BlocksOfDiagonals},
-    },
-}
-    d = length(blocks(xpred.Σ.R))
-    q = size(blocks(xpred.Σ.R)[1], 1) - 1
-
-    @views @simd ivdep for i in eachindex(blocks(xpred.Σ.R))
-        _Kout = AffineNormalKernel(
-            Kout.A.blocks[i],
-            Kout.b[i:d:end],
-            PSDMatrix(Kout.C.R.blocks[i]),
-        )
-        _xpred = Gaussian(
-            xpred.μ[i:d:end],
-            PSDMatrix(xpred.Σ.R.blocks[i]),
-        )
-        _x = Gaussian(
-            x.μ[i:d:end],
-            PSDMatrix(x.Σ.R.blocks[i]),
-        )
-        _K = AffineNormalKernel(
-            K.A.blocks[i],
-            ismissing(K.b) ? missing : K.b[i:d:end],
-            PSDMatrix(K.C.R.blocks[i]),
-        )
-        _C_DxD = C_DxD.blocks[i]
-        _diffusion = diffusion isa Number ? diffusion : diffusion.diag[i]
-        compute_backward_kernel!(
-            _Kout, _xpred, _x, _K, C_DxD=_C_DxD, diffusion=_diffusion,
-        )
-    end
+) where {T}
+    foreach_diagonal_block(
+        compute_backward_kernel!, nblocks(K.A), Kout, xpred, x, K; C_DxD, diffusion)
     return Kout
 end

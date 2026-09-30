@@ -146,95 +146,48 @@ function pn_logpdf!(measurement, S_chol, tmpmean)
     return -0.5 * μ'z - 0.5 * d * log(2π) - 0.5 * (d ÷ size(Σ, 1)) * logdet(Σ)
 end
 
-# Kronecker version
 function update!(
     x_out::SRGaussian{T,<:IsometricKroneckerProduct},
     x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
     measurement::Gaussian{
-        <:AbstractVector,
-        <:Union{<:PSDMatrix{T,<:IsometricKroneckerProduct},<:IsometricKroneckerProduct},
-    },
+        <:AbstractVector,<:Union{<:KroneckerPSD{T},<:IsometricKroneckerProduct}},
     H::IsometricKroneckerProduct,
     K1_cache::IsometricKroneckerProduct,
     K2_cache::IsometricKroneckerProduct,
     M_cache::IsometricKroneckerProduct,
     C_dxd::IsometricKroneckerProduct,
     C_d::AbstractVector;
-    R::Union{Nothing,PSDMatrix{T,<:IsometricKroneckerProduct}}=nothing,
+    R::Union{Nothing,KroneckerPSD{T}}=nothing,
 ) where {T}
-    D = length(x_out.μ)  # full_state_dim
-    d = H.rdim           # ode_dimension_dim
-    Q = D ÷ d            # n_derivatives_dim
-    _x_out = Gaussian(reshape(x_out.μ, d, Q)', PSDMatrix(x_out.Σ.R.B))
-    _x_pred = Gaussian(reshape(x_pred.μ, d, Q)', PSDMatrix(x_pred.Σ.R.B))
-    _measurement = Gaussian(
-        reshape(measurement.μ, d, 1)',
-        measurement.Σ isa PSDMatrix ? PSDMatrix(measurement.Σ.R.B) : measurement.Σ.B,
-    )
-    _H = H.B
-    _K1_cache = K1_cache.B
-    _K2_cache = K2_cache.B
-    _M_cache = M_cache.B
-    _C_dxd = C_dxd.B
-    _R = isnothing(R) ? nothing : PSDMatrix(R.R.B)
-
+    d = H.rdim
+    args = (x_out, x_pred, measurement, H, K1_cache, K2_cache, M_cache, C_dxd)
+    # `C_d` is workspace for the flattened measurement, so it is not converted
     _, loglikelihood = update!(
-        _x_out,
-        _x_pred,
-        _measurement,
-        _H,
-        _K1_cache,
-        _K2_cache,
-        _M_cache,
-        _C_dxd,
-        C_d,
-        R=_R,
-    )
+        map(x -> _kronecker_factor(x, d), args)..., C_d; R=_kronecker_factor(R, d))
     return x_out, loglikelihood
 end
-
 function update!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},
     x_pred::SRGaussian{T,<:BlocksOfDiagonals},
     measurement::Gaussian{
-        <:AbstractVector,
-        <:Union{<:PSDMatrix{T,<:BlocksOfDiagonals},<:BlocksOfDiagonals},
-    },
+        <:AbstractVector,<:Union{<:BlocksOfDiagonalsPSD{T},<:BlocksOfDiagonals}},
     H::BlocksOfDiagonals,
     K1_cache::BlocksOfDiagonals,
     K2_cache::BlocksOfDiagonals,
     M_cache::BlocksOfDiagonals,
     C_dxd::BlocksOfDiagonals,
     C_d::AbstractVector;
-    R::Union{Nothing,PSDMatrix{T,<:BlocksOfDiagonals}}=nothing,
+    R::Union{Nothing,BlocksOfDiagonalsPSD{T}}=nothing,
 ) where {T}
-    d = length(blocks(x_out.Σ.R))
-    q = size(blocks(x_out.Σ.R)[1], 1) - 1
-
-    ll = zero(eltype(x_out.μ))
-    @views for i in eachindex(blocks(x_out.Σ.R))
-        _, _ll = update!(
-            Gaussian(x_out.μ[i:d:end],
-                PSDMatrix(x_out.Σ.R.blocks[i])),
-            Gaussian(x_pred.μ[i:d:end],
-                PSDMatrix(x_pred.Σ.R.blocks[i])),
-            Gaussian(measurement.μ[i:d:end],
-                if measurement.Σ isa PSDMatrix
-                    PSDMatrix(measurement.Σ.R.blocks[i])
-                else
-                    measurement.Σ.blocks[i]
-                end),
-            H.blocks[i],
-            K1_cache.blocks[i],
-            K2_cache.blocks[i],
-            M_cache.blocks[i],
-            C_dxd.blocks[i],
-            view(C_d, i:i);
-            R=isnothing(R) ? nothing : PSDMatrix(blocks(R.R)[i]),
-        )
-        ll += _ll
+    d = nblocks(H)
+    args = (x_out, x_pred, measurement, H, K1_cache, K2_cache, M_cache, C_dxd, C_d)
+    loglikelihood = zero(T)
+    for i in 1:d
+        _, ll = update!(
+            map(x -> _diagonal_block(x, i, d), args)...; R=_diagonal_block(R, i, d))
+        loglikelihood += ll
     end
-    return x_out, ll
+    return x_out, loglikelihood
 end
 
 # Short-hand with cache
