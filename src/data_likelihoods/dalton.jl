@@ -14,7 +14,10 @@ so use at your own risk!
 - `alg::AbstractEK`: the probabilistic ODE solver to be used; use `EK1` for best results.
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
-  the matrix which maps the ODE state to the measurements; typically a projection matrix
+  the matrix which maps the ODE state to the measurements; typically a projection matrix.
+  Partial observations (`o < d`) are supported with the `EK1` and `DiagonalEK1`; the
+  `DiagonalEK1` requires a dimension-selection observation matrix, i.e. each row must
+  have exactly one nonzero entry (any scaling is fine)
 - `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
 
 # Reference

@@ -78,6 +78,215 @@ end
         adaptive=false, dt=DT,
         dense=false,
     )
+    # Non-unit row scalings need no special handling: the scale is part of the
+    # observation matrix, so the noise covariance scales with it
+    H2 = [2 0]
+    data_scaled = (t=times, u=[H2 * x for x in obss])
+    for alg in (DiagonalEK1(), EK1())
+        compare_data_likelihoods(
+            alg;
+            observation_matrix=H2,
+            observation_noise_cov=4σ^2,
+            data=data_scaled,
+            adaptive=false, dt=DT,
+            dense=false,
+        )
+    end
+    # EK0 with a multivariate diffusion uses a block-diagonal covariance structure
+    # as well, so partial observations work the same way
+    compare_data_likelihoods(
+        EK0(diffusionmodel=FixedMVDiffusion(rand(2), false));
+        observation_matrix=H,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    # Observation noise covariance types, like in the testset below, but for partial
+    # observations; the per-observation noise variances are extracted from the matrix
+    for R in (σ^2 * I, Diagonal([σ^2]))
+        compare_data_likelihoods(
+            DiagonalEK1();
+            observation_matrix=H,
+            observation_noise_cov=R,
+            data=data_part,
+            adaptive=false, dt=DT,
+            dense=false,
+        )
+    end
+end
+
+@testset "Bad observation matrices" begin
+    # Partial observations with `DiagonalEK1` require dimension-selection observation
+    # matrices: each row must have exactly one nonzero entry (any scaling is fine);
+    # rows that mix dimensions can not be handled block-wise
+    @testset "H = $H" for H in ([1 1], [0 0])
+        data_bad = (t=times, u=[H * x for x in obss])
+        @test_throws ArgumentError PNDE.dalton_data_loglik(
+            prob, remake(DiagonalEK1(), smooth=false);
+            observation_matrix=H,
+            observation_noise_cov=σ^2,
+            data=data_bad,
+            adaptive=false, dt=DT,
+            dense=false,
+        )
+        @test_throws ArgumentError PNDE.filtering_data_loglik(
+            prob, remake(DiagonalEK1(), smooth=false);
+            observation_matrix=H,
+            observation_noise_cov=σ^2,
+            data=data_bad,
+            adaptive=false, dt=DT,
+            dense=false,
+        )
+        @test_throws ArgumentError PNDE.fenrir_data_loglik(
+            prob, remake(DiagonalEK1(), smooth=true);
+            observation_matrix=H,
+            observation_noise_cov=σ^2,
+            data=data_bad,
+            adaptive=false, dt=DT,
+            dense=false,
+        )
+    end
+
+    # Observing the same dimension twice requires at least three state dimensions
+    prob3 = ODEProblem((du, u, p, t) -> (du .= -u), [1.0, 2.0, 3.0], (0.0, 5.0), 1.0)
+    times3 = [1.0, 4.0]
+    H3 = [1 0 0; 1 0 0]
+    data3 = (t=times3, u=[H3 * randn(3) for _ in times3])
+    @test_throws ArgumentError PNDE.dalton_data_loglik(
+        prob3, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=H3,
+        observation_noise_cov=σ^2,
+        data=data3,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.filtering_data_loglik(
+        prob3, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=H3,
+        observation_noise_cov=σ^2,
+        data=data3,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.fenrir_data_loglik(
+        prob3, remake(DiagonalEK1(), smooth=true);
+        observation_matrix=H3,
+        observation_noise_cov=σ^2,
+        data=data3,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+
+    # EK0 with the default isometric-kronecker covariance structure does not support
+    # partial observations
+    H = [1 0;]
+    data_part = (t=times, u=[H * x for x in obss])
+    @test_throws ErrorException PNDE.dalton_data_loglik(
+        prob, remake(EK0(), smooth=false);
+        observation_matrix=H,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ErrorException PNDE.filtering_data_loglik(
+        prob, remake(EK0(), smooth=false);
+        observation_matrix=H,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ErrorException PNDE.fenrir_data_loglik(
+        prob, EK0();
+        observation_matrix=H,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+
+    # Observation noise covariances which can not be decomposed into one noise
+    # variance per observation (e.g. correlated noise) are not supported
+    correlated_noise = (A=randn(2, 2); A'A)
+    @test_throws ArgumentError PNDE.dalton_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=H,
+        observation_noise_cov=correlated_noise,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.filtering_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=H,
+        observation_noise_cov=correlated_noise,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.fenrir_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=true);
+        observation_matrix=H,
+        observation_noise_cov=correlated_noise,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+
+    # The default `I` observation matrix implies observing the full state
+    @test_throws ArgumentError PNDE.dalton_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=I,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.filtering_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=I,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.fenrir_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=true);
+        observation_matrix=I,
+        observation_noise_cov=σ^2,
+        data=data_part,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+
+    # Observation matrices must have one column per ODE dimension
+    data_o1 = (t=times, u=[[0.0] for _ in times])
+    @test_throws ArgumentError PNDE.dalton_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=[1 0 0],
+        observation_noise_cov=σ^2,
+        data=data_o1,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.filtering_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=false);
+        observation_matrix=[1 0 0],
+        observation_noise_cov=σ^2,
+        data=data_o1,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
+    @test_throws ArgumentError PNDE.fenrir_data_loglik(
+        prob, remake(DiagonalEK1(), smooth=true);
+        observation_matrix=[1 0 0],
+        observation_noise_cov=σ^2,
+        data=data_o1,
+        adaptive=false, dt=DT,
+        dense=false,
+    )
 end
 
 @testset "Observation noise types: $(typeof(Σ))" for Σ in (

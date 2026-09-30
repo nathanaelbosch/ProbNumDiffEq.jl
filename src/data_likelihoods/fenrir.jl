@@ -21,7 +21,10 @@ so use at your own risk!
 - `alg::AbstractEK`: the probabilistic ODE solver to be used; use `EK1` for best results.
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
-  the matrix which maps the ODE state to the measurements; typically a projection matrix
+  the matrix which maps the ODE state to the measurements; typically a projection matrix.
+  Partial observations (`o < d`) are supported with the `EK1` and `DiagonalEK1`; the
+  `DiagonalEK1` requires a dimension-selection observation matrix, i.e. each row must
+  have exactly one nonzero entry (any scaling is fine)
 - `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
 
 # Reference
@@ -46,6 +49,25 @@ function fenrir_data_loglik(
 
     integ = init(prob, alg, args...; tstops, kwargs...)
 
+    # Validate the observation model and determine how the data will be fit upfront,
+    # such that unsupported inputs fail before the ODE solve is run
+    o = length(data.u[1])
+    d = integ.cache.d
+    fac = integ.cache.covariance_factorization
+    if o != d && !(fac isa DenseCovariance) && !(fac isa BlockDiagonalCovariance)
+        error(
+            "Partial observations require a `DenseCovariance` or " *
+            "`BlockDiagonalCovariance` covariance structure (like the `EK1` or " *
+            "`DiagonalEK1`); they are not supported with the isometric-kronecker " *
+            "structure right now",
+        )
+    end
+    obs_indices = if o != d && fac isa BlockDiagonalCovariance
+        _partial_obs_indices(observation_matrix, d)
+    else
+        nothing
+    end
+
     T = prob.tspan[2] - prob.tspan[1]
     step!(integ, T, false) # basically `solve!` but this prevents smoothing
     sol = integ.sol
@@ -56,18 +78,16 @@ function fenrir_data_loglik(
     end
 
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
-    o = length(data.u[1])
-    d = integ.cache.d
-    if o != d && integ.cache.covariance_factorization isa BlockDiagonalCovariance
-        obs_indices = _partial_obs_indices(observation_matrix, d)
+    if !isnothing(obs_indices)
         LL, _, _ = fit_pnsolution_to_data!(
             sol, observation_noise_cov, data;
-            obs_indices, proj_blocks=integ.cache.E0)
-    elseif o != d && !(integ.cache.covariance_factorization isa DenseCovariance)
-        error("Partial observations only work with the EK1 and DiagonalEK1 right now")
+            obs_indices,
+            obs_matrix=observation_matrix,
+            proj_blocks=integ.cache.E0,
+        )
     else
         R = cov2psdmatrix(observation_noise_cov; d=o)
-        R = to_factorized_matrix(integ.cache.covariance_factorization, R)
+        R = to_factorized_matrix(fac, R)
         LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
     end
 
@@ -141,10 +161,11 @@ function fit_pnsolution_to_data!(
     observation_noise_cov,
     data::NamedTuple{(:t, :u)};
     obs_indices::Vector{Int},
+    obs_matrix::AbstractMatrix,
     proj_blocks::BlocksOfDiagonals,
 )
     @unpack cache, backward_kernels = sol
-    @unpack x_tmp, C_DxD, C_3DxD = cache
+    @unpack C_DxD, C_3DxD = cache
 
     LL = zero(eltype(sol.prob.p))
 
@@ -153,7 +174,7 @@ function fit_pnsolution_to_data!(
     if sol.t[end] in data.t
         _x = copy!(cache.x_tmp, x_posterior[end])
         ll = _partial_block_update!(
-            x_posterior[end], _x, obs_indices, data.u[end],
+            x_posterior[end], _x, obs_indices, obs_matrix, data.u[end],
             proj_blocks, observation_noise_cov)
         LL += ll
     end
@@ -171,7 +192,7 @@ function fit_pnsolution_to_data!(
         if data_idx > 0 && sol.t[i] == data.t[data_idx]
             _x = copy!(cache.x_tmp, x_posterior[i])
             ll = _partial_block_update!(
-                x_posterior[i], _x, obs_indices, data.u[data_idx],
+                x_posterior[i], _x, obs_indices, obs_matrix, data.u[data_idx],
                 proj_blocks, observation_noise_cov)
             if !isinf(ll)
                 LL += ll
