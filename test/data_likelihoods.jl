@@ -152,6 +152,19 @@ end
         ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=[1 0 0], data=data_o1)
 end
 
+@testset "Fenrir with second-order ODEs and a block-diagonal covariance" begin
+    # Fenrir observes `[du; u]` for second-order ODEs, which the block-wise update does
+    # not support yet
+    prob2 = SecondOrderODEProblem(
+        (ddu, du, u, p, t) -> (ddu .= -u), [0.0, 1.0], [1.0, 0.0], (0.0, 2.0))
+    data2 = (t=[1.0, 2.0], u=[randn(4) for _ in 1:2])
+    @testset "$alg" for alg in (
+        DiagonalEK1(), EK0(diffusionmodel=FixedMVDiffusion(ones(2), false)))
+        @test_throws ArgumentError PNDE.fenrir_data_loglik(
+            prob2, alg; kwargs..., data=data2)
+    end
+end
+
 @testset "Observation noise types: $(typeof(Σ))" for Σ in (
     σ^2,
     σ^2 * I,
