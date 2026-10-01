@@ -19,10 +19,10 @@ so use at your own risk!
 # Arguments
 - `prob::SciMLBase.AbstractODEProblem`: the initial value problem of interest
 - `alg::AbstractEK`: the probabilistic ODE solver to be used; use `EK1` for best results.
-  Second-order ODEs are not supported with the `DiagonalEK1` right now.
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
   the matrix which maps the ODE state to the measurements; typically a projection matrix.
+  For second-order ODEs, it acts on `u` only, not on `du`.
   Partial observations (`o < d`) are supported with the `EK1` and `DiagonalEK1`; with
   the `DiagonalEK1`, non-diagonal observation matrices must select dimensions, i.e. each
   row must have exactly one nonzero entry (any scaling is fine)
@@ -50,19 +50,9 @@ function fenrir_data_loglik(
 
     integ = init(prob, alg, args...; tstops, kwargs...)
 
-    if integ.f isa DynamicalODEFunction &&
-       integ.cache.covariance_factorization isa BlockDiagonalCovariance
-        throw(
-            ArgumentError(
-                "`fenrir_data_loglik` does not support second-order ODEs with a " *
-                "block-diagonal covariance structure (e.g. the `DiagonalEK1`) right now."),
-        )
-    end
-
     # Build the observation model before the solve, such that unsupported inputs fail early
     H, R = observation_model(
-        integ.cache, observation_matrix, observation_noise_cov;
-        o=length(data.u[1]), proj=integ.cache.SolProj)
+        integ.cache, observation_matrix, observation_noise_cov; o=length(data.u[1]))
 
     T = prob.tspan[2] - prob.tspan[1]
     step!(integ, T, false) # basically `solve!` but this prevents smoothing

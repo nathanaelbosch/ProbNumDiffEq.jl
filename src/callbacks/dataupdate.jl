@@ -31,6 +31,7 @@ y(t) &= H x(t) + \varepsilon(t), \quad \varepsilon(t) \sim \mathcal{N}(0, R),
 ```
 where ``H`` is the observation matrix (`observation_matrix`) and
 ``R`` is the observation noise covariance (`observation_noise_cov`).
+For second-order ODEs, the observation matrix acts on `u` only, not on `du`.
 
 Partial observations with `o < d` are supported with a `DenseCovariance` (e.g. the
 `EK1`) or a `BlockDiagonalCovariance` (e.g. the `DiagonalEK1`) covariance structure.
@@ -94,25 +95,33 @@ _is_positive(cov::UniformScaling) = cov.λ > 0
 _is_positive(cov::Diagonal) = all(>(0), cov.diag)
 _is_positive(cov::AbstractMatrix) = isposdef(Matrix(cov))
 
-function observation_model(cache, M, noise_cov; o, proj=cache.E0)
+function observation_model(cache, M, noise_cov; o)
+    if M isa AbstractMatrix && size(M, 2) != cache.d
+        throw(
+            ArgumentError(
+                "The observation matrix must have one column per ODE dimension " *
+                "(d = $(cache.d)), but has size $(size(M)). For second-order ODEs, it " *
+                "acts on `u` only."),
+        )
+    end
     fac = cache.covariance_factorization
     is_structured = if fac isa BlockDiagonalCovariance
-        # `M * proj` is only block-diagonal for diagonal observation matrices; any other
+        # `M * E0` is only block-diagonal for diagonal observation matrices; any other
         # observation matrix needs to select dimensions
         o == cache.d && M isa Union{UniformScaling,Diagonal}
     else
         o == cache.d || fac isa DenseCovariance
     end
     if !is_structured
-        return block_selection_model(fac, M, proj, noise_cov; o)
+        return block_selection_model(fac, M, cache.E0, noise_cov; o)
     end
     R = to_factorized_matrix(fac, cov2psdmatrix(noise_cov; d=o))
-    return M * proj, R
+    return M * cache.E0, R
 end
 function block_selection_model(
-    fac::BlockDiagonalCovariance{T}, M, proj, noise_cov; o,
+    fac::BlockDiagonalCovariance{T}, M, E0, noise_cov; o,
 ) where {T}
-    obs_dims = _partial_obs_indices(M, fac.d)
+    obs_dims = _partial_obs_indices(M)
     if length(obs_dims) != o
         throw(
             DimensionMismatch(
@@ -120,13 +129,13 @@ function block_selection_model(
                 "has $o entries."),
         )
     end
-    H = BlocksOfDiagonals([M[k, i] * blocks(proj)[i] for (k, i) in enumerate(obs_dims)])
+    H = BlocksOfDiagonals([M[k, i] * blocks(E0)[i] for (k, i) in enumerate(obs_dims)])
     R = to_factorized_matrix(
         BlockDiagonalCovariance{T}(o, fac.q),
         cov2psdmatrix(_diagonal_noise(noise_cov); d=o))
     return BlockSelection(H, obs_dims), R
 end
-block_selection_model(fac, M, proj, noise_cov; o) = error(
+block_selection_model(fac, M, E0, noise_cov; o) = error(
     "Partial observations require a `DenseCovariance` or " *
     "`BlockDiagonalCovariance` covariance structure (like the `EK1` or " *
     "`DiagonalEK1`); they are not supported with the isometric-kronecker " *
@@ -146,16 +155,8 @@ function _diagonal_noise(cov::AbstractMatrix)
     return Diagonal(diag(C))
 end
 
-function _partial_obs_indices(M::AbstractMatrix, d::Int)
+function _partial_obs_indices(M::AbstractMatrix)
     o = size(M, 1)
-    if size(M, 2) != d
-        throw(
-            ArgumentError(
-                "Observation matrices with a block-diagonal covariance structure " *
-                "require one column per ODE dimension (d = $d). " *
-                "Got a matrix of size $(size(M))."),
-        )
-    end
     indices = Vector{Int}(undef, o)
     for k in 1:o
         row = view(M, k, :)
@@ -182,7 +183,7 @@ function _partial_obs_indices(M::AbstractMatrix, d::Int)
     end
     return indices
 end
-function _partial_obs_indices(::UniformScaling, d::Int)
+function _partial_obs_indices(::UniformScaling)
     throw(
         ArgumentError(
             "Partial observations require an explicit observation matrix with one " *

@@ -148,21 +148,35 @@ end
 
     # Observation matrices must have one column per ODE dimension
     data_o1 = (t=times, u=[[0.0] for _ in times])
-    test_data_likelihoods_throw(
-        ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=[1 0 0], data=data_o1)
+    @testset "$alg" for alg in (EK0(), EK1(), DiagonalEK1())
+        test_data_likelihoods_throw(
+            ArgumentError, alg; kwargs..., observation_matrix=[1 0 0], data=data_o1)
+    end
 end
 
-@testset "Fenrir with second-order ODEs and a block-diagonal covariance" begin
-    # Fenrir observes `[du; u]` for second-order ODEs, which the block-wise update does
-    # not support yet
+@testset "Second-order ODEs" begin
+    # The observation matrix acts on `u` only, not on `du`
     prob2 = SecondOrderODEProblem(
-        (ddu, du, u, p, t) -> (ddu .= -u), [0.0, 1.0], [1.0, 0.0], (0.0, 2.0))
-    data2 = (t=[1.0, 2.0], u=[randn(4) for _ in 1:2])
-    @testset "$alg" for alg in (
-        DiagonalEK1(), EK0(diffusionmodel=FixedMVDiffusion(ones(2), false)))
-        @test_throws ArgumentError PNDE.fenrir_data_loglik(
-            prob2, alg; kwargs..., data=data2)
+        (ddu, du, u, p, t) -> (ddu .= -p .* u), [0.0, 1.0], [1.0, 0.0], (0.0, 10.0), 1.0,
+    )
+    obss2 = [randn(2) for _ in times]
+    @testset "H = $H" for (H, algs) in (
+        (I, (EK0(), EK1(), DiagonalEK1())),
+        (
+            [0 1],
+            (EK1(), DiagonalEK1(), EK0(diffusionmodel=FixedMVDiffusion(ones(2), false))),
+        ),
+    )
+        data2 = (t=times, u=[H * x for x in obss2])
+        @testset "$alg" for alg in algs
+            compare_data_likelihoods(
+                alg; kwargs..., problem=prob2, observation_matrix=H, data=data2)
+        end
     end
+    data_du = (t=times, u=[randn(1) for _ in times])
+    test_data_likelihoods_throw(
+        ArgumentError, EK1(); kwargs..., problem=prob2, observation_matrix=[0 0 1 0],
+        data=data_du)
 end
 
 @testset "Observation noise types: $(typeof(Σ))" for Σ in (

@@ -15,6 +15,7 @@ so use at your own risk!
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
   the matrix which maps the ODE state to the measurements; typically a projection matrix.
+  For second-order ODEs, it acts on `u` only, not on `du`.
   Partial observations (`o < d`) are supported with the `EK1` and `DiagonalEK1`; with
   the `DiagonalEK1`, non-diagonal observation matrices must select dimensions, i.e. each
   row must have exactly one nonzero entry (any scaling is fine)
