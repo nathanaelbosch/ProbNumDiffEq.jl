@@ -31,6 +31,17 @@ y(t) &= H x(t) + \varepsilon(t), \quad \varepsilon(t) \sim \mathcal{N}(0, R),
 ```
 where ``H`` is the observation matrix (`observation_matrix`) and
 ``R`` is the observation noise covariance (`observation_noise_cov`).
+For second-order ODEs, the observation matrix acts on `u` only, not on `du`.
+
+The rows of the observation matrix must not be zero. Observation matrices other than `I`
+(or a multiple of it), e.g. for partial observations (`o < d`), work with all solvers
+except the `EK0` with an `IWP` prior and a scalar diffusion, as by default; there, the
+observation noise must also be isotropic: a scalar variance, a `UniformScaling` or an
+`Eye`. With a block-diagonal covariance (the `DiagonalEK1`, or the `EK0` with a
+multivariate diffusion), observation matrices must select dimensions, i.e. each row must
+have exactly one nonzero entry (any scaling is fine) and no dimension may be observed
+twice, and the observation noise must be a scalar variance, a `UniformScaling` or a
+`Diagonal`.
 
 By passing a [`DataUpdateLogLikelihood`](@ref) object with the `loglikelihood` keyword
 argument, the log-likelihood of the data is computed and stored in the `ll` field, and can
@@ -49,41 +60,20 @@ function DataUpdateCallback(
         times, values = data.t, data.u
         idx = findfirst(isequal(integ.t), times)
         val = values[idx]
+        o = length(val)
+
+        H, R = make_observation_model(
+            integ.cache, observation_matrix, observation_noise_cov; o)
 
         # The initial value is known exactly, so no update is needed, only the likelihood
         if integ.iter == 0
-            ll = initial_data_loglik(
-                integ.u, val, observation_matrix, observation_noise_cov)
+            ll = initial_data_loglik(integ.u, val, observation_matrix, R)
             isnothing(loglikelihood) || (loglikelihood.ll += ll)
             return nothing
         end
 
-        o = length(val)
-        d = integ.cache.d
-
-        @unpack x, E0, m_tmp = integ.cache
-        M = observation_matrix
-        H = M * E0
-
-        obs_mean = _matmul!(view(m_tmp.μ, 1:o), H, x.μ)
-        obs_mean .-= val
-
-        R = cov2psdmatrix(observation_noise_cov; d=o)
-        R = to_factorized_matrix(integ.cache.covariance_factorization, R)
-
-        # _A = x.Σ.R * H'
-        # obs_cov = _A'_A + R
-        obs_cov = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
-
-        obs = Gaussian(obs_mean, obs_cov)
-
-        if o != d && !(integ.alg isa EK1)
-            error("Partial observations only work with the EK1 right now")
-        end
-        _cache = make_obssized_cache(integ.cache; o)
-        @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
-        _x = copy!(integ.cache.x_tmp, x)
-        _, ll = update!(x, _x, obs, H, K1, C_Dxd, C_DxD, C_dxd, C_d; R=R)
+        _, ll = measure_and_update!(
+            integ.cache.x, val, H, R, make_obssized_cache(integ.cache; o))
 
         if !isnothing(loglikelihood)
             loglikelihood.ll += ll
@@ -92,22 +82,10 @@ function DataUpdateCallback(
     return PresetTimeCallback(data.t, affect!; save_positions, kwargs...)
 end
 
-function initial_data_loglik(u0, val, M, observation_noise_cov)
+function initial_data_loglik(u0, val, M, R::PSDMatrix)
     (u0 isa RecursiveArrayTools.ArrayPartition) && (u0 = u0.x[2]) # for 2ndOrderODEs
-    R = Matrix(cov2psdmatrix(observation_noise_cov; d=length(val)))
-    return logpdf(Gaussian(M * vec(u0), R), val)
+    return logpdf(Gaussian(M * vec(u0), Matrix(R)), val)
 end
-
-function check_observation_noise_cov(cov)
-    if !_is_positive(cov)
-        throw(ArgumentError("The observation noise covariance must be positive definite."))
-    end
-end
-_is_positive(cov::Number) = cov > 0
-_is_positive(cov::UniformScaling) = cov.λ > 0
-_is_positive(cov::Diagonal) = all(>(0), cov.diag)
-# Dense covariances are checked by the Cholesky factorization in `cov2psdmatrix`
-_is_positive(cov) = true
 
 make_obscov_sqrt(PR::AbstractMatrix, H::AbstractMatrix, RR::AbstractMatrix) =
     qr!([PR * H'; RR]).R
@@ -138,7 +116,13 @@ function make_obssized_cache(::DenseCovariance, cache; o)
         C_Dxd=view(C_Dxd, :, 1:o),
         C_d=view(C_d, 1:o),
         C_DxD=C_DxD,
-        m_tmp=Gaussian(view(m_tmp.μ, 1:o), view(m_tmp.Σ, 1:o, 1:o)),
+        m_tmp=m_tmp,
         x_tmp=x_tmp,
     )
+end
+function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
+    # The block-wise `update!` only uses the first `o` blocks of the matrix caches
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
+    return (K1=K1, C_dxd=C_dxd, C_Dxd=C_Dxd, C_d=view(C_d, 1:o), C_DxD=C_DxD,
+        m_tmp=m_tmp, x_tmp=x_tmp)
 end

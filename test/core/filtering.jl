@@ -238,6 +238,47 @@ end
     end
 end
 
+@testset "SolutionObservation of a ScaledSelection with a block-diagonal covariance" begin
+    # Row `k` of `H = e0ᵀ ⊗ diag(m) Π` observes `m[k]` times the zeroth derivative of
+    # dimension `dims[k]`. Compare `_matmul!`, `make_obscov_sqrt` and `update!` with the
+    # dense `H = [M 0 ⋯ 0]`; dimension 2 is not observed and keeps its prediction.
+    d, q, m, dims = 3, 2, [2.0, -1.0], [3, 1]
+    o, D = length(dims), d * (q + 1)
+    M = PNDE.ScaledSelection(m, dims, d)
+    H = PNDE.SolutionObservation(M, q)
+    H_dense = [Matrix(M) zeros(o, d * q)]
+    blockdiag(f, n) = BlocksOfDiagonals([f() for _ in 1:n])
+    x_pred = Gaussian(
+        rand(D),
+        PSDMatrix(blockdiag(() -> Matrix(UpperTriangular(rand(q + 1, q + 1))), d)))
+    RR = blockdiag(() -> rand(1, 1), o)
+    P, R = Matrix(x_pred.Σ), Matrix(PSDMatrix(RR))
+
+    z = PNDE._matmul!(zeros(o), H, x_pred.μ)
+    @test z ≈ H_dense * x_pred.μ
+
+    SR = PNDE.make_obscov_sqrt(x_pred.Σ.R, H, RR)
+    S = Matrix(PSDMatrix(SR))
+    @test S ≈ H_dense * P * H_dense' + R
+
+    FAC = PNDE.BlockDiagonalCovariance{Float64}(o, q)
+    caches = (
+        PNDE.factorized_zeros(FAC, o * (q + 1), o),
+        PNDE.factorized_zeros(FAC, o * (q + 1), o),
+        PNDE.factorized_zeros(FAC, o * (q + 1), o * (q + 1)),
+        PNDE.factorized_zeros(FAC, o, o),
+        zeros(o),
+    )
+    residual = z - rand(o)
+    x_out = Gaussian(zero(x_pred.μ), PSDMatrix(zero(x_pred.Σ.R)))
+    _, ll = PNDE.update!(
+        x_out, x_pred, Gaussian(residual, PSDMatrix(SR)), H, caches...; R=PSDMatrix(RR))
+    K = P * H_dense' / S
+    @test x_out.μ ≈ x_pred.μ - K * residual
+    @test Matrix(x_out.Σ) ≈ P - K * S * K'
+    @test ll ≈ logpdf(Gaussian(residual, S), zeros(o))
+end
+
 @testset "UPDATE with observation noise" begin
     # Setup
     d = 5

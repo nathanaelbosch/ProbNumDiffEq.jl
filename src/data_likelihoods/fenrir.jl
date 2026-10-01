@@ -21,8 +21,18 @@ so use at your own risk!
 - `alg::AbstractEK`: the probabilistic ODE solver to be used; use `EK1` for best results.
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
-  the matrix which maps the ODE state to the measurements; typically a projection matrix
-- `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
+  the matrix which maps the ODE state to the measurements; typically a projection matrix.
+  For second-order ODEs, it acts on `u` only, not on `du`. Its rows must not be zero.
+  Observation matrices other than `I` (or a multiple of it), e.g. for partial
+  observations (`o < d`), work with all solvers except the `EK0` with an `IWP` prior and
+  a scalar diffusion, as by default. With a block-diagonal covariance (the `DiagonalEK1`,
+  or the `EK0` with a multivariate diffusion), observation matrices must select
+  dimensions, i.e. each row must have exactly one nonzero entry (any scaling is fine) and
+  no dimension may be observed twice.
+- `observation_noise_cov::Union{Number,UniformScaling,AbstractMatrix}`: the observation
+  noise covariance, or a scalar variance. With a block-diagonal covariance it must be a
+  scalar, a `UniformScaling` or a `Diagonal`, and with the `EK0` with an `IWP` prior and
+  a scalar diffusion a scalar, a `UniformScaling` or an `Eye`.
 
 # Reference
 * [Tronarp et al. (2022)](@cite tronarp22fenrir) "Fenrir: Physics-Enhanced Regression for Initial Value Problems", ICML
@@ -46,6 +56,10 @@ function fenrir_data_loglik(
 
     integ = init(prob, alg, args...; tstops, kwargs...)
 
+    # Build the observation model before the solve, such that unsupported inputs fail early
+    H, R = make_observation_model(
+        integ.cache, observation_matrix, observation_noise_cov; o=length(data.u[1]))
+
     T = prob.tspan[2] - prob.tspan[1]
     step!(integ, T, false) # basically `solve!` but this prevents smoothing
     sol = integ.sol
@@ -56,33 +70,25 @@ function fenrir_data_loglik(
     end
 
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
-    o = length(data.u[1])
-    R = cov2psdmatrix(observation_noise_cov; d=o)
-    R = to_factorized_matrix(integ.cache.covariance_factorization, R)
-    LL, _, _ = fit_pnsolution_to_data!(sol, R, data; proj=observation_matrix)
+    LL, _, _ = fit_pnsolution_to_data!(sol, H, R, data)
 
     return LL
 end
 
 function fit_pnsolution_to_data!(
     sol::AbstractProbODESolution,
+    H,
     observation_noise_cov::PSDMatrix,
-    data::NamedTuple{(:t, :u)};
-    proj=I,
+    data::NamedTuple{(:t, :u)},
 )
     @unpack cache, backward_kernels = sol
-    @unpack A, Q, x_tmp, x_tmp2, m_tmp, C_DxD, C_3DxD = cache
+    @unpack C_DxD, C_3DxD = cache
 
     LL = zero(eltype(sol.prob.p))
 
-    o = length(data.u[1])
-    d = cache.d
-    @unpack x_tmp, m_tmp = cache
-    _cache = make_obssized_cache(cache; o)
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d = _cache
+    _cache = make_obssized_cache(cache; o=length(data.u[1]))
 
     x_posterior = copy(sol.x_filt) # the object to be filled
-    state2data_projmat = proj * cache.SolProj
 
     # First update on the last data point, if it lies at the end of the solution
     data_idx = length(data.u)
@@ -90,7 +96,7 @@ function fit_pnsolution_to_data!(
         _, ll = measure_and_update!(
             x_posterior[end],
             data.u[data_idx],
-            state2data_projmat,
+            H,
             observation_noise_cov,
             _cache,
         )
@@ -113,7 +119,7 @@ function fit_pnsolution_to_data!(
             _, ll = measure_and_update!(
                 x_posterior[i],
                 data.u[data_idx],
-                state2data_projmat,
+                H,
                 observation_noise_cov,
                 _cache,
             )
@@ -127,7 +133,7 @@ function fit_pnsolution_to_data!(
 end
 
 function measure_and_update!(x, u, H, R::PSDMatrix, cache)
-    z, S = mean(cache.m_tmp), cov(cache.m_tmp)
+    z = view(mean(cache.m_tmp), 1:length(u))
     _matmul!(z, H, x.μ)
     z .-= u
     S = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
