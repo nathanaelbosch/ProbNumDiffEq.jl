@@ -131,7 +131,7 @@ end
     # EK0 with the default isometric-kronecker covariance structure does not support
     # partial observations
     test_data_likelihoods_throw(
-        ErrorException, EK0(); kwargs..., observation_matrix=H, data=data_part)
+        ArgumentError, EK0(); kwargs..., observation_matrix=H, data=data_part)
 
     # Observation noise covariances which can not be decomposed into one noise
     # variance per observation (e.g. correlated noise) are not supported
@@ -151,6 +151,14 @@ end
     @testset "$alg" for alg in (EK0(), EK1(), DiagonalEK1())
         test_data_likelihoods_throw(
             ArgumentError, alg; kwargs..., observation_matrix=[1 0 0], data=data_o1)
+    end
+
+    # At most `d` observations per data point
+    H_tall = [1 0; 0 1; 1 0]
+    data_tall = (t=times, u=[H_tall * x for x in obss])
+    @testset "$alg" for alg in (EK0(), EK1(), DiagonalEK1())
+        test_data_likelihoods_throw(
+            ArgumentError, alg; kwargs..., observation_matrix=H_tall, data=data_tall)
     end
 end
 

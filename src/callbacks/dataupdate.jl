@@ -104,6 +104,13 @@ function observation_model(cache, M, noise_cov; o)
                 "acts on `u` only."),
         )
     end
+    if o > cache.d
+        throw(
+            ArgumentError(
+                "The data has $o entries, but at most d = $(cache.d) (the ODE " *
+                "dimension) are supported right now."),
+        )
+    end
     fac = cache.covariance_factorization
     is_structured = if fac isa BlockDiagonalCovariance
         # `M * E0` is only block-diagonal for diagonal observation matrices; any other
@@ -135,11 +142,12 @@ function block_selection_model(
         cov2psdmatrix(_diagonal_noise(noise_cov); d=o))
     return BlockSelection(H, obs_dims), R
 end
-block_selection_model(fac, M, E0, noise_cov; o) = error(
-    "Partial observations require a `DenseCovariance` or " *
-    "`BlockDiagonalCovariance` covariance structure (like the `EK1` or " *
-    "`DiagonalEK1`); they are not supported with the isometric-kronecker " *
-    "structure right now",
+block_selection_model(fac, M, E0, noise_cov; o) = throw(
+    ArgumentError(
+        "Partial observations require a `DenseCovariance` or " *
+        "`BlockDiagonalCovariance` covariance structure (like the `EK1` or " *
+        "`DiagonalEK1`); they are not supported with the isometric-kronecker " *
+        "structure right now"),
 )
 
 _diagonal_noise(cov::Union{Number,UniformScaling,Diagonal}) = cov

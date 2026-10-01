@@ -238,6 +238,34 @@ end
     end
 end
 
+@testset "UPDATE of a subset of blocks" begin
+    # The state blocks that are not observed keep their predicted values, also when
+    # `x_out` does not start as a copy of `x_pred`
+    d, q, obs_dims = 3, 2, [3, 1]
+    o = length(obs_dims)
+    blockdiag(f, n) = BlocksOfDiagonals([f() for _ in 1:n])
+    uppertri() = Matrix(UpperTriangular(rand(q + 1, q + 1)))
+    x_pred = Gaussian(rand(d * (q + 1)), PSDMatrix(blockdiag(uppertri, d)))
+    msmnt = Gaussian(rand(o), PSDMatrix(blockdiag(() -> rand(1, 1) .+ 1, o)))
+    H = blockdiag(() -> rand(1, q + 1), o)
+    caches = (
+        blockdiag(() -> zeros(q + 1, 1), o),
+        blockdiag(() -> zeros(q + 1, 1), o),
+        blockdiag(() -> zeros(q + 1, q + 1), o),
+        blockdiag(() -> zeros(1, 1), o),
+        zeros(o),
+    )
+
+    x_out = copy(x_pred)
+    _, ll = PNDE.update!(x_out, x_pred, msmnt, H, caches...; obs_dims)
+    x_out_zero = Gaussian(zero(x_pred.μ), PSDMatrix(zero(x_pred.Σ.R)))
+    _, ll_zero = PNDE.update!(x_out_zero, x_pred, msmnt, H, caches...; obs_dims)
+    @test x_out_zero == x_out
+    @test ll_zero == ll
+    @test x_out.μ[2:d:end] == x_pred.μ[2:d:end]
+    @test x_out.μ[1:d:end] != x_pred.μ[1:d:end]
+end
+
 @testset "UPDATE with observation noise" begin
     # Setup
     d = 5

@@ -213,7 +213,10 @@ function update!(
     o = length(obs_dims)
 
     # Block `k` of the measurement observes block `obs_dims[k]` of the state; the state
-    # blocks that are not observed are left untouched
+    # blocks that are not observed keep their predicted values
+    if o < d
+        copy!(x_out, x_pred)
+    end
     ll = zero(eltype(x_out.μ))
     @views for (k, i) in enumerate(obs_dims)
         _, _ll = update!(
