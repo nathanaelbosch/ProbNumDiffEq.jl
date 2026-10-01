@@ -264,8 +264,17 @@ end
     _, ll_zero = PNDE.update!(x_out_zero, x_pred, msmnt, H, caches...; obs_dims)
     @test x_out_zero == x_out
     @test ll_zero == ll
-    @test x_out.μ[2:d:end] == x_pred.μ[2:d:end]
-    @test x_out.μ[1:d:end] != x_pred.μ[1:d:end]
+
+    # Dense reference: measurement `k` observes state block `obs_dims[k]`
+    H_dense = zeros(o, d * (q + 1))
+    for (k, i) in enumerate(obs_dims)
+        H_dense[k, i:d:end] .= vec(H.blocks[k])
+    end
+    P, S = Matrix(x_pred.Σ), Matrix(msmnt.Σ)
+    K = P * H_dense' / S
+    @test x_out.μ ≈ x_pred.μ - K * msmnt.μ
+    @test Matrix(x_out.Σ) ≈ (I - K * H_dense) * P * (I - K * H_dense)'
+    @test ll ≈ logpdf(Gaussian(msmnt.μ, S), zeros(o))
 end
 
 @testset "UPDATE with observation noise" begin

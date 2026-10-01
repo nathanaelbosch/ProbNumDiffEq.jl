@@ -29,6 +29,7 @@ function compare_data_likelihoods(alg; problem=prob, kwargs...)
     )
     @test dalton_ll ≈ filtering_ll rtol = 1e-6
     @test dalton_ll ≈ fenrir_ll rtol = 1e-6
+    return dalton_ll
 end
 
 kwargs = (
@@ -94,6 +95,31 @@ end
         prob, remake(DiagonalEK1(), smooth=false); kwargs...,
         observation_matrix=P, data=data_perm,
     ) ≈ PNDE.dalton_data_loglik(prob, remake(DiagonalEK1(), smooth=false); kwargs...)
+    # On `prob_lin`, the block-wise update of the `DiagonalEK1` matches the dense one of
+    # the `EK1`, also for scaled observations in unsorted order
+    H_lin = [0 0 2; 1 0 0]
+    data_lin = (t=[1.0, 4.0], u=[H_lin * randn(3) for _ in 1:2])
+    ll_ek1, ll_diag = (
+        compare_data_likelihoods(
+            alg; kwargs..., problem=prob_lin, observation_matrix=H_lin, data=data_lin)
+        for alg in (EK1(), DiagonalEK1())
+    )
+    @test ll_diag ≈ ll_ek1 rtol = 1e-6
+end
+
+@testset "Scalar observation matrices" begin
+    @testset "$alg" for alg in (EK0(), EK1(), DiagonalEK1())
+        lls = [
+            compare_data_likelihoods(
+                alg;
+                kwargs...,
+                observation_matrix=M,
+                data=observe(2I),
+            )
+            for M in (2.0, 2I)
+        ]
+        @test lls[1] ≈ lls[2]
+    end
 end
 
 function test_data_likelihoods_throw(E, alg; problem=prob, kwargs...)
@@ -106,10 +132,9 @@ end
     # Partial observations with `DiagonalEK1` require dimension-selection observation
     # matrices: each row must have exactly one nonzero entry (any scaling is fine);
     # rows that mix dimensions can not be handled block-wise
-    @testset "H = $H" for H in ([1 1], [0 0])
-        test_data_likelihoods_throw(
-            ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=H, data=observe(H))
-    end
+    H = [1 1]
+    test_data_likelihoods_throw(
+        ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=H, data=observe(H))
 
     # Observing the same dimension twice requires at least three state dimensions
     times3 = [1.0, 4.0]
@@ -119,10 +144,16 @@ end
         ArgumentError, DiagonalEK1(); kwargs...,
         problem=prob_lin, observation_matrix=H3, data=data3)
 
-    # EK0 with the default isometric-kronecker covariance structure does not support
-    # partial observations
-    test_data_likelihoods_throw(
-        ArgumentError, EK0(); kwargs..., observation_matrix=H_part, data=data_part)
+    # EK0 with the default isometric-kronecker covariance structure only supports `I` as
+    # observation matrix, and isotropic noise
+    P = [0 1; 1 0]
+    for bad in (
+        (observation_matrix=H_part, data=data_part),
+        (observation_matrix=P, data=observe(P)),
+        (observation_noise_cov=Diagonal([σ^2, 2σ^2]),),
+    )
+        test_data_likelihoods_throw(ArgumentError, EK0(); kwargs..., bad...)
+    end
 
     # Observation noise covariances which can not be decomposed into one noise
     # variance per observation (e.g. correlated noise) are not supported
@@ -134,17 +165,27 @@ end
         data=data2)
 
     # With every solver, the observation matrix needs one row per data entry (the default
-    # `I` has `d`), one column per ODE dimension, and at most `d` rows
+    # `I` has `d`), one column per ODE dimension, at most `d` rows and no zero rows, and
+    # the noise covariance one row and column per data entry
     H_tall = [1 0; 0 1; 1 0]
     @testset "$alg" for alg in (EK0(), EK1(), DiagonalEK1())
-        for (E, H, bad_data) in (
-            (DimensionMismatch, [1 0], data),
-            (DimensionMismatch, I, data_part),
-            (ArgumentError, [1 0 0], (t=times, u=[[0.0] for _ in times])),
-            (ArgumentError, H_tall, observe(H_tall)),
+        for (E, bad) in (
+            (DimensionMismatch, (observation_matrix=[1 0], data=data)),
+            (DimensionMismatch, (observation_matrix=I, data=data_part)),
+            (
+                DimensionMismatch,
+                (observation_matrix=H_part, data=data_part,
+                    observation_noise_cov=σ^2 * I(2)),
+            ),
+            (
+                ArgumentError,
+                (observation_matrix=[1 0 0], data=(t=times, u=[[0.0] for _ in times])),
+            ),
+            (ArgumentError, (observation_matrix=H_tall, data=observe(H_tall))),
+            (ArgumentError, (observation_matrix=[0 0], data=observe([0 0]))),
+            (ArgumentError, (observation_matrix=Diagonal([1, 0]), data=data)),
         )
-            test_data_likelihoods_throw(
-                E, alg; kwargs..., observation_matrix=H, data=bad_data)
+            test_data_likelihoods_throw(E, alg; kwargs..., bad...)
         end
     end
 end
@@ -185,10 +226,8 @@ end
     (PSDMatrix(randn(2, 2))),
 )
     @testset "$alg" for alg in (EK0(), DiagonalEK1(), EK1())
-        if alg isa EK0 && !(
-            Σ isa Number || Σ isa UniformScaling ||
-            Σ isa Diagonal{<:Number,<:FillArrays.Fill}
-        )
+        if alg isa EK0 && Σ isa AbstractMatrix &&
+           !(isdiag(Matrix(Σ)) && allequal(diag(Matrix(Σ))))
             continue
         end
         if alg isa DiagonalEK1 && Σ isa AbstractMatrix && !isdiag(Matrix(Σ))

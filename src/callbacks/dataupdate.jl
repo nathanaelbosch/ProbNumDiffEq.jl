@@ -33,11 +33,13 @@ where ``H`` is the observation matrix (`observation_matrix`) and
 ``R`` is the observation noise covariance (`observation_noise_cov`).
 For second-order ODEs, the observation matrix acts on `u` only, not on `du`.
 
-Partial observations (`o < d`) work with all solvers except the `EK0` with an `IWP` prior
-and a scalar diffusion, as by default. With a block-diagonal covariance (the `DiagonalEK1`,
-or the `EK0` with a multivariate diffusion), observation matrices must select dimensions,
-i.e. each row must have exactly one nonzero entry (any scaling is fine), and the
-observation noise must be uncorrelated.
+The rows of the observation matrix must not be zero. Observation matrices other than `I`
+(or a multiple of it), e.g. for partial observations (`o < d`), work with all solvers
+except the `EK0` with an `IWP` prior and a scalar diffusion, as by default; there, the
+observation noise must also be a multiple of the identity. With a block-diagonal
+covariance (the `DiagonalEK1`, or the `EK0` with a multivariate diffusion), observation
+matrices must select dimensions, i.e. each row must have exactly one nonzero entry (any
+scaling is fine), and the observation noise must be uncorrelated.
 
 By passing a [`DataUpdateLogLikelihood`](@ref) object with the `loglikelihood` keyword
 argument, the log-likelihood of the data is computed and stored in the `ll` field, and can
@@ -94,6 +96,7 @@ _is_positive(cov::AbstractMatrix) = isposdef(Matrix(cov))
 
 function observation_model(cache, M, noise_cov; o)
     d = cache.d
+    M isa Number && (M = M * I)
     rows, cols = M isa UniformScaling ? (d, d) : size(M)
     if cols != d
         throw(
@@ -117,31 +120,61 @@ function observation_model(cache, M, noise_cov; o)
                 "dimension) are supported right now."),
         )
     end
-    fac = cache.covariance_factorization
-    if fac isa BlockDiagonalCovariance
-        return block_selection_model(fac, M, cache.E0, noise_cov; o)
+    k = _zero_row(M)
+    if !isnothing(k)
+        throw(ArgumentError("Row $k of the observation matrix is zero."))
     end
-    if fac isa IsometricKroneckerCovariance && o != d
+    if noise_cov isa AbstractMatrix && size(noise_cov) != (o, o)
         throw(
-            ArgumentError(
-                "Partial observations require a `DenseCovariance` or " *
-                "`BlockDiagonalCovariance` covariance structure (like the `EK1` or " *
-                "`DiagonalEK1`); they are not supported with the isometric-kronecker " *
-                "structure right now"),
+            DimensionMismatch(
+                "The observation noise covariance must be $o×$o, one row and column per " *
+                "data entry, but has size $(size(noise_cov))."),
         )
     end
-    R = to_factorized_matrix(fac, cov2psdmatrix(noise_cov; d=o))
-    return M * cache.E0, R
+    return observation_model(cache.covariance_factorization, M, cache.E0, noise_cov; o)
 end
-function block_selection_model(
-    fac::BlockDiagonalCovariance{T}, M, E0, noise_cov; o,
-) where {T}
+function observation_model(fac::DenseCovariance, M, E0, noise_cov; o)
+    return M * E0, to_factorized_matrix(fac, cov2psdmatrix(noise_cov; d=o))
+end
+function observation_model(fac::IsometricKroneckerCovariance, M, E0, noise_cov; o)
+    if !(M isa UniformScaling)
+        throw(
+            ArgumentError(
+                "The isometric-kronecker covariance structure (e.g. of the default " *
+                "`EK0`) only supports the observation matrix `I` or multiples of it. " *
+                "For other observation matrices, e.g. partial observations, use a " *
+                "solver with a `DenseCovariance` or `BlockDiagonalCovariance` covariance " *
+                "structure, like the `EK1` or `DiagonalEK1`."),
+        )
+    end
+    R = to_factorized_matrix(fac, cov2psdmatrix(_isotropic_noise(noise_cov); d=o))
+    return M * E0, R
+end
+function observation_model(fac::BlockDiagonalCovariance{T}, M, E0, noise_cov; o) where {T}
     obs_dims = _selected_dims(M, o)
     H = BlocksOfDiagonals([M[k, i] * blocks(E0)[i] for (k, i) in enumerate(obs_dims)])
     R = to_factorized_matrix(
         BlockDiagonalCovariance{T}(o, fac.q),
         cov2psdmatrix(_diagonal_noise(noise_cov); d=o))
     return BlockSelection(H, obs_dims), R
+end
+
+_zero_row(M::UniformScaling) = iszero(M.λ) ? 1 : nothing
+_zero_row(M::Diagonal) = findfirst(iszero, M.diag)
+_zero_row(M::AbstractMatrix) = findfirst(row -> all(iszero, row), eachrow(M))
+
+_isotropic_noise(cov::Union{Number,UniformScaling}) = cov
+function _isotropic_noise(cov::AbstractMatrix)
+    C = Matrix(cov)
+    if !(isdiag(C) && allequal(diag(C)))
+        throw(
+            ArgumentError(
+                "Observations with the isometric-kronecker covariance structure (e.g. " *
+                "of the default `EK0`) require isotropic observation noise, i.e. a " *
+                "multiple of the identity."),
+        )
+    end
+    return C[1, 1]
 end
 
 _diagonal_noise(cov::Union{Number,UniformScaling,Diagonal}) = cov
@@ -162,16 +195,14 @@ _selected_dims(::Diagonal, o) = collect(1:o)
 function _selected_dims(M::AbstractMatrix, o)
     indices = Vector{Int}(undef, o)
     for k in 1:o
-        row = view(M, k, :)
-        nz = findall(!iszero, row)
+        nz = findall(!iszero, view(M, k, :))
         if length(nz) != 1
-            problem = isempty(nz) ? "has no nonzero entry" : "mixes dimensions"
             throw(
                 ArgumentError(
                     "Observation matrices with a block-diagonal covariance structure " *
                     "(e.g. the `DiagonalEK1`) must select dimensions: each row must " *
                     "have exactly one nonzero entry (any scaling is fine). " *
-                    "Row $k $problem."),
+                    "Row $k mixes dimensions."),
             )
         end
         indices[k] = nz[1]
@@ -234,20 +265,9 @@ function make_obssized_cache(::DenseCovariance, cache; o)
         C_Dxd=view(C_Dxd, :, 1:o),
         C_d=view(C_d, 1:o),
         C_DxD=C_DxD,
-        m_tmp=Gaussian(view(m_tmp.μ, 1:o), view(m_tmp.Σ, 1:o, 1:o)),
+        m_tmp=m_tmp,
         x_tmp=x_tmp,
     )
 end
-function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
-    # The block-wise `update!` only uses the first `o` blocks of the caches
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
-    return (
-        K1=K1,
-        C_dxd=C_dxd,
-        C_Dxd=C_Dxd,
-        C_d=C_d,
-        C_DxD=C_DxD,
-        m_tmp=Gaussian(view(m_tmp.μ, 1:o), m_tmp.Σ),
-        x_tmp=x_tmp,
-    )
-end
+# The block-wise `update!` only uses the first `o` blocks of the caches
+make_obssized_cache(::BlockDiagonalCovariance, cache; o) = cache

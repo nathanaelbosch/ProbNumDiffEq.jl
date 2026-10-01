@@ -22,13 +22,16 @@ so use at your own risk!
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
   the matrix which maps the ODE state to the measurements; typically a projection matrix.
-  For second-order ODEs, it acts on `u` only, not on `du`.
-  Partial observations (`o < d`) work with all solvers except the `EK0` with an `IWP`
-  prior and a scalar diffusion, as by default. With a block-diagonal covariance (the
-  `DiagonalEK1`, or the `EK0` with a multivariate diffusion), observation matrices must
-  select dimensions, i.e. each row must have exactly one nonzero entry (any scaling is
-  fine), and the observation noise must be uncorrelated
-- `observation_noise_cov::Union{Number,AbstractMatrix}`: the scalar observation noise variance
+  For second-order ODEs, it acts on `u` only, not on `du`. Its rows must not be zero.
+  Observation matrices other than `I` (or a multiple of it), e.g. for partial
+  observations (`o < d`), work with all solvers except the `EK0` with an `IWP` prior and
+  a scalar diffusion, as by default. With a block-diagonal covariance (the `DiagonalEK1`,
+  or the `EK0` with a multivariate diffusion), observation matrices must select
+  dimensions, i.e. each row must have exactly one nonzero entry (any scaling is fine).
+- `observation_noise_cov::Union{Number,UniformScaling,AbstractMatrix}`: the observation
+  noise covariance, or a scalar variance. With a block-diagonal covariance it must be
+  diagonal, and with the `EK0` with an `IWP` prior and a scalar diffusion a multiple of
+  the identity.
 
 # Reference
 * [Tronarp et al. (2022)](@cite tronarp22fenrir) "Fenrir: Physics-Enhanced Regression for Initial Value Problems", ICML
@@ -129,7 +132,7 @@ function fit_pnsolution_to_data!(
 end
 
 function measure_and_update!(x, u, H, R::PSDMatrix, cache)
-    z, S = mean(cache.m_tmp), cov(cache.m_tmp)
+    z = view(mean(cache.m_tmp), 1:length(u))
     _matmul!(z, H, x.μ)
     z .-= u
     S = PSDMatrix(make_obscov_sqrt(x.Σ.R, H, R.R))
