@@ -277,3 +277,5 @@ function Base.hcat(K1::IKP, K2::IKP)
     @assert K1.rdim == K2.rdim
     return IKP(K1.rdim, hcat(K1.B, K2.B))
 end
+
+const KroneckerPSD{T} = PSDMatrix{T,<:IsometricKroneckerProduct}
