@@ -27,11 +27,12 @@ so use at your own risk!
   observations (`o < d`), work with all solvers except the `EK0` with an `IWP` prior and
   a scalar diffusion, as by default. With a block-diagonal covariance (the `DiagonalEK1`,
   or the `EK0` with a multivariate diffusion), observation matrices must select
-  dimensions, i.e. each row must have exactly one nonzero entry (any scaling is fine).
+  dimensions, i.e. each row must have exactly one nonzero entry (any scaling is fine) and
+  no dimension may be observed twice.
 - `observation_noise_cov::Union{Number,UniformScaling,AbstractMatrix}`: the observation
-  noise covariance, or a scalar variance. With a block-diagonal covariance it must be
-  diagonal, and with the `EK0` with an `IWP` prior and a scalar diffusion a multiple of
-  the identity.
+  noise covariance, or a scalar variance. With a block-diagonal covariance it must be a
+  scalar, a `UniformScaling` or a `Diagonal`, and with the `EK0` with an `IWP` prior and
+  a scalar diffusion a scalar, a `UniformScaling` or an `Eye`.
 
 # Reference
 * [Tronarp et al. (2022)](@cite tronarp22fenrir) "Fenrir: Physics-Enhanced Regression for Initial Value Problems", ICML
@@ -56,7 +57,7 @@ function fenrir_data_loglik(
     integ = init(prob, alg, args...; tstops, kwargs...)
 
     # Build the observation model before the solve, such that unsupported inputs fail early
-    H, R = observation_model(
+    H, R = make_observation_model(
         integ.cache, observation_matrix, observation_noise_cov; o=length(data.u[1]))
 
     T = prob.tspan[2] - prob.tspan[1]

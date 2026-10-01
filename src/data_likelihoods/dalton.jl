@@ -20,11 +20,12 @@ so use at your own risk!
   observations (`o < d`), work with all solvers except the `EK0` with an `IWP` prior and
   a scalar diffusion, as by default. With a block-diagonal covariance (the `DiagonalEK1`,
   or the `EK0` with a multivariate diffusion), observation matrices must select
-  dimensions, i.e. each row must have exactly one nonzero entry (any scaling is fine).
+  dimensions, i.e. each row must have exactly one nonzero entry (any scaling is fine) and
+  no dimension may be observed twice.
 - `observation_noise_cov::Union{Number,UniformScaling,AbstractMatrix}`: the observation
-  noise covariance, or a scalar variance. With a block-diagonal covariance it must be
-  diagonal, and with the `EK0` with an `IWP` prior and a scalar diffusion a multiple of
-  the identity.
+  noise covariance, or a scalar variance. With a block-diagonal covariance it must be a
+  scalar, a `UniformScaling` or a `Diagonal`, and with the `EK0` with an `IWP` prior and
+  a scalar diffusion a scalar, a `UniformScaling` or an `Eye`.
 
 # Reference
 * [Wu & Lysy (2023)](@cite wu23dalton) "Data-Adaptive Probabilistic Likelihood Approximation for Ordinary Differential Equations"

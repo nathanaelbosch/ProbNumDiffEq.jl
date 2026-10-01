@@ -10,8 +10,8 @@ import Base:
     eltype, rand
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
-    UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, isdiag,
-    ishermitian, isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
+    UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
+    isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 import Random: Random, AbstractRNG
@@ -148,6 +148,7 @@ if !isdefined(Base, :get_extension)
     include("../ext/DiffEqDevToolsExt.jl")
 end
 
+include("observation_model.jl")
 include("callbacks/manifoldupdate.jl")
 export ManifoldUpdate
 include("callbacks/dataupdate.jl")

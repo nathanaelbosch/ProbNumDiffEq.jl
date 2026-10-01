@@ -238,44 +238,45 @@ end
     end
 end
 
-@testset "UPDATE of a subset of blocks" begin
-    # The state blocks that are not observed keep their predicted values, also when
-    # `x_out` does not start as a copy of `x_pred`
-    d, q, obs_dims = 3, 2, [3, 1]
-    o = length(obs_dims)
+@testset "SolutionObservation of a ScaledSelection with a block-diagonal covariance" begin
+    # Row `k` of `H = e0ᵀ ⊗ diag(m) Π` observes `m[k]` times the zeroth derivative of
+    # dimension `dims[k]`. Compare `_matmul!`, `make_obscov_sqrt` and `update!` with the
+    # dense `H = [M 0 ⋯ 0]`; dimension 2 is not observed and keeps its prediction.
+    d, q, m, dims = 3, 2, [2.0, -1.0], [3, 1]
+    o, D = length(dims), d * (q + 1)
+    M = PNDE.ScaledSelection(m, dims, d)
+    H = PNDE.SolutionObservation(M, q)
+    H_dense = [Matrix(M) zeros(o, d * q)]
     blockdiag(f, n) = BlocksOfDiagonals([f() for _ in 1:n])
-    uppertri() = Matrix(UpperTriangular(rand(q + 1, q + 1)))
-    x_pred = Gaussian(rand(d * (q + 1)), PSDMatrix(blockdiag(uppertri, d)))
-    msmnt = Gaussian(rand(o), PSDMatrix(blockdiag(() -> rand(1, 1) .+ 1, o)))
-    H = blockdiag(() -> rand(1, q + 1), o)
+    x_pred = Gaussian(
+        rand(D),
+        PSDMatrix(blockdiag(() -> Matrix(UpperTriangular(rand(q + 1, q + 1))), d)))
+    RR = blockdiag(() -> rand(1, 1), o)
+    P, R = Matrix(x_pred.Σ), Matrix(PSDMatrix(RR))
+
+    z = PNDE._matmul!(zeros(o), H, x_pred.μ)
+    @test z ≈ H_dense * x_pred.μ
+
+    SR = PNDE.make_obscov_sqrt(x_pred.Σ.R, H, RR)
+    S = Matrix(PSDMatrix(SR))
+    @test S ≈ H_dense * P * H_dense' + R
+
     FAC = PNDE.BlockDiagonalCovariance{Float64}(o, q)
-    D_o = o * (q + 1)
     caches = (
-        PNDE.factorized_zeros(FAC, D_o, o),
-        PNDE.factorized_zeros(FAC, D_o, o),
-        PNDE.factorized_zeros(FAC, D_o, D_o),
+        PNDE.factorized_zeros(FAC, o * (q + 1), o),
+        PNDE.factorized_zeros(FAC, o * (q + 1), o),
+        PNDE.factorized_zeros(FAC, o * (q + 1), o * (q + 1)),
         PNDE.factorized_zeros(FAC, o, o),
         zeros(o),
     )
-
-    x_out = copy(x_pred)
-    _, ll = PNDE.update!(x_out, x_pred, msmnt, PNDE.BlockSelection(H, obs_dims), caches...)
-    x_out_zero = Gaussian(zero(x_pred.μ), PSDMatrix(zero(x_pred.Σ.R)))
-    _, ll_zero = PNDE.update!(
-        x_out_zero, x_pred, msmnt, PNDE.BlockSelection(H, obs_dims), caches...)
-    @test x_out_zero == x_out
-    @test ll_zero == ll
-
-    # Dense reference: measurement `k` observes state block `obs_dims[k]`
-    H_dense = zeros(o, d * (q + 1))
-    for (k, i) in enumerate(obs_dims)
-        H_dense[k, i:d:end] .= vec(H.blocks[k])
-    end
-    P, S = Matrix(x_pred.Σ), Matrix(msmnt.Σ)
+    residual = z - rand(o)
+    x_out = Gaussian(zero(x_pred.μ), PSDMatrix(zero(x_pred.Σ.R)))
+    _, ll = PNDE.update!(
+        x_out, x_pred, Gaussian(residual, PSDMatrix(SR)), H, caches...; R=PSDMatrix(RR))
     K = P * H_dense' / S
-    @test x_out.μ ≈ x_pred.μ - K * msmnt.μ
-    @test Matrix(x_out.Σ) ≈ (I - K * H_dense) * P * (I - K * H_dense)'
-    @test ll ≈ logpdf(Gaussian(msmnt.μ, S), zeros(o))
+    @test x_out.μ ≈ x_pred.μ - K * residual
+    @test Matrix(x_out.Σ) ≈ P - K * S * K'
+    @test ll ≈ logpdf(Gaussian(residual, S), zeros(o))
 end
 
 @testset "UPDATE with observation noise" begin

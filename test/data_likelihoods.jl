@@ -32,6 +32,12 @@ function compare_data_likelihoods(alg; problem=prob, kwargs...)
     return dalton_ll
 end
 
+function test_data_likelihoods_throw(E, alg; problem=prob, kwargs...)
+    @test_throws E PNDE.dalton_data_loglik(problem, remake(alg, smooth=false); kwargs...)
+    @test_throws E PNDE.filtering_data_loglik(problem, remake(alg, smooth=false); kwargs...)
+    @test_throws E PNDE.fenrir_data_loglik(problem, remake(alg, smooth=true); kwargs...)
+end
+
 kwargs = (
     observation_noise_cov=σ^2,
     data=data,
@@ -79,8 +85,8 @@ end
             observation_matrix=H2, observation_noise_cov=4σ^2, data=data_scaled)
     end
     # Observation noise covariance types, like in the testset below, but for partial
-    # observations; the per-observation noise variances are extracted from the matrix
-    for R in (σ^2 * I, Diagonal([σ^2]), fill(σ^2, 1, 1), PSDMatrix(fill(σ, 1, 1)))
+    # observations
+    for R in (σ^2 * I, Diagonal([σ^2]))
         compare_data_likelihoods(
             DiagonalEK1(); kwargs...,
             observation_matrix=H_part, observation_noise_cov=R, data=data_part)
@@ -122,47 +128,37 @@ end
     end
 end
 
-function test_data_likelihoods_throw(E, alg; problem=prob, kwargs...)
-    @test_throws E PNDE.dalton_data_loglik(problem, remake(alg, smooth=false); kwargs...)
-    @test_throws E PNDE.filtering_data_loglik(problem, remake(alg, smooth=false); kwargs...)
-    @test_throws E PNDE.fenrir_data_loglik(problem, remake(alg, smooth=true); kwargs...)
+@testset "Observation matrix structures" begin
+    # `H = e0ᵀ ⊗ M` has the structure of `M`, so each type of `M` works with the covariance
+    # structures that can represent it, and raises an `ArgumentError` with the others
+    algs = (dense=EK1(), kronecker=EK0(), blockdiagonal=DiagonalEK1())
+    @testset "M = $M" for (M, supported) in (
+        (2I, (:dense, :kronecker, :blockdiagonal)),
+        (Diagonal([1, 2]), (:dense, :blockdiagonal)),
+        ([0 2; 1 0], (:dense, :blockdiagonal)),
+        ([1 0], (:dense, :blockdiagonal)),
+        ([1 1; 0 1], (:dense,)),
+    )
+        @testset "$structure" for (structure, alg) in pairs(algs)
+            if structure in supported
+                compare_data_likelihoods(
+                    alg; kwargs..., observation_matrix=M, data=observe(M))
+            else
+                test_data_likelihoods_throw(
+                    ArgumentError, alg; kwargs..., observation_matrix=M, data=observe(M))
+            end
+        end
+    end
 end
 
 @testset "Bad observation matrices" begin
-    # Partial observations with `DiagonalEK1` require dimension-selection observation
-    # matrices: each row must have exactly one nonzero entry (any scaling is fine);
-    # rows that mix dimensions can not be handled block-wise
-    H = [1 1]
-    test_data_likelihoods_throw(
-        ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=H, data=observe(H))
-
-    # Observing the same dimension twice requires at least three state dimensions
+    # With a block-diagonal covariance, no dimension may be observed twice
     times3 = [1.0, 4.0]
     H3 = [1 0 0; 1 0 0]
     data3 = (t=times3, u=[H3 * randn(3) for _ in times3])
     test_data_likelihoods_throw(
         ArgumentError, DiagonalEK1(); kwargs...,
         problem=prob_lin, observation_matrix=H3, data=data3)
-
-    # EK0 with the default isometric-kronecker covariance structure only supports `I` as
-    # observation matrix, and isotropic noise
-    P = [0 1; 1 0]
-    for bad in (
-        (observation_matrix=H_part, data=data_part),
-        (observation_matrix=P, data=observe(P)),
-        (observation_noise_cov=Diagonal([σ^2, 2σ^2]),),
-    )
-        test_data_likelihoods_throw(ArgumentError, EK0(); kwargs..., bad...)
-    end
-
-    # Observation noise covariances which can not be decomposed into one noise
-    # variance per observation (e.g. correlated noise) are not supported
-    H2 = [1 0 0; 0 1 0]
-    data2 = (t=times3, u=[H2 * randn(3) for _ in times3])
-    test_data_likelihoods_throw(
-        ArgumentError, DiagonalEK1(); kwargs...,
-        problem=prob_lin, observation_matrix=H2, observation_noise_cov=[1.0 0.5; 0.5 1.0],
-        data=data2)
 
     # With every solver, the observation matrix needs one row per data entry (the default
     # `I` has `d`), one column per ODE dimension, at most `d` rows and no zero rows, and
@@ -225,21 +221,23 @@ end
     (A=randn(2, 2); A'A),
     (PSDMatrix(randn(2, 2))),
 )
+    # The type of the noise covariance declares its structure: scalars, `UniformScaling`s
+    # and `Eye`s are isotropic, `Diagonal`s uncorrelated, and other matrices general
     @testset "$alg" for alg in (EK0(), DiagonalEK1(), EK1())
-        if alg isa EK0 && Σ isa AbstractMatrix &&
-           !(isdiag(Matrix(Σ)) && allequal(diag(Matrix(Σ))))
-            continue
+        supported =
+            alg isa EK1 || Σ isa Union{Number,UniformScaling} ||
+            Σ isa Diagonal{<:Number,<:FillArrays.Fill} ||
+            (alg isa DiagonalEK1 && Σ isa Diagonal)
+        if supported
+            compare_data_likelihoods(alg; kwargs..., observation_noise_cov=Σ)
+        else
+            test_data_likelihoods_throw(
+                ArgumentError,
+                alg;
+                kwargs...,
+                observation_noise_cov=Σ,
+            )
         end
-        if alg isa DiagonalEK1 && Σ isa AbstractMatrix && !isdiag(Matrix(Σ))
-            continue
-        end
-        compare_data_likelihoods(
-            alg;
-            observation_noise_cov=Σ,
-            data=data,
-            adaptive=false, dt=DT,
-            dense=false,
-        )
     end
 end
 
