@@ -50,9 +50,7 @@ function DataUpdateCallback(
         idx = findfirst(isequal(integ.t), times)
         val = values[idx]
 
-        # Callbacks are initialized before the solver's state, so at `t0` the state is not
-        # set yet. The initial value is known exactly though, so the data point leaves the
-        # state unchanged and only contributes its likelihood under `N(M u0, R)`.
+        # The initial value is known exactly, so no update is needed, only the likelihood
         if integ.iter == 0
             ll = initial_data_loglik(
                 integ.u, val, observation_matrix, observation_noise_cov)

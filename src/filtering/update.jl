@@ -76,13 +76,8 @@ function update!(
 )
     z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
-    @assert P_p isa PSDMatrix || P_p isa Matrix
-    # The following is not ideal as `iszero` allocates
-    # But, it is necessary to make the classic solver init stable
-    # With observation noise `R`, the measurement covariance is regular and the standard
-    # update below applies even if the state is known exactly
-    if isnothing(R) &&
-       ((P_p isa PSDMatrix && iszero(P_p.R)) || (P_p isa Matrix && iszero(P_p)))
+
+    if (isnothing(R) || iszero(R)) && iszero(P_p)
         copy!(x_out, x_pred)
         if iszero(z)
             return x_out, convert(eltype(z), Inf)

@@ -357,6 +357,24 @@ end
                 )
                 @test x_out == x_pred
             end
+            @testset "Zero predicted covariance and zero noise" begin
+                x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(P_p_R)))
+                x_out = copy(x_pred)
+                _, ll = ProbNumDiffEq.update!(
+                    x_out,
+                    x_pred,
+                    Gaussian(measurement.μ, PSDMatrix(SR)),
+                    H,
+                    copy(C_Dxd),
+                    copy(C_Dxd),
+                    C_DxD,
+                    C_dxd,
+                    C_d,
+                    R=PSDMatrix(zero(R_R)),
+                )
+                @test x_out == x_pred
+                @test ll == -Inf
+            end
         end
     end
 end
