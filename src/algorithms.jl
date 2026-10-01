@@ -467,7 +467,10 @@ julia> solve(prob, RosenbrockExpEK())
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
 
-function DiffEqBase.remake(thing::EK1{CS,AD,DT,ST,CJ}; kwargs...) where {CS,AD,DT,ST,CJ}
+function DiffEqBase.remake(
+    thing::Union{EK1{CS,AD,DT,ST,CJ},DiagonalEK1{CS,AD,DT,ST,CJ}};
+    kwargs...,
+) where {CS,AD,DT,ST,CJ}
     if haskey(kwargs, :autodiff) && kwargs[:autodiff] isa AutoForwardDiff
         chunk_size = OrdinaryDiffEqCore._get_fwd_chunksize(kwargs[:autodiff])
     else
