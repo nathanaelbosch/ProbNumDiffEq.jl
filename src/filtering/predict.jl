@@ -103,46 +103,29 @@ function predict_cov!(
     return Σ_out
 end
 
-# Kronecker version
 function predict_cov!(
-    Σ_out::PSDMatrix{T,<:IsometricKroneckerProduct},
-    Σ_curr::PSDMatrix{T,<:IsometricKroneckerProduct},
+    Σ_out::KroneckerPSD{T},
+    Σ_curr::KroneckerPSD{T},
     Ah::IsometricKroneckerProduct,
-    Qh::PSDMatrix{S,<:IsometricKroneckerProduct},
+    Qh::KroneckerPSD{S},
     C_DxD::IsometricKroneckerProduct,
     C_2DxD::IsometricKroneckerProduct,
     diffusion::Union{Number,Diagonal},
 ) where {T,S}
-    _Σ_out = PSDMatrix(Σ_out.R.B)
-    _Σ_curr = PSDMatrix(Σ_curr.R.B)
-    _Ah = Ah.B
-    _Qh = PSDMatrix(Qh.R.B)
-    _C_DxD = C_DxD.B
-    _C_2DxD = C_2DxD.B
-
-    return predict_cov!(_Σ_out, _Σ_curr, _Ah, _Qh, _C_DxD, _C_2DxD, diffusion)
+    on_kronecker_factors(
+        predict_cov!, Ah.rdim, Σ_out, Σ_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
+    return Σ_out
 end
-
-# BlocksOfDiagonalsonal version
 function predict_cov!(
-    Σ_out::PSDMatrix{T,<:BlocksOfDiagonals},
-    Σ_curr::PSDMatrix{T,<:BlocksOfDiagonals},
+    Σ_out::BlocksOfDiagonalsPSD{T},
+    Σ_curr::BlocksOfDiagonalsPSD{T},
     Ah::BlocksOfDiagonals,
-    Qh::PSDMatrix{S,<:BlocksOfDiagonals},
+    Qh::BlocksOfDiagonalsPSD{S},
     C_DxD::BlocksOfDiagonals,
     C_2DxD::BlocksOfDiagonals,
     diffusion::Union{Number,Diagonal},
 ) where {T,S}
-    @simd ivdep for i in eachindex(blocks(Σ_out.R))
-        predict_cov!(
-            PSDMatrix(Σ_out.R.blocks[i]),
-            PSDMatrix(Σ_curr.R.blocks[i]),
-            Ah.blocks[i],
-            PSDMatrix(Qh.R.blocks[i]),
-            C_DxD.blocks[i],
-            C_2DxD.blocks[i],
-            diffusion isa Number ? diffusion : diffusion.diag[i],
-        )
-    end
+    foreach_diagonal_block(
+        predict_cov!, nblocks(Ah), Σ_out, Σ_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
     return Σ_out
 end

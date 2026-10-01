@@ -259,9 +259,10 @@ end
     )
 
     x_out = copy(x_pred)
-    _, ll = PNDE.update!(x_out, x_pred, msmnt, H, caches...; obs_dims)
+    _, ll = PNDE.update!(x_out, x_pred, msmnt, PNDE.BlockSelection(H, obs_dims), caches...)
     x_out_zero = Gaussian(zero(x_pred.μ), PSDMatrix(zero(x_pred.Σ.R)))
-    _, ll_zero = PNDE.update!(x_out_zero, x_pred, msmnt, H, caches...; obs_dims)
+    _, ll_zero = PNDE.update!(
+        x_out_zero, x_pred, msmnt, PNDE.BlockSelection(H, obs_dims), caches...)
     @test x_out_zero == x_out
     @test ll_zero == ll
 

@@ -183,8 +183,24 @@ function _matmul!(z::AbstractVector, H::BlockSelection, μ::AbstractVector)
 end
 make_obscov_sqrt(PR::BlocksOfDiagonals, H::BlockSelection, RR::BlocksOfDiagonals) =
     make_obscov_sqrt(BlocksOfDiagonals(blocks(PR)[H.obs_dims]), H.H, RR)
-update!(x_out, x_pred, measurement, H::BlockSelection, K1, K2, M, C_dxd, C_d; R=nothing) =
-    update!(x_out, x_pred, measurement, H.H, K1, K2, M, C_dxd, C_d; R, H.obs_dims)
+function update!(
+    x_out, x_pred, measurement, H::BlockSelection, K1_cache, K2_cache, M_cache, C_dxd,
+    C_d; R=nothing,
+)
+    d, o = nblocks(x_out.Σ.R), length(H.obs_dims)
+    if o < d
+        copy!(x_out, x_pred)
+    end
+    args = (measurement, H.H, K1_cache, K2_cache, M_cache, C_dxd, C_d)
+    loglikelihood = zero(eltype(x_out.μ))
+    for (k, i) in enumerate(H.obs_dims)
+        _, ll = update!(
+            _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...; R=_diagonal_block(R, k, o))
+        loglikelihood += ll
+    end
+    return x_out, loglikelihood
+end
 
 function make_obssized_cache(cache; o)
     if o == cache.d
@@ -205,8 +221,12 @@ function make_obssized_cache(::DenseCovariance, cache; o)
         x_tmp=x_tmp,
     )
 end
-# The block-wise `update!` only uses the first `o` blocks of the caches
-make_obssized_cache(::BlockDiagonalCovariance, cache; o) = cache
+function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
+    # The block-wise `update!` only uses the first `o` blocks of the matrix caches
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
+    return (K1=K1, C_dxd=C_dxd, C_Dxd=C_Dxd, C_d=view(C_d, 1:o), C_DxD=C_DxD,
+        m_tmp=m_tmp, x_tmp=x_tmp)
+end
 
 nonpositive_noise_error() =
     throw(ArgumentError("The observation noise covariance must be positive definite."))

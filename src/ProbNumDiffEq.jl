@@ -132,6 +132,7 @@ include("solution_sampling.jl")
 
 include("integrator_utils.jl")
 include("filtering/markov_kernel.jl")
+include("filtering/structured_covariances.jl")
 include("filtering/predict.jl")
 include("filtering/update.jl")
 include("filtering/smooth.jl")
