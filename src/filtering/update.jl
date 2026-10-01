@@ -212,8 +212,6 @@ function update!(
     d = length(blocks(x_out.Σ.R))
     o = length(obs_dims)
 
-    # Block `k` of the measurement observes block `obs_dims[k]` of the state; the state
-    # blocks that are not observed keep their predicted values
     if o < d
         copy!(x_out, x_pred)
     end

@@ -248,11 +248,13 @@ end
     x_pred = Gaussian(rand(d * (q + 1)), PSDMatrix(blockdiag(uppertri, d)))
     msmnt = Gaussian(rand(o), PSDMatrix(blockdiag(() -> rand(1, 1) .+ 1, o)))
     H = blockdiag(() -> rand(1, q + 1), o)
+    FAC = PNDE.BlockDiagonalCovariance{Float64}(o, q)
+    D_o = o * (q + 1)
     caches = (
-        blockdiag(() -> zeros(q + 1, 1), o),
-        blockdiag(() -> zeros(q + 1, 1), o),
-        blockdiag(() -> zeros(q + 1, q + 1), o),
-        blockdiag(() -> zeros(1, 1), o),
+        PNDE.factorized_zeros(FAC, D_o, o),
+        PNDE.factorized_zeros(FAC, D_o, o),
+        PNDE.factorized_zeros(FAC, D_o, D_o),
+        PNDE.factorized_zeros(FAC, o, o),
         zeros(o),
     )
 

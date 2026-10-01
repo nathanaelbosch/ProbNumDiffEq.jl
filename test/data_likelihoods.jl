@@ -10,6 +10,9 @@ sol = solve(prob, EK1(diffusionmodel=FixedDiffusion()), abstol=1e-9, reltol=1e-9
 times = range(prob.tspan..., length=3)[2:end];
 obss = [mean(sol(t)) + σ * randn(length(prob.u0)) for t in times];
 data = (t=times, u=obss);
+observe(H) = (t=times, u=[H * x for x in obss])
+H_part = [1 0;]
+data_part = observe(H_part)
 
 DT = 2e-2
 
@@ -60,17 +63,15 @@ kwargs = (
 end
 
 @testset "Partial observations" begin
-    H = [1 0;]
-    data_part = (t=times, u=[H * d for d in obss])
     # EK0 with a multivariate diffusion uses a block-diagonal covariance structure
     # as well, so partial observations work the same way as with the DiagonalEK1
     for alg in (EK1(), DiagonalEK1(), EK0(diffusionmodel=FixedMVDiffusion(rand(2), false)))
-        compare_data_likelihoods(alg; kwargs..., observation_matrix=H, data=data_part)
+        compare_data_likelihoods(alg; kwargs..., observation_matrix=H_part, data=data_part)
     end
     # Non-unit row scalings need no special handling: the scale is part of the
     # observation matrix, so the noise covariance scales with it
     H2 = [2 0]
-    data_scaled = (t=times, u=[H2 * x for x in obss])
+    data_scaled = observe(H2)
     for alg in (DiagonalEK1(), EK1())
         compare_data_likelihoods(
             alg; kwargs...,
@@ -81,12 +82,12 @@ end
     for R in (σ^2 * I, Diagonal([σ^2]), fill(σ^2, 1, 1), PSDMatrix(fill(σ, 1, 1)))
         compare_data_likelihoods(
             DiagonalEK1(); kwargs...,
-            observation_matrix=H, observation_noise_cov=R, data=data_part)
+            observation_matrix=H_part, observation_noise_cov=R, data=data_part)
     end
     # With a block-diagonal covariance, observation matrices that select all dimensions,
     # e.g. permutations, are handled block-wise as well
     P = [0 1; 1 0]
-    data_perm = (t=times, u=[P * x for x in obss])
+    data_perm = observe(P)
     compare_data_likelihoods(
         DiagonalEK1(); kwargs..., observation_matrix=P, data=data_perm)
     @test PNDE.dalton_data_loglik(
@@ -106,9 +107,8 @@ end
     # matrices: each row must have exactly one nonzero entry (any scaling is fine);
     # rows that mix dimensions can not be handled block-wise
     @testset "H = $H" for H in ([1 1], [0 0])
-        data_bad = (t=times, u=[H * x for x in obss])
         test_data_likelihoods_throw(
-            ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=H, data=data_bad)
+            ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=H, data=observe(H))
     end
 
     # Observing the same dimension twice requires at least three state dimensions
@@ -119,19 +119,10 @@ end
         ArgumentError, DiagonalEK1(); kwargs...,
         problem=prob_lin, observation_matrix=H3, data=data3)
 
-    # The data must have one entry per row of the observation matrix
-    data_long = (t=times3, u=[[0.3, 100.0] for _ in times3])
-    test_data_likelihoods_throw(
-        DimensionMismatch, DiagonalEK1(); kwargs...,
-        problem=prob_lin, observation_matrix=[1 0 0], data=data_long)
-
-    H = [1 0;]
-    data_part = (t=times, u=[H * x for x in obss])
-
     # EK0 with the default isometric-kronecker covariance structure does not support
     # partial observations
     test_data_likelihoods_throw(
-        ArgumentError, EK0(); kwargs..., observation_matrix=H, data=data_part)
+        ArgumentError, EK0(); kwargs..., observation_matrix=H_part, data=data_part)
 
     # Observation noise covariances which can not be decomposed into one noise
     # variance per observation (e.g. correlated noise) are not supported
@@ -142,23 +133,19 @@ end
         problem=prob_lin, observation_matrix=H2, observation_noise_cov=[1.0 0.5; 0.5 1.0],
         data=data2)
 
-    # The default `I` observation matrix implies observing the full state
-    test_data_likelihoods_throw(
-        ArgumentError, DiagonalEK1(); kwargs..., observation_matrix=I, data=data_part)
-
-    # Observation matrices must have one column per ODE dimension
-    data_o1 = (t=times, u=[[0.0] for _ in times])
-    @testset "$alg" for alg in (EK0(), EK1(), DiagonalEK1())
-        test_data_likelihoods_throw(
-            ArgumentError, alg; kwargs..., observation_matrix=[1 0 0], data=data_o1)
-    end
-
-    # At most `d` observations per data point
+    # With every solver, the observation matrix needs one row per data entry (the default
+    # `I` has `d`), one column per ODE dimension, and at most `d` rows
     H_tall = [1 0; 0 1; 1 0]
-    data_tall = (t=times, u=[H_tall * x for x in obss])
     @testset "$alg" for alg in (EK0(), EK1(), DiagonalEK1())
-        test_data_likelihoods_throw(
-            ArgumentError, alg; kwargs..., observation_matrix=H_tall, data=data_tall)
+        for (E, H, bad_data) in (
+            (DimensionMismatch, [1 0], data),
+            (DimensionMismatch, I, data_part),
+            (ArgumentError, [1 0 0], (t=times, u=[[0.0] for _ in times])),
+            (ArgumentError, H_tall, observe(H_tall)),
+        )
+            test_data_likelihoods_throw(
+                E, alg; kwargs..., observation_matrix=H, data=bad_data)
+        end
     end
 end
 
@@ -204,7 +191,7 @@ end
         )
             continue
         end
-        if alg isa DiagonalEK1 && !(Σ isa Number || Σ isa UniformScaling || Σ isa Diagonal)
+        if alg isa DiagonalEK1 && Σ isa AbstractMatrix && !isdiag(Matrix(Σ))
             continue
         end
         compare_data_likelihoods(
@@ -264,12 +251,12 @@ end
 end
 
 @testset "Non-positive observation noise" begin
-    for R in (0.0, 0.0I, Diagonal([σ^2, 0.0]), [σ^2 0; 0 0], PSDMatrix(zeros(2, 2))),
-        loglik in
-        (PNDE.dalton_data_loglik, PNDE.filtering_data_loglik, PNDE.fenrir_data_loglik)
-
-        smooth = loglik === PNDE.fenrir_data_loglik
-        @test_throws ArgumentError loglik(
-            prob, remake(EK1(); smooth); kwargs..., observation_noise_cov=R)
+    for R in (0.0, 0.0I, Diagonal([σ^2, 0.0]), [σ^2 0; 0 0], PSDMatrix(zeros(2, 2)))
+        test_data_likelihoods_throw(
+            ArgumentError,
+            EK1();
+            kwargs...,
+            observation_noise_cov=R,
+        )
     end
 end
