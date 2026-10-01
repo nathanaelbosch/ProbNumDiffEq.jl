@@ -85,9 +85,8 @@ function initial_data_loglik(u0, val, M, R::PSDMatrix)
 end
 
 function check_observation_noise_cov(cov)
-    if !_is_positive(cov)
-        throw(ArgumentError("The observation noise covariance must be positive definite."))
-    end
+    _is_positive(cov) || nonpositive_noise_error()
+    return nothing
 end
 _is_positive(cov::Number) = cov > 0
 _is_positive(cov::UniformScaling) = cov.λ > 0
@@ -98,55 +97,20 @@ function observation_model(cache, M, noise_cov; o)
     d = cache.d
     M isa Number && (M = M * I)
     rows, cols = M isa UniformScaling ? (d, d) : size(M)
-    if cols != d
-        throw(
-            ArgumentError(
-                "The observation matrix must have one column per ODE dimension " *
-                "(d = $d), but has size $(size(M)). For second-order ODEs, it acts on " *
-                "`u` only."),
-        )
-    end
-    if rows != o
-        throw(
-            DimensionMismatch(
-                "The observation matrix maps the state to $rows values, but the data " *
-                "has $o entries."),
-        )
-    end
-    if o > d
-        throw(
-            ArgumentError(
-                "The observation matrix has $o rows, but at most d = $d (the ODE " *
-                "dimension) are supported right now."),
-        )
-    end
+    cols == d || column_count_error(M, d)
+    rows == o || row_count_error(rows, o)
+    o <= d || too_many_rows_error(o, d)
     k = _zero_row(M)
-    if !isnothing(k)
-        throw(ArgumentError("Row $k of the observation matrix is zero."))
-    end
-    if noise_cov isa AbstractMatrix && size(noise_cov) != (o, o)
-        throw(
-            DimensionMismatch(
-                "The observation noise covariance must be $o×$o, one row and column per " *
-                "data entry, but has size $(size(noise_cov))."),
-        )
-    end
+    isnothing(k) || zero_row_error(k)
+    noise_cov isa AbstractMatrix && size(noise_cov) != (o, o) &&
+        noise_size_error(noise_cov, o)
     return observation_model(cache.covariance_factorization, M, cache.E0, noise_cov; o)
 end
 function observation_model(fac::DenseCovariance, M, E0, noise_cov; o)
     return M * E0, to_factorized_matrix(fac, cov2psdmatrix(noise_cov; d=o))
 end
 function observation_model(fac::IsometricKroneckerCovariance, M, E0, noise_cov; o)
-    if !(M isa UniformScaling)
-        throw(
-            ArgumentError(
-                "The isometric-kronecker covariance structure (e.g. of the default " *
-                "`EK0`) only supports the observation matrix `I` or multiples of it. " *
-                "For other observation matrices, e.g. partial observations, use a " *
-                "solver with a `DenseCovariance` or `BlockDiagonalCovariance` covariance " *
-                "structure, like the `EK1` or `DiagonalEK1`."),
-        )
-    end
+    M isa UniformScaling || kronecker_matrix_error()
     R = to_factorized_matrix(fac, cov2psdmatrix(_isotropic_noise(noise_cov); d=o))
     return M * E0, R
 end
@@ -166,27 +130,14 @@ _zero_row(M::AbstractMatrix) = findfirst(row -> all(iszero, row), eachrow(M))
 _isotropic_noise(cov::Union{Number,UniformScaling}) = cov
 function _isotropic_noise(cov::AbstractMatrix)
     C = Matrix(cov)
-    if !(isdiag(C) && allequal(diag(C)))
-        throw(
-            ArgumentError(
-                "Observations with the isometric-kronecker covariance structure (e.g. " *
-                "of the default `EK0`) require isotropic observation noise, i.e. a " *
-                "multiple of the identity."),
-        )
-    end
+    isdiag(C) && allequal(diag(C)) || anisotropic_noise_error()
     return C[1, 1]
 end
 
 _diagonal_noise(cov::Union{Number,UniformScaling,Diagonal}) = cov
 function _diagonal_noise(cov::AbstractMatrix)
     C = Matrix(cov)
-    if !isdiag(C)
-        throw(
-            ArgumentError(
-                "Observations with a block-diagonal covariance structure require " *
-                "uncorrelated observation noise, i.e. a diagonal noise covariance."),
-        )
-    end
+    isdiag(C) || correlated_noise_error()
     return Diagonal(diag(C))
 end
 
@@ -196,25 +147,10 @@ function _selected_dims(M::AbstractMatrix, o)
     indices = Vector{Int}(undef, o)
     for k in 1:o
         nz = findall(!iszero, view(M, k, :))
-        if length(nz) != 1
-            throw(
-                ArgumentError(
-                    "Observation matrices with a block-diagonal covariance structure " *
-                    "(e.g. the `DiagonalEK1`) must select dimensions: each row must " *
-                    "have exactly one nonzero entry (any scaling is fine). " *
-                    "Row $k mixes dimensions."),
-            )
-        end
+        length(nz) == 1 || mixed_row_error(k)
         indices[k] = nz[1]
     end
-    if !allunique(indices)
-        throw(
-            ArgumentError(
-                "Observation matrices with a block-diagonal covariance structure " *
-                "(e.g. the `DiagonalEK1`) must observe each dimension at most once. " *
-                "Got repeated dimensions."),
-        )
-    end
+    allunique(indices) || repeated_dims_error()
     return indices
 end
 
@@ -271,3 +207,58 @@ function make_obssized_cache(::DenseCovariance, cache; o)
 end
 # The block-wise `update!` only uses the first `o` blocks of the caches
 make_obssized_cache(::BlockDiagonalCovariance, cache; o) = cache
+
+nonpositive_noise_error() =
+    throw(ArgumentError("The observation noise covariance must be positive definite."))
+column_count_error(M, d) = throw(
+    ArgumentError(
+        "The observation matrix must have one column per ODE dimension (d = $d), but has " *
+        "size $(size(M)). For second-order ODEs, it acts on `u` only."),
+)
+row_count_error(rows, o) = throw(
+    DimensionMismatch(
+        "The observation matrix maps the state to $rows values, but the data has $o " *
+        "entries."),
+)
+too_many_rows_error(o, d) = throw(
+    ArgumentError(
+        "The observation matrix has $o rows, but at most d = $d (the ODE dimension) are " *
+        "supported right now."),
+)
+zero_row_error(k) = throw(ArgumentError("Row $k of the observation matrix is zero."))
+noise_size_error(noise_cov, o) = throw(
+    DimensionMismatch(
+        "The observation noise covariance must be $o×$o, one row and column per data " *
+        "entry, but has size $(size(noise_cov))."),
+)
+kronecker_matrix_error() = throw(
+    ArgumentError(
+        "The isometric-kronecker covariance structure (e.g. of the default `EK0`) only " *
+        "supports the observation matrix `I` or multiples of it. For other observation " *
+        "matrices, e.g. partial observations, use a solver with a `DenseCovariance` or " *
+        "`BlockDiagonalCovariance` covariance structure, like the `EK1` or `DiagonalEK1`.",
+    ),
+)
+anisotropic_noise_error() = throw(
+    ArgumentError(
+        "Observations with the isometric-kronecker covariance structure (e.g. of the " *
+        "default `EK0`) require isotropic observation noise, i.e. a multiple of the " *
+        "identity."),
+)
+correlated_noise_error() = throw(
+    ArgumentError(
+        "Observations with a block-diagonal covariance structure require uncorrelated " *
+        "observation noise, i.e. a diagonal noise covariance."),
+)
+mixed_row_error(k) = throw(
+    ArgumentError(
+        "Observation matrices with a block-diagonal covariance structure (e.g. the " *
+        "`DiagonalEK1`) must select dimensions: each row must have exactly one nonzero " *
+        "entry (any scaling is fine). Row $k mixes dimensions."),
+)
+repeated_dims_error() = throw(
+    ArgumentError(
+        "Observation matrices with a block-diagonal covariance structure (e.g. the " *
+        "`DiagonalEK1`) must observe each dimension at most once. Got repeated " *
+        "dimensions."),
+)
