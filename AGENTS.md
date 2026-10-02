@@ -13,11 +13,11 @@ julia --project -e 'using Pkg; Pkg.test()'                  # all tests
 GROUP=Core julia --project -e 'using Pkg; Pkg.test()'       # one group
 ```
 
-Each test file is standalone (brings its own `using` statements), so a single file can be run in the test environment. `test/Project.toml` has no `[sources]` entry, so dev the local package into it once (creates a gitignored `test/Manifest.toml`):
+Each test file is standalone (brings its own `using` statements), so a single file can be run in the test environment. `test/Project.toml` points to the local package through `[sources]`, so instantiate it once (creates a gitignored `test/Manifest.toml`):
 
 ```sh
-julia --project=test -e 'using Pkg; Pkg.develop(path=".")'  # once
-julia --project=test test/core/filtering.jl                 # one file
+julia --project=test -e 'using Pkg; Pkg.instantiate()'  # once
+julia --project=test test/core/filtering.jl             # one file
 ```
 
 The test environment requires Julia ≥ 1.12, while the package itself supports Julia ≥ 1.10.
