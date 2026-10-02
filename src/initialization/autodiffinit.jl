@@ -1,24 +1,12 @@
 function initial_update!(integ, cache, init::AutodiffInitializationScheme)
     @unpack u, f, p, t = integ
-    @unpack d, q, x, Proj = cache
+    @unpack q, x, Proj = cache
 
     f = _unwrap_f(f)
 
     f_derivatives = get_derivatives(init, u, f, p, t)
     integ.stats.nf += init.order
     @assert length(f_derivatives) == init.order + 1
-
-    # This is hacky and should definitely be removed. But it also works so 🤷
-    MM = if f.mass_matrix isa UniformScaling
-        f.mass_matrix
-    else
-        _MM = copy(f.mass_matrix)
-        if any(iszero.(diag(_MM)))
-            _MM = typeof(promote(_MM[1], 1e-20)[1]).(_MM)
-            _MM .+= 1e-20I(d)
-        end
-        _MM
-    end
 
     for (o, df) in zip(0:q, f_derivatives)
         if f isa DynamicalODEFunction
@@ -31,7 +19,7 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
         H = if o == 0
             Proj(o)
         else
-            MM * Proj(o)
+            f.mass_matrix * Proj(o)
         end
         init_condition_on!(x, H, df, cache)
     end
