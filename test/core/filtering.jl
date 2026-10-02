@@ -507,6 +507,7 @@ end
         C_DxD = PNDE.factorized_zeros(FAC, D, D)
         C_2DxD = PNDE.factorized_zeros(FAC, 2D, D)
         C_3DxD = PNDE.factorized_zeros(FAC, 3D, D)
+        C_2Dx2D = PNDE.factorized_zeros(FAC, 2D, 2D)
 
         @testset "smooth" begin
             x_out, _ = ProbNumDiffEq.smooth(x_curr, x_next, A, Q)
@@ -520,6 +521,23 @@ end
             @test m_smoothed ≈ x_out.μ
             @test P_smoothed ≈ Matrix(x_out.Σ)
         end
+        @testset "backward kernel for an ill-conditioned prediction" begin
+            # This takes the QR branch, which does not use the predicted covariance
+            _R_bad = copy(_P_p_R.B)
+            _R_bad[end, end] *= 1e-10
+            R_bad = PNDE.to_factorized_matrix(FAC, IsometricKroneckerProduct(d, _R_bad))
+            x_next_pred = Gaussian(copy(m_p), PSDMatrix(R_bad))
+            x_curr = Gaussian(m, PSDMatrix(P_R)) |> copy
+            K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
+            K_backward = ProbNumDiffEq.AffineNormalKernel(
+                copy(A), copy(m_p), PSDMatrix(copy(C_2DxD)))
+            ProbNumDiffEq.compute_backward_kernel!(
+                K_backward, x_next_pred, x_curr, K_forward; C_DxD, C_2DxD, C_2Dx2D)
+            G = PM * AM' * inv(P_pM)
+            @test K_backward.A ≈ G
+            @test K_backward.b ≈ m - G * m_p
+            @test Matrix(K_backward.C) ≈ PM - G * P_pM * G'
+        end
         @testset "smooth via backward kernels" begin
             K_forward = ProbNumDiffEq.AffineNormalKernel(copy(A), copy(Q_SR))
             K_backward = ProbNumDiffEq.AffineNormalKernel(
@@ -530,7 +548,7 @@ end
             x_next_smoothed = Gaussian(m_s, PSDMatrix(P_s_R)) |> copy
 
             ProbNumDiffEq.compute_backward_kernel!(
-                K_backward, x_next_pred, x_curr, K_forward; C_DxD)
+                K_backward, x_next_pred, x_curr, K_forward; C_DxD, C_2DxD, C_2Dx2D)
 
             G = Matrix(x_curr.Σ) * Matrix(A)' * inv(Matrix(x_next_pred.Σ))
             b = x_curr.μ - G * x_next_pred.μ
@@ -574,7 +592,8 @@ end
                 QM_diff = Matrix(BlocksOfDiagonals([σ² * _Q.B for σ² in _diffusions]))
 
                 ProbNumDiffEq.compute_backward_kernel!(
-                    K_backward, x_next_pred, x_curr, K_forward; C_DxD, diffusion)
+                    K_backward, x_next_pred, x_curr, K_forward;
+                    C_DxD, C_2DxD, C_2Dx2D, diffusion)
 
                 G = Matrix(x_curr.Σ) * Matrix(A)' * inv(Matrix(x_next_pred.Σ))
                 b = x_curr.μ - G * x_next_pred.μ
@@ -667,4 +686,32 @@ end
         @test typeof(sol(t_between)) == typeof(sol(sol.t[2])) == typeof(sol(t_after))
         @test sol(t_between).Σ.R isa M
     end
+end
+
+@testset "Backward kernel from a QR decomposition ($T)" for T in (Float64, BigFloat)
+    D = 8
+    uppertri(n) = Matrix(UpperTriangular(rand(T, n, n)) + I)
+    μ, R, A, Q_R, diffusion = rand(T, D), uppertri(D), rand(T, D, D), uppertri(D), rand(T)
+    Σ = R'R
+    Σ_p = A * Σ * A' + diffusion * Q_R'Q_R
+    G = Σ * A' / Σ_p
+
+    x = Gaussian(μ, PSDMatrix(R))
+    x_pred = Gaussian(A * μ, PSDMatrix(zeros(T, D, D)))
+    K = PNDE.AffineNormalKernel(zeros(T, D, D), zeros(T, D), PSDMatrix(zeros(T, 2D, D)))
+    PNDE.qr_backward_kernel!(
+        K, x_pred, x, PNDE.AffineNormalKernel(A, PSDMatrix(Q_R));
+        C_2DxD=zeros(T, 2D, D), C_2Dx2D=zeros(T, 2D, 2D), diffusion)
+    @test K.A ≈ G
+    @test K.b ≈ μ - G * A * μ
+    @test Matrix(K.C) ≈ Σ - G * Σ_p * G'
+end
+
+@testset "is_well_conditioned" begin
+    M = randn(10, 4)
+    @test PNDE.is_well_conditioned(qr(M).R)
+    M[:, 4] .= M[:, 1] .+ 1e-10 .* randn(10)
+    @test !PNDE.is_well_conditioned(qr(M).R)
+    # the check does not depend on the scaling of the columns
+    @test !PNDE.is_well_conditioned(qr(M * Diagonal([1e10, 1, 1, 1e-10])).R)
 end

@@ -67,7 +67,8 @@ Compute `qr(A).R` in the most efficient and allocation-free way possible.
 
 The fallback implementation essentially computes `qr!(A).R`. But if `A` is of type
 `StridedMatrix{<:LinearAlgebra.BlasFloat}`, we can make things more efficient by calling
-LAPACK directly and using the preallocated cache `cachemat`.
+LAPACK directly and using the preallocated cache `cachemat`. It needs `size(A, 2)` columns,
+and its number of rows bounds the block size of the LAPACK routine.
 
 The returned `UpperTriangular` wraps a view into `A` (see `getupperright!`(@ref)), so it is
 only valid until `A` is modified again. Callers that need to keep it must copy it.
@@ -81,8 +82,33 @@ end
 function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     D = size(A, 2)
     BLOCKSIZE = 36
-    R, _ = LinearAlgebra.LAPACK.geqrt!(A, @view cachemat[1:min(BLOCKSIZE, D), :])
+    nb = min(BLOCKSIZE, D, size(cachemat, 1))
+    R, _ = LinearAlgebra.LAPACK.geqrt!(A, @view cachemat[1:nb, :])
     return getupperright!(R)
+end
+
+"""
+    is_well_conditioned(U)
+
+Check whether the upper-triangular square root `U` of `M = UᵀU` can be computed accurately as
+the Cholesky factor of `M`.
+
+With `M = RᵀR`, the ratio `U[i, i]^2 / M[i, i]` is the squared sine of the angle between the
+`i`-th column of `R` and the previous ones. Forming `M` loses about `eps / ratio` of relative
+accuracy in that pivot, so `U` counts as well-conditioned if no ratio is below `sqrt(eps)`.
+The check costs `O(D^2)`, and it does not depend on the scaling of the columns. Entries
+below the diagonal of `U` are ignored.
+"""
+is_well_conditioned(U::UpperTriangular) = is_well_conditioned(parent(U))
+function is_well_conditioned(U::AbstractMatrix{T}) where {T}
+    tol = sqrt(eps(T))
+    for i in axes(U, 2)
+        s = sum(abs2, view(U, 1:i, i))
+        if !iszero(s) && abs2(U[i, i]) < tol * s
+            return false
+        end
+    end
+    return true
 end
 
 """
