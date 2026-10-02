@@ -86,6 +86,30 @@ function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
 end
 
 """
+    is_well_conditioned(U)
+
+Check whether the upper-triangular square root `U` of `M = UᵀU` can be computed accurately as
+the Cholesky factor of `M`.
+
+With `M = RᵀR`, the ratio `U[i, i]^2 / M[i, i]` is the squared sine of the angle between the
+`i`-th column of `R` and the previous ones. Forming `M` loses about `eps / ratio` of relative
+accuracy in that pivot, so `U` counts as well-conditioned if no ratio is below `sqrt(eps)`.
+The check costs `O(D^2)`, and it does not depend on the scaling of the columns. Entries
+below the diagonal of `U` are ignored.
+"""
+is_well_conditioned(U::UpperTriangular) = is_well_conditioned(parent(U))
+function is_well_conditioned(U::AbstractMatrix{T}) where {T}
+    tol = sqrt(eps(T))
+    for i in axes(U, 2)
+        s = sum(abs2, view(U, 1:i, i))
+        if !iszero(s) && abs2(U[i, i]) < tol * s
+            return false
+        end
+    end
+    return true
+end
+
+"""
     fast_X_A_Xt!(out::PSDMatrix, A::PSDMatrix, X::AbstractMatrix)
 
 Compute `out .= X * A * X'` in-place, efficiently.

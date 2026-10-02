@@ -94,7 +94,7 @@ function predict_cov!(
     _matmul!(M, R', R)
     chol = cholesky!(Symmetric(M), check=false)
 
-    Q_R = if issuccess(chol)
+    Q_R = if issuccess(chol) && is_well_conditioned(chol.U)
         chol.U
     else
         triangularize!(R, cachemat=C_DxD)

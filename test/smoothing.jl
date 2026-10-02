@@ -2,6 +2,8 @@ using ProbNumDiffEq
 using Test
 using LinearAlgebra
 using OrdinaryDiffEq
+using OrdinaryDiffEqFIRK: RadauIIA5
+using Statistics: mean
 import ODEProblemLibrary: prob_ode_lotkavolterra
 using Plots
 
@@ -22,6 +24,20 @@ prob = prob_ode_lotkavolterra
         adaptive=false,
         dt=dt,
     )
+end
+
+@testset "Stable smoothing at high order on a stiff problem (#393)" begin
+    function vanderpol!(du, u, p, t)
+        du[1] = u[2]
+        du[2] = p[1] * ((1 - u[1]^2) * u[2] - u[1])
+    end
+    vdp = ODEProblem(vanderpol!, [2.0, 0.0], (0.0, 2.0), [1e5])
+    ref = solve(vdp, RadauIIA5(), abstol=1e-12, reltol=1e-12)
+    ts = range(vdp.tspan..., length=200)
+    @testset "order $order" for order in (6, 7)
+        sol = solve(vdp, EK1(; order, smooth=true), abstol=1e-10, reltol=1e-7)
+        @test maximum(norm(mean(sol(t)) - ref(t)) for t in ts) < 1e-4
+    end
 end
 
 @testset "Smooth vs. non-smooth" begin

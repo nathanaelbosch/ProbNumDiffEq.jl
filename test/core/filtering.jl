@@ -668,3 +668,30 @@ end
         @test sol(t_between).Σ.R isa M
     end
 end
+
+@testset "Backward kernel from a QR decomposition ($T)" for T in (Float64, BigFloat)
+    D = 8
+    uppertri(n) = Matrix(UpperTriangular(rand(T, n, n)) + I)
+    μ, R, A, Q_R, diffusion = rand(T, D), uppertri(D), rand(T, D, D), uppertri(D), rand(T)
+    Σ = R'R
+    Σ_p = A * Σ * A' + diffusion * Q_R'Q_R
+    G = Σ * A' / Σ_p
+
+    x = Gaussian(μ, PSDMatrix(R))
+    x_pred = Gaussian(A * μ, PSDMatrix(zeros(T, D, D)))
+    K = PNDE.AffineNormalKernel(zeros(T, D, D), zeros(T, D), PSDMatrix(zeros(T, 2D, D)))
+    PNDE.qr_backward_kernel!(
+        K, x_pred, x, PNDE.AffineNormalKernel(A, PSDMatrix(Q_R)), diffusion)
+    @test K.A ≈ G
+    @test K.b ≈ μ - G * A * μ
+    @test Matrix(K.C) ≈ Σ - G * Σ_p * G'
+end
+
+@testset "is_well_conditioned" begin
+    M = randn(10, 4)
+    @test PNDE.is_well_conditioned(qr(M).R)
+    M[:, 4] .= M[:, 1] .+ 1e-10 .* randn(10)
+    @test !PNDE.is_well_conditioned(qr(M).R)
+    # the check does not depend on the scaling of the columns
+    @test !PNDE.is_well_conditioned(qr(M * Diagonal([1e10, 1, 1, 1e-10])).R)
+end

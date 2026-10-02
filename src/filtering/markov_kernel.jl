@@ -166,7 +166,10 @@ d &= μ - G μ^P, \\\\
 \\end{aligned}
 ```
 Everything is computed in square-root form and with minimal allocations (thus the
-cache `C_DxD`), so the actual formulas implemented here differ a bit.
+cache `C_DxD`), so the actual formulas implemented here differ a bit. These formulas divide by
+`xpred.Σ`, which squares its condition number; if `xpred.Σ` is ill-conditioned (see
+`is_well_conditioned`), the kernel is instead computed from a QR decomposition, which
+allocates.
 
 The resulting backward kernels are used to smooth the posterior, via [`marginalize!`](@ref).
 """
@@ -183,6 +186,10 @@ function compute_backward_kernel!(
     KT2<:AffineNormalKernel{<:AbstractMatrix,<:Any,<:PSDMatrix},
 }
     # @assert Matrix(UpperTriangular(xpred.Σ.R)) == Matrix(xpred.Σ.R)
+
+    if !is_well_conditioned(xpred.Σ.R)
+        return qr_backward_kernel!(Kout, xpred, x, K, diffusion)
+    end
 
     A, _, Q = K
     G, b, Λ = Kout
@@ -214,6 +221,24 @@ function compute_backward_kernel!(
         _matmul!(view(Λ.R, (D+1):2D, 1:D), C_DxD, G')
     end
 
+    return Kout
+end
+
+# For an ill-conditioned prediction, compute the kernel from the QR decomposition
+# [R Aᵀ R; R_C 0] = U [R₁ R₁₂; 0 R₂] instead, where Σ = RᵀR and C = R_CᵀR_C: then
+# G = (R₁⁻¹ R₁₂)ᵀ and Λ = R₂ᵀR₂, without forming a covariance
+function qr_backward_kernel!(Kout, xpred, x, K, diffusion)
+    A, _, C = K
+    G, b, Λ = Kout
+    D = size(G, 1)
+    R = x.Σ.R
+    F = qr!([R * A'; apply_diffusion(C, diffusion).R])
+    N = lmul!(F.Q', [R; zero(R)])
+    G .= (UpperTriangular(F.R) \ N[1:D, :])'
+    _matmul!(b, G, xpred.μ)
+    b .= x.μ .- b
+    copy!(view(Λ.R, 1:D, :), view(N, (D+1):2D, :))
+    fill!(view(Λ.R, (D+1):2D, :), zero(eltype(Λ.R)))
     return Kout
 end
 
