@@ -67,7 +67,8 @@ Compute `qr(A).R` in the most efficient and allocation-free way possible.
 
 The fallback implementation essentially computes `qr!(A).R`. But if `A` is of type
 `StridedMatrix{<:LinearAlgebra.BlasFloat}`, we can make things more efficient by calling
-LAPACK directly and using the preallocated cache `cachemat`.
+LAPACK directly and using the preallocated cache `cachemat`. It needs `size(A, 2)` columns,
+and its number of rows bounds the block size of the LAPACK routine.
 
 The returned `UpperTriangular` wraps a view into `A` (see `getupperright!`(@ref)), so it is
 only valid until `A` is modified again. Callers that need to keep it must copy it.
@@ -81,7 +82,8 @@ end
 function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     D = size(A, 2)
     BLOCKSIZE = 36
-    R, _ = LinearAlgebra.LAPACK.geqrt!(A, @view cachemat[1:min(BLOCKSIZE, D), :])
+    nb = min(BLOCKSIZE, D, size(cachemat, 1))
+    R, _ = LinearAlgebra.LAPACK.geqrt!(A, @view cachemat[1:nb, :])
     return getupperright!(R)
 end
 

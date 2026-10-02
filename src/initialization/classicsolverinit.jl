@@ -117,7 +117,8 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
 
         K = AffineNormalKernel(A, Q)
         compute_backward_kernel!(
-            backward_kernel, x_pred, x, K; C_DxD, diffusion=cache.default_diffusion)
+            backward_kernel, x_pred, x, K; C_DxD, C_2DxD=cache.C_2DxD,
+            C_2Dx2D=cache.C_2Dx2D, diffusion=cache.default_diffusion)
         push!(backward_kernels, copy(backward_kernel))
 
         measurement.μ .= H * x_pred.μ .- u

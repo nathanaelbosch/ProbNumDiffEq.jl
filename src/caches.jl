@@ -55,6 +55,7 @@ mutable struct EKCache{
     C_DxD::matType
     C_2DxD::matType
     C_3DxD::matType
+    C_2Dx2D::matType
     backward_kernel::bkType
     default_diffusion::diffusionType
     local_diffusion::diffusionType
@@ -212,6 +213,7 @@ function OrdinaryDiffEqCore.alg_cache(
     C_DxD = factorized_similar(FAC, D, D)
     C_2DxD = factorized_similar(FAC, 2D, D)
     C_3DxD = factorized_similar(FAC, 3D, D)
+    C_2Dx2D = factorized_similar(FAC, 2D, 2D)
 
     backward_kernel = AffineNormalKernel(
         factorized_similar(FAC, D, D),
@@ -258,7 +260,7 @@ function OrdinaryDiffEqCore.alg_cache(
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, m_tmp, pu_tmp,
         H, du, ddu, K,
-        C_d, C_dxd, C_Dxd, C_DxD, C_2DxD, C_3DxD,
+        C_d, C_dxd, C_Dxd, C_DxD, C_2DxD, C_3DxD, C_2Dx2D,
         backward_kernel,
         initdiff, initdiff * NaN, initdiff * NaN,
         err_tmp, ll, dt, du1, uf, jac_config,
