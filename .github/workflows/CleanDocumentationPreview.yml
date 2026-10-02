@@ -3,26 +3,39 @@ name: Doc Preview Cleanup
 on:
   pull_request:
     types: [closed]
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: doc-preview-cleanup
+  cancel-in-progress: false
 
 jobs:
   doc-preview-cleanup:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: read
     steps:
       - name: Checkout gh-pages branch
         uses: actions/checkout@v7
         with:
           ref: gh-pages
-      - name: Delete preview and history + push changes
-        run: |
-            if [ -d "previews/PR$PRNUM" ]; then
-              git config user.name "Documenter.jl"
-              git config user.email "documenter@juliadocs.github.io"
-              git rm -rf "previews/PR$PRNUM"
-              git commit -m "delete preview"
-              git branch gh-pages-new $(echo "delete history" | git commit-tree HEAD^{tree})
-              git push --force origin gh-pages-new:gh-pages
-            fi
+      - name: Delete previews of closed PRs and history + push changes
         env:
-            PRNUM: ${{ github.event.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          open=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 1000 --json number --jq '.[].number')
+          for dir in previews/PR*; do
+            [ -d "$dir" ] || continue
+            grep -qx "${dir#previews/PR}" <<< "$open" || git rm -rfq "$dir"
+          done
+          if ! git diff --cached --quiet; then
+            git config user.name "Documenter.jl"
+            git config user.email "documenter@juliadocs.github.io"
+            base=$(git rev-parse HEAD)
+            git commit -qm "delete previews of closed PRs"
+            new=$(echo "delete history" | git commit-tree "HEAD^{tree}")
+            git push --force-with-lease=gh-pages:"$base" origin "$new":refs/heads/gh-pages
+          fi
