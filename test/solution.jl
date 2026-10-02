@@ -4,6 +4,7 @@ using Plots
 using LinearAlgebra
 using OrdinaryDiffEq
 using Statistics
+using Random
 using ODEProblemLibrary: prob_ode_lotkavolterra
 import SciMLBase
 
@@ -135,27 +136,6 @@ import SciMLBase
                     @test m == length(dense_times)
                     @test n == length(sol.u[1])
                     @test o == n_samples
-
-                    pu = sol(dense_times).u
-                    us, es = stack(mean.(pu)), stack(std.(pu))
-                    for (interval_width, (low, high)) in (
-                        (1, (0.5, 0.8)),
-                        (2, (0.8, 0.99)),
-                        (3, (0.95, 1)),
-                        (4, (0.99, 1)),
-                    )
-                        percent_in_interval =
-                            sum(
-                                (
-                                sum(
-                                    abs.(us .- dense_samples[:, :, i]') .<=
-                                    interval_width * es,
-                                )
-                                for i in 1:n_samples
-                            )
-                            ) / (m * n * o)
-                        @test_skip low <= percent_in_interval <= high
-                    end
                 end
             end
 
@@ -246,4 +226,40 @@ end
     @test typeof(sol3).parameters[5] == typeof(u_analytic)
     @test typeof(sol3).parameters[6] == typeof(errors)
     @test sol3(0.5) == sol(0.5)
+end
+
+@testset "Samples follow the posterior marginals" begin
+    function f!(du, u, p, t)
+        du[1] = u[2]
+        du[2] = -u[1]
+    end
+    prob = ODEProblem(f!, [1.0, 0.0], (0.0, 4.0))
+    density, n_samples = 10, 10_000
+    times = range(prob.tspan..., length=density)
+
+    function test_marginals(samples, marginals)
+        μ, σ = stack(mean.(marginals); dims=1), stack(std.(marginals); dims=1)
+        sample_μ = dropdims(mean(samples; dims=3); dims=3)
+        sample_σ = dropdims(std(samples; dims=3); dims=3)
+        # Skips the exactly known components: the state at t0, and u' at the steps of EK0
+        uncertain = σ .> 0
+        @test maximum(abs, ((sample_μ .- μ) ./ σ)[uncertain]) < 0.1
+        @test maximum(abs, (sample_σ ./ σ .- 1)[uncertain]) < 0.05
+    end
+
+    @testset "$Alg" for Alg in (EK0, EK1)
+        # Most dense times lie strictly between two solver steps; one lies 1e-8 after a
+        # step, which is numerically delicate
+        sol = solve(prob, Alg(); adaptive=false, dt=1.0, tstops=[times[3] - 1e-8])
+        Random.seed!(1)
+        test_marginals(ProbNumDiffEq.sample_states(sol, n_samples), sol.x_smooth)
+        samples, _ = ProbNumDiffEq.dense_sample_states(sol, n_samples; density)
+        marginals = [
+            ProbNumDiffEq.interpolate(
+                t, sol.t, sol.x_filt, sol.x_smooth, sol.diffusions, sol.cache;
+                smoothed=true)
+            for t in times
+        ]
+        test_marginals(samples, marginals)
+    end
 end
