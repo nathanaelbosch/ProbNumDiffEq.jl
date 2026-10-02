@@ -145,6 +145,9 @@ end
 
 Condition `x` on `data` with linear measurement function `H`. Used only for initialization.
 
+Rows of `H` that are zero, such as those of `M * Proj(o)` for a mass matrix `M` with zero
+rows, are treated as unobserved; see [`_unobserve_zero_rows!`](@ref).
+
 Don't use this as a Kalman update! The function has quite a few assumptions, that only
 really work out in the specific context of initialization. If you actually want to update,
 use [`update`](@ref) or [`update!`](@ref).
@@ -164,6 +167,30 @@ function init_condition_on!(
     # measurement cov
     _matmul!(C_Dxd, x.Σ.R, H')
     _matmul!(m_tmp.Σ, C_Dxd', C_Dxd)
+    _unobserve_zero_rows!(m_tmp.Σ, H)
     copy!(x_tmp, x)
     update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
 end
+
+"""
+    _unobserve_zero_rows!(S, H)
+
+Set `S[i, i] = 1` for every zero row `i` of `H`, so that the update with measurement
+covariance `S = H Σ Hᵀ` ignores the measurements in these rows.
+
+A zero row `i` of `H` makes row and column `i` of `S` zero, so `S` is singular. With
+`S[i, i] = 1`, `S` can be factorized, and column `i` of the gain `Σ Hᵀ S⁻¹` is zero, so the
+mean and covariance are updated only on the other rows.
+"""
+function _unobserve_zero_rows!(S::AbstractMatrix, H::AbstractMatrix)
+    for i in axes(H, 1)
+        if iszero(view(H, i, :))
+            S[i, i] = 1
+        end
+    end
+    return S
+end
+_unobserve_zero_rows!(S::IsometricKroneckerProduct, H::IsometricKroneckerProduct) =
+    (on_kronecker_factors(_unobserve_zero_rows!, H.rdim, S, H); S)
+_unobserve_zero_rows!(S::BlocksOfDiagonals, H::BlocksOfDiagonals) =
+    (foreach_diagonal_block(_unobserve_zero_rows!, nblocks(H), S, H); S)

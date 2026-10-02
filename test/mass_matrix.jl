@@ -96,4 +96,16 @@ end
     @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 
     @test_throws ArgumentError solve(prob, EK0())
+
+    @testset "Initial value with a constraint residual" begin
+        prob = remake(prob, u0=[1.0, 0.0, 1e-12])
+        ref = solve(prob, RadauIIA5())
+        @testset "$Alg, $init" for Alg in (EK1, DiagonalEK1),
+            init in (TaylorModeInit(3), SimpleInit())
+
+            sol = solve(prob, Alg(order=3, initialization=init))
+            @test sol.retcode == ReturnCode.Success
+            @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
+        end
+    end
 end

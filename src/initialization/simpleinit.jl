@@ -1,21 +1,9 @@
 function initial_update!(integ, cache, init::SimpleInit)
     @unpack u, f, p, t = integ
-    @unpack x, d, Proj = cache
+    @unpack x, Proj = cache
     du = integ.uprev
 
     f = _unwrap_f(f)
-
-    # This is hacky and should definitely be removed. But it also works so 🤷
-    MM = if f.mass_matrix isa UniformScaling
-        f.mass_matrix
-    else
-        _MM = copy(f.mass_matrix)
-        if any(iszero.(diag(_MM)))
-            _MM = typeof(promote(_MM[1], 1e-20)[1]).(_MM)
-            _MM .+= 1e-20I(d)
-        end
-        _MM
-    end
 
     f(du, u, p, t)
     integ.stats.nf += 1
@@ -28,5 +16,5 @@ function initial_update!(integ, cache, init::SimpleInit)
     end
 
     init_condition_on!(x, Proj(0), view(u, :), cache)
-    init_condition_on!(x, MM * Proj(1), view(du, :), cache)
+    init_condition_on!(x, f.mass_matrix * Proj(1), view(du, :), cache)
 end
