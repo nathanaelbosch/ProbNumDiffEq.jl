@@ -29,7 +29,7 @@ invquad(v, M::BlocksOfDiagonals; v_cache, M_cache=nothing) = begin
 end
 
 @doc raw"""
-    estimate_global_diffusion(::FixedDiffusion, integ)
+    estimate_global_diffusion(::FixedDiffusion, integ, z, S)
 
 Updates the global quasi-MLE diffusion estimate on the current measuremnt.
 
@@ -37,7 +37,8 @@ The global quasi-MLE diffusion estimate Corresponds to
 ```math
 \hat{σ}^2_N = \frac{1}{Nd} \sum_{i=1}^N z_i^T S_i^{-1} z_i,
 ```
-where ``z_i, S_i`` are taken the predicted observations from each step.
+where ``z_i`` is the residual of the observation in each step and ``S_i`` its covariance
+computed by [`update!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
 \hat{σ}^2_n = \hat{σ}^2_{n-1} + ((z_n^T S_n^{-1} z_n) / d - \hat{σ}^2_{n-1}) / n.
@@ -46,12 +47,10 @@ This function updates the iteratively computed global diffusion estimate by comp
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function estimate_global_diffusion(::FixedDiffusion, integ)
-    @unpack d, measurement, m_tmp = integ.cache
-    v, S = measurement.μ, measurement.Σ
-    _v, _S = m_tmp.μ, m_tmp.Σ
+function estimate_global_diffusion(::FixedDiffusion, integ, z, S)
+    @unpack d, m_tmp = integ.cache
 
-    diffusion_increment = invquad(v, S; v_cache=_v, M_cache=_S) / d
+    diffusion_increment = invquad(z, S; v_cache=m_tmp.μ, M_cache=m_tmp.Σ) / d
 
     new_mle_diffusion = if integ.success_iter == 0
         diffusion_increment
@@ -66,7 +65,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ)
 end
 
 @doc raw"""
-    estimate_global_diffusion(::FixedMVDiffusion, integ)
+    estimate_global_diffusion(::FixedMVDiffusion, integ, z, S)
 
 Updates the multivariate global quasi-MLE diffusion estimate on the current measuremnt.
 
@@ -76,7 +75,8 @@ The global quasi-MLE diffusion estimate Corresponds to
 ```math
 [\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{jj},
 ```
-where ``z_i, S_i`` are taken the predicted observations from each step.
+where ``z_i`` is the residual of the observation in each step and ``S_i`` its covariance
+computed by [`update!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
 [\hat{Σ}^2_n]_{jj} = [\hat{Σ}^2_{n-1}]_{jj} + ([z_n]_j^2 / [S_n]_{jj} - [\hat{Σ}^2_{n-1}]_{jj}) / n.
@@ -85,12 +85,11 @@ This function updates the iteratively computed global diffusion estimate by comp
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function estimate_global_diffusion(::FixedMVDiffusion, integ)
-    @unpack d, q, measurement, local_diffusion, C_d = integ.cache
-    v, S = measurement.μ, measurement.Σ
+function estimate_global_diffusion(::FixedMVDiffusion, integ, z, S)
+    @unpack C_d = integ.cache
     diffusion_increment = let
         diag!(C_d, S)
-        @.. C_d = v^2 / C_d
+        @.. C_d = z^2 / C_d
         Diagonal(C_d)
     end
 
@@ -107,22 +106,23 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ)
 end
 
 @doc raw"""
-    local_scalar_diffusion(cache)
+    local_scalar_diffusion(cache, obs)
 
 Compute and return the local scalar quasi-MLE diffusion estimate as a `Number`.
 
 Corresponds to
 ```math
-σ² = zᵀ (H Q H^T)⁻¹ z,
+σ² = zᵀ (H Q H^T)⁻¹ z / d,
 ```
-where ``z, H, Q`` are taken from the passed integrator.
+where ``z, H`` are taken from the [`LinearizedObservation`](@ref) `obs` and ``Q`` from the
+cache.
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function local_scalar_diffusion(cache)
-    @unpack d, R, H, Qh, measurement, m_tmp, C_Dxd, C_d, C_dxd = cache
-    z = measurement.μ
+function local_scalar_diffusion(cache, obs)
+    @unpack d, Qh, C_Dxd, C_d, C_dxd = cache
+    (; z, H) = obs
     HQH = let
         _matmul!(C_Dxd, Qh.R, H')
         _matmul!(C_dxd, C_Dxd', C_Dxd)
@@ -132,7 +132,7 @@ function local_scalar_diffusion(cache)
 end
 
 @doc raw"""
-    local_diagonal_diffusion(cache)
+    local_diagonal_diffusion(cache, obs)
 
 Compute the local diagonal quasi-MLE diffusion estimate.
 
@@ -142,14 +142,15 @@ Corresponds to
 ```math
 Σ_{ii} = z_i^2 / (H Q H^T)_{ii},
 ```
-where ``z, H, Q`` are taken from the passed integrator.
+where ``z, H`` are taken from the [`LinearizedObservation`](@ref) `obs` and ``Q`` from the
+cache.
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function local_diagonal_diffusion(cache)
-    @unpack d, H, Qh, measurement, m_tmp, local_diffusion = cache
-    z = measurement.μ
+function local_diagonal_diffusion(cache, obs)
+    @unpack d, Qh, m_tmp, local_diffusion = cache
+    (; z, H) = obs
     HQH_diag = m_tmp.μ
     for i in 1:d
         c1 = _matmul!(

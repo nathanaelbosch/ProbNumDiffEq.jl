@@ -70,8 +70,8 @@ Basically consists of the following steps
 - Evaluate the ODE (and Jacobian) at the predicted mean; Build measurement mean `z`
 - Compute local diffusion and local error estimate
 - If the step is rejected, terminate here; Else continue
-- Predict the covariance and build the measurement covariance `S`
-- Kalman update step
+- Predict the covariance
+- Kalman update step, which builds the measurement covariance `S`
 - (optional) Update the global diffusion MLE
 
 As in OrdinaryDiffEqCore.jl, this step is not necessarily successful!
@@ -105,14 +105,14 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
 
     # Measure
-    evaluate_ode!(integ, x_pred, tnew)
+    obs = evaluate_ode!(integ, x_pred, tnew)
 
     # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
     if integ.opts.adaptive || isdynamic(cache.diffusionmodel)
-        cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ)
+        cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ, obs)
     end
     if integ.opts.adaptive
-        _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache))
+        _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, obs))
         _EEst = _get_EEst(integ)
         if _EEst >= one(_EEst)
             return
@@ -132,12 +132,8 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
             C_DxD, C_2DxD, C_2Dx2D, diffusion=extrapolation_diff)
     end
 
-    # Compute measurement covariance only now; likelihood computation is currently broken
-    compute_measurement_covariance!(cache)
-
     # Update state and save the ODE solution value
-    x_filt, loglikelihood = update!(
-        x_filt, x_pred, cache.measurement, cache.H; cache, R=cache.R)
+    (; loglikelihood, S) = update!(x_filt, x_pred, obs; cache)
     write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
 
     cache.log_likelihood = loglikelihood
@@ -145,7 +141,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
 
     # Update the global diffusion MLE (if applicable)
     if isstatic(cache.diffusionmodel) && cache.diffusionmodel.calibrate
-        estimate_global_diffusion(cache.diffusionmodel, integ)
+        estimate_global_diffusion(cache.diffusionmodel, integ, obs.z, S)
     end
 
     # Advance the state
@@ -157,38 +153,26 @@ end
 """
     evaluate_ode!(integ, x_pred, t)
 
-Evaluate the ODE vector field and, if using the [`EK1`](@ref), its Jacobian.
+Evaluate the ODE vector field and, if using the [`EK1`](@ref), its Jacobian, and return the
+[`LinearizedObservation`](@ref) of the ODE residual at the mean of `x_pred`.
 
-In addition, compute the measurement mean (`z`) and the measurement function Jacobian (`H`).
-Results are saved into `integ.cache.du`, `integ.cache.ddu`, `integ.cache.measurement.μ`
-and `integ.cache.H`.
-Jacobians are computed either with the supplied `f.jac`, or via automatic differentiation,
-as in OrdinaryDiffEqCore.jl.
+Its residual `z` and Jacobian `H` are written into `integ.cache.measurement.μ` and
+`integ.cache.H`. Jacobians are computed either with the supplied `f.jac`, or via automatic
+differentiation, as in OrdinaryDiffEqCore.jl.
 """
 function evaluate_ode!(integ, x_pred, t)
-    @unpack p = integ
-    @unpack measurement, H = integ.cache
+    @unpack measurement, H, R = integ.cache
 
-    z = integ.cache.measurement
-
-    integ.cache.measurement_model(z.μ, x_pred.μ, p, t)
+    integ.cache.measurement_model(measurement.μ, x_pred.μ, integ.p, t)
     integ.stats.nf += 1
 
     calc_H!(H, integ, integ.cache)
 
-    return nothing
-end
-
-compute_measurement_covariance!(cache) = begin
-    _matmul!(cache.C_Dxd, cache.x_pred.Σ.R, cache.H')
-    _matmul!(cache.measurement.Σ, cache.C_Dxd', cache.C_Dxd)
-    if !isnothing(cache.R)
-        add!(cache.measurement.Σ, _matmul!(cache.C_dxd, cache.R.R', cache.R.R))
-    end
+    return LinearizedObservation(x_pred.μ, measurement.μ, H, R)
 end
 
 """
-    compute_scaled_error_estimate!(integ, cache)
+    compute_scaled_error_estimate!(integ, cache, obs)
 
 Compute the scaled, local error estimate `Eest`, that should satisfy `Eest < 1`.
 The actual local error is computed with [`estimate_errors!`](@ref).
@@ -196,10 +180,10 @@ Then, `DiffEqBase.calculate_residuals!` handles the scaling with adaptive and re
 tolerances, and `integ.opts.internalnorm` provides the norm that should be used to return
 only a scalar.
 """
-function compute_scaled_error_estimate!(integ, cache)
+function compute_scaled_error_estimate!(integ, cache, obs)
     @unpack err_tmp = cache
     t = integ.t + integ.dt
-    err_est_unscaled = estimate_errors!(cache)
+    err_est_unscaled = estimate_errors!(cache, obs)
     err_est_unscaled .*= integ.dt
     if integ.f isa DynamicalODEFunction # second-order ODE
         DiffEqBase.calculate_residuals!(
@@ -228,19 +212,20 @@ function compute_scaled_error_estimate!(integ, cache)
 end
 
 """
-    estimate_errors!(cache)
+    estimate_errors!(cache, obs)
 
 Computes a local error estimate, as
 ```math
 E_i = ( σ_{loc}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
 ```
+with `H` the Jacobian of the [`LinearizedObservation`](@ref) `obs`.
 To save allocations, the function modifies the given `cache` and writes into
 `cache.C_Dxd` during some computations.
 """
-function estimate_errors!(cache::AbstractODEFilterCache)
-    @unpack local_diffusion, Qh, H, C_d, C_Dxd, C_DxD = cache
+function estimate_errors!(cache::AbstractODEFilterCache, obs)
+    @unpack local_diffusion, Qh, C_d, C_Dxd, C_DxD = cache
     _Q = apply_diffusion!(PSDMatrix(C_DxD), Qh, local_diffusion)
-    _HQH = PSDMatrix(_matmul!(C_Dxd, _Q.R, H'))
+    _HQH = PSDMatrix(_matmul!(C_Dxd, _Q.R, obs.H'))
     error_estimate = diag!(C_d, _HQH)
     @.. error_estimate = sqrt(error_estimate)
     return error_estimate
