@@ -23,8 +23,8 @@ using Reexport: @reexport
 using DiffEqBase: DiffEqBase
 import SciMLBase
 import SciMLBase: remake
-using SciMLBase: DAEFunction, DiscreteCallback, DynamicalODEFunction, ODEFunction,
-    ODEProblem, ReturnCode, SecondOrderODEProblem, isinplace
+using SciMLBase: CallbackSet, DAEFunction, DiscreteCallback, DynamicalODEFunction,
+    ODEFunction, ODEProblem, ReturnCode, SecondOrderODEProblem, isinplace
 using CommonSolve: init, solve, step!
 import SciMLOperators
 using SciMLOperators: MatrixOperator

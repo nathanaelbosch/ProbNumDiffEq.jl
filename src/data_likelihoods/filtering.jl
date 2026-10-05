@@ -11,17 +11,12 @@ function filtering_data_loglik(
 )
     if alg.smooth
         str =
-            "The passed algorithm performs smoothing, but `dalton_nll` can be used without. " *
-            "You might want to set `smooth=false` to imprpove performance."
+            "The passed algorithm performs smoothing, but `filtering_data_loglik` can be used " *
+            "without. You might want to set `smooth=false` to improve performance."
         @warn str
     end
-    if :tstops in keys(kwargs)
-        str = "The passed `tstops` argument will be extended with the observation locations `data.t`."
-        @warn str
-    end
-    tstops = union(data.t, get(kwargs, :tstops, []))
 
-    data_ll = DataUpdateLogLikelihood(zero(eltype(prob.p)))
+    data_ll = DataUpdateLogLikelihood{Real}(0.0)
 
     cb = DataUpdateCallback(
         data; observation_matrix, observation_noise_cov,
@@ -29,10 +24,9 @@ function filtering_data_loglik(
 
     solve(
         prob, alg, args...;
-        callback=cb,
         save_everystep=false,
-        tstops,
         kwargs...,
+        callback=CallbackSet(cb, get(kwargs, :callback, nothing)),
     )
 
     return data_ll.ll

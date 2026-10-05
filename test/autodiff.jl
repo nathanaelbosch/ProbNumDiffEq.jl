@@ -6,7 +6,8 @@ using FiniteDifferences
 using ForwardDiff
 import SciMLStructures
 using Statistics: mean
-using ProbNumDiffEq.DataLikelihoods: fenrir_data_loglik
+using ProbNumDiffEq.DataLikelihoods:
+    fenrir_data_loglik, filtering_data_loglik, dalton_data_loglik
 # using ReverseDiff
 # using Zygote
 
@@ -94,4 +95,27 @@ end
         data, observation_noise_cov=1e-2, kw...)
     dldp = grad(central_fdm(5, 1), loglik, prob.p)[1]
     @test ForwardDiff.gradient(loglik, prob.p) ≈ dldp rtol = 1e-6
+end
+
+@testset "Data likelihoods" begin
+    # A pendulum, whose Jacobian has `J[1, 1] = 0`: there, `DiagonalEK1` is like `EK0`
+    function pendulum!(du, u, p, t)
+        du[1] = u[2]
+        du[2] = -p[1] * sin(u[1]) - p[2] * u[2]
+    end
+    prob = ODEProblem(pendulum!, [1.0, 0.0], (0.0, 2.0), [3.0, 0.5])
+    ts = [0.5, 1.0, 1.5, 2.0]
+    sol = solve(prob, EK1())
+    data = (t=ts, u=[mean(sol(t)) .+ 0.1 for t in ts])
+    logliks = (fenrir_data_loglik, filtering_data_loglik, dalton_data_loglik)
+    @testset "$loglik with $ALG, gradient in $x" for loglik in logliks,
+        ALG in (EK0, EK1, DiagonalEK1),
+        x in (:u0, :p)
+
+        smooth = loglik === fenrir_data_loglik
+        ll(v) = loglik(remake(prob; x => v), ALG(; smooth);
+            data, observation_noise_cov=1e-2, adaptive=false, dt=0.05)
+        v = getproperty(prob, x)
+        @test ForwardDiff.gradient(ll, v) ≈ grad(central_fdm(5, 1), ll, v)[1] rtol = 1e-6
+    end
 end

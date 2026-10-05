@@ -79,6 +79,15 @@ function triangularize!(A; cachemat=nothing)
     QR = qr!(A)
     return getupperright!(getfield(QR, :factors))
 end
+# A coordinate without variance, e.g. `u'` with the `EK0`, which observes it exactly, has
+# a column that is zero in value. Its partials should be zero too, but roundoff leaves tiny
+# nonzero values, and `qr!` turns these into NaN. So set them to exactly zero first.
+function triangularize!(A::AbstractMatrix{<:ForwardDiff.Dual}; cachemat=nothing)
+    for a in eachcol(A)
+        all(iszero ∘ ForwardDiff.value, a) && fill!(a, zero(eltype(A)))
+    end
+    return getupperright!(getfield(qr!(A), :factors))
+end
 function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     D = size(A, 2)
     BLOCKSIZE = 36

@@ -69,6 +69,14 @@ kwargs = (
     end
 end
 
+@testset "User-provided tstops and callbacks" begin
+    # They are added to the likelihoods' own; `DT` would step over the data times
+    noop = DiscreteCallback((u, t, integ) -> false, integ -> nothing)
+    ll(; kw...) = compare_data_likelihoods(EK1(); kwargs..., kw...)
+    @test ll(tstops=[0.25]) ≈ ll(tstops=[0.25; data.t])
+    @test ll(callback=noop) ≈ ll()
+end
+
 @testset "Partial observations" begin
     # EK0 with a multivariate diffusion uses a block-diagonal covariance structure
     # as well, so partial observations work the same way as with the DiagonalEK1
