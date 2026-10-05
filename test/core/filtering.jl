@@ -114,134 +114,95 @@ import ProbNumDiffEq: logpdf
     end
 end
 
+# The buffers of `update!` for an `o`-dimensional observation of a `D`-dimensional state
+update_cache(FAC, D, o) = (;
+    K1=PNDE.factorized_zeros(FAC, D, o),
+    C_Dxd=PNDE.factorized_zeros(FAC, D, o),
+    C_DxD=PNDE.factorized_zeros(FAC, D, D),
+    measurement=Gaussian(zeros(o), PNDE.factorized_zeros(FAC, o, o)),
+    C_dxd=PNDE.factorized_zeros(FAC, o, o),
+    C_d=zeros(o),
+)
+
 @testset "UPDATE" begin
-    # Setup
-    d = 5
-    o = 1
+    # A scalar observation of a 5-dimensional state, which is a single block in each
+    # covariance structure
+    D, o = 5, 1
+    m_p = rand(D)
+    _P_p_R = IsometricKroneckerProduct(o, Matrix(UpperTriangular(rand(D, D))))
+    _H = IsometricKroneckerProduct(o, rand(o, D))
+    _R_R = IsometricKroneckerProduct(o, rand(o, o))
+    z = rand(o)
+    P_p, HM, RM = Matrix(_P_p_R'_P_p_R), Matrix(_H), Matrix(_R_R'_R_R)
 
-    m_p = rand(d)
-    _P_p_R = IsometricKroneckerProduct(o, Matrix(UpperTriangular(rand(d, d))))
-    _P_p = _P_p_R'_P_p_R
-    P_p_M = Matrix(_P_p)
+    @testset "Factorization: $_FAC, noise: $noise" for _FAC in (
+            PNDE.DenseCovariance,
+            PNDE.BlockDiagonalCovariance,
+            PNDE.IsometricKroneckerCovariance,
+        ),
+        noise in (false, true)
 
-    # Measure
-    _HB = rand(1, d)
-    _H = IsometricKroneckerProduct(o, _HB)
-    HM = Matrix(_H)
-    R = zeros(o, o)
-
-    z_data = zeros(o)
-    z = _H * m_p
-    _SR = _P_p_R * _H'
-    _S = _SR'_SR
-    SM = Matrix(_S)
-
-    LL = logpdf(Gaussian(z, SM), z_data)
-
-    # UPDATE
-    KM = P_p_M * HM' / SM
-    m = m_p + KM * (z_data .- z)
-    P = P_p_M - KM * SM * KM'
-
-    _R_R = rand(o, o)
-    _R = _R_R'_R_R
-    _SR_noisy = qr([_P_p_R * _H'; _R_R]).R |> Matrix
-    _S_noisy = _SR_noisy'_SR_noisy
-    SM_noisy = Matrix(_S_noisy)
-
-    KM_noisy = P_p_M * HM' / SM_noisy
-    m_noisy = m_p + KM_noisy * (z_data .- z)
-    P_noisy = P_p_M - KM_noisy * SM_noisy * KM_noisy'
-
-    @testset "Factorization: $_FAC" for _FAC in (
-        PNDE.DenseCovariance,
-        PNDE.BlockDiagonalCovariance,
-        PNDE.IsometricKroneckerCovariance,
-    )
-        FAC = _FAC{Float64}(o, d)
-
-        C_dxd = PNDE.factorized_zeros(FAC, o, o)
-        C_d = zeros(o)
-        C_Dxd = PNDE.factorized_zeros(FAC, d, o)
-        C_DxD = PNDE.factorized_zeros(FAC, d, d)
-        C_2DxD = PNDE.factorized_zeros(FAC, 2d, d)
-        C_3DxD = PNDE.factorized_zeros(FAC, 3d, d)
-
+        FAC = _FAC{Float64}(o, D)
         P_p_R = PNDE.to_factorized_matrix(FAC, _P_p_R)
-        P_p = P_p_R'P_p_R
-
         H = PNDE.to_factorized_matrix(FAC, _H)
+        R = noise ? PNDE.to_factorized_matrix(FAC, PSDMatrix(_R_R)) : nothing
+        x_pred = Gaussian(m_p, PSDMatrix(P_p_R))
+        obs = PNDE.LinearizedObservation(m_p, z, H, R)
+        cache = update_cache(FAC, D, o)
 
-        SR = PNDE.to_factorized_matrix(FAC, _SR)
-        S = SR'SR
-
-        x_pred = Gaussian(m_p, P_p)
-        x_out = copy(x_pred)
-        measurement = Gaussian(z, S)
+        S = HM * P_p * HM' + (noise ? RM : zeros(o, o))
+        K = P_p * HM' / S
+        m, P = m_p - K * z, P_p - K * S * K'
+        LL = logpdf(Gaussian(z, S), zeros(o))
 
         @testset "update" begin
-            x_out = ProbNumDiffEq.update(x_pred, measurement, H)
-            @test m ≈ x_out.μ
-            @test P ≈ x_out.Σ
+            x_out = PNDE.update(x_pred, obs)
+            @test x_out.μ ≈ m
+            @test x_out.Σ ≈ P
         end
 
+        x_out = copy(x_pred)
+        res = PNDE.update!(x_out, x_pred, obs; cache)
         @testset "update!" begin
-            @testset "PSDMatrix" begin
-                K_cache = copy(C_Dxd)
-                K2_cache = copy(C_Dxd)
-                M_cache = C_DxD
-                S = measurement.Σ
-                msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
-                O_cache = C_dxd
-                z_cache = C_d
-                x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
-                x_out = copy(x_pred)
-                _, ll = ProbNumDiffEq.update!(
-                    x_out,
-                    x_pred,
-                    msmnt,
-                    H,
-                    K_cache,
-                    K2_cache,
-                    M_cache,
-                    O_cache,
-                    z_cache,
-                )
-                @test m ≈ x_out.μ
-                @test P ≈ Matrix(x_out.Σ)
-                @test ll ≈ LL
-            end
-            @testset "Zero predicted covariance" begin
-                K_cache = copy(C_Dxd)
-                K2_cache = copy(C_Dxd)
-                M_cache = C_DxD
-                S = measurement.Σ
-                msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
-                O_cache = C_dxd
-                z_cache = C_d
-                x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(P_p_R)))
-                x_out = copy(x_pred)
-                ProbNumDiffEq.update!(
-                    x_out,
-                    x_pred,
-                    msmnt,
-                    H,
-                    K_cache,
-                    K2_cache,
-                    M_cache,
-                    O_cache,
-                    z_cache,
-                )
-                @test x_out == x_pred
-            end
+            @test x_out.μ ≈ m
+            @test Matrix(x_out.Σ) ≈ P
+            @test Matrix(res.S) ≈ S
+            @test res.loglikelihood ≈ LL
+        end
+
+        @testset "update_mean! and update_cov!" begin
+            x_split = copy(x_pred)
+            (; K, B) = PNDE.update_mean!(x_split, x_pred, obs; cache)
+            @test x_split.μ == x_out.μ
+            PNDE.update_cov!(x_split, x_pred, obs, K, B; cache)
+            @test x_split == x_out
+        end
+
+        @testset "Linearized at a point other than the mean" begin
+            # The same affine model, written at `m_lin`
+            m_lin = m_p + rand(D)
+            obs_lin = PNDE.LinearizedObservation(m_lin, z + HM * (m_lin - m_p), H, R)
+            x_lin = copy(x_pred)
+            PNDE.update!(x_lin, x_pred, obs_lin; cache)
+            @test x_lin.μ ≈ m
+            @test Matrix(x_lin.Σ) ≈ P
+            @test PNDE.update(x_pred, obs_lin).μ ≈ m
+        end
+
+        @testset "Zero predicted covariance" begin
+            x_pred0 = Gaussian(m_p, PSDMatrix(zero(P_p_R)))
+            x_out0 = copy(x_pred)
+            (; loglikelihood) = PNDE.update!(x_out0, x_pred0, obs; cache)
+            @test x_out0 == x_pred0
+            noise || @test loglikelihood == -Inf
         end
     end
 end
 
 @testset "SolutionObservation of a ScaledSelection with a block-diagonal covariance" begin
     # Row `k` of `H = e0ᵀ ⊗ diag(m) Π` observes `m[k]` times the zeroth derivative of
-    # dimension `dims[k]`. Compare `_matmul!`, `make_obscov_sqrt` and `update!` with the
-    # dense `H = [M 0 ⋯ 0]`; dimension 2 is not observed and keeps its prediction.
+    # dimension `dims[k]`. Compare `_matmul!` and `update!` with the dense `H = [M 0 ⋯ 0]`;
+    # dimension 2 is not observed and keeps its prediction.
     d, q, m, dims = 3, 2, [2.0, -1.0], [3, 1]
     o, D = length(dims), d * (q + 1)
     M = PNDE.ScaledSelection(m, dims, d)
@@ -254,170 +215,21 @@ end
     RR = blockdiag(() -> rand(1, 1), o)
     P, R = Matrix(x_pred.Σ), Matrix(PSDMatrix(RR))
 
-    z = PNDE._matmul!(zeros(o), H, x_pred.μ)
-    @test z ≈ H_dense * x_pred.μ
+    @test PNDE._matmul!(zeros(o), H, x_pred.μ) ≈ H_dense * x_pred.μ
 
-    SR = PNDE.make_obscov_sqrt(x_pred.Σ.R, H, RR)
-    S = Matrix(PSDMatrix(SR))
-    @test S ≈ H_dense * P * H_dense' + R
-
+    # The block-wise update uses the first `o` blocks of the buffers
     FAC = PNDE.BlockDiagonalCovariance{Float64}(o, q)
-    caches = (
-        PNDE.factorized_zeros(FAC, o * (q + 1), o),
-        PNDE.factorized_zeros(FAC, o * (q + 1), o),
-        PNDE.factorized_zeros(FAC, o * (q + 1), o * (q + 1)),
-        PNDE.factorized_zeros(FAC, o, o),
-        zeros(o),
-    )
-    residual = z - rand(o)
+    z = rand(o)
+    obs = PNDE.LinearizedObservation(x_pred.μ, z, H, PSDMatrix(RR))
     x_out = Gaussian(zero(x_pred.μ), PSDMatrix(zero(x_pred.Σ.R)))
-    _, ll = PNDE.update!(
-        x_out, x_pred, Gaussian(residual, PSDMatrix(SR)), H, caches...; R=PSDMatrix(RR))
-    K = P * H_dense' / S
-    @test x_out.μ ≈ x_pred.μ - K * residual
-    @test Matrix(x_out.Σ) ≈ P - K * S * K'
-    @test ll ≈ logpdf(Gaussian(residual, S), zeros(o))
-end
-
-@testset "UPDATE with observation noise" begin
-    # Setup
-    d = 5
-    m_p = rand(d)
-    P_p_R = Matrix(UpperTriangular(rand(d, d)))
-    P_p = P_p_R'P_p_R
-
-    # Measure
-    o = 1
-    _HB = rand(1, d)
-    H = kron(I(o), _HB)
-    R_R = rand(o, o)
-    R = R_R'R_R
-
-    z_data = zeros(o)
-    z = H * m_p
-    SR = qr([P_p_R * H'; R_R]).R |> Matrix
-    S = Symmetric(SR'SR)
-
-    LL = logpdf(Gaussian(z, S), z_data)
-
-    # UPDATE
-    S_inv = inv(S)
-    K = P_p * H' * S_inv
-    m = m_p + K * (z_data .- z)
-    P = P_p - K * S * K'
-
-    x_pred = Gaussian(m_p, P_p)
-    x_out = copy(x_pred)
-    measurement = Gaussian(z, S)
-
-    C_dxd = zeros(o, o)
-    C_d = zeros(o)
-    C_Dxd = zeros(d, o)
-    C_DxD = zeros(d, d)
-    C_2DxD = zeros(2d, d)
-    C_3DxD = zeros(3d, d)
-
-    _fstr(F) = F ? "Kronecker" : "None"
-    @testset "Factorization: $(_fstr(KRONECKER))" for KRONECKER in (false, true)
-        if KRONECKER
-            P_p_R = IsometricKroneckerProduct(1, P_p_R)
-            P_p = P_p_R'P_p_R
-
-            H = IsometricKroneckerProduct(1, _HB)
-            R_R = IsometricKroneckerProduct(1, R_R)
-            R = R'R
-
-            SR = IsometricKroneckerProduct(1, SR)
-            S = SR'SR
-
-            x_pred = Gaussian(m_p, P_p)
-            x_out = copy(x_pred)
-            measurement = Gaussian(z, S)
-
-            C_dxd = IsometricKroneckerProduct(1, C_dxd)
-            C_Dxd = IsometricKroneckerProduct(1, C_Dxd)
-            C_DxD = IsometricKroneckerProduct(1, C_DxD)
-            C_2DxD = IsometricKroneckerProduct(1, C_2DxD)
-            C_3DxD = IsometricKroneckerProduct(1, C_3DxD)
-        end
-
-        @testset "update" begin
-            x_out = ProbNumDiffEq.update(x_pred, measurement, H)
-            @test m ≈ x_out.μ
-            @test P ≈ x_out.Σ
-        end
-
-        @testset "update!" begin
-            @testset "PSDMatrix" begin
-                K_cache = copy(C_Dxd)
-                K2_cache = copy(C_Dxd)
-                M_cache = C_DxD
-                S = measurement.Σ
-                msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
-                O_cache = C_dxd
-                z_cache = C_d
-                x_pred = Gaussian(x_pred.μ, PSDMatrix(P_p_R))
-                x_out = copy(x_pred)
-                _, ll = ProbNumDiffEq.update!(
-                    x_out,
-                    x_pred,
-                    msmnt,
-                    H,
-                    K_cache,
-                    K2_cache,
-                    M_cache,
-                    O_cache,
-                    z_cache;
-                    R=PSDMatrix(R_R),
-                )
-                @test m ≈ x_out.μ
-                @test P ≈ Matrix(x_out.Σ)
-                @test ll ≈ LL
-            end
-            @testset "Zero predicted covariance" begin
-                K_cache = copy(C_Dxd)
-                K2_cache = copy(C_Dxd)
-                M_cache = C_DxD
-                S = measurement.Σ
-                msmnt = Gaussian(measurement.μ, PSDMatrix(SR))
-                O_cache = C_dxd
-                z_cache = C_d
-                x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(P_p_R)))
-                x_out = copy(x_pred)
-                ProbNumDiffEq.update!(
-                    x_out,
-                    x_pred,
-                    msmnt,
-                    H,
-                    K_cache,
-                    K2_cache,
-                    M_cache,
-                    O_cache,
-                    z_cache,
-                    R=PSDMatrix(R_R),
-                )
-                @test x_out == x_pred
-            end
-            @testset "Zero predicted covariance and zero noise" begin
-                x_pred = Gaussian(x_pred.μ, PSDMatrix(zero(P_p_R)))
-                x_out = copy(x_pred)
-                _, ll = ProbNumDiffEq.update!(
-                    x_out,
-                    x_pred,
-                    Gaussian(measurement.μ, PSDMatrix(SR)),
-                    H,
-                    copy(C_Dxd),
-                    copy(C_Dxd),
-                    C_DxD,
-                    C_dxd,
-                    C_d,
-                    R=PSDMatrix(zero(R_R)),
-                )
-                @test x_out == x_pred
-                @test ll == -Inf
-            end
-        end
-    end
+    (; loglikelihood, S) =
+        PNDE.update!(x_out, x_pred, obs; cache=update_cache(FAC, o * (q + 1), o))
+    S_dense = H_dense * P * H_dense' + R
+    K = P * H_dense' / S_dense
+    @test Matrix(S) ≈ S_dense
+    @test x_out.μ ≈ x_pred.μ - K * z
+    @test Matrix(x_out.Σ) ≈ P - K * S_dense * K'
+    @test loglikelihood ≈ logpdf(Gaussian(z, S_dense), zeros(o))
 end
 
 @testset "UPDATE log-likelihood with a multi-dimensional Kronecker covariance" begin
@@ -427,24 +239,19 @@ end
     D = d * q1
     P_R = IsometricKroneckerProduct(d, Matrix(UpperTriangular(rand(q1, q1))))
     H = IsometricKroneckerProduct(d, rand(1, q1))
-    SR = IsometricKroneckerProduct(d, Matrix(qr(P_R.B * H.B').R))
     m_p = rand(D)
     z = H * m_p
 
     x_pred = Gaussian(m_p, PSDMatrix(P_R))
     x_out = copy(x_pred)
-    _, ll = ProbNumDiffEq.update!(
-        x_out,
-        x_pred,
-        Gaussian(z, PSDMatrix(SR)),
-        H,
-        PNDE.factorized_zeros(FAC, D, d),
-        PNDE.factorized_zeros(FAC, D, d),
-        PNDE.factorized_zeros(FAC, D, D),
-        PNDE.factorized_zeros(FAC, d, d),
-        zeros(d),
-    )
-    @test ll ≈ logpdf(Gaussian(z, Matrix(SR'SR)), zeros(d))
+    obs = PNDE.LinearizedObservation(m_p, z, H)
+    (; loglikelihood, S) = PNDE.update!(x_out, x_pred, obs; cache=update_cache(FAC, D, d))
+    S_dense = Matrix(H) * Matrix(PSDMatrix(P_R)) * Matrix(H)'
+    @test Matrix(S) ≈ S_dense
+    @test loglikelihood ≈ logpdf(Gaussian(z, S_dense), zeros(d))
+    x_ref = PNDE.update(x_pred, obs)
+    @test x_out.μ ≈ x_ref.μ
+    @test Matrix(x_out.Σ) ≈ x_ref.Σ
 end
 
 @testset "SMOOTH" begin
