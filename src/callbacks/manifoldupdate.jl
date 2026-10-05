@@ -28,7 +28,7 @@ function manifoldupdate!(cache, residualf; maxiters=10, steptol=nothing)
         mul!(H, DiffResults.jacobian(result), SolProj)
         obs = LinearizedObservation(m_i, DiffResults.value(result), H)
 
-        (; S, K) = try
+        (; S, K, B) = try
             update_mean!(x_out, x_pred, obs; cache=obs_cache)
         catch e
             e isa PosDefException ? manifold_rankerror(u_i) : rethrow()
@@ -36,7 +36,7 @@ function manifoldupdate!(cache, residualf; maxiters=10, steptol=nothing)
         length(S) == 1 && iszero(S[1]) && manifold_rankerror(u_i)
 
         if norm(x_out.μ .- m_i) <= steptol * norm(x_out.μ) || i == maxiters
-            update_cov!(x_out, x_pred, obs, K; cache=obs_cache)
+            update_cov!(x_out, x_pred, obs, K, B; cache=obs_cache)
             break
         end
         m_i = copy!(x_tmp2.μ, x_out.μ)

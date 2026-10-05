@@ -46,13 +46,15 @@ K &= Σ H^T S^{-1}, \\\\
 \\end{aligned}
 ```
 `z + H (μ - m)` is the value of the linearization at the predicted mean ``μ``; it is `z` when
-`obs` is linearized at ``μ``.
+`obs` is linearized at ``μ``. The square root of ``(I - K H) Σ (I - K H)^T`` is computed as
+``\\sqrt{Σ} - B K^T`` with ``B = \\sqrt{Σ} H^T``, in ``O(D^2 o)`` for an `o`-dimensional
+observation.
 
 See also: [`update`](@ref).
 """
 function update!(x_out, x_pred, obs::LinearizedObservation; cache)
-    (; loglikelihood, S, K) = update_mean!(x_out, x_pred, obs; cache)
-    update_cov!(x_out, x_pred, obs, K; cache)
+    (; loglikelihood, S, K, B) = update_mean!(x_out, x_pred, obs; cache)
+    update_cov!(x_out, x_pred, obs, K, B; cache)
     return (; loglikelihood, S)
 end
 
@@ -62,10 +64,11 @@ end
                  K1_cache, K2_cache, measurement_cache, C_dxd, C_d)
 
 The mean of [`update!`](@ref): write ``μ^F`` into `x_out.μ`, and return the named tuple
-`(; loglikelihood, S, K)` with the gain `K` for [`update_cov!`](@ref). An iterated update
-calls it for each linearization and [`update_cov!`](@ref) only for the last one. The second
-form takes the buffers explicitly; the first takes them from `cache`, and writes `S` into
-`cache.measurement.Σ` and `K` into `cache.C_Dxd`.
+`(; loglikelihood, S, K, B)` with the gain `K` and `B = √Σ Hᵀ` for [`update_cov!`](@ref).
+An iterated update calls it for each linearization and [`update_cov!`](@ref) only for the
+last one. The second form takes the buffers explicitly; the first takes them from `cache`,
+and writes `S` into `cache.measurement.Σ`, `K` into `cache.C_Dxd` and `B` into
+`cache.K1`.
 """
 function update_mean!(
     x_out,
@@ -115,7 +118,7 @@ function _update_mean!(
     if (isnothing(R) || iszero(R)) && iszero(P_p)
         copy!(x_out.μ, m_p)
         loglikelihood = convert(eltype(z), iszero(z) ? Inf : -Inf)
-        return (; loglikelihood, S, K=fill!(K2_cache, 0))
+        return (; loglikelihood, S, K=fill!(K2_cache, 0), B=K1)
     end
 
     _S = make_hermitian_if_fowarddiff(copy!(C_dxd, S))
@@ -125,7 +128,7 @@ function _update_mean!(
     loglikelihood = pn_logpdf!(C_d, z, S_chol)
 
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
-    return (; loglikelihood, S, K)
+    return (; loglikelihood, S, K, B=K1)
 end
 function pn_logpdf!(v, z, S_chol)
     μ = reshape(z, :)
@@ -151,7 +154,7 @@ function _update_mean!(
     # `C_d` is workspace for the flattened residual, so it is not converted
     (; loglikelihood) =
         _update_mean!(map(x -> _kronecker_factor(x, d), args)..., C_d)
-    return (; loglikelihood, S=S_cache, K=K2_cache)
+    return (; loglikelihood, S=S_cache, K=K2_cache, B=K1_cache)
 end
 function _update_mean!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},
@@ -172,22 +175,22 @@ function _update_mean!(
         loglikelihood +=
             _update_mean!(map(x -> _diagonal_block(x, i, d), args)...).loglikelihood
     end
-    return (; loglikelihood, S=S_cache, K=K2_cache)
+    return (; loglikelihood, S=S_cache, K=K2_cache, B=K1_cache)
 end
 
 """
-    update_cov!(x_out, x_pred, obs::LinearizedObservation, K; cache)
-    update_cov!(x_out, x_pred, obs::LinearizedObservation, K, M_cache, K1_cache)
+    update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B; cache)
+    update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B, M_cache, KR_cache)
 
-The covariance of [`update!`](@ref): write ``Σ^F`` into `x_out.Σ`, for the gain `K` that
-[`update_mean!`](@ref) returned for the same `x_pred` and `obs`.
+The covariance of [`update!`](@ref): write ``Σ^F`` into `x_out.Σ`, for the gain `K` and
+`B = √Σ Hᵀ` that [`update_mean!`](@ref) returned for the same `x_pred` and `obs`.
 """
-function update_cov!(x_out, x_pred, obs::LinearizedObservation, K, M_cache, K1_cache)
-    _update_cov!(x_out.Σ, x_pred.Σ, obs.H, obs.R, K, M_cache, K1_cache)
+function update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B, M_cache, KR_cache)
+    _update_cov!(x_out.Σ, x_pred.Σ, obs.H, obs.R, K, B, M_cache, KR_cache)
     return x_out
 end
-update_cov!(x_out, x_pred, obs::LinearizedObservation, K; cache) =
-    update_cov!(x_out, x_pred, obs, K, cache.C_DxD, cache.K1)
+update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B; cache) =
+    update_cov!(x_out, x_pred, obs, K, B, cache.C_DxD, cache.K1)
 
 function _update_cov!(
     Σ_out::PSDMatrix,
@@ -195,31 +198,28 @@ function _update_cov!(
     H::AbstractMatrix,
     R::Union{Nothing,PSDMatrix},
     K::AbstractMatrix,
+    B::AbstractMatrix,
     M_cache::AbstractMatrix,
-    K1_cache::AbstractMatrix,
+    KR_cache::AbstractMatrix,
 )
     if (isnothing(R) || iszero(R)) && iszero(Σ_pred)
         copy!(Σ_out.R, Σ_pred.R)
         return Σ_out
     end
 
-    # M = I - K H
-    M = _matmul!(M_cache, K, H, -1.0, 0.0)
-    @inbounds @simd ivdep for i in axes(M, 1)
-        M[i, i] += 1
-    end
-    fast_X_A_Xt!(Σ_out, Σ_pred, M)
+    # √Σ (I - K H)ᵀ = √Σ - B Kᵀ
+    _matmul!(copy!(Σ_out.R, Σ_pred.R), B, K', -1.0, 1.0)
 
     if !isnothing(R)
-        # Σ^F = √Σ^Fᵀ √Σ^F + B Bᵀ with B = K √Rᵀ
-        _matmul!(M, Σ_out.R', Σ_out.R)
-        B = _matmul!(K1_cache, K, R.R')
-        _matmul!(M, B, B', 1, 1)
+        # Σ^F = √Σ^Fᵀ √Σ^F + KR KRᵀ with KR = K √Rᵀ
+        M = _matmul!(M_cache, Σ_out.R', Σ_out.R)
+        KR = _matmul!(KR_cache, K, R.R')
+        _matmul!(M, KR, KR', 1, 1)
         chol = cholesky!(Symmetric(M), check=false)
         if issuccess(chol)
             copy!(Σ_out.R, chol.U)
         else
-            Σ_out.R .= triangularize!([Σ_out.R; B']; cachemat=M)
+            Σ_out.R .= triangularize!([Σ_out.R; KR']; cachemat=M)
         end
     end
 
@@ -231,10 +231,12 @@ function _update_cov!(
     H::IsometricKroneckerProduct,
     R::Union{Nothing,KroneckerPSD},
     K::IsometricKroneckerProduct,
+    B::IsometricKroneckerProduct,
     M_cache::IsometricKroneckerProduct,
-    K1_cache::IsometricKroneckerProduct,
+    KR_cache::IsometricKroneckerProduct,
 )
-    on_kronecker_factors(_update_cov!, H.rdim, Σ_out, Σ_pred, H, R, K, M_cache, K1_cache)
+    on_kronecker_factors(
+        _update_cov!, H.rdim, Σ_out, Σ_pred, H, R, K, B, M_cache, KR_cache)
     return Σ_out
 end
 function _update_cov!(
@@ -243,11 +245,12 @@ function _update_cov!(
     H::BlocksOfDiagonals,
     R::Union{Nothing,BlocksOfDiagonalsPSD},
     K::BlocksOfDiagonals,
+    B::BlocksOfDiagonals,
     M_cache::BlocksOfDiagonals,
-    K1_cache::BlocksOfDiagonals,
+    KR_cache::BlocksOfDiagonals,
 )
     foreach_diagonal_block(
-        _update_cov!, nblocks(H), Σ_out, Σ_pred, H, R, K, M_cache, K1_cache)
+        _update_cov!, nblocks(H), Σ_out, Σ_pred, H, R, K, B, M_cache, KR_cache)
     return Σ_out
 end
 

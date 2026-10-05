@@ -145,7 +145,7 @@ function _update_mean!(
             _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
             map(x -> _diagonal_block(x, k, o), args)...).loglikelihood
     end
-    return (; loglikelihood, S=S_cache, K=K2_cache)
+    return (; loglikelihood, S=S_cache, K=K2_cache, B=K1_cache)
 end
 function _update_cov!(
     Σ_out::BlocksOfDiagonalsPSD,
@@ -153,12 +153,13 @@ function _update_cov!(
     H::SolutionObservation{<:ScaledSelection},
     R::Union{Nothing,BlocksOfDiagonalsPSD},
     K::BlocksOfDiagonals,
+    B::BlocksOfDiagonals,
     M_cache::BlocksOfDiagonals,
-    K1_cache::BlocksOfDiagonals,
+    KR_cache::BlocksOfDiagonals,
 )
     d, o = nblocks(Σ_out.R), length(H.M.dims)
     o < d && copy!(Σ_out.R, Σ_pred.R)
-    args = (H, R, K, M_cache, K1_cache)
+    args = (H, R, K, B, M_cache, KR_cache)
     for (k, i) in enumerate(H.M.dims)
         _update_cov!(_diagonal_block(Σ_out, i, d), _diagonal_block(Σ_pred, i, d),
             map(x -> _diagonal_block(x, k, o), args)...)
