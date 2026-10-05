@@ -118,37 +118,52 @@ _measurement_structure(C::BlockDiagonalCovariance{T}, o) where {T} =
 _measurement_structure(C, o) = C
 
 # With a block-diagonal covariance, a `ScaledSelection` observation decouples into one
-# scalar observation `m[k] e0ᵀ x_{dims[k]}` per row `k`
+# scalar observation `m[k] e0ᵀ x_{dims[k]}` per row `k`; unobserved state blocks keep the
+# prediction
 _diagonal_block(H::SolutionObservation{<:ScaledSelection}, k, o) =
     _e0_row(eltype(H.M), H.q, H.M.m[k])
 _matmul!(z::AbstractVector, H::SolutionObservation{<:ScaledSelection}, μ::AbstractVector) =
     z .= H.M.m .* view(μ, H.M.dims)
-function make_obscov_sqrt(
-    PR::BlocksOfDiagonals, H::SolutionObservation{<:ScaledSelection}, RR::BlocksOfDiagonals,
-)
-    o = length(H.M.dims)
-    return BlocksOfDiagonals([
-        make_obscov_sqrt(blocks(PR)[i], _diagonal_block(H, k, o), blocks(RR)[k])
-        for (k, i) in enumerate(H.M.dims)
-    ])
-end
-function update!(
-    x_out, x_pred, measurement, H::SolutionObservation{<:ScaledSelection},
-    K1_cache, K2_cache, M_cache, C_dxd, C_d; R=nothing,
-)
+function _update_mean!(
+    x_out::SRGaussian{T,<:BlocksOfDiagonals},
+    x_pred::SRGaussian{T,<:BlocksOfDiagonals},
+    z::AbstractVector,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K1_cache::BlocksOfDiagonals,
+    K2_cache::BlocksOfDiagonals,
+    S_cache::BlocksOfDiagonals,
+    C_dxd::BlocksOfDiagonals,
+    C_d::AbstractVector,
+) where {T}
     d, o = nblocks(x_out.Σ.R), length(H.M.dims)
-    if o < d
-        copy!(x_out, x_pred)
-    end
-    args = (measurement, H, K1_cache, K2_cache, M_cache, C_dxd, C_d)
-    loglikelihood = zero(eltype(x_out.μ))
+    o < d && copy!(x_out.μ, x_pred.μ)
+    args = (z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
+    loglikelihood = zero(T)
     for (k, i) in enumerate(H.M.dims)
-        _, ll = update!(
+        loglikelihood += _update_mean!(
             _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
-            map(x -> _diagonal_block(x, k, o), args)...; R=_diagonal_block(R, k, o))
-        loglikelihood += ll
+            map(x -> _diagonal_block(x, k, o), args)...).loglikelihood
     end
-    return x_out, loglikelihood
+    return (; loglikelihood, S=S_cache, K=K2_cache)
+end
+function _update_cov!(
+    Σ_out::BlocksOfDiagonalsPSD,
+    Σ_pred::BlocksOfDiagonalsPSD,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K::BlocksOfDiagonals,
+    M_cache::BlocksOfDiagonals,
+    K1_cache::BlocksOfDiagonals,
+)
+    d, o = nblocks(Σ_out.R), length(H.M.dims)
+    o < d && copy!(Σ_out.R, Σ_pred.R)
+    args = (H, R, K, M_cache, K1_cache)
+    for (k, i) in enumerate(H.M.dims)
+        _update_cov!(_diagonal_block(Σ_out, i, d), _diagonal_block(Σ_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+    end
+    return Σ_out
 end
 
 nonpositive_noise_error() =

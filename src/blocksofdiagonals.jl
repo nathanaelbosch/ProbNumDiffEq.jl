@@ -243,23 +243,6 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(
-        C::AbstractVector,
-        A::BlocksOfDiagonals,
-        B::AbstractVector,
-        alpha::Number,
-        beta::Number,
-    ) = begin
-        @assert size(A, 2) == length(B)
-        @assert length(C) == size(A, 1)
-        D = nblocks(A)
-        d1, d2 = size(A.blocks[1])
-        for i in eachindex(blocks(A))
-            @inbounds $_mul!(
-                view(C, i:D:(D*d1)), A.blocks[i], view(B, i:D:(D*d2)), alpha, beta)
-        end
-        return C
-    end
 end
 
 # Block-wise, instead of LinearAlgebra's entry-by-entry fallback

@@ -94,7 +94,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
     # @unpack Ah, Qh = cache
     @unpack x, x_pred, x_filt, measurement, x_tmp = cache
-    @unpack K1, C_Dxd, C_DxD, C_dxd, C_3DxD, C_d = cache
+    @unpack C_DxD, C_3DxD = cache
     @unpack backward_kernel = cache
 
     # Predict forward:
@@ -122,10 +122,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
         push!(backward_kernels, copy(backward_kernel))
 
         measurement.μ .= H * x_pred.μ .- u
-        _matmul!(C_Dxd, x_pred.Σ.R, H')
-        _matmul!(measurement.Σ, C_Dxd', C_Dxd)
-
-        update!(x_filt, x_pred, measurement, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
+        update!(x_filt, x_pred, LinearizedObservation(x_pred.μ, measurement.μ, H); cache)
         push!(filts, copy(x_filt))
 
         x = x_filt
