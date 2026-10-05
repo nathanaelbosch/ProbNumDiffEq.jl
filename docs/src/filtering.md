@@ -10,8 +10,11 @@ ProbNumDiffEq.predict!
 ## Update
 
 ```@docs
+ProbNumDiffEq.LinearizedObservation
 ProbNumDiffEq.update
 ProbNumDiffEq.update!
+ProbNumDiffEq.update_mean!
+ProbNumDiffEq.update_cov!
 ```
 
 ## Smooth
