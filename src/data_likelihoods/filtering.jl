@@ -18,7 +18,6 @@ function filtering_data_loglik(
 
     data_ll = DataUpdateLogLikelihood{Real}(0.0)
 
-    # Adds the data times to the `tstops`
     cb = DataUpdateCallback(
         data; observation_matrix, observation_noise_cov,
         loglikelihood=data_ll)
