@@ -29,7 +29,7 @@ end
 LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
 
 """
-    update!(x_out, x_pred, obs::LinearizedObservation; cache, unobserved_zero_rows=false)
+    update!(x_out, x_pred, obs::LinearizedObservation; cache)
 
 Condition the Gaussian `x_pred` on the observation `obs`, write the result into `x_out`, and
 return the named tuple `(; loglikelihood, S)`: the log-likelihood of the observation and its
@@ -48,21 +48,18 @@ K &= Σ H^T S^{-1}, \\\\
 `z + H (μ - m)` is the value of the linearization at the predicted mean ``μ``; it is `z` when
 `obs` is linearized at ``μ``.
 
-With `unobserved_zero_rows=true`, the zero rows of `H` are not observed; see
-`_unobserve_zero_rows!`.
-
 See also: [`update`](@ref).
 """
-function update!(x_out, x_pred, obs::LinearizedObservation; cache, kwargs...)
-    (; loglikelihood, S, K) = update_mean!(x_out, x_pred, obs; cache, kwargs...)
+function update!(x_out, x_pred, obs::LinearizedObservation; cache)
+    (; loglikelihood, S, K) = update_mean!(x_out, x_pred, obs; cache)
     update_cov!(x_out, x_pred, obs, K; cache)
     return (; loglikelihood, S)
 end
 
 """
-    update_mean!(x_out, x_pred, obs::LinearizedObservation; cache, unobserved_zero_rows=false)
+    update_mean!(x_out, x_pred, obs::LinearizedObservation; cache)
     update_mean!(x_out, x_pred, obs::LinearizedObservation,
-                 K1_cache, K2_cache, measurement_cache, C_dxd, C_d; unobserved_zero_rows=false)
+                 K1_cache, K2_cache, measurement_cache, C_dxd, C_d)
 
 The mean of [`update!`](@ref): write ``μ^F`` into `x_out.μ`, and return the named tuple
 `(; loglikelihood, S, K)` with the gain `K` for [`update_cov!`](@ref). An iterated update
@@ -78,23 +75,22 @@ function update_mean!(
     K2_cache,
     measurement_cache,
     C_dxd,
-    C_d;
-    unobserved_zero_rows::Bool=false,
+    C_d,
 )
     (; m, H, R) = obs
-    # z + H (μ - m), with x_out.μ as buffer for μ - m
+    # z + H (μ - m) = z - H (m - μ), with x_out.μ and C_d as buffers
     z = if m === x_pred.μ
         obs.z
     else
-        Δ = x_out.μ .= x_pred.μ .- m
-        _matmul!(copy!(measurement_cache.μ, obs.z), H, Δ, 1, 1)
+        Δ = x_out.μ .= m .- x_pred.μ
+        measurement_cache.μ .= obs.z .- _matmul!(C_d, H, Δ)
     end
     return _update_mean!(x_out, x_pred, z, H, R, K1_cache, K2_cache, measurement_cache.Σ,
-        C_dxd, C_d; unobserved_zero_rows)
+        C_dxd, C_d)
 end
-function update_mean!(x_out, x_pred, obs::LinearizedObservation; cache, kwargs...)
+function update_mean!(x_out, x_pred, obs::LinearizedObservation; cache)
     @unpack K1, C_Dxd, measurement, C_dxd, C_d = cache
-    return update_mean!(x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d; kwargs...)
+    return update_mean!(x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d)
 end
 
 function _update_mean!(
@@ -107,8 +103,7 @@ function _update_mean!(
     K2_cache::AbstractMatrix,
     S_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
-    C_d::AbstractArray;
-    unobserved_zero_rows::Bool=false,
+    C_d::AbstractArray,
 )
     m_p, P_p = x_pred.μ, x_pred.Σ
 
@@ -116,7 +111,6 @@ function _update_mean!(
     K1 = _matmul!(K1_cache, P_p.R, H')
     S = _matmul!(S_cache, K1', K1)
     isnothing(R) || add!(S, _matmul!(C_dxd, R.R', R.R))
-    unobserved_zero_rows && _unobserve_zero_rows!(S, H)
 
     if (isnothing(R) || iszero(R)) && iszero(P_p)
         copy!(x_out.μ, m_p)
@@ -150,14 +144,13 @@ function _update_mean!(
     K2_cache::IsometricKroneckerProduct,
     S_cache::IsometricKroneckerProduct,
     C_dxd::IsometricKroneckerProduct,
-    C_d::AbstractVector;
-    kwargs...,
+    C_d::AbstractVector,
 ) where {T}
     d = H.rdim
     args = (x_out, x_pred, z, H, R, K1_cache, K2_cache, S_cache, C_dxd)
     # `C_d` is workspace for the flattened residual, so it is not converted
     (; loglikelihood) =
-        _update_mean!(map(x -> _kronecker_factor(x, d), args)..., C_d; kwargs...)
+        _update_mean!(map(x -> _kronecker_factor(x, d), args)..., C_d)
     return (; loglikelihood, S=S_cache, K=K2_cache)
 end
 function _update_mean!(
@@ -170,15 +163,14 @@ function _update_mean!(
     K2_cache::BlocksOfDiagonals,
     S_cache::BlocksOfDiagonals,
     C_dxd::BlocksOfDiagonals,
-    C_d::AbstractVector;
-    kwargs...,
+    C_d::AbstractVector,
 ) where {T}
     d = nblocks(H)
     args = (x_out, x_pred, z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
     loglikelihood = zero(T)
     for i in 1:d
         loglikelihood +=
-            _update_mean!(map(x -> _diagonal_block(x, i, d), args)...; kwargs...).loglikelihood
+            _update_mean!(map(x -> _diagonal_block(x, i, d), args)...).loglikelihood
     end
     return (; loglikelihood, S=S_cache, K=K2_cache)
 end

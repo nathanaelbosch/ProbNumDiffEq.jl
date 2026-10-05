@@ -146,7 +146,7 @@ end
 Condition `x` on `data` with linear measurement function `H`. Used only for initialization.
 
 Rows of `H` that are zero, such as those of `M * Proj(o)` for a mass matrix `M` with zero
-rows, are treated as unobserved; see [`_unobserve_zero_rows!`](@ref).
+rows, are treated as unobserved; see [`_zero_row_noise`](@ref).
 
 Don't use this as a Kalman update! The function has quite a few assumptions, that only
 really work out in the specific context of initialization. If you actually want to update,
@@ -158,39 +158,36 @@ function init_condition_on!(
     data::AbstractVector,
     cache,
 )
-    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, m_tmp, C_d = cache
-
-    # measurement mean
-    _matmul!(m_tmp.μ, H, x.μ)
-    m_tmp.μ .-= data
-
-    # measurement cov
-    _matmul!(C_Dxd, x.Σ.R, H')
-    _matmul!(m_tmp.Σ, C_Dxd', C_Dxd)
-    _unobserve_zero_rows!(m_tmp.Σ, H)
+    @unpack x_tmp, m_tmp = cache
+    z = _matmul!(m_tmp.μ, H, x.μ)
+    z .-= data
     copy!(x_tmp, x)
-    update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
+    obs = LinearizedObservation(x_tmp.μ, z, H, _zero_row_noise(H, cache))
+    return update!(x, x_tmp, obs; cache)
 end
 
 """
-    _unobserve_zero_rows!(S, H)
+    _zero_row_noise(H, cache)
 
-Set `S[i, i] = 1` for every zero row `i` of `H`, so that the update with measurement
-covariance `S = H Σ Hᵀ` ignores the measurements in these rows.
+Unit observation noise on the zero rows of `H`, or `nothing` if `H` has no zero row.
 
-A zero row `i` of `H` makes row and column `i` of `S` zero, so `S` is singular. With
-`S[i, i] = 1`, `S` can be factorized, and column `i` of the gain `Σ Hᵀ S⁻¹` is zero, so the
-mean and covariance are updated only on the other rows.
+A zero row `i` of `H` makes row and column `i` of `S = H Σ Hᵀ` zero, so `S` is singular.
+With unit noise on row `i`, `S[i, i] = 1`, `S` can be factorized, and column `i` of the gain
+`Σ Hᵀ S⁻¹` is zero, so the observation in this row is ignored.
 """
-function _unobserve_zero_rows!(S::AbstractMatrix, H::AbstractMatrix)
+function _zero_row_noise(H, cache)
+    R = _ones_on_zero_rows!(zero(cache.C_dxd), H)
+    return iszero(R) ? nothing : PSDMatrix(R)
+end
+function _ones_on_zero_rows!(R::AbstractMatrix, H::AbstractMatrix)
     for i in axes(H, 1)
         if iszero(view(H, i, :))
-            S[i, i] = 1
+            R[i, i] = 1
         end
     end
-    return S
+    return R
 end
-_unobserve_zero_rows!(S::IsometricKroneckerProduct, H::IsometricKroneckerProduct) =
-    (on_kronecker_factors(_unobserve_zero_rows!, H.rdim, S, H); S)
-_unobserve_zero_rows!(S::BlocksOfDiagonals, H::BlocksOfDiagonals) =
-    (foreach_diagonal_block(_unobserve_zero_rows!, nblocks(H), S, H); S)
+_ones_on_zero_rows!(R::IsometricKroneckerProduct, H::IsometricKroneckerProduct) =
+    (on_kronecker_factors(_ones_on_zero_rows!, H.rdim, R, H); R)
+_ones_on_zero_rows!(R::BlocksOfDiagonals, H::BlocksOfDiagonals) =
+    (foreach_diagonal_block(_ones_on_zero_rows!, nblocks(H), R, H); R)

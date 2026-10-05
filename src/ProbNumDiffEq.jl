@@ -11,7 +11,7 @@ import Base:
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
     UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
-    isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
+    isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!, PosDefException
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 import Random: Random, AbstractRNG
