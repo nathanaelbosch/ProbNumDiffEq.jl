@@ -32,8 +32,10 @@ LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
     update!(x_out, x_pred, obs::LinearizedObservation; cache)
 
 Condition the Gaussian `x_pred` on the observation `obs`, write the result into `x_out`, and
-return the named tuple `(; loglikelihood, S)`: the log-likelihood of the observation and its
-covariance `S = H Σ Hᵀ + R`, which is written into `cache.measurement.Σ`.
+return the named tuple `(; loglikelihood, mahalanobis², S)`: the log-likelihood of the
+observation, the squared Mahalanobis distance ``\\hat{z}^T S^{-1} \\hat{z}`` of
+``\\hat{z} = z + H (μ - m)``, and its covariance `S = H Σ Hᵀ + R`, which is written into
+`cache.measurement.Σ`.
 
 This is [`update_mean!`](@ref) followed by [`update_cov!`](@ref). For an explicit `H`, it is
 the square-root Kalman update in Joseph form:
@@ -53,9 +55,9 @@ observation.
 See also: [`update`](@ref).
 """
 function update!(x_out, x_pred, obs::LinearizedObservation; cache)
-    (; loglikelihood, S, K, B) = update_mean!(x_out, x_pred, obs; cache)
+    (; loglikelihood, mahalanobis², S, K, B) = update_mean!(x_out, x_pred, obs; cache)
     update_cov!(x_out, x_pred, obs, K, B; cache)
-    return (; loglikelihood, S)
+    return (; loglikelihood, mahalanobis², S)
 end
 
 """
@@ -64,7 +66,8 @@ end
                  K1_cache, K2_cache, measurement_cache, C_dxd, C_d)
 
 The mean of [`update!`](@ref): write ``μ^F`` into `x_out.μ`, and return the named tuple
-`(; loglikelihood, S, K, B)` with the gain `K` and `B = √Σ Hᵀ` for [`update_cov!`](@ref).
+`(; loglikelihood, mahalanobis², S, K, B)` with the gain `K` and `B = √Σ Hᵀ` for
+[`update_cov!`](@ref).
 An iterated update calls it for each linearization and [`update_cov!`](@ref) only for the
 last one. The second form takes the buffers explicitly; the first takes them from `cache`,
 and writes `S` into `cache.measurement.Σ`, `K` into `cache.C_Dxd` and `B` into
@@ -118,24 +121,29 @@ function _update_mean!(
     if (isnothing(R) || iszero(R)) && iszero(P_p)
         copy!(x_out.μ, m_p)
         loglikelihood = convert(eltype(z), iszero(z) ? Inf : -Inf)
-        return (; loglikelihood, S, K=fill!(K2_cache, 0), B=K1)
+        mahalanobis² = convert(eltype(z), iszero(z) ? 0 : Inf)
+        return (; loglikelihood, mahalanobis², S, K=fill!(K2_cache, 0), B=K1)
     end
 
     _S = make_hermitian_if_fowarddiff(copy!(C_dxd, S))
     S_chol = length(_S) == 1 ? _S[1] : cholesky!(_S)
     K = rdiv!(_matmul!(K2_cache, P_p.R', K1), S_chol)
 
-    loglikelihood = pn_logpdf!(C_d, z, S_chol)
+    (; loglikelihood, mahalanobis²) = pn_logpdf!(C_d, z, S_chol)
 
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
-    return (; loglikelihood, S, K, B=K1)
+    return (; loglikelihood, mahalanobis², S, K, B=K1)
 end
 function pn_logpdf!(v, z, S_chol)
     μ = reshape(z, :)
     w = ldiv!(S_chol, copy!(reshape(v, :), μ))
     n = length(μ)
+    mahalanobis² = μ'w
     # With a Kronecker covariance `S ⊗ I`, `μ` stacks `n ÷ size(S, 1)` independent columns
-    return -0.5 * μ'w - 0.5 * n * log(2π) - 0.5 * (n ÷ size(S_chol, 1)) * logdet(S_chol)
+    loglikelihood =
+        -0.5 * mahalanobis² - 0.5 * n * log(2π) -
+        0.5 * (n ÷ size(S_chol, 1)) * logdet(S_chol)
+    return (; loglikelihood, mahalanobis²)
 end
 function _update_mean!(
     x_out::SRGaussian{T,<:IsometricKroneckerProduct},
@@ -152,9 +160,9 @@ function _update_mean!(
     d = H.rdim
     args = (x_out, x_pred, z, H, R, K1_cache, K2_cache, S_cache, C_dxd)
     # `C_d` is workspace for the flattened residual, so it is not converted
-    (; loglikelihood) =
+    (; loglikelihood, mahalanobis²) =
         _update_mean!(map(x -> _kronecker_factor(x, d), args)..., C_d)
-    return (; loglikelihood, S=S_cache, K=K2_cache, B=K1_cache)
+    return (; loglikelihood, mahalanobis², S=S_cache, K=K2_cache, B=K1_cache)
 end
 function _update_mean!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},
@@ -170,12 +178,13 @@ function _update_mean!(
 ) where {T}
     d = nblocks(H)
     args = (x_out, x_pred, z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
-    loglikelihood = zero(T)
+    loglikelihood, mahalanobis² = zero(T), zero(T)
     for i in 1:d
-        loglikelihood +=
-            _update_mean!(map(x -> _diagonal_block(x, i, d), args)...).loglikelihood
+        block = _update_mean!(map(x -> _diagonal_block(x, i, d), args)...)
+        loglikelihood += block.loglikelihood
+        mahalanobis² += block.mahalanobis²
     end
-    return (; loglikelihood, S=S_cache, K=K2_cache, B=K1_cache)
+    return (; loglikelihood, mahalanobis², S=S_cache, K=K2_cache, B=K1_cache)
 end
 
 """
