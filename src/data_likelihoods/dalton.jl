@@ -43,22 +43,18 @@ function dalton_data_loglik(
 )
     if alg.smooth
         str =
-            "The passed algorithm performs smoothing, but `dalton_nll` can be used without. " *
-            "You might want to set `smooth=false` to imprpove performance."
+            "The passed algorithm performs smoothing, but `dalton_data_loglik` can be used " *
+            "without. You might want to set `smooth=false` to improve performance."
         @warn str
     end
     if !(:adaptive in keys(kwargs))
-        str = "`dalton_nll` only works with fixed step sizes. Set `adaptive=false`."
+        str = "`dalton_data_loglik` only works with fixed step sizes. Set `adaptive=false`."
         throw(ArgumentError(str))
     end
 
-    if :tstops in keys(kwargs)
-        str = "The passed `tstops` argument will be extended with the observation locations `data.t`."
-        @warn str
-    end
     tstops = union(data.t, get(kwargs, :tstops, []))
 
-    data_ll = DataUpdateLogLikelihood(zero(eltype(prob.p)))
+    data_ll = DataUpdateLogLikelihood{Real}(0)
 
     cb = DataUpdateCallback(
         data; observation_matrix, observation_noise_cov,
@@ -66,10 +62,10 @@ function dalton_data_loglik(
 
     sol_with_data = solve(
         prob, alg, args...;
-        callback=cb,
         save_everystep=false,
         kwargs...,
         tstops,
+        callback=CallbackSet(cb, get(kwargs, :callback, nothing)),
     )
 
     sol_without_data = solve(

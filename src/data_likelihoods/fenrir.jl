@@ -54,7 +54,7 @@ function fenrir_data_loglik(
     check_observation_noise_cov(observation_noise_cov)
     tstops = union(data.t, get(kwargs, :tstops, []))
 
-    integ = init(prob, alg, args...; tstops, kwargs...)
+    integ = init(prob, alg, args...; kwargs..., tstops)
 
     # Build the observation model before the solve, such that unsupported inputs fail early
     H, R = make_observation_model(
@@ -66,7 +66,7 @@ function fenrir_data_loglik(
     if sol.retcode !== SciMLBase.ReturnCode.Success &&
        sol.retcode !== SciMLBase.ReturnCode.Default
         @error "The PN ODE solver did not succeed!" sol.retcode
-        return -Inf * one(eltype(integ.p))
+        return -Inf * one(eltype(integ.u))
     end
 
     # Fit the ODE solution / PN posterior to the provided data; this is the actual Fenrir
@@ -84,7 +84,7 @@ function fit_pnsolution_to_data!(
     @unpack cache, backward_kernels = sol
     @unpack C_DxD, C_3DxD = cache
 
-    LL = zero(eltype(sol.prob.p))
+    LL = zero(eltype(sol.x_filt[1].μ))
 
     _cache = make_obssized_cache(cache; o=length(data.u[1]))
 

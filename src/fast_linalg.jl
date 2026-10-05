@@ -79,6 +79,14 @@ function triangularize!(A; cachemat=nothing)
     QR = qr!(A)
     return getupperright!(getfield(QR, :factors))
 end
+# `qr!` gives NaN partials for a column that is zero in value but not in its partials, as
+# for a coordinate with zero variance, whose partials are roundoff: zero them first
+function triangularize!(A::AbstractMatrix{<:ForwardDiff.Dual}; cachemat=nothing)
+    for a in eachcol(A)
+        all(iszero ∘ ForwardDiff.value, a) && fill!(a, zero(eltype(A)))
+    end
+    return getupperright!(getfield(qr!(A), :factors))
+end
 function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     D = size(A, 2)
     BLOCKSIZE = 36

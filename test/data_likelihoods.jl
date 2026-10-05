@@ -69,6 +69,20 @@ kwargs = (
     end
 end
 
+@testset "User-provided tstops and callbacks" begin
+    # The data times are added to the `tstops`, without a warning (`DT` would step over
+    # them), and the likelihoods' own callbacks to the `callback`
+    noop = DiscreteCallback((u, t, integ) -> false, integ -> nothing)
+    @testset "$loglik" for loglik in (
+        PNDE.dalton_data_loglik, PNDE.filtering_data_loglik, PNDE.fenrir_data_loglik)
+        smooth = loglik === PNDE.fenrir_data_loglik
+        ll(; kw...) = loglik(prob, EK1(; smooth); kwargs..., kw...)
+        @test_nowarn ll(tstops=[0.25])
+        @test ll(tstops=[0.25]) ≈ ll(tstops=[0.25; data.t])
+        @test ll(callback=noop) ≈ ll()
+    end
+end
+
 @testset "Partial observations" begin
     # EK0 with a multivariate diffusion uses a block-diagonal covariance structure
     # as well, so partial observations work the same way as with the DiagonalEK1
