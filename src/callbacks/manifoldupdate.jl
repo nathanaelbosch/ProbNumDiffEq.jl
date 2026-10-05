@@ -1,4 +1,4 @@
-function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
+function manifoldupdate!(cache, residualf; maxiters=10, steptol=nothing)
     x_pred = cache.x
 
     # Skip update if cov is exactly zero
@@ -17,15 +17,16 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
     H = view(cache.H, 1:d, :)
     obs_cache = make_obssized_cache(cache; o=d)
 
+    steptol = isnothing(steptol) ? sqrt(eps(eltype(x_pred.μ))) : steptol
+
     # Linearize at the current iterate m_i, and update the prediction
     x_out = x_tmp
     m_i = x_pred.μ
     for i in 1:maxiters
         u_i = mul!(tmp, SolProj, m_i)
         ForwardDiff.jacobian!(result, residualf, u_i)
-        z = DiffResults.value(result)
         mul!(H, DiffResults.jacobian(result), SolProj)
-        obs = LinearizedObservation(m_i, z, H)
+        obs = LinearizedObservation(m_i, DiffResults.value(result), H)
 
         (; S, K) = try
             update_mean!(x_out, x_pred, obs; cache=obs_cache)
@@ -34,9 +35,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
         end
         length(S) == 1 && iszero(S[1]) && manifold_rankerror(u_i)
 
-        # `ϵ₁` is only checked in the first iteration, as before: there, from the second
-        # iteration on, the iterate and its update were the same array, so the step was zero
-        if (norm(z) < ϵ₂ && (i > 1 || norm(x_out.μ .- m_i) < ϵ₁)) || (i == maxiters)
+        if norm(x_out.μ .- m_i) <= steptol * norm(x_out.μ) || i == maxiters
             update_cov!(x_out, x_pred, obs, K; cache=obs_cache)
             break
         end
@@ -57,7 +56,7 @@ manifold_rankerror(u) = throw(
 )
 
 """
-    ManifoldUpdate(residual::Function)
+    ManifoldUpdate(residual::Function; maxiters=10, steptol=sqrt(eps(T)))
 
 Update the state to satisfy a zero residual function via iterated extended Kalman filtering.
 
@@ -75,18 +74,21 @@ Its Jacobian must have full row rank.
 # Additional keyword arguments
 - `maxiters::Int`: Maximum number of IEKF iterations.
   Setting this to 1 results in a single standard EKF update.
+- `steptol`: The iteration stops once a step changes the mean of the state by at most
+  `steptol` relative to it. The iteration converges quadratically, so the default, the
+  square root of the machine epsilon of the state's element type `T`, leaves an error at
+  the level of the machine epsilon.
 """
 function ManifoldUpdate(
     residual::Function,
     args...;
-    maxiters=100,
-    ϵ₁=1e-25,
-    ϵ₂=1e-15,
+    maxiters=10,
+    steptol=nothing,
     kwargs...,
 )
     condition(u, t, integ) = true
     affect!(integ) = begin
-        manifoldupdate!(integ.cache, residual; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂)
+        manifoldupdate!(integ.cache, residual; maxiters, steptol)
         mul!(view(integ.u, :), integ.cache.SolProj, integ.cache.x.μ)
     end
     return DiscreteCallback(condition, affect!, args...; kwargs...)
