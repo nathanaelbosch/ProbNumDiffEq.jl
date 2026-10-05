@@ -485,7 +485,7 @@ function DiffEqBase.remake(
 end
 
 function DiffEqBase.prepare_alg(
-    alg::Union{EK1{0},DiagonalEK1{0}},
+    alg::Union{EK1,DiagonalEK1},
     u0::AbstractArray{T},
     p,
     prob,

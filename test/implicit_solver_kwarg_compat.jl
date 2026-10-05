@@ -17,3 +17,7 @@ sol2 = solve(prob, EK1(autodiff=false))
 
 # check that forwarddiff leads to a smaller nf than finite diff
 @test sol1.stats.nf < sol2.stats.nf
+
+# explicit chunk sizes
+@test solve(prob, EK1(autodiff=AutoForwardDiff(chunksize=2))).retcode == ReturnCode.Success
+@test solve(prob, DiagonalEK1(chunk_size=2)).retcode == ReturnCode.Success

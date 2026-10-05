@@ -20,7 +20,7 @@ const q = 3
         du .= p .* u
         return nothing
     end
-    u0 = [1.0]
+    u0 = [1.0, 1.0]
     p = [-0.1]
     tspan = (0.0, 1.0)
     prob = ODEProblem(f, u0, tspan, p)

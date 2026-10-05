@@ -18,6 +18,10 @@ OrdinaryDiffEqCore.concrete_jac(::AbstractEK) = nothing
     (cache.tmp, cache.atmp)
 OrdinaryDiffEqCore.isfsal(::AbstractEK) = false
 
+# Unlike OrdinaryDiffEqCore's `_get_fwd_chunksize`, never `Val(nothing)` (early v3 versions)
+_chunksize(::Type{<:AutoForwardDiff{CS}}) where {CS} = Val(something(CS, 0))
+_chunksize(AD) = Val(0)
+
 for ALG in [:EK1, :DiagonalEK1]
     @static if isdefined(OrdinaryDiffEqDifferentiation, :_alg_autodiff)
         @eval OrdinaryDiffEqDifferentiation._alg_autodiff(alg::$ALG{CS,AD}) where {CS,AD} =
@@ -35,7 +39,12 @@ for ALG in [:EK1, :DiagonalEK1]
     @eval OrdinaryDiffEqCore.concrete_jac(
         ::$ALG{CS,AD,DiffType,ST,CJ},
     ) where {CS,AD,DiffType,ST,CJ} = CJ
-    @eval OrdinaryDiffEqCore.get_chunksize(::$ALG{CS}) where {CS} = Val(CS)
+    @eval OrdinaryDiffEqCore.get_chunksize(::$ALG{CS,AD}) where {CS,AD} = _chunksize(AD)
+    @static if isdefined(SciMLBase, :forwarddiff_chunksize)
+        @eval SciMLBase.forwarddiff_chunksize(alg::$ALG) =
+            OrdinaryDiffEqCore.get_chunksize(alg)
+    end
+    @eval OrdinaryDiffEqCore.has_autodiff(::$ALG) = true
     @eval OrdinaryDiffEqCore.isimplicit(::$ALG) = true
 end
 
