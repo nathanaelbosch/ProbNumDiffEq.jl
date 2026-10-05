@@ -70,17 +70,11 @@ kwargs = (
 end
 
 @testset "User-provided tstops and callbacks" begin
-    # The data times are added to the `tstops`, without a warning (`DT` would step over
-    # them), and the likelihoods' own callbacks to the `callback`
+    # They are added to the likelihoods' own; `DT` would step over the data times
     noop = DiscreteCallback((u, t, integ) -> false, integ -> nothing)
-    @testset "$loglik" for loglik in (
-        PNDE.dalton_data_loglik, PNDE.filtering_data_loglik, PNDE.fenrir_data_loglik)
-        smooth = loglik === PNDE.fenrir_data_loglik
-        ll(; kw...) = loglik(prob, EK1(; smooth); kwargs..., kw...)
-        @test_nowarn ll(tstops=[0.25])
-        @test ll(tstops=[0.25]) ≈ ll(tstops=[0.25; data.t])
-        @test ll(callback=noop) ≈ ll()
-    end
+    ll(; kw...) = compare_data_likelihoods(EK1(); kwargs..., kw...)
+    @test ll(tstops=[0.25]) ≈ ll(tstops=[0.25; data.t])
+    @test ll(callback=noop) ≈ ll()
 end
 
 @testset "Partial observations" begin

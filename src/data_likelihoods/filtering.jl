@@ -16,7 +16,7 @@ function filtering_data_loglik(
         @warn str
     end
 
-    data_ll = DataUpdateLogLikelihood{Real}(0)
+    data_ll = DataUpdateLogLikelihood{Real}(0.0)
 
     # Adds the data times to the `tstops`
     cb = DataUpdateCallback(

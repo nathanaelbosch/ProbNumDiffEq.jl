@@ -54,7 +54,7 @@ function dalton_data_loglik(
 
     tstops = union(data.t, get(kwargs, :tstops, []))
 
-    data_ll = DataUpdateLogLikelihood{Real}(0)
+    data_ll = DataUpdateLogLikelihood{Real}(0.0)
 
     cb = DataUpdateCallback(
         data; observation_matrix, observation_noise_cov,
