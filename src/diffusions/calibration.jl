@@ -27,6 +27,8 @@ invquad(v, M::BlocksOfDiagonals; v_cache, M_cache=nothing) = begin
     end
     return dot(v, v_cache)
 end
+invquad(v, M::PSDMatrix; v_cache, M_cache) =
+    invquad(v, _matmul!(M_cache, M.R', M.R); v_cache, M_cache)
 
 @doc raw"""
     estimate_global_diffusion(::FixedDiffusion, integ, z, S)
@@ -106,7 +108,7 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ, z, S)
 end
 
 @doc raw"""
-    local_scalar_diffusion(cache, obs)
+    local_scalar_diffusion(cache, z, HQH)
 
 Compute and return the local scalar quasi-MLE diffusion estimate as a `Number`.
 
@@ -114,25 +116,20 @@ Corresponds to
 ```math
 σ² = zᵀ (H Q H^T)⁻¹ z / d,
 ```
-where ``z, H`` are taken from the [`LinearizedObservation`](@ref) `obs` and ``Q`` from the
-cache.
+where ``z`` is the residual of the [`LinearizedObservation`](@ref) and `HQH` is computed by
+[`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function local_scalar_diffusion(cache, obs)
-    @unpack d, Qh, C_Dxd, C_d, C_dxd = cache
-    (; z, H) = obs
-    HQH = let
-        _matmul!(C_Dxd, Qh.R, H')
-        _matmul!(C_dxd, C_Dxd', C_Dxd)
-    end
+function local_scalar_diffusion(cache, z, HQH)
+    @unpack d, C_d, C_dxd = cache
     σ² = invquad(z, HQH; v_cache=C_d, M_cache=C_dxd) / d
     return σ²
 end
 
 @doc raw"""
-    local_diagonal_diffusion(cache, obs)
+    local_diagonal_diffusion(cache, z, HQH)
 
 Compute the local diagonal quasi-MLE diffusion estimate.
 
@@ -142,24 +139,15 @@ Corresponds to
 ```math
 Σ_{ii} = z_i^2 / (H Q H^T)_{ii},
 ```
-where ``z, H`` are taken from the [`LinearizedObservation`](@ref) `obs` and ``Q`` from the
-cache.
+where ``z`` is the residual of the [`LinearizedObservation`](@ref) and `HQH` is computed by
+[`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function local_diagonal_diffusion(cache, obs)
-    @unpack d, Qh, m_tmp, local_diffusion = cache
-    (; z, H) = obs
-    HQH_diag = m_tmp.μ
-    for i in 1:d
-        c1 = _matmul!(
-            view(cache.C_Dxd.blocks[i], :, 1:1),
-            Qh.R.blocks[i],
-            view(H.blocks[i], 1:1, :)',
-        )
-        HQH_diag[i] = dot(c1, c1)
-    end
-    @. local_diffusion.diag = z^2 / HQH_diag
+function local_diagonal_diffusion(cache, z, HQH)
+    @unpack local_diffusion = cache
+    HQH_diag = diag!(local_diffusion.diag, HQH)
+    @.. local_diffusion.diag = z^2 / HQH_diag
     return local_diffusion
 end

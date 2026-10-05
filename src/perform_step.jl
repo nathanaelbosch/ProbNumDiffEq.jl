@@ -109,13 +109,15 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
 
     # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
     if integ.opts.adaptive || isdynamic(cache.diffusionmodel)
-        cache.local_diffusion = estimate_local_diffusion(cache.diffusionmodel, integ, obs)
-    end
-    if integ.opts.adaptive
-        _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, obs))
-        _EEst = _get_EEst(integ)
-        if _EEst >= one(_EEst)
-            return
+        HQH = observed_process_noise!(cache, obs)
+        cache.local_diffusion =
+            estimate_local_diffusion(cache.diffusionmodel, integ, obs.z, HQH)
+        if integ.opts.adaptive
+            _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, HQH))
+            _EEst = _get_EEst(integ)
+            if _EEst >= one(_EEst)
+                return
+            end
         end
     end
 
@@ -172,7 +174,19 @@ function evaluate_ode!(integ, x_pred, t)
 end
 
 """
-    compute_scaled_error_estimate!(integ, cache, obs)
+    observed_process_noise!(cache, obs)
+
+Return the covariance ``H Q(h) H^T`` of the process noise of one step, observed through the
+Jacobian `H` of the [`LinearizedObservation`](@ref) `obs`, as a `PSDMatrix` with the factor
+``\\sqrt{Q(h)} H^T`` in `cache.C_Dxd`. With unit diffusion, it is the covariance of the
+residual `z` if the previous state were known exactly; the local diffusion estimate and
+[`estimate_errors!`](@ref) are both computed from it.
+"""
+observed_process_noise!(cache::AbstractODEFilterCache, obs) =
+    PSDMatrix(_matmul!(cache.C_Dxd, cache.Qh.R, obs.H'))
+
+"""
+    compute_scaled_error_estimate!(integ, cache, HQH)
 
 Compute the scaled, local error estimate `Eest`, that should satisfy `Eest < 1`.
 The actual local error is computed with [`estimate_errors!`](@ref).
@@ -180,10 +194,10 @@ Then, `DiffEqBase.calculate_residuals!` handles the scaling with adaptive and re
 tolerances, and `integ.opts.internalnorm` provides the norm that should be used to return
 only a scalar.
 """
-function compute_scaled_error_estimate!(integ, cache, obs)
+function compute_scaled_error_estimate!(integ, cache, HQH)
     @unpack err_tmp = cache
     t = integ.t + integ.dt
-    err_est_unscaled = estimate_errors!(cache, obs)
+    err_est_unscaled = estimate_errors!(cache, HQH)
     err_est_unscaled .*= integ.dt
     if integ.f isa DynamicalODEFunction # second-order ODE
         DiffEqBase.calculate_residuals!(
@@ -212,22 +226,22 @@ function compute_scaled_error_estimate!(integ, cache, obs)
 end
 
 """
-    estimate_errors!(cache, obs)
+    estimate_errors!(cache, HQH)
 
 Computes a local error estimate, as
 ```math
-E_i = ( σ_{loc}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
+E_i = ( σ_{loc,i}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
 ```
-with `H` the Jacobian of the [`LinearizedObservation`](@ref) `obs`.
-To save allocations, the function modifies the given `cache` and writes into
-`cache.C_Dxd` during some computations.
+with `HQH` from [`observed_process_noise!`](@ref) and the local diffusion ``σ_{loc}^2``, a
+scalar or a `Diagonal` with one entry per dimension. A `Diagonal` with unequal entries
+requires that row `i` of `H` observes only dimension `i`, as with block-diagonal
+covariances. The estimate is written into `cache.C_d`.
 """
-function estimate_errors!(cache::AbstractODEFilterCache, obs)
-    @unpack local_diffusion, Qh, C_d, C_Dxd, C_DxD = cache
-    _Q = apply_diffusion!(PSDMatrix(C_DxD), Qh, local_diffusion)
-    _HQH = PSDMatrix(_matmul!(C_Dxd, _Q.R, obs.H'))
-    error_estimate = diag!(C_d, _HQH)
-    @.. error_estimate = sqrt(error_estimate)
+function estimate_errors!(cache::AbstractODEFilterCache, HQH)
+    @unpack local_diffusion, C_d = cache
+    σ² = local_diffusion isa Diagonal ? local_diffusion.diag : local_diffusion
+    error_estimate = diag!(C_d, HQH)
+    @.. error_estimate = sqrt(σ² * error_estimate)
     return error_estimate
 end
 
