@@ -207,15 +207,28 @@ update_cache(FAC, D, o) = (;
     end
 end
 
-@testset "SolutionObservation of a ScaledSelection with a block-diagonal covariance" begin
-    # Row `k` of `H = e0ᵀ ⊗ diag(m) Π` observes `m[k]` times the zeroth derivative of
-    # dimension `dims[k]`. Compare `_matmul!` and `update!` with the dense `H = [M 0 ⋯ 0]`;
-    # dimension 2 is not observed and keeps its prediction.
-    d, q, m, dims = 3, 2, [2.0, -1.0], [3, 1]
+@testset "SolutionObservation of the derivative $i" for i in 0:2
+    # `H = eᵢᵀ ⊗ M` observes `M u⁽ⁱ⁾`; densely, `H = [0 ⋯ 0 M 0 ⋯ 0]` with `M` in block `i`
+    d, q = 3, 2
+    dense(M) = [zeros(size(M, 1), d * i) Matrix(M) zeros(size(M, 1), d * (q - i))]
+    @testset "$(nameof(FAC)), $(typeof(M))" for (FAC, M) in (
+        (PNDE.DenseCovariance, rand(2, d)),
+        (PNDE.IsometricKroneckerCovariance, 2.0I),
+        (PNDE.BlockDiagonalCovariance, 2.0I),
+        (PNDE.BlockDiagonalCovariance, Diagonal(rand(d))),
+    )
+        H = PNDE.to_factorized_matrix(FAC{Float64}(d, q), PNDE.SolutionObservation(M, q, i))
+        @test Matrix(H) == dense(M isa UniformScaling ? Matrix(M, d, d) : M)
+    end
+
+    # Row `k` of a `ScaledSelection` observes `m[k]` times derivative `i` of dimension
+    # `dims[k]`. With a block-diagonal covariance, compare `_matmul!` and `update!` with the
+    # dense `H`; dimension 2 is not observed and keeps its prediction.
+    m, dims = [2.0, -1.0], [3, 1]
     o, D = length(dims), d * (q + 1)
     M = PNDE.ScaledSelection(m, dims, d)
-    H = PNDE.SolutionObservation(M, q)
-    H_dense = [Matrix(M) zeros(o, d * q)]
+    H = PNDE.SolutionObservation(M, q, i)
+    H_dense = dense(M)
     blockdiag(f, n) = BlocksOfDiagonals([f() for _ in 1:n])
     x_pred = Gaussian(
         rand(D),

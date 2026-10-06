@@ -141,28 +141,33 @@ function initial_update!(integ, cache)
 end
 
 """
-    _zero_row_noise(H, cache)
+    update_on_derivative!(x, M, i, y; cache)
 
-Unit observation noise on the zero rows of `H`, or `nothing` if `H` has no zero row.
-
-The initializations observe `M u⁽ⁱ⁾` for a mass matrix `M`, which can have zero rows. A zero
-row `i` of `H` makes row and column `i` of `S = H Σ Hᵀ` zero, so `S` is singular.
-With unit noise on row `i`, `S[i, i] = 1`, `S` can be factorized, and column `i` of the gain
-`Σ Hᵀ S⁻¹` is zero, so the observation in this row is ignored.
+Condition the initial state `x` on `M u⁽ⁱ⁾ = y`, for the `i`-th derivative `u⁽ⁱ⁾` of the
+solution and the mass matrix `M`. The zero rows of `M`, the algebraic equations of a DAE, say
+nothing about `u⁽ⁱ⁾` and would make `S = H Σ Hᵀ` singular, so the observation leaves them
+out.
 """
-function _zero_row_noise(H, cache)
-    R = _ones_on_zero_rows!(zero(cache.C_dxd), H)
-    return iszero(R) ? nothing : PSDMatrix(R)
+function update_on_derivative!(x, M, i, y; cache)
+    H, rows = _derivative_observation(cache.covariance_factorization, cache, M, i)
+    o = length(rows)
+    o == 0 && return nothing
+    y = o == cache.d ? y : view(y, rows)
+    return update_on_data!(x, H, y, nothing; cache=make_obssized_cache(cache; o))
 end
-function _ones_on_zero_rows!(R::AbstractMatrix, H::AbstractMatrix)
-    for i in axes(H, 1)
-        if iszero(view(H, i, :))
-            R[i, i] = 1
-        end
-    end
-    return R
+
+# `H` for the nonzero `rows` of `M`
+function _derivative_observation(::DenseCovariance, cache, M, i)
+    H = M * cache.Proj(i)
+    rows = findall(!iszero, eachrow(H))
+    return length(rows) == cache.d ? H : H[rows, :], rows
 end
-_ones_on_zero_rows!(R::IsometricKroneckerProduct, H::IsometricKroneckerProduct) =
-    (on_kronecker_factors(_ones_on_zero_rows!, H.rdim, R, H); R)
-_ones_on_zero_rows!(R::BlocksOfDiagonals, H::BlocksOfDiagonals) =
-    (foreach_diagonal_block(_ones_on_zero_rows!, nblocks(H), R, H); R)
+_derivative_observation(::IsometricKroneckerCovariance, cache, M::UniformScaling, i) =
+    M * cache.Proj(i), iszero(M.λ) ? (1:0) : (1:cache.d)
+function _derivative_observation(C::BlockDiagonalCovariance, cache, M, i)
+    m = M isa UniformScaling ? fill(M.λ, cache.d) : M.diag
+    rows = findall(!iszero, m)
+    length(rows) == cache.d && return M * cache.Proj(i), rows
+    H = SolutionObservation(ScaledSelection(m[rows], rows, cache.d), cache.q, i)
+    return to_factorized_matrix(C, H), rows
+end

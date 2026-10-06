@@ -16,6 +16,5 @@ function initial_update!(integ, cache, init::SimpleInit)
     end
 
     update_on_data!(x, Proj(0), view(u, :), nothing; cache)
-    H = f.mass_matrix * Proj(1)
-    update_on_data!(x, H, view(du, :), _zero_row_noise(H, cache); cache)
+    update_on_derivative!(x, f.mass_matrix, 1, view(du, :); cache)
 end
