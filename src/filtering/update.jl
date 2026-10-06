@@ -146,7 +146,8 @@ end
 Condition the Gaussian `x` in place on data `y = H x + v`, `v ~ N(0, R)`, and return the
 result of [`update!`](@ref). The data enters [`update!`](@ref) through the residual
 `z = H μ - y` at the mean `μ` of `x`, which is exact for this linear model. `cache` is the
-solver's cache, from which `make_obssized_cache` takes the buffers for the size of `y`.
+solver's cache, from which `make_obssized_cache` takes the buffers for the size of
+`y`; since `x` is copied to `cache.x_tmp`, it must not be `cache.x_tmp`.
 """
 function update_on_data!(x, H, y, R; cache)
     obs_cache = make_obssized_cache(cache; o=length(y))
@@ -161,8 +162,10 @@ end
 """
     make_obssized_cache(cache; o)
 
-The buffers of `cache` that [`update!`](@ref) uses, sized for an `o`-dimensional
-observation.
+The buffers of `cache` that [`update_on_data!`](@ref) and [`update!`](@ref) use, sized for an
+`o`-dimensional observation: `cache` itself if `o` is the dimension `d` of the ODE, otherwise
+views (dense covariance) or the first `o` blocks (block-diagonal covariance). The Kronecker
+covariance only supports `o = d`.
 """
 function make_obssized_cache(cache; o)
     if o == cache.d
