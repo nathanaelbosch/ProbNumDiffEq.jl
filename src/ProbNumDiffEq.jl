@@ -134,6 +134,7 @@ include("integrator_utils.jl")
 include("filtering/markov_kernel.jl")
 include("filtering/structured_covariances.jl")
 include("filtering/predict.jl")
+include("observation_model.jl")
 include("filtering/update.jl")
 include("filtering/smooth.jl")
 include("measurement_models.jl")
@@ -148,7 +149,6 @@ if !isdefined(Base, :get_extension)
     include("../ext/DiffEqDevToolsExt.jl")
 end
 
-include("observation_model.jl")
 include("callbacks/manifoldupdate.jl")
 export ManifoldUpdate
 include("callbacks/dataupdate.jl")
