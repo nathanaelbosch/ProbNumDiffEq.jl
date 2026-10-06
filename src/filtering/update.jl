@@ -145,15 +145,17 @@ end
 
 Condition the Gaussian `x` in place on data `y = H x + v`, `v ~ N(0, R)`, and return the
 result of [`update!`](@ref). The data enters [`update!`](@ref) through the residual
-`z = H μ - y` at the mean `μ` of `x`, which is exact for this linear model. `cache` holds the
-buffers for an observation of the size of `y`, see `make_obssized_cache`.
+`z = H μ - y` at the mean `μ` of `x`, which is exact for this linear model. `cache` is the
+solver's cache, from which `make_obssized_cache` takes the buffers for the size of `y`.
 """
 function update_on_data!(x, H, y, R; cache)
-    x_pred = copy!(cache.x_tmp, x)
-    z = view(mean(cache.m_tmp), 1:length(y))
+    obs_cache = make_obssized_cache(cache; o=length(y))
+    x_pred = copy!(obs_cache.x_tmp, x)
+    z = view(mean(obs_cache.m_tmp), 1:length(y))
     _matmul!(z, H, x_pred.μ)
     z .-= y
-    return update!(x, x_pred, LinearizedObservation(x_pred.μ, z, H, R); cache)
+    obs = LinearizedObservation(x_pred.μ, z, H, R)
+    return update!(x, x_pred, obs; cache=obs_cache)
 end
 
 """

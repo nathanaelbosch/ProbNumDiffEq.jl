@@ -72,9 +72,7 @@ function DataUpdateCallback(
             return nothing
         end
 
-        ll = update_on_data!(
-            integ.cache.x, H, val, R; cache=make_obssized_cache(integ.cache; o),
-        ).loglikelihood
+        ll = update_on_data!(integ.cache.x, H, val, R; integ.cache).loglikelihood
 
         if !isnothing(loglikelihood)
             loglikelihood.ll += ll

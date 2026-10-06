@@ -86,8 +86,6 @@ function fit_pnsolution_to_data!(
 
     LL = zero(eltype(sol.prob.p))
 
-    _cache = make_obssized_cache(cache; o=length(data.u[1]))
-
     x_posterior = copy(sol.x_filt) # the object to be filled
 
     # First update on the last data point, if it lies at the end of the solution
@@ -98,7 +96,7 @@ function fit_pnsolution_to_data!(
             H,
             data.u[data_idx],
             observation_noise_cov;
-            cache=_cache,
+            cache,
         )
         LL += loglikelihood
         data_idx -= 1
@@ -121,7 +119,7 @@ function fit_pnsolution_to_data!(
                 H,
                 data.u[data_idx],
                 observation_noise_cov;
-                cache=_cache,
+                cache,
             )
             LL += loglikelihood
             data_idx -= 1
