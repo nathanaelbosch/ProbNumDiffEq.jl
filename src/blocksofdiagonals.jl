@@ -29,6 +29,13 @@ blocks(B::BlocksOfDiagonals) = B.blocks
 nblocks(B::BlocksOfDiagonals) = length(B.blocks)
 size(B::BlocksOfDiagonals) = mapreduce(size, ((a, b), (c, d)) -> (a + c, b + d), blocks(B))
 
+# `B ⊗ I_d` is a `BlocksOfDiagonals` whose `d` blocks all equal `B`. The prior's matrices
+# have this form, so block-wise products also take them as inputs; outputs stay
+# `BlocksOfDiagonals`, which keeps writes into the shared block out of these loops.
+blocks(K::IsometricKroneckerProduct) = Fill(K.B, K.rdim)
+nblocks(K::IsometricKroneckerProduct) = K.rdim
+const PerDimensionBlocks = Union{BlocksOfDiagonals,IsometricKroneckerProduct}
+
 Base.@propagate_inbounds function Base.getindex(
     B::BlocksOfDiagonals{T},
     i::Integer,
@@ -92,10 +99,13 @@ Base.:*(M::BlocksOfDiagonals, U::UniformScaling) =
     BlocksOfDiagonals([B * U for B in blocks(M)])
 
 # Mul between BockDiag's
-Base.:*(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = begin
-    @assert length(A.blocks) == length(B.blocks)
+_blockwise_product(A, B) = begin
+    @assert nblocks(A) == nblocks(B)
     return BlocksOfDiagonals([Ai * Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
 end
+Base.:*(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = _blockwise_product(A, B)
+Base.:*(A::BlocksOfDiagonals, B::IsometricKroneckerProduct) = _blockwise_product(A, B)
+Base.:*(A::IsometricKroneckerProduct, B::BlocksOfDiagonals) = _blockwise_product(A, B)
 Base.:*(A::Adjoint{T,<:BlocksOfDiagonals}, B::BlocksOfDiagonals) where {T} = begin
     @assert length(A.parent.blocks) == length(B.blocks)
     return BlocksOfDiagonals([Ai' * Bi for (Ai, Bi) in zip(blocks(A.parent), blocks(B))])
@@ -207,10 +217,11 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Number) = begin
-        @assert length(C.blocks) == length(A.blocks)
+    @eval $_mul!(C::BlocksOfDiagonals, A::PerDimensionBlocks, B::Number) = begin
+        @assert nblocks(C) == nblocks(A)
+        Ab = blocks(A)
         @simd ivdep for i in eachindex(blocks(C))
-            @inbounds $_mul!(C.blocks[i], A.blocks[i], B)
+            @inbounds $_mul!(C.blocks[i], Ab[i], B)
         end
         return C
     end
@@ -244,6 +255,34 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 end
+
+# Products with a Kronecker prior matrix. The `BlasFloat` methods are more specific than
+# the vec trick in kronecker.jl, which matches these arguments too.
+_block(M::PerDimensionBlocks, i) = blocks(M)[i]
+_block(M::Adjoint{<:Number,<:BlocksOfDiagonals}, i) = adjoint(blocks(parent(M))[i])
+function _blockwise_matmul!(C::BlocksOfDiagonals, A, B)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds _matmul!(blocks(C)[i], _block(A, i), _block(B, i))
+    end
+    return C
+end
+_matmul!(
+    C::BlocksOfDiagonals,
+    A::IsometricKroneckerProduct,
+    B::Adjoint{<:Number,<:BlocksOfDiagonals},
+) = _blockwise_matmul!(C, A, B)
+_matmul!(
+    C::BlocksOfDiagonals{T},
+    A::IsometricKroneckerProduct{T},
+    B::Adjoint{T,<:BlocksOfDiagonals{T}},
+) where {T<:LinearAlgebra.BlasFloat} = _blockwise_matmul!(C, A, B)
+_matmul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::IsometricKroneckerProduct) =
+    _blockwise_matmul!(C, A, B)
+_matmul!(
+    C::BlocksOfDiagonals{T},
+    A::BlocksOfDiagonals{T},
+    B::IsometricKroneckerProduct{T},
+) where {T<:LinearAlgebra.BlasFloat} = _blockwise_matmul!(C, A, B)
 
 # Block-wise, instead of LinearAlgebra's entry-by-entry fallback
 function _blockwise_mul!(C::AbstractMatrix, A_blocks, B::AbstractMatrix)

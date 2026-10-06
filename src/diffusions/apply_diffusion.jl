@@ -4,15 +4,16 @@
 Apply the diffusion to the PSD transition noise covariance `Q`, return the result.
 
 Scalar diffusions are `Number`s and work with every covariance structure. Multivariate
-diffusions are `Diagonal`s and are supported for `BlocksOfDiagonals` and dense `Q`; the
-dense methods are the fallback for any other `Q`.
+diffusions are `Diagonal`s and are supported for `BlocksOfDiagonals` and dense `Q`, and
+for a Kronecker `Q`, which then gives a `BlocksOfDiagonals`; the dense methods are the
+fallback for any other `Q`.
 """
 apply_diffusion(
     Q::PSDMatrix,
     diffusion::Number,
 ) = PSDMatrix(Q.R * sqrt(diffusion))
 apply_diffusion(
-    Q::PSDMatrix{T,<:BlocksOfDiagonals},
+    Q::PSDMatrix{T,<:PerDimensionBlocks},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = PSDMatrix(
     BlocksOfDiagonals([
@@ -74,11 +75,12 @@ apply_diffusion!(
 end
 apply_diffusion!(
     out::PSDMatrix{T,<:BlocksOfDiagonals},
-    Q::PSDMatrix{T,<:BlocksOfDiagonals},
+    Q::PSDMatrix{T,<:PerDimensionBlocks},
     diffusion::Diagonal{<:T,<:Vector},
 ) where {T} = begin
-    @simd ivdep for i in eachindex(blocks(Q.R))
-        _matmul!(blocks(out.R)[i], blocks(Q.R)[i], sqrt(diffusion.diag[i]))
+    Qb = blocks(Q.R)
+    @simd ivdep for i in eachindex(blocks(out.R))
+        _matmul!(blocks(out.R)[i], Qb[i], sqrt(diffusion.diag[i]))
     end
     return out
 end

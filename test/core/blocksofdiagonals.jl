@@ -147,4 +147,19 @@ D = d1 * d2
     xp_bod, xp_dense = PNDE.predict(x_bod, B, Q), PNDE.predict(x_dense, BM, QM)
     @test xp_bod.μ ≈ xp_dense.μ
     @test Matrix(xp_bod.Σ) ≈ Matrix(xp_dense.Σ)
+
+    # Kronecker products, as the prior's matrices, combined with `BlocksOfDiagonals`
+    K = PNDE.IsometricKroneckerProduct(d2, rand(T, d1, d1))
+    KM = Matrix(K)
+    @test nblocks(K) == d2
+    @test tttm(_matmul!(copy(C), K, B')) ≈ KM * BM'
+    @test tttm(_matmul!(copy(C), A, K)) ≈ AM * KM
+    @test tttm(_matmul!(copy(C), K, alpha)) ≈ KM * alpha
+    @test tttm(A * K) ≈ AM * KM
+    @test tttm(K * A) ≈ KM * AM
+    QK = PSDMatrix(PNDE.IsometricKroneckerProduct(d2, rand(T, d1, d1)))
+    @test Matrix(PNDE.predict_cov(PSDMatrix(A), K, QK)) ≈
+          Matrix(PNDE.predict_cov(PSDMatrix(AM), KM, PSDMatrix(Matrix(QK.R))))
+    σ² = Diagonal(rand(T, d2))
+    @test tttm(PNDE.apply_diffusion(QK, σ²).R) ≈ Matrix(QK.R) * kron(I(d1), sqrt.(σ²))
 end

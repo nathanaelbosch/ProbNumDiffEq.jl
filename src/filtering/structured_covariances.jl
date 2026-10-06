@@ -42,19 +42,19 @@ the filter decouples into `d` independent dense filters, one per ODE dimension. 
 `AffineNormalKernel` are converted field by field, and scalars, `nothing` and `missing`
 pass through.
 """
-function foreach_diagonal_block(f, d, args...; kwargs...)
+function foreach_diagonal_block(f::F, d, args::Vararg{Any,N}; kwargs...) where {F,N}
     for i in 1:d
         _on_diagonal_block(f, i, d, args, values(kwargs))
     end
     return nothing
 end
 
-_on_diagonal_block(f, i, d, args, kwargs) = f(
+_on_diagonal_block(f::F, i, d, args, kwargs) where {F} = f(
     map(x -> _diagonal_block(x, i, d), args)...;
     map(x -> _diagonal_block(x, i, d), kwargs)...,
 )
 
-_diagonal_block(M::BlocksOfDiagonals, i, d) = blocks(M)[i]
+_diagonal_block(M::PerDimensionBlocks, i, d) = blocks(M)[i]
 _diagonal_block(H::BlocksOfScaledSelections, i, d) = H.blocks[i]
 _diagonal_block(v::AbstractVector, i, d) = view(v, i:d:length(v))
 _diagonal_block(D::Diagonal, i, d) = D.diag[i]

@@ -281,14 +281,14 @@ function compute_backward_kernel!(
     },
     xpred::SRGaussian{T,<:BlocksOfDiagonals},
     x::SRGaussian{T,<:BlocksOfDiagonals},
-    K::AffineNormalKernel{<:BlocksOfDiagonals,<:Any,<:BlocksOfDiagonalsPSD{T}};
+    K::AffineNormalKernel{<:PerDimensionBlocks,<:Any,<:PSDMatrix{T,<:PerDimensionBlocks}};
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     C_2Dx2D::AbstractMatrix,
     diffusion::Union{Number,Diagonal}=1,
 ) where {T}
     foreach_diagonal_block(
-        compute_backward_kernel!, nblocks(K.A), Kout, xpred, x, K;
+        compute_backward_kernel!, nblocks(Kout.A), Kout, xpred, x, K;
         C_DxD, C_2DxD, C_2Dx2D, diffusion)
     return Kout
 end
