@@ -139,15 +139,15 @@ function _update_mean!(
     d, o = nblocks(x_out.Σ.R), length(H.M.dims)
     o < d && copy!(x_out.μ, x_pred.μ)
     args = (z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
-    loglikelihood, mahalanobis² = zero(T), zero(T)
+    loglikelihood, ztSinvz = zero(T), zero(T)
     for (k, i) in enumerate(H.M.dims)
         block = _update_mean!(
             _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
             map(x -> _diagonal_block(x, k, o), args)...)
         loglikelihood += block.loglikelihood
-        mahalanobis² += block.mahalanobis²
+        ztSinvz += block.ztSinvz
     end
-    return (; loglikelihood, mahalanobis², S=S_cache, K=K2_cache, B=K1_cache)
+    return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
 end
 function _update_cov!(
     Σ_out::BlocksOfDiagonalsPSD,
