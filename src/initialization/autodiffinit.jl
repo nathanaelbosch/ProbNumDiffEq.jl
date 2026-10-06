@@ -21,7 +21,7 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
         else
             f.mass_matrix * Proj(o)
         end
-        init_condition_on!(x, H, df, cache)
+        update_on_data!(x, H, df, _zero_row_noise(H, cache); cache)
     end
 end
 

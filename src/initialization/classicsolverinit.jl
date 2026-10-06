@@ -12,10 +12,10 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    init_condition_on!(x, Proj(0), _u, cache)
+    update_on_data!(x, Proj(0), _u, nothing; cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.stats.nf += 1
-    init_condition_on!(x, Proj(1), view(du, :), cache)
+    update_on_data!(x, Proj(1), view(du, :), nothing; cache)
 
     if q < 2
         return
@@ -41,7 +41,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> _f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        init_condition_on!(x, Proj(2), ddfddu, cache)
+        update_on_data!(x, Proj(2), ddfddu, nothing; cache)
         if q < 3
             return
         end
