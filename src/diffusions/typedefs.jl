@@ -16,8 +16,8 @@ particular also when solving stiff systems.
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicDiffusion, d, Eltype) = one(Eltype)
-estimate_local_diffusion(::DynamicDiffusion, integ, z, HQH) =
-    local_scalar_diffusion(integ.cache, z, HQH)
+estimate_local_diffusion(::DynamicDiffusion, integ, obs, HQH) =
+    local_scalar_diffusion(integ.cache, obs.z, HQH)
 
 """
     DynamicMVDiffusion()
@@ -37,8 +37,8 @@ separately.
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicMVDiffusion, d, Eltype) = Diagonal(ones(Eltype, d))
-estimate_local_diffusion(::DynamicMVDiffusion, integ, z, HQH) =
-    local_diagonal_diffusion(integ.cache, z, HQH)
+estimate_local_diffusion(::DynamicMVDiffusion, integ, obs, HQH) =
+    local_diagonal_diffusion(integ.cache, obs.z, HQH)
 
 """
     FixedDiffusion(; initial_diffusion=1.0, calibrate=true)
@@ -58,8 +58,8 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
 end
 initial_diffusion(diffusionmodel::FixedDiffusion, d, Eltype) =
     diffusionmodel.initial_diffusion * one(Eltype)
-estimate_local_diffusion(::FixedDiffusion, integ, z, HQH) =
-    local_scalar_diffusion(integ.cache, z, HQH)
+estimate_local_diffusion(::FixedDiffusion, integ, obs, HQH) =
+    local_scalar_diffusion(integ.cache, obs.z, HQH)
 
 """
     FixedMVDiffusion(; initial_diffusion=1.0, calibrate=true)
@@ -103,13 +103,13 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
         )
     end
 end
-function estimate_local_diffusion(::FixedMVDiffusion, integ, z, HQH)
+function estimate_local_diffusion(::FixedMVDiffusion, integ, obs, HQH)
     if integ.alg isa EK0 && integ.cache.covariance_factorization isa BlockDiagonalCovariance
-        return local_diagonal_diffusion(integ.cache, z, HQH)
+        return local_diagonal_diffusion(integ.cache, obs.z, HQH)
     else
         # The local diffusion is stored as a `Diagonal` for multivariate models, so the
         # scalar estimate is written into every entry.
-        σ² = local_scalar_diffusion(integ.cache, z, HQH)
+        σ² = local_scalar_diffusion(integ.cache, obs.z, HQH)
         fill!(integ.cache.local_diffusion.diag, σ²)
         return integ.cache.local_diffusion
     end

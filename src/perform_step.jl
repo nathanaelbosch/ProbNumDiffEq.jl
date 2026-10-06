@@ -111,7 +111,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     if integ.opts.adaptive || isdynamic(cache.diffusionmodel)
         HQH = observed_process_noise!(cache, obs)
         cache.local_diffusion =
-            estimate_local_diffusion(cache.diffusionmodel, integ, obs.z, HQH)
+            estimate_local_diffusion(cache.diffusionmodel, integ, obs, HQH)
         if integ.opts.adaptive
             _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, HQH))
             _EEst = _get_EEst(integ)
@@ -135,15 +135,15 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     end
 
     # Update state and save the ODE solution value
-    (; loglikelihood, ztSinvz, S) = update!(x_filt, x_pred, obs; cache)
+    upd = update!(x_filt, x_pred, obs; cache)
     write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
 
-    cache.log_likelihood = loglikelihood
+    cache.log_likelihood = upd.loglikelihood
     integ.sol.pnstats.log_likelihood += cache.log_likelihood
 
     # Update the global diffusion MLE (if applicable)
     if isstatic(cache.diffusionmodel) && cache.diffusionmodel.calibrate
-        estimate_global_diffusion(cache.diffusionmodel, integ, obs.z, S, ztSinvz)
+        estimate_global_diffusion(cache.diffusionmodel, integ, obs, upd)
     end
 
     # Advance the state
