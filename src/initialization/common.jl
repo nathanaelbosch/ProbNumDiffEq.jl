@@ -153,7 +153,7 @@ function update_on_derivative!(x, M, i, y; cache)
     o = length(rows)
     o == 0 && return nothing
     y = o == cache.d ? y : view(y, rows)
-    return update_on_data!(x, H, y, nothing; cache=make_obssized_cache(cache; o))
+    return update_on_data!(x, H, y, nothing; cache)
 end
 
 # `H` for the nonzero `rows` of `M`
