@@ -189,7 +189,7 @@ function make_obssized_cache(cache; o)
     end
 end
 function make_obssized_cache(::DenseCovariance, cache; o)
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement, m_tmp, x_tmp = cache
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement = cache
     return (
         K1=view(K1, :, 1:o),
         C_dxd=view(C_dxd, 1:o, 1:o),
@@ -197,12 +197,10 @@ function make_obssized_cache(::DenseCovariance, cache; o)
         C_d=view(C_d, 1:o),
         C_DxD=C_DxD,
         measurement=Gaussian(view(measurement.μ, 1:o), view(measurement.Σ, 1:o, 1:o)),
-        m_tmp=m_tmp,
-        x_tmp=x_tmp,
     )
 end
 function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement, m_tmp, x_tmp = cache
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement = cache
     first_blocks(M) = BlocksOfDiagonals(blocks(M)[1:o])
     return (
         K1=first_blocks(K1),
@@ -211,8 +209,6 @@ function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
         C_d=view(C_d, 1:o),
         C_DxD=first_blocks(C_DxD),
         measurement=Gaussian(view(measurement.μ, 1:o), first_blocks(measurement.Σ)),
-        m_tmp=m_tmp,
-        x_tmp=x_tmp,
     )
 end
 
