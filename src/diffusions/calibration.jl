@@ -31,7 +31,7 @@ invquad(v, M::PSDMatrix; v_cache, M_cache) =
     invquad(v, _matmul!(M_cache, M.R', M.R); v_cache, M_cache)
 
 @doc raw"""
-    estimate_global_diffusion(::FixedDiffusion, integ, z, S, mahalanobis²)
+    estimate_global_diffusion(::FixedDiffusion, integ, z, S, ztSinvz)
 
 Updates the global quasi-MLE diffusion estimate on the current measuremnt.
 
@@ -40,7 +40,7 @@ The global quasi-MLE diffusion estimate Corresponds to
 \hat{σ}^2_N = \frac{1}{Nd} \sum_{i=1}^N z_i^T S_i^{-1} z_i,
 ```
 where ``z_i`` is the residual of the observation in each step and ``S_i`` its covariance;
-[`update!`](@ref) returns ``z_i^T S_i^{-1} z_i`` as `mahalanobis²`.
+[`update!`](@ref) returns ``z_i^T S_i^{-1} z_i`` as `ztSinvz`.
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
 \hat{σ}^2_n = \hat{σ}^2_{n-1} + ((z_n^T S_n^{-1} z_n) / d - \hat{σ}^2_{n-1}) / n.
@@ -49,8 +49,8 @@ This function updates the iteratively computed global diffusion estimate by comp
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function estimate_global_diffusion(::FixedDiffusion, integ, z, S, mahalanobis²)
-    diffusion_increment = mahalanobis² / integ.cache.d
+function estimate_global_diffusion(::FixedDiffusion, integ, z, S, ztSinvz)
+    diffusion_increment = ztSinvz / integ.cache.d
 
     new_mle_diffusion = if integ.success_iter == 0
         diffusion_increment
@@ -65,7 +65,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ, z, S, mahalanobis²)
 end
 
 @doc raw"""
-    estimate_global_diffusion(::FixedMVDiffusion, integ, z, S, mahalanobis²)
+    estimate_global_diffusion(::FixedMVDiffusion, integ, z, S, ztSinvz)
 
 Updates the multivariate global quasi-MLE diffusion estimate on the current measuremnt.
 
@@ -85,7 +85,7 @@ This function updates the iteratively computed global diffusion estimate by comp
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function estimate_global_diffusion(::FixedMVDiffusion, integ, z, S, mahalanobis²)
+function estimate_global_diffusion(::FixedMVDiffusion, integ, z, S, ztSinvz)
     @unpack C_d = integ.cache
     diffusion_increment = let
         diag!(C_d, S)

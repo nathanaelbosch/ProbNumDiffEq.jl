@@ -135,7 +135,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     end
 
     # Update state and save the ODE solution value
-    (; loglikelihood, mahalanobis², S) = update!(x_filt, x_pred, obs; cache)
+    (; loglikelihood, ztSinvz, S) = update!(x_filt, x_pred, obs; cache)
     write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
 
     cache.log_likelihood = loglikelihood
@@ -143,7 +143,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
 
     # Update the global diffusion MLE (if applicable)
     if isstatic(cache.diffusionmodel) && cache.diffusionmodel.calibrate
-        estimate_global_diffusion(cache.diffusionmodel, integ, obs.z, S, mahalanobis²)
+        estimate_global_diffusion(cache.diffusionmodel, integ, obs.z, S, ztSinvz)
     end
 
     # Advance the state

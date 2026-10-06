@@ -168,7 +168,7 @@ update_cache(FAC, D, o) = (;
             @test Matrix(x_out.Σ) ≈ P
             @test Matrix(res.S) ≈ S
             @test res.loglikelihood ≈ LL
-            @test res.mahalanobis² ≈ z' * (S \ z)
+            @test res.ztSinvz ≈ z' * (S \ z)
         end
 
         @testset "update_mean! and update_cov!" begin
@@ -186,7 +186,7 @@ update_cache(FAC, D, o) = (;
             x_lin = copy(x_pred)
             res_lin = PNDE.update!(x_lin, x_pred, obs_lin; cache)
             @test res_lin.loglikelihood ≈ LL
-            @test res_lin.mahalanobis² ≈ res.mahalanobis²
+            @test res_lin.ztSinvz ≈ res.ztSinvz
             @test x_lin.μ ≈ m
             @test Matrix(x_lin.Σ) ≈ P
             @test PNDE.update(x_pred, obs_lin).μ ≈ m
@@ -195,10 +195,10 @@ update_cache(FAC, D, o) = (;
         @testset "Zero predicted covariance" begin
             x_pred0 = Gaussian(m_p, PSDMatrix(zero(P_p_R)))
             x_out0 = copy(x_pred)
-            (; loglikelihood, mahalanobis²) = PNDE.update!(x_out0, x_pred0, obs; cache)
+            (; loglikelihood, ztSinvz) = PNDE.update!(x_out0, x_pred0, obs; cache)
             @test x_out0 == x_pred0
             noise || @test loglikelihood == -Inf
-            noise || @test mahalanobis² == Inf
+            noise || @test ztSinvz == Inf
         end
     end
 end
@@ -226,7 +226,7 @@ end
     z = rand(o)
     obs = PNDE.LinearizedObservation(x_pred.μ, z, H, PSDMatrix(RR))
     x_out = Gaussian(zero(x_pred.μ), PSDMatrix(zero(x_pred.Σ.R)))
-    (; loglikelihood, mahalanobis², S) =
+    (; loglikelihood, ztSinvz, S) =
         PNDE.update!(x_out, x_pred, obs; cache=update_cache(FAC, o * (q + 1), o))
     S_dense = H_dense * P * H_dense' + R
     K = P * H_dense' / S_dense
@@ -234,7 +234,7 @@ end
     @test x_out.μ ≈ x_pred.μ - K * z
     @test Matrix(x_out.Σ) ≈ P - K * S_dense * K'
     @test loglikelihood ≈ logpdf(Gaussian(z, S_dense), zeros(o))
-    @test mahalanobis² ≈ z' * (S_dense \ z)
+    @test ztSinvz ≈ z' * (S_dense \ z)
 end
 
 @testset "UPDATE log-likelihood with a multi-dimensional Kronecker covariance" begin
@@ -250,12 +250,12 @@ end
     x_pred = Gaussian(m_p, PSDMatrix(P_R))
     x_out = copy(x_pred)
     obs = PNDE.LinearizedObservation(m_p, z, H)
-    (; loglikelihood, mahalanobis², S) =
+    (; loglikelihood, ztSinvz, S) =
         PNDE.update!(x_out, x_pred, obs; cache=update_cache(FAC, D, d))
     S_dense = Matrix(H) * Matrix(PSDMatrix(P_R)) * Matrix(H)'
     @test Matrix(S) ≈ S_dense
     @test loglikelihood ≈ logpdf(Gaussian(z, S_dense), zeros(d))
-    @test mahalanobis² ≈ z' * (S_dense \ z)
+    @test ztSinvz ≈ z' * (S_dense \ z)
     x_ref = PNDE.update(x_pred, obs)
     @test x_out.μ ≈ x_ref.μ
     @test Matrix(x_out.Σ) ≈ x_ref.Σ
