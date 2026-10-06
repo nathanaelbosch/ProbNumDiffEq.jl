@@ -37,7 +37,7 @@ function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix; R=nothi
     K = Matrix(C) * H' * inv(S)
     m_new = m - K * z
     C_new = X_A_Xt(C, (I - K * H))
-    isnothing(R) || (C_new = add_qr(C_new, X_A_Xt(R, K)))
+    isnothing(R) || (C_new = PSDMatrix(qr([C_new.R; R.R * K']).R))
 
     return Gaussian(m_new, C_new)
 end
@@ -99,8 +99,7 @@ function update(x::Gaussian, obs::LinearizedObservation)
 end
 function update(x::SRGaussian, obs::LinearizedObservation)
     x = Gaussian(mean(x), PSDMatrix(Matrix(x.Σ.R)))
-    R = isnothing(obs.R) ? nothing : PSDMatrix(Matrix(obs.R.R))
-    return update(x, _dense_measurement(x, obs)...; R)
+    return update(x, _dense_measurement(x, obs)...; R=obs.R)
 end
 function _dense_measurement(x, obs)
     μ, Σ, H = mean(x), Matrix(cov(x)), Matrix(obs.H)
