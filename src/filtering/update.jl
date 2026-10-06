@@ -98,6 +98,39 @@ function update!(x_out, x_pred, obs::LinearizedObservation; cache)
 end
 
 """
+    make_obssized_cache(cache; o)
+
+The buffers of `cache` that [`update!`](@ref) uses, sized for an `o`-dimensional
+observation.
+"""
+function make_obssized_cache(cache; o)
+    if o == cache.d
+        return cache
+    else
+        return make_obssized_cache(cache.covariance_factorization, cache; o)
+    end
+end
+function make_obssized_cache(::DenseCovariance, cache; o)
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement, m_tmp, x_tmp = cache
+    return (
+        K1=view(K1, :, 1:o),
+        C_dxd=view(C_dxd, 1:o, 1:o),
+        C_Dxd=view(C_Dxd, :, 1:o),
+        C_d=view(C_d, 1:o),
+        C_DxD=C_DxD,
+        measurement=Gaussian(view(measurement.μ, 1:o), view(measurement.Σ, 1:o, 1:o)),
+        m_tmp=m_tmp,
+        x_tmp=x_tmp,
+    )
+end
+function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
+    # The block-wise `update!` only uses the first `o` blocks of the matrix caches
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement, m_tmp, x_tmp = cache
+    return (K1=K1, C_dxd=C_dxd, C_Dxd=C_Dxd, C_d=view(C_d, 1:o), C_DxD=C_DxD,
+        measurement=measurement, m_tmp=m_tmp, x_tmp=x_tmp)
+end
+
+"""
     update_mean!(x_out, x_pred, obs::LinearizedObservation; cache)
     update_mean!(x_out, x_pred, obs::LinearizedObservation,
                  K1_cache, K2_cache, measurement_cache, C_dxd, C_d)
