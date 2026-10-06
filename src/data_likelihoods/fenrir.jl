@@ -93,12 +93,12 @@ function fit_pnsolution_to_data!(
     # First update on the last data point, if it lies at the end of the solution
     data_idx = length(data.u)
     if sol.t[end] == data.t[data_idx]
-        (; loglikelihood) = measure_and_update!(
+        (; loglikelihood) = update_on_data!(
             x_posterior[end],
-            data.u[data_idx],
             H,
-            observation_noise_cov,
-            _cache,
+            data.u[data_idx],
+            observation_noise_cov;
+            cache=_cache,
         )
         LL += loglikelihood
         data_idx -= 1
@@ -116,12 +116,12 @@ function fit_pnsolution_to_data!(
         marginalize!(x_posterior[i], x_posterior[i+1], K; C_DxD, C_3DxD)
 
         if data_idx > 0 && sol.t[i] == data.t[data_idx]
-            (; loglikelihood) = measure_and_update!(
+            (; loglikelihood) = update_on_data!(
                 x_posterior[i],
-                data.u[data_idx],
                 H,
-                observation_noise_cov,
-                _cache,
+                data.u[data_idx],
+                observation_noise_cov;
+                cache=_cache,
             )
             LL += loglikelihood
             data_idx -= 1
@@ -130,12 +130,4 @@ function fit_pnsolution_to_data!(
     @assert data_idx == 0 # to make sure we went through all the data
 
     return LL, sol.t, x_posterior
-end
-
-function measure_and_update!(x, u, H, R::PSDMatrix, cache)
-    z = view(mean(cache.m_tmp), 1:length(u))
-    _matmul!(z, H, x.μ)
-    z .-= u
-    x_pred = copy!(cache.x_tmp, x)
-    return update!(x, x_pred, LinearizedObservation(x_pred.μ, z, H, R); cache)
 end

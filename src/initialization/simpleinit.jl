@@ -15,6 +15,7 @@ function initial_update!(integ, cache, init::SimpleInit)
         du = du.x[2]
     end
 
-    init_condition_on!(x, Proj(0), view(u, :), cache)
-    init_condition_on!(x, f.mass_matrix * Proj(1), view(du, :), cache)
+    update_on_data!(x, Proj(0), view(u, :), nothing; cache)
+    H = f.mass_matrix * Proj(1)
+    update_on_data!(x, H, view(du, :), _zero_row_noise(H, cache); cache)
 end

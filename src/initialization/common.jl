@@ -141,37 +141,12 @@ function initial_update!(integ, cache)
 end
 
 """
-    init_condition_on!(x, H, data, cache)
-
-Condition `x` on `data` with linear measurement function `H`. Used only for initialization.
-
-Rows of `H` that are zero, such as those of `M * Proj(o)` for a mass matrix `M` with zero
-rows, are treated as unobserved; see [`_zero_row_noise`](@ref).
-
-Don't use this as a Kalman update! The function has quite a few assumptions, that only
-really work out in the specific context of initialization. If you actually want to update,
-use [`update`](@ref) or [`update!`](@ref).
-"""
-function init_condition_on!(
-    x::SRGaussian,
-    H::AbstractMatrix,
-    data::AbstractVector,
-    cache,
-)
-    @unpack x_tmp, m_tmp = cache
-    z = _matmul!(m_tmp.μ, H, x.μ)
-    z .-= data
-    copy!(x_tmp, x)
-    obs = LinearizedObservation(x_tmp.μ, z, H, _zero_row_noise(H, cache))
-    return update!(x, x_tmp, obs; cache)
-end
-
-"""
     _zero_row_noise(H, cache)
 
 Unit observation noise on the zero rows of `H`, or `nothing` if `H` has no zero row.
 
-A zero row `i` of `H` makes row and column `i` of `S = H Σ Hᵀ` zero, so `S` is singular.
+The initializations observe `M u⁽ⁱ⁾` for a mass matrix `M`, which can have zero rows. A zero
+row `i` of `H` makes row and column `i` of `S = H Σ Hᵀ` zero, so `S` is singular.
 With unit noise on row `i`, `S[i, i] = 1`, `S` can be factorized, and column `i` of the gain
 `Σ Hᵀ S⁻¹` is zero, so the observation in this row is ignored.
 """
