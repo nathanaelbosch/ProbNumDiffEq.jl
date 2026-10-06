@@ -16,12 +16,11 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
 
         df = view(df, :)
 
-        H = if o == 0
-            Proj(o)
+        if o == 0
+            update_on_data!(x, Proj(0), df, nothing; cache)
         else
-            f.mass_matrix * Proj(o)
+            update_on_derivative!(x, f.mass_matrix, o, df; cache)
         end
-        update_on_data!(x, H, df, _zero_row_noise(H, cache); cache)
     end
 end
 

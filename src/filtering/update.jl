@@ -387,7 +387,7 @@ function _update_cov!(
 end
 
 # With a block-diagonal covariance, a `ScaledSelection` observation decouples into one scalar
-# observation `m[k] e0ᵀ x_{dims[k]}` per row `k`, each of a single state block. So the update
+# observation `m[k] eᵢᵀ x_{dims[k]}` per row `k`, each of a single state block. So the update
 # is one scalar update per observed block, and unobserved blocks keep the prediction.
 function _update_mean!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},

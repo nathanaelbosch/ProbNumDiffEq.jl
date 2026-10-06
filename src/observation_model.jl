@@ -32,12 +32,13 @@ _is_positive(cov::Diagonal) = all(>(0), cov.diag)
 _is_positive(cov::AbstractMatrix) = isposdef(Matrix(cov))
 
 """
-    SolutionObservation(M, q)
+    SolutionObservation(M, q, derivative=0)
 
-The observation matrix `H = M * E0 = e0ᵀ ⊗ M` of the filter state, which observes the linear
-combination `M * u` of the ODE solution `u`, i.e. only the zeroth derivative.
+The observation matrix `H = M * Eᵢ = eᵢᵀ ⊗ M` of the filter state, which observes the linear
+combination `M * u⁽ⁱ⁾` of the `i`-th derivative of the ODE solution `u`, `i = derivative`.
+Data observes `u`; the initializations observe higher derivatives.
 
-With the derivative-major state `x = vec(X)`, `X ∈ ℝ^(d×(q+1))`, it is `H * x = M * X * e0`.
+With the derivative-major state `x = vec(X)`, `X ∈ ℝ^(d×(q+1))`, it is `H * x = M * X * eᵢ`.
 So all structure of `H` is in `M`, which is a `UniformScaling`, a `Diagonal`, a
 `ScaledSelection` or a general matrix. `M` determines which covariance structures can
 represent `H`, see the `to_factorized_matrix` methods.
@@ -45,7 +46,9 @@ represent `H`, see the `to_factorized_matrix` methods.
 struct SolutionObservation{MT}
     M::MT
     q::Int
+    derivative::Int
 end
+SolutionObservation(M, q) = SolutionObservation(M, q, 0)
 
 """
     ScaledSelection(m, dims, d)
@@ -81,31 +84,35 @@ _has_zero_row(M::Diagonal) = any(iszero, M.diag)
 _has_zero_row(::ScaledSelection) = false
 _has_zero_row(M::AbstractMatrix) = any(iszero, eachrow(M))
 
-_e0_row(::Type{T}, q, λ) where {T} = [T(λ) zeros(T, 1, q)]
+# `λ eᵢᵀ`, a row of length `q + 1`
+_ei_row(::Type{T}, q, i, λ) where {T} = [zeros(T, 1, i) T(λ) zeros(T, 1, q - i)]
 
-# The first `d` entries of the derivative-major state are `u`, so `H = [M 0 ⋯ 0]`
+# Entries `i d + 1` to `(i + 1) d` of the derivative-major state are `u⁽ⁱ⁾`, so
+# `H = [0 ⋯ 0 M 0 ⋯ 0]`
 function to_factorized_matrix(C::DenseCovariance{T}, H::SolutionObservation) where {T}
     M = H.M isa UniformScaling ? Matrix{T}(H.M, C.d, C.d) : Matrix{T}(H.M)
-    return [M zeros(T, size(M, 1), C.d * C.q)]
+    o, i = size(M, 1), H.derivative
+    return [zeros(T, o, C.d * i) M zeros(T, o, C.d * (C.q - i))]
 end
-# `e0ᵀ ⊗ λI = (λ e0ᵀ) ⊗ I_d`; no other `M` gives the form `B ⊗ I_d`
+# `eᵢᵀ ⊗ λI = (λ eᵢᵀ) ⊗ I_d`; no other `M` gives the form `B ⊗ I_d`
 to_factorized_matrix(
     C::IsometricKroneckerCovariance{T}, H::SolutionObservation{<:UniformScaling},
-) where {T} = IsometricKroneckerProduct(C.d, _e0_row(T, C.q, H.M.λ))
+) where {T} = IsometricKroneckerProduct(C.d, _ei_row(T, C.q, H.derivative, H.M.λ))
 to_factorized_matrix(::IsometricKroneckerCovariance, ::SolutionObservation) =
     kronecker_matrix_error()
-# `e0ᵀ ⊗ Diagonal(m)` has the blocks `m[i] e0ᵀ`. A `ScaledSelection` is kept as it is: its
+# `eᵢᵀ ⊗ Diagonal(m)` has the blocks `m[j] eᵢᵀ`. A `ScaledSelection` is kept as it is: its
 # row `k` reads only state block `dims[k]`, see the methods below and its update in
 # `filtering/update.jl`.
 to_factorized_matrix(
     C::BlockDiagonalCovariance{T}, H::SolutionObservation{<:UniformScaling},
-) where {T} = BlocksOfDiagonals([_e0_row(T, C.q, H.M.λ) for _ in 1:C.d])
+) where {T} = BlocksOfDiagonals([_ei_row(T, C.q, H.derivative, H.M.λ) for _ in 1:C.d])
 to_factorized_matrix(
     C::BlockDiagonalCovariance{T}, H::SolutionObservation{<:Diagonal},
-) where {T} = BlocksOfDiagonals([_e0_row(T, C.q, m) for m in H.M.diag])
+) where {T} = BlocksOfDiagonals([_ei_row(T, C.q, H.derivative, m) for m in H.M.diag])
 to_factorized_matrix(
     ::BlockDiagonalCovariance{T}, H::SolutionObservation{<:ScaledSelection},
-) where {T} = SolutionObservation(ScaledSelection(T.(H.M.m), H.M.dims, H.M.d), H.q)
+) where {T} = SolutionObservation(
+    ScaledSelection(T.(H.M.m), H.M.dims, H.M.d), H.q, H.derivative)
 to_factorized_matrix(::BlockDiagonalCovariance, ::SolutionObservation) = selection_error()
 
 _noise_fits(::DenseCovariance, noise_cov) = true
@@ -118,11 +125,11 @@ _measurement_structure(C::BlockDiagonalCovariance{T}, o) where {T} =
     BlockDiagonalCovariance{T}(o, C.q)
 _measurement_structure(C, o) = C
 
-# Row `k` of a `ScaledSelection` observation is `m[k] e0ᵀ` on state block `dims[k]`
+# Row `k` of a `ScaledSelection` observation is `m[k] eᵢᵀ` on state block `dims[k]`
 _diagonal_block(H::SolutionObservation{<:ScaledSelection}, k, o) =
-    _e0_row(eltype(H.M), H.q, H.M.m[k])
+    _ei_row(eltype(H.M), H.q, H.derivative, H.M.m[k])
 _matmul!(z::AbstractVector, H::SolutionObservation{<:ScaledSelection}, μ::AbstractVector) =
-    z .= H.M.m .* view(μ, H.M.dims)
+    z .= H.M.m .* view(μ, H.derivative * H.M.d .+ H.M.dims)
 
 nonpositive_noise_error() =
     throw(ArgumentError("The observation noise covariance must be positive definite."))
