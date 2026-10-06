@@ -183,9 +183,12 @@ update_cache(FAC, D, o) = (;
             @test x_split == x_out
         end
 
-        @testset "Linearized at a point other than the mean" begin
+        @testset "Linearized at $name" for (name, m_lin) in
+                                           (
+            ("another point", m_p + rand(D)),
+            ("zero", Zeros(D)),
+        )
             # The same affine model, written at `m_lin`
-            m_lin = m_p + rand(D)
             obs_lin = PNDE.LinearizedObservation(m_lin, z + HM * (m_lin - m_p), H, R)
             x_lin = copy(x_pred)
             res_lin = PNDE.update!(x_lin, x_pred, obs_lin; cache)
@@ -194,6 +197,39 @@ update_cache(FAC, D, o) = (;
             @test x_lin.μ ≈ m
             @test Matrix(x_lin.Σ) ≈ P
             @test PNDE.update(x_pred, obs_lin).μ ≈ m
+        end
+
+        @testset "In place" begin
+            cache_ip = merge(cache, (; d=o, x_tmp=copy(x_pred)))
+            x_ip = copy(x_pred)
+            @test PNDE.update!(x_ip, obs; cache=cache_ip).loglikelihood ≈ LL
+            @test x_ip.μ ≈ m
+            @test Matrix(x_ip.Σ) ≈ P
+            # An observation linearized at `x.μ` itself, which the update overwrites
+            x_ip = copy(x_pred)
+            obs_x = PNDE.LinearizedObservation(x_ip.μ, z, H, R)
+            @test PNDE.update!(x_ip, obs_x; cache=cache_ip).loglikelihood ≈ LL
+            @test x_ip.μ ≈ m
+            @test Matrix(x_ip.Σ) ≈ P
+            # An empty observation leaves the state unchanged
+            x_ip = copy(x_pred)
+            obs_empty = PNDE.LinearizedObservation(m_p, zeros(0), H, R)
+            @test PNDE.update!(x_ip, obs_empty; cache=cache_ip).loglikelihood == 0
+            @test x_ip == x_pred
+        end
+
+        @testset "Data at m = 0, against the residual at the mean" begin
+            # `(-y) - H (0 - μ)` rounds exactly as `H μ - y`
+            y = rand(o)
+            obs_data = PNDE.data_observation((; x=x_pred), H, y, R)
+            @test obs_data.m isa Zeros
+            obs_μ = PNDE.LinearizedObservation(
+                x_pred.μ, PNDE._matmul!(zeros(o), H, x_pred.μ) .- y, H, R)
+            x_data, x_μ = copy(x_pred), copy(x_pred)
+            res_data = PNDE.update!(x_data, x_pred, obs_data; cache)
+            res_μ = PNDE.update!(x_μ, x_pred, obs_μ; cache)
+            @test x_data == x_μ
+            @test res_data.loglikelihood == res_μ.loglikelihood
         end
 
         @testset "Zero predicted covariance" begin

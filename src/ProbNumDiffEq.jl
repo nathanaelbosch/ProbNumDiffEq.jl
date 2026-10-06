@@ -49,7 +49,7 @@ using Octavian: matmul!
 import Kronecker
 using ArrayAllocators: calloc
 using FiniteHorizonGramians: FiniteHorizonGramians
-using FillArrays: FillArrays, Eye, Fill
+using FillArrays: FillArrays, Eye, Fill, Zeros
 using MatrixEquations: plyapc
 using DiffEqCallbacks: PresetTimeCallback
 using ADTypes: ADTypes, AutoForwardDiff, AutoSparse

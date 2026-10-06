@@ -141,16 +141,18 @@ function initial_update!(integ, cache)
 end
 
 """
-    derivative_observation(cache, M, i)
+    derivative_observation(cache, M, i, y)
 
-Return `(H, rows)`: `rows` are the indices of the nonzero rows of the mass matrix `M`, and
-`H`, in the covariance structure of `cache`, observes `(M u⁽ⁱ⁾)[rows]` for the `i`-th
-derivative `u⁽ⁱ⁾` of the solution. The zero rows, the algebraic equations of a DAE, say
-nothing about `u⁽ⁱ⁾` and would make `S = H Σ Hᵀ` singular. Data `y = M u⁽ⁱ⁾` is observed with
-`update_on_data!(x, H, view(y, rows), nothing; cache)`, which is skipped if `rows` is empty.
+The [`data_observation`](@ref) `M u⁽ⁱ⁾ = y` of the `i`-th derivative `u⁽ⁱ⁾` of the solution,
+for the mass matrix `M`, without the zero rows of `M`. These rows, the algebraic equations of
+a DAE, say nothing about `u⁽ⁱ⁾` and would make `S = H Σ Hᵀ` singular. If all rows of `M` are
+zero, the observation is empty, and [`update!`](@ref) leaves the state unchanged.
 """
-derivative_observation(cache, M, i) =
-    _derivative_observation(cache.covariance_factorization, cache, M, i)
+function derivative_observation(cache, M, i, y)
+    H, rows = _derivative_observation(cache.covariance_factorization, cache, M, i)
+    return data_observation(cache, H, view(y, rows))
+end
+# `H` for the nonzero `rows` of `M`
 function _derivative_observation(::DenseCovariance, cache, M, i)
     H = M * cache.Proj(i)
     rows = findall(!iszero, eachrow(H))

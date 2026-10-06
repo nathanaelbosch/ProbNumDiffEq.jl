@@ -76,8 +76,9 @@ The global quasi-MLE diffusion estimate Corresponds to
 ```math
 [\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{jj},
 ```
-where ``z_i`` is the residual `obs.z` of the observation in each step and ``S_i`` its
-covariance `upd.S`, as returned by [`update!`](@ref).
+where ``z_i`` is the residual `obs.z` at the predicted mean (`obs.m = μ`, as from
+[`evaluate_ode!`](@ref)) in each step and ``S_i`` its covariance `upd.S`, as returned by
+[`update!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
 [\hat{Σ}^2_n]_{jj} = [\hat{Σ}^2_{n-1}]_{jj} + ([z_n]_j^2 / [S_n]_{jj} - [\hat{Σ}^2_{n-1}]_{jj}) / n.
@@ -115,8 +116,9 @@ Corresponds to
 ```math
 σ² = zᵀ (H Q H^T)⁻¹ z / d,
 ```
-where ``z`` is the residual of the [`LinearizedObservation`](@ref) and `HQH` is computed by
-[`observed_process_noise!`](@ref).
+where ``z`` is the residual at the predicted mean, the `z` of a
+[`LinearizedObservation`](@ref) with `m = μ` as from [`evaluate_ode!`](@ref), and `HQH` is
+computed by [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
@@ -138,8 +140,9 @@ Corresponds to
 ```math
 Σ_{ii} = z_i^2 / (H Q H^T)_{ii},
 ```
-where ``z`` is the residual of the [`LinearizedObservation`](@ref) and `HQH` is computed by
-[`observed_process_noise!`](@ref).
+where ``z`` is the residual at the predicted mean, the `z` of a
+[`LinearizedObservation`](@ref) with `m = μ` as from [`evaluate_ode!`](@ref), and `HQH` is
+computed by [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
