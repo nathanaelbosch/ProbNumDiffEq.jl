@@ -65,10 +65,11 @@ end
         @test (@allocated ProbNumDiffEq.getupperright!(_A)) == 0
     end
 
-    for T in (Float64, BigFloat)
-        A = rand(T, 12, 6)
+    # Both branches for Float64: up to 36 columns, and more
+    for T in (Float64, BigFloat), (m, n) in ((12, 6), (80, 40))
+        A = rand(T, m, n)
         R_ref = qr(A).R
-        R = ProbNumDiffEq.triangularize!(copy(A); cachemat=zeros(T, 6, 6))
+        R = ProbNumDiffEq.triangularize!(copy(A); cachemat=zeros(T, n, n))
         @test abs.(R) ≈ abs.(R_ref)
         @test R' * R ≈ A' * A
     end
