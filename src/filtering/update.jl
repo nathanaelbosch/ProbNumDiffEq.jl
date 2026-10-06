@@ -356,3 +356,51 @@ function _update_cov!(
         _update_cov!, nblocks(H), Σ_out, Σ_pred, H, R, K, B, M_cache, KR_cache)
     return Σ_out
 end
+
+# With a block-diagonal covariance, a `ScaledSelection` observation decouples into one scalar
+# observation `m[k] e0ᵀ x_{dims[k]}` per row `k`, each of a single state block. So the update
+# is one scalar update per observed block, and unobserved blocks keep the prediction.
+function _update_mean!(
+    x_out::SRGaussian{T,<:BlocksOfDiagonals},
+    x_pred::SRGaussian{T,<:BlocksOfDiagonals},
+    z::AbstractVector,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K1_cache::BlocksOfDiagonals,
+    K2_cache::BlocksOfDiagonals,
+    S_cache::BlocksOfDiagonals,
+    C_dxd::BlocksOfDiagonals,
+    C_d::AbstractVector,
+) where {T}
+    d, o = nblocks(x_out.Σ.R), length(H.M.dims)
+    o < d && copy!(x_out.μ, x_pred.μ)
+    args = (z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
+    loglikelihood, ztSinvz = zero(T), zero(T)
+    for (k, i) in enumerate(H.M.dims)
+        block = _update_mean!(
+            _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+        loglikelihood += block.loglikelihood
+        ztSinvz += block.ztSinvz
+    end
+    return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
+end
+function _update_cov!(
+    Σ_out::BlocksOfDiagonalsPSD,
+    Σ_pred::BlocksOfDiagonalsPSD,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K::BlocksOfDiagonals,
+    B::BlocksOfDiagonals,
+    M_cache::BlocksOfDiagonals,
+    KR_cache::BlocksOfDiagonals,
+)
+    d, o = nblocks(Σ_out.R), length(H.M.dims)
+    o < d && copy!(Σ_out.R, Σ_pred.R)
+    args = (H, R, K, B, M_cache, KR_cache)
+    for (k, i) in enumerate(H.M.dims)
+        _update_cov!(_diagonal_block(Σ_out, i, d), _diagonal_block(Σ_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+    end
+    return Σ_out
+end
