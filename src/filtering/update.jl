@@ -124,10 +124,18 @@ function make_obssized_cache(::DenseCovariance, cache; o)
     )
 end
 function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
-    # The block-wise `update!` only uses the first `o` blocks of the matrix caches
     @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement, m_tmp, x_tmp = cache
-    return (K1=K1, C_dxd=C_dxd, C_Dxd=C_Dxd, C_d=view(C_d, 1:o), C_DxD=C_DxD,
-        measurement=measurement, m_tmp=m_tmp, x_tmp=x_tmp)
+    first_blocks(M) = BlocksOfDiagonals(blocks(M)[1:o])
+    return (
+        K1=first_blocks(K1),
+        C_dxd=first_blocks(C_dxd),
+        C_Dxd=first_blocks(C_Dxd),
+        C_d=view(C_d, 1:o),
+        C_DxD=first_blocks(C_DxD),
+        measurement=Gaussian(view(measurement.μ, 1:o), first_blocks(measurement.Σ)),
+        m_tmp=m_tmp,
+        x_tmp=x_tmp,
+    )
 end
 
 """
