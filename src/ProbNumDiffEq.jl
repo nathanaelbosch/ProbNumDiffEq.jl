@@ -34,7 +34,7 @@ using OrdinaryDiffEqCore: OrdinaryDiffEqCore
 using OrdinaryDiffEqDifferentiation: OrdinaryDiffEqDifferentiation
 using FastBroadcast: @..
 using StaticArrayInterface: StaticArrayInterface
-using TaylorSeries: Taylor1, differentiate, evaluate, order
+using TaylorSeries: Taylor1, differentiate, evaluate
 using TaylorIntegration: TaylorIntegration
 @reexport using StructArrays
 using StructArrays: StructArrays, StructArray

@@ -1,13 +1,8 @@
-########################################################################################
-# Algorithm
-########################################################################################
-abstract type AbstractEK <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm end
-
 # `_process_AD_choice` normalizes the legacy `(autodiff, chunk_size, diff_type)`
 # kwargs into an `ADTypes.AbstractADType`. v3's OrdinaryDiffEqCore exports this
 # helper; v4 (OrdinaryDiffEq v7) removed it along with the legacy kwargs. We keep
-# accepting the kwargs on EK1/DiagonalEK1 by delegating to OrdinaryDiffEqCore on v3
-# and inlining an equivalent shim on v4.
+# accepting the kwargs by delegating to OrdinaryDiffEqCore on v3 and inlining an
+# equivalent shim on v4.
 @static if isdefined(OrdinaryDiffEqCore, :_process_AD_choice)
     _process_AD_choice(autodiff, chunk_size, diff_type) =
         OrdinaryDiffEqCore._process_AD_choice(autodiff, chunk_size, diff_type)
@@ -17,7 +12,7 @@ else
         if ad isa Bool
             # Mirror v3: `true` → AutoForwardDiff(chunksize=chunk_size), `false` →
             # AutoFiniteDiff(fdtype=diff_type, dir=1). Without this a Bool would
-            # propagate as EK1's AD type parameter and break `AbstractADType` dispatch.
+            # be stored as the `autodiff` field and break `AbstractADType` dispatch.
             if ad
                 cs_int = _unwrap_val(chunk_size)
                 cs = cs_int == 0 ? nothing : cs_int
@@ -46,117 +41,146 @@ else
     end
 end
 
-# Tell SciMLBase that EK1/DiagonalEK1 use ForwardDiff on the model function,
-# so that FunctionWrappersWrapper registers Dual-compatible wrappers.
-function SciMLBase.forwarddiffs_model(alg::AbstractEK)
-    hasfield(typeof(alg), :autodiff) || return false
-    ad = alg.autodiff
-    ad isa ADTypes.AutoForwardDiff && return true
-    ad isa ADTypes.AutoSparse && return ADTypes.dense_ad(ad) isa ADTypes.AutoForwardDiff
-    return false
-end
+########################################################################################
+# Linearizations
+########################################################################################
+"""
+    AbstractLinearization
 
-# DAE-initialization hook.
-#
-# v3's `_default_dae_init!` is only extended for OrdinaryDiffEq's own implicit
-# algorithms (in OrdinaryDiffEqNonlinearSolve), so without an override the EK
-# solvers hit a MethodError on DAE / singular-mass-matrix problems. Route through
-# `CheckInit` to match the OrdinaryDiffEq v7 default; users who want the previous
-# silent-fix behavior pass `initializealg = BrownFullBasicInit()` explicitly.
-# v4 dropped the hook and `CheckInit` is already its `DefaultInit` target.
-@static if isdefined(OrdinaryDiffEqCore, :_default_dae_init!)
-    function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::AbstractEK)
-        return OrdinaryDiffEqCore._initialize_dae!(
-            integrator,
-            prob,
-            DiffEqBase.CheckInit(),
-            x,
+How an `ODEFilter` linearizes the ODE vector field, that is, which approximation of its
+Jacobian enters the observation matrix `H`: `ZeroJacobian` in the [`EK0`](@ref),
+`DiagonalJacobian` in the [`DiagonalEK1`](@ref) and `FullJacobian` in the [`EK1`](@ref).
+"""
+abstract type AbstractLinearization end
+struct ZeroJacobian <: AbstractLinearization end
+struct DiagonalJacobian <: AbstractLinearization end
+struct FullJacobian <: AbstractLinearization end
+
+"""
+    needs_jacobian(component)
+
+Whether a component of an `ODEFilter` needs the Jacobian of the ODE vector field.
+"""
+needs_jacobian(::ZeroJacobian) = false
+needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
+needs_jacobian(::AbstractGaussMarkovProcess) = false
+needs_jacobian(prior::IOUP) = prior.update_rate_parameter
+
+########################################################################################
+# Algorithm
+########################################################################################
+"""
+    ODEFilter(; linearization, prior, diffusionmodel, initialization, pn_observation_noise,
+              smooth, covariance_factorization, autodiff, standardtag, concrete_jac)
+
+**Gaussian ODE filter.** The solvers [`EK0`](@ref), [`EK1`](@ref) and [`DiagonalEK1`](@ref)
+are `ODEFilter`s that differ only in their `linearization`; see them for the defaults.
+
+- `covariance_factorization`: `IsometricKroneckerCovariance`, `BlockDiagonalCovariance`,
+  `DenseCovariance`, or `nothing` for the most structured one that all other settings and
+  the problem's mass matrix support.
+- `autodiff`: an `ADTypes` choice for the Jacobian, or `nothing`. It is used if the
+  `linearization` or the `prior` need a Jacobian, with `nothing` meaning
+  `AutoForwardDiff()`, and is set to `nothing` otherwise.
+"""
+struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
+       OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm
+    linearization::LT
+    prior::PT
+    diffusionmodel::DT
+    initialization::IT
+    pn_observation_noise::RT
+    smooth::Bool
+    covariance_factorization::CF
+    autodiff::AD
+    standardtag::Bool
+    concrete_jac::CJ
+    function ODEFilter(;
+        linearization,
+        prior,
+        diffusionmodel,
+        initialization,
+        pn_observation_noise,
+        smooth,
+        covariance_factorization,
+        autodiff,
+        standardtag,
+        concrete_jac,
+    )
+        if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
+           (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
+            throw(
+                ArgumentError(
+                    "Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually.",
+                ),
+            )
+        end
+        if !(needs_jacobian(linearization) || needs_jacobian(prior))
+            autodiff = nothing
+        elseif isnothing(autodiff)
+            autodiff = AutoForwardDiff()
+        end
+        return new{
+            typeof(linearization),
+            typeof(prior),
+            typeof(diffusionmodel),
+            typeof(initialization),
+            typeof(pn_observation_noise),
+            _typeof(covariance_factorization),
+            typeof(autodiff),
+            typeof(concrete_jac),
+        }(
+            linearization,
+            prior,
+            diffusionmodel,
+            initialization,
+            pn_observation_noise,
+            smooth,
+            covariance_factorization,
+            autodiff,
+            standardtag,
+            concrete_jac,
         )
     end
 end
 
-function ekargcheck(
-    alg;
-    diffusionmodel,
-    pn_observation_noise,
-    covariance_factorization,
-    kwargs...,
+# `Type{T}` instead of `UnionAll`, so that `choose_covariance_structure` infers its result
+_typeof(x) = typeof(x)
+_typeof(T::Type) = Type{T}
+
+_unwrap_val(::Val{B}) where {B} = B
+_unwrap_val(B) = B
+
+# The keyword arguments of `EK0`, `EK1` and `DiagonalEK1`, with their defaults. The
+# `chunk_size` and `diff_type` of OrdinaryDiffEq 6 are folded into `autodiff`.
+function _odefilter(
+    linearization;
+    order=3,
+    prior=IWP(order),
+    diffusionmodel=DynamicDiffusion(),
+    smooth=true,
+    initialization=TaylorModeInit(num_derivatives(prior)),
+    pn_observation_noise=nothing,
+    covariance_factorization=nothing,
+    autodiff=AutoForwardDiff(),
+    chunk_size=Val{0}(),
+    diff_type=Val{:forward}(),
+    standardtag=Val{true}(),
+    concrete_jac=nothing,
 )
-    if diffusionmodel isa Union{DynamicMVDiffusion,FixedMVDiffusion} &&
-       covariance_factorization <: IsometricKroneckerCovariance
-        throw(
-            ArgumentError(
-                "A per-dimension diffusion like `$(nameof(typeof(diffusionmodel)))` cannot be " *
-                "represented with the Kronecker-factorized `IsometricKroneckerCovariance`. " *
-                "Use `BlockDiagonalCovariance` (the default for the `EK0` with a " *
-                "multivariate diffusion) or a scalar diffusion model."),
-        )
-    end
-    estimates_per_dimension =
-        diffusionmodel isa DynamicMVDiffusion ||
-        (diffusionmodel isa FixedMVDiffusion && diffusionmodel.calibrate)
-    if estimates_per_dimension && !(covariance_factorization <: BlockDiagonalCovariance)
-        throw(
-            ArgumentError(
-                "`$(nameof(typeof(diffusionmodel)))` estimates a separate diffusion per ODE " *
-                "dimension, which is only supported with block-diagonal covariances: " *
-                "for the `EK0` with an `IWP` prior, and for the `DiagonalEK1`. " *
-                "Use a scalar diffusion model like `DynamicDiffusion` or `FixedDiffusion` " *
-                "instead, or `FixedMVDiffusion(diffusion, false)` to use a given " *
-                "per-dimension diffusion without calibration."),
-        )
-    end
-    if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
-       (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
-        throw(
-            ArgumentError(
-                "Automatic calibration of global diffusion models is not possible when using observation noise. If you want to calibrate a global diffusion parameter, do so setting `calibrate=false` and optimizing `sol.pnstats.log_likelihood` manually.",
-            ),
-        )
-    end
-    if !(isnothing(pn_observation_noise) || ismissing(pn_observation_noise))
-        if covariance_factorization == IsometricKroneckerCovariance && !(
-            pn_observation_noise isa Number
-            || pn_observation_noise isa UniformScaling
-            || pn_observation_noise isa Diagonal{<:Number,<:FillArrays.Fill})
-            throw(
-                ArgumentError(
-                    "The supplied `pn_observation_noise` is not compatible with the chosen `IsometricKroneckerCovariance` factorization. Try one of `BlockDiagonalCovariance` or `DenseCovariance` instead!",
-                ),
-            )
-        end
-        if covariance_factorization == BlockDiagonalCovariance && !(
-            pn_observation_noise isa Number
-            || pn_observation_noise isa UniformScaling
-            || pn_observation_noise isa Diagonal)
-            throw(
-                ArgumentError(
-                    "The supplied `pn_observation_noise` is not compatible with the chosen `BlockDiagonalCovariance` factorization. Try `DenseCovariance` instead!",
-                ),
-            )
-        end
-    end
-end
-
-function covariance_structure(::Type{Alg}, prior, diffusionmodel) where {Alg<:AbstractEK}
-    if Alg <: EK0
-        if prior isa IWP
-            if (diffusionmodel isa DynamicDiffusion || diffusionmodel isa FixedDiffusion)
-                return IsometricKroneckerCovariance
-            else
-                return BlockDiagonalCovariance
-            end
-        else
-            # This is not great as other priors can be Kronecker too; TODO
-            return DenseCovariance
-        end
-    elseif Alg <: DiagonalEK1
-        return BlockDiagonalCovariance
-    elseif Alg <: EK1
-        return DenseCovariance
-    else
-        throw(ArgumentError("Unknown algorithm type $Alg"))
-    end
+    autodiff, _, _ = _process_AD_choice(autodiff, chunk_size, diff_type)
+    return ODEFilter(;
+        linearization,
+        prior,
+        diffusionmodel,
+        initialization,
+        pn_observation_noise,
+        smooth,
+        covariance_factorization,
+        autodiff,
+        standardtag=_unwrap_val(standardtag),
+        concrete_jac=_unwrap_val(concrete_jac),
+    )
 end
 
 """
@@ -175,8 +199,11 @@ problems, use the [`EK1`](@ref).
 Whenever possible this solver will use a Kronecker-factored implementation to achieve its
 linear scaling and to get the best runtimes. This can currently be done only with an
 `IWP` prior (default), with a scalar diffusion model (either `DynamicDiffusion` or
-`FixedDiffusion`). _For other configurations the solver falls back to a dense implementation
-which scales cubically with the problem size._
+`FixedDiffusion`). Otherwise it uses block-diagonal covariances, which also scale linearly,
+for example with a multivariate diffusion model or a `Diagonal` mass matrix. _Settings that
+only dense covariances can represent, such as an `IOUP` or `Matern` prior, throw an error
+unless you pass `covariance_factorization=DenseCovariance`; dense covariances scale
+cubically with the problem size._
 
 # Arguments
 - `order::Integer`: Order of the integrated Wiener process (IWP) prior.
@@ -187,6 +214,10 @@ which scales cubically with the problem size._
 - `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
 - `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
 
+The keyword arguments of the [`EK1`](@ref) for computing Jacobians, such as `autodiff`,
+are used for a prior that needs a Jacobian, such as an [`IOUP`](@ref) with
+`update_rate_parameter=true`.
+
 # Examples
 ```julia-repl
 julia> solve(prob, EK0())
@@ -194,30 +225,7 @@ julia> solve(prob, EK0())
 
 # [References](@ref references)
 """
-struct EK0{PT,DT,IT,RT,CF} <: AbstractEK
-    prior::PT
-    diffusionmodel::DT
-    smooth::Bool
-    initialization::IT
-    pn_observation_noise::RT
-    covariance_factorization::CF
-    EK0(; order=3,
-        prior::PT=IWP(order),
-        diffusionmodel::DT=DynamicDiffusion(),
-        smooth=true,
-        initialization::IT=TaylorModeInit(num_derivatives(prior)),
-        pn_observation_noise::RT=nothing,
-        covariance_factorization::CF=covariance_structure(EK0, prior, diffusionmodel),
-    ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(EK0; diffusionmodel, pn_observation_noise, covariance_factorization)
-        new{PT,DT,IT,RT,CF}(
-            prior, diffusionmodel, smooth, initialization, pn_observation_noise,
-            covariance_factorization)
-    end
-end
-
-_unwrap_val(::Val{B}) where {B} = B
-_unwrap_val(B) = B
+EK0(; kwargs...) = _odefilter(ZeroJacobian(); kwargs...)
 
 """
     EK1(; order=3,
@@ -256,53 +264,7 @@ julia> solve(prob, EK1())
 
 # [References](@ref references)
 """
-struct EK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
-    prior::PT
-    diffusionmodel::DT
-    smooth::Bool
-    initialization::IT
-    pn_observation_noise::RT
-    covariance_factorization::CF
-    autodiff::AD
-    EK1(;
-        order=3,
-        prior::PT=IWP(order),
-        diffusionmodel::DT=DynamicDiffusion(),
-        smooth=true,
-        initialization::IT=TaylorModeInit(num_derivatives(prior)),
-        chunk_size=Val{0}(),
-        autodiff=AutoForwardDiff(),
-        diff_type=Val{:forward}(),
-        standardtag=Val{true}(),
-        concrete_jac=nothing,
-        pn_observation_noise::RT=nothing,
-        covariance_factorization::CF=covariance_structure(EK1, prior, diffusionmodel),
-    ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(EK1; diffusionmodel, pn_observation_noise, covariance_factorization)
-        AD_choice, chunk_size, diff_type =
-            _process_AD_choice(autodiff, chunk_size, diff_type)
-        new{
-            _unwrap_val(chunk_size),
-            typeof(AD_choice),
-            diff_type,
-            _unwrap_val(standardtag),
-            _unwrap_val(concrete_jac),
-            PT,
-            DT,
-            IT,
-            RT,
-            CF,
-        }(
-            prior,
-            diffusionmodel,
-            smooth,
-            initialization,
-            pn_observation_noise,
-            covariance_factorization,
-            AD_choice,
-        )
-    end
-end
+EK1(; kwargs...) = _odefilter(FullJacobian(); kwargs...)
 
 """
     DiagonalEK1(; order=3,
@@ -317,7 +279,9 @@ end
 A semi-implicit solver that approximates the Jacobian as diagonal, using a block-diagonal
 covariance representation to achieve linear scaling with the ODE dimension
 [Krämer et al. (2022)](@cite krämer21highdim). This makes it suitable for high-dimensional problems where
-the full [`EK1`](@ref) would be too expensive.
+the full [`EK1`](@ref) would be too expensive. Settings that only dense covariances can
+represent, such as an `IOUP` or `Matern` prior or a non-diagonal mass matrix, throw an error
+unless you pass `covariance_factorization=DenseCovariance`.
 
 !!! tip "Providing a Jacobian for linear scaling"
     For truly linear O(d) time and memory complexity, provide both a custom Jacobian
@@ -349,57 +313,7 @@ julia> solve(prob, DiagonalEK1())
 
 # [References](@ref references)
 """
-struct DiagonalEK1{CS,AD,DiffType,ST,CJ,PT,DT,IT,RT,CF} <: AbstractEK
-    prior::PT
-    diffusionmodel::DT
-    smooth::Bool
-    initialization::IT
-    pn_observation_noise::RT
-    covariance_factorization::CF
-    autodiff::AD
-    DiagonalEK1(;
-        order=3,
-        prior::PT=IWP(order),
-        diffusionmodel::DT=DynamicDiffusion(),
-        smooth=true,
-        initialization::IT=TaylorModeInit(num_derivatives(prior)),
-        chunk_size=Val{0}(),
-        autodiff=AutoForwardDiff(),
-        diff_type=Val{:forward}(),
-        standardtag=Val{true}(),
-        concrete_jac=nothing,
-        pn_observation_noise::RT=nothing,
-        covariance_factorization::CF=covariance_structure(
-            DiagonalEK1,
-            prior,
-            diffusionmodel,
-        ),
-    ) where {PT,DT,IT,RT,CF} = begin
-        ekargcheck(DiagonalEK1; diffusionmodel, pn_observation_noise, covariance_factorization)
-        AD_choice, chunk_size, diff_type =
-            _process_AD_choice(autodiff, chunk_size, diff_type)
-        new{
-            _unwrap_val(chunk_size),
-            typeof(AD_choice),
-            diff_type,
-            _unwrap_val(standardtag),
-            _unwrap_val(concrete_jac),
-            PT,
-            DT,
-            IT,
-            RT,
-            CF,
-        }(
-            prior,
-            diffusionmodel,
-            smooth,
-            initialization,
-            pn_observation_noise,
-            covariance_factorization,
-            AD_choice,
-        )
-    end
-end
+DiagonalEK1(; kwargs...) = _odefilter(DiagonalJacobian(); kwargs...)
 
 """
     ExpEK(; L, order=3, kwargs...)
@@ -411,9 +325,11 @@ that provide improved stability by essentially solving the linear part of the OD
 In probabilistic numerics, this amounts to including the linear part into the prior model
 of the solver.
 
-`ExpEK` is therefore just a short-hand for [`EK0`](@ref) with [`IOUP`](@ref) prior:
+`ExpEK` is therefore just a short-hand for [`EK0`](@ref) with [`IOUP`](@ref) prior, which
+needs dense covariances:
 ```julia
-ExpEK(; order=3, L, kwargs...) = EK0(; prior=IOUP(order, L), kwargs...)
+ExpEK(; order=3, L, kwargs...) =
+    EK0(; prior=IOUP(order, L), covariance_factorization=DenseCovariance, kwargs...)
 ```
 
 See also [`RosenbrockExpEK`](@ref), [`EK0`](@ref), [`EK1`](@ref).
@@ -431,7 +347,8 @@ julia> solve(prob, ExpEK(L=-1))
 # Reference
 * [Bosch et al. (2023)](@cite bosch23expint) "Probabilistic Exponential Integrators", NeurIPS
 """
-ExpEK(; L, order=3, kwargs...) = EK0(; prior=IOUP(order, L), kwargs...)
+ExpEK(; L, order=3, kwargs...) =
+    EK0(; prior=IOUP(order, L), covariance_factorization=DenseCovariance, kwargs...)
 
 """
     RosenbrockExpEK(; order=3, kwargs...)
@@ -467,33 +384,132 @@ julia> solve(prob, RosenbrockExpEK())
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
 
-function DiffEqBase.remake(
-    thing::Union{EK1{CS,AD,DT,ST,CJ},DiagonalEK1{CS,AD,DT,ST,CJ}};
-    kwargs...,
-) where {CS,AD,DT,ST,CJ}
-    if haskey(kwargs, :autodiff) && kwargs[:autodiff] isa AutoForwardDiff
-        chunk_size = OrdinaryDiffEqCore._get_fwd_chunksize(kwargs[:autodiff])
-    else
-        chunk_size = Val{CS}()
-    end
+########################################################################################
+# Covariance structure
+########################################################################################
+"""
+    supports_covariance(input, S)
 
-    T = SciMLBase.remaker_of(thing)
-    T(; SciMLBase.struct_as_namedtuple(thing)...,
-        chunk_size=chunk_size, autodiff=thing.autodiff, standardtag=Val{ST}(),
-        concrete_jac=CJ === nothing ? CJ : Val{CJ}(),
-        kwargs...)
+Whether the covariance structure `S` can represent `input`: a component of an `ODEFilter`,
+its `ObservationNoise`, or the problem's `MassMatrix`.
+"""
+supports_covariance(::ZeroJacobian, S) = true
+supports_covariance(::DiagonalJacobian, S) = S !== IsometricKroneckerCovariance
+supports_covariance(::FullJacobian, S) = S === DenseCovariance
+supports_covariance(::IWP, S) = true
+supports_covariance(::AbstractGaussMarkovProcess, S) = S === DenseCovariance
+supports_covariance(::Union{DynamicDiffusion,FixedDiffusion}, S) = true
+supports_covariance(::DynamicMVDiffusion, S) = S === BlockDiagonalCovariance
+supports_covariance(diffusion::FixedMVDiffusion, S) =
+    S === BlockDiagonalCovariance || (S === DenseCovariance && !diffusion.calibrate)
+
+struct ObservationNoise{T}
+    value::T
+end
+supports_covariance(::ObservationNoise{<:Union{Nothing,Number,UniformScaling}}, S) = true
+supports_covariance(::ObservationNoise{<:Diagonal{<:Number,<:FillArrays.Fill}}, S) = true
+supports_covariance(::ObservationNoise{<:Diagonal}, S) = S !== IsometricKroneckerCovariance
+supports_covariance(::ObservationNoise, S) = S === DenseCovariance
+
+struct MassMatrix{T}
+    value::T
+end
+supports_covariance(::MassMatrix{<:UniformScaling}, S) = true
+supports_covariance(::MassMatrix{<:Diagonal}, S) = S !== IsometricKroneckerCovariance
+supports_covariance(::MassMatrix, S) = S === DenseCovariance
+
+"""
+    choose_covariance_structure(alg::ODEFilter, mass_matrix)
+
+The first of `IsometricKroneckerCovariance`, `BlockDiagonalCovariance` and
+`DenseCovariance` that all settings of `alg` and the problem's `mass_matrix` support, or
+`alg.covariance_factorization` if it is set and supported. Dense covariances are chosen
+automatically only for a linearization that supports nothing else: a solver built for
+structured covariances needs `covariance_factorization=DenseCovariance` for them.
+"""
+function choose_covariance_structure(alg::ODEFilter, mass_matrix)
+    inputs = (;
+        alg.linearization,
+        alg.prior,
+        alg.diffusionmodel,
+        pn_observation_noise=ObservationNoise(alg.pn_observation_noise),
+        mass_matrix=MassMatrix(mass_matrix),
+    )
+    supported(S) = all(map(input -> supports_covariance(input, S), Tuple(inputs)))
+    C = alg.covariance_factorization
+    if !isnothing(C)
+        supported(C) && return _constant(C)
+        msg =
+            "`covariance_factorization = $C` is not supported by these inputs:\n" *
+            _restrictions(inputs, (C,))
+    elseif supported(IsometricKroneckerCovariance)
+        return IsometricKroneckerCovariance
+    elseif supported(BlockDiagonalCovariance)
+        return BlockDiagonalCovariance
+    elseif !supported(DenseCovariance)
+        msg =
+            "No covariance structure is supported by all of these inputs:\n" *
+            _restrictions(inputs, COVARIANCE_STRUCTURES)
+    elseif !supports_covariance(alg.linearization, BlockDiagonalCovariance)
+        return DenseCovariance
+    else
+        msg =
+            "These inputs rule out structured covariances:\n" *
+            _restrictions(inputs, (BlockDiagonalCovariance,)) * "\n" *
+            "Dense covariances scale cubically with the ODE dimension. For them, use " *
+            "the `EK1`, or pass `covariance_factorization=DenseCovariance` to keep " *
+            "this solver."
+    end
+    throw(ArgumentError(msg))
 end
 
-function DiffEqBase.prepare_alg(
-    alg::Union{EK1,DiagonalEK1},
-    u0::AbstractArray{T},
-    p,
-    prob,
-) where {T}
+# A type read from a field is not a constant for inference, a static parameter is
+_constant(::Type{C}) where {C} = C
+
+const COVARIANCE_STRUCTURES =
+    (IsometricKroneckerCovariance, BlockDiagonalCovariance, DenseCovariance)
+
+# One line for each input that does not support all of `structures`
+function _restrictions(inputs, structures)
+    lines = String[]
+    for (name, input) in pairs(inputs)
+        supported = filter(S -> supports_covariance(input, S), COVARIANCE_STRUCTURES)
+        if !all(in(supported), structures)
+            push!(lines,
+                "- `$name = $(_describe(input))` supports only $(join(supported, ", "))")
+        end
+    end
+    return join(lines, "\n")
+end
+_describe(input) = repr(input)
+_describe(input::Union{ObservationNoise,MassMatrix}) = summary(input.value)
+
+# DAE-initialization hook.
+#
+# v3's `_default_dae_init!` is only extended for OrdinaryDiffEq's own implicit
+# algorithms (in OrdinaryDiffEqNonlinearSolve), so without an override the EK
+# solvers hit a MethodError on DAE / singular-mass-matrix problems. Route through
+# `CheckInit` to match the OrdinaryDiffEq v7 default; users who want the previous
+# silent-fix behavior pass `initializealg = BrownFullBasicInit()` explicitly.
+# v4 dropped the hook and `CheckInit` is already its `DefaultInit` target.
+@static if isdefined(OrdinaryDiffEqCore, :_default_dae_init!)
+    function OrdinaryDiffEqCore._default_dae_init!(integrator, prob, x, alg::ODEFilter)
+        return OrdinaryDiffEqCore._initialize_dae!(
+            integrator,
+            prob,
+            DiffEqBase.CheckInit(),
+            x,
+        )
+    end
+end
+
+function DiffEqBase.prepare_alg(alg::ODEFilter, u0::AbstractArray{T}, p, prob) where {T}
+    isnothing(alg.autodiff) && return alg
+
     # See OrdinaryDiffEqCore.jl: ./src/alg_utils.jl (where this is copied from).
-    # In the future we might want to make EK1 an OrdinaryDiffEqAdaptiveImplicitAlgorithm and
-    # use the prepare_alg from OrdinaryDiffEqCore; but right now, we do not use `linsolve` which
-    # is a requirement.
+    # In the future we might want to make the ODEFilter an
+    # OrdinaryDiffEqAdaptiveImplicitAlgorithm and use the prepare_alg from
+    # OrdinaryDiffEqCore; but right now, we do not use `linsolve` which is a requirement.
 
     prepped_AD = OrdinaryDiffEqDifferentiation.prepare_ADType(
         OrdinaryDiffEqCore.alg_autodiff(alg),

@@ -35,7 +35,7 @@ CI also runs doctests: `julia --project=docs -e 'using Documenter: doctest; usin
 
 ## Architecture
 
-The solvers are `OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm`s and reuse OrdinaryDiffEq's integrator loop, step-size control and Jacobian machinery by overloading its hooks; `docs/src/implementation.md` maps each hook to its file.
+All solvers are one type, `ODEFilter <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm` (`src/algorithms.jl`); `EK0`, `EK1` and `DiagonalEK1` are functions that return it and differ only in its `linearization` (`ZeroJacobian`, `FullJacobian`, `DiagonalJacobian`). Code that depends on the solver dispatches on the field, not on the solver name. The solvers reuse OrdinaryDiffEq's integrator loop, step-size control and Jacobian machinery by overloading its hooks; `docs/src/implementation.md` maps each hook to its file.
 
 The package supports two major versions of several SciML packages at once (OrdinaryDiffEqCore 3/4, OrdinaryDiffEqDifferentiation 2/3, DiffEqBase 6/7, SciMLBase 2/3). Differences between them are bridged with `@static if isdefined(OrdinaryDiffEqCore, :name)` shims (for example `_set_EEst!`/`_get_EEst` in `perform_step.jl`, `_process_AD_choice` in `algorithms.jl`). Keep both branches working when editing them.
 
@@ -48,13 +48,13 @@ The package supports two major versions of several SciML packages at once (Ordin
 
 ### Covariance factorizations
 
-The same filter code runs on three matrix representations, chosen by `covariance_structure(Alg, prior, diffusionmodel)` in `src/algorithms.jl`:
+The same filter code runs on three matrix representations. `choose_covariance_structure` in `src/algorithms.jl` picks one in `alg_cache`: each input (linearization, prior, diffusion model, `pn_observation_noise`, mass matrix) states through `supports_covariance` which structures it supports, and the most structured one that all support is used, or the user's `covariance_factorization` if they all support it. Dense covariances are chosen automatically only for the `EK1`: the `EK0` and the `DiagonalEK1` throw instead, unless asked with `covariance_factorization=DenseCovariance`.
 
-| `CovarianceStructure` | Matrix type | Used for |
+| `CovarianceStructure` | Matrix type | Used for, by default |
 |---|---|---|
 | `IsometricKroneckerCovariance` | `IsometricKroneckerProduct` (`B ⊗ I_d`, `src/kronecker.jl`) | `EK0` with `IWP` prior and scalar diffusion |
 | `BlockDiagonalCovariance` | `BlocksOfDiagonals` (`src/blocksofdiagonals.jl`) | `DiagonalEK1`, or `EK0` with multivariate diffusion |
-| `DenseCovariance` | `Matrix` | `EK1`, and `EK0` with a non-IWP prior |
+| `DenseCovariance` | `Matrix` | `EK1`; `EK0` and `DiagonalEK1` only on request, as in `ExpEK` |
 
 All cache matrices are created through `factorized_similar` / `factorized_zeros` / `to_factorized_matrix` (`src/covariance_structure.jl`), so their types follow the chosen structure. Any new linear-algebra operation used in the solve (predict, update, smoothing, marginalization, `diag!`, `_matmul!`, …) therefore needs a method for each of the three types. Plain linear algebra (matrix products, sums, the Kronecker vec trick, as used for the means in `predict_mean!` and `marginalize_mean!`) is overloaded on the structured types in `src/kronecker.jl` and `src/blocksofdiagonals.jl`. Filtering steps, which need QR, Cholesky or views into caches, are written once as a dense method; the Kronecker method calls it on the Kronecker factors through `on_kronecker_factors`, and the block-diagonal method calls it once per block through `foreach_diagonal_block` (`src/filtering/structured_covariances.jl`). Structured results are tested against dense ones in `test/core/`. Dense output and sampling must also keep the structure.
 

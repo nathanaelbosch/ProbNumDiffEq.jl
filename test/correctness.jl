@@ -48,10 +48,12 @@ CONSTANT_ALGS = (
     DiagonalEK1(
         order=3, smooth=true, initialization=ClassicSolverInit(Tsit5())) => 1e-7,
     # Priors
-    EK0(prior=IOUP(3, -1), smooth=true) => 2e-9,
+    EK0(prior=IOUP(3, -1), smooth=true, covariance_factorization=DenseCovariance) =>
+        2e-9,
     EK1(prior=IOUP(3, -1), smooth=true, diffusionmodel=FixedDiffusion()) => 1e-9,
     EK1(prior=IOUP(3, update_rate_parameter=true), smooth=true) => 1e-9,
-    EK0(prior=Matern(3, 1), smooth=true) => 5e-7,
+    EK0(prior=Matern(3, 1), smooth=true, covariance_factorization=DenseCovariance) =>
+        5e-7,
     EK1(prior=Matern(4, 0.1), smooth=true, diffusionmodel=FixedDiffusion()) => 2e-5,
 )
 ADAPTIVE_ALGS = (
@@ -79,10 +81,12 @@ ADAPTIVE_ALGS = (
     DiagonalEK1(order=3, diffusionmodel=DynamicDiffusion()) => 1e-4,
     DiagonalEK1(order=3, initialization=ClassicSolverInit(Tsit5())) => 1e-4,
     # Priors
-    EK0(prior=IOUP(3, -1), smooth=true) => 1e-5,
+    EK0(prior=IOUP(3, -1), smooth=true, covariance_factorization=DenseCovariance) =>
+        1e-5,
     EK1(prior=IOUP(3, -1), smooth=true, diffusionmodel=FixedDiffusion()) => 1e-5,
     EK1(prior=IOUP(3, update_rate_parameter=true), smooth=true) => 2e-5,
-    EK0(prior=Matern(3, 1), smooth=true) => 1e-4,
+    EK0(prior=Matern(3, 1), smooth=true, covariance_factorization=DenseCovariance) =>
+        1e-4,
     EK1(prior=Matern(3, 0.1), smooth=true, diffusionmodel=FixedDiffusion()) => 1e-5,
 )
 

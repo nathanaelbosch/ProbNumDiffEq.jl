@@ -70,9 +70,9 @@ The solutions are indeed much more accurate than those of the standard `EK1`, fo
 
 Probabilistic exponential integrators "solve the linear part exactly" by including it into the prior model of the solver.
 Namely, the solver chooses a (q-times) integrated Ornstein-Uhlenbeck prior with rate parameter equal to the linearity.
-The [`ExpEK`](@ref) solver is just a short-hand for an [`EK0`](@ref) with appropriate prior:
+The [`ExpEK`](@ref) solver is just a short-hand for an [`EK0`](@ref) with appropriate prior, which needs dense covariances:
 ```@repl expint
-ExpEK(order=3, L=-1) == EK0(prior=IOUP(3, -1))
+ExpEK(order=3, L=-1) == EK0(prior=IOUP(3, -1), covariance_factorization=DenseCovariance)
 ```
 Similarly, the [`RosenbrockExpEK`](@ref) solver is also just a short-hand:
 ```@repl expint

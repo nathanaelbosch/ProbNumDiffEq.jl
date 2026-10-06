@@ -20,9 +20,9 @@ In particular:
 
 ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
 
-- **Algorithms:** `EK0/EK1 <: AbstractEK <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm`
-  - `./src/algorithms.jl` provides the algorithms themselves
-  - `./src/alg_utils.jl` implements many traits (relating to automatic differentiation, implicitness, step-size control, etc)
+- **Algorithm:** `ODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm`
+  - `./src/algorithms.jl` provides the algorithm; `EK0`, `EK1` and `DiagonalEK1` are functions that return an `ODEFilter` and differ only in its `linearization`
+  - `./src/alg_utils.jl` implements many traits (relating to automatic differentiation, step-size control, etc), from the fields of the `ODEFilter`
 - **Cache:** `EKCache <: AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache`
   - `./src/caches.jl` implements the cache and its main constructor: `OrdinaryDiffEq.alg_cache`
 - **Initialization and `perform_step!`:** via `OrdinaryDiffEq.initialize!` and `OrdinaryDiffEq.perform_step!`.
@@ -44,8 +44,8 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
   - `AbstractODEFilterPosterior <: SciMLBase.AbstractDiffEqInterpolation` handles the interpolation.
   - *Plot recipe* in `./ext/RecipesBaseExt.jl`
   - *Sampling* in `./src/solution_sampling.jl`
-- `DiffEqBase.prepare_alg(::EK1{0})`; closely follows a similar function implemented in OrdinaryDiffEq.jl `./src/alg_utils.jl`
-   - this also required `DiffEqBase.remake(::EK1)`
+- `DiffEqBase.prepare_alg(::ODEFilter)`; closely follows a similar function implemented in OrdinaryDiffEq.jl `./src/alg_utils.jl`
+   - it relies on SciMLBase's generic `remake`, through the keyword constructor of the `ODEFilter`
 
 ## Other packages
 - `DiffEqDevTools.appxtrue`: We extend this function to work with `ProbODESolution`. This also enables `DiffEqDevTools.WorkPrecision` to work out of the box.
