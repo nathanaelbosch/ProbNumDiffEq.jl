@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, init::AutodiffInitializationScheme)
     @unpack u, f, p, t = integ
-    @unpack q, x, Proj = cache
+    @unpack q, x = cache
 
     f = _unwrap_f(f)
 
@@ -14,13 +14,8 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
             df = df.x[2]
         end
 
-        df = view(df, :)
-
-        if o == 0
-            update_on_data!(x, Proj(0), df, nothing; cache)
-        else
-            update_on_derivative!(x, f.mass_matrix, o, df; cache)
-        end
+        H, rows = derivative_observation(cache, o == 0 ? I : f.mass_matrix, o)
+        isempty(rows) || update_on_data!(x, H, view(df, rows), nothing; cache)
     end
 end
 
