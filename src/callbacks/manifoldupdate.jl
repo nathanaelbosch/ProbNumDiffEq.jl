@@ -1,4 +1,4 @@
-function manifoldupdate!(cache, residualf; maxiters=10, steptol=nothing)
+function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
     x_pred = cache.x
 
     # Skip update if cov is exactly zero
@@ -56,7 +56,7 @@ manifold_rankerror(u) = throw(
 )
 
 """
-    ManifoldUpdate(residual::Function; maxiters=10, steptol=sqrt(eps(T)))
+    ManifoldUpdate(residual::Function; maxiters=100, steptol=sqrt(eps(T)))
 
 Update the state to satisfy a zero residual function via iterated extended Kalman filtering.
 
@@ -82,7 +82,7 @@ Its Jacobian must have full row rank.
 function ManifoldUpdate(
     residual::Function,
     args...;
-    maxiters=10,
+    maxiters=100,
     steptol=nothing,
     kwargs...,
 )
