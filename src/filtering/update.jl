@@ -1,4 +1,48 @@
 """
+    update(x, measurement, H)
+
+Update step in Kalman filtering for linear dynamics models.
+
+Given a Gaussian ``x = \\mathcal{N}(μ, Σ)``
+and a measurement ``z = \\mathcal{N}(\\hat{z}, S)``, with ``S = H Σ H^T + R``,
+compute
+```math
+\\begin{aligned}
+K &= Σ^P H^T S^{-1}, \\\\
+μ^F &= μ + K (0 - \\hat{z}), \\\\
+Σ^F &= Σ - K S K^T,
+\\end{aligned}
+```
+and return an updated state `\\mathcal{N}(μ^F, Σ^F)`.
+Note that this assumes zero-measurements.
+When called with a `PSDMatrix` covariance it performs the update in Joseph / square-root
+form, and takes the measurement noise `R` as a keyword argument.
+
+For better performance, we recommend to use the non-allocating [`update!`](@ref).
+"""
+function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
+    m, C = mean(x), cov(x)
+    z, S = mean(measurement), cov(measurement)
+
+    K = C * H' * inv(S)
+    m_new = m - K * z
+    C_new = C - K * S * K'
+
+    return Gaussian(m_new, C_new)
+end
+function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix; R=nothing)
+    m, C = mean(x), cov(x)
+    z, S = mean(measurement), cov(measurement)
+
+    K = Matrix(C) * H' * inv(S)
+    m_new = m - K * z
+    C_new = X_A_Xt(C, (I - K * H))
+    isnothing(R) || (C_new = add_qr(C_new, X_A_Xt(R, K)))
+
+    return Gaussian(m_new, C_new)
+end
+
+"""
     LinearizedObservation(m, z, H, R=nothing)
 
 An observation ``y = h(x) + v``, ``v \\sim \\mathcal{N}(0, R)``, of the filter state ``x``,
@@ -31,38 +75,23 @@ LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
 """
     update(x, obs::LinearizedObservation)
 
-Condition the Gaussian `x` on the observation `obs` and return the result:
-```math
-\\begin{aligned}
-S &= H Σ H^T + R, \\\\
-K &= Σ H^T S^{-1}, \\\\
-μ^F &= μ - K (z + H (μ - m)), \\\\
-Σ^F &= Σ - K S K^T.
-\\end{aligned}
-```
-For a `PSDMatrix` covariance ``Σ = \\sqrt{Σ}^T \\sqrt{Σ}``, it computes ``Σ^F`` in Joseph
-form, ``(I - K H) Σ (I - K H)^T + K R K^T``, and returns it as a `PSDMatrix`. Both methods
-compute with dense matrices; for performance, use the non-allocating [`update!`](@ref).
+[`update`](@ref) on the observation `obs`, with dense matrices: the measurement is
+``\\mathcal{N}(\\hat{z}, S)`` with ``\\hat{z} = z + H (μ - m)`` and ``S = H Σ H^T + R``.
 """
 function update(x::Gaussian, obs::LinearizedObservation)
-    Σ = Matrix(cov(x))
-    (; μ_F, S, K) = _update_dense(mean(x), Σ, obs)
-    return Gaussian(μ_F, Σ - K * S * K')
+    x = Gaussian(mean(x), Matrix(cov(x)))
+    return update(x, _dense_measurement(x, obs)...)
 end
 function update(x::SRGaussian, obs::LinearizedObservation)
-    sqrtΣ = Matrix(x.Σ.R)
-    (; μ_F, H, K) = _update_dense(mean(x), sqrtΣ' * sqrtΣ, obs)
-    # √Σ^F is the triangular factor of [√Σ (I - K H)ᵀ; √R Kᵀ]
-    sqrtΣ_F = sqrtΣ * (I - K * H)'
-    isnothing(obs.R) || (sqrtΣ_F = [sqrtΣ_F; Matrix(obs.R.R) * K'])
-    return Gaussian(μ_F, PSDMatrix(qr(sqrtΣ_F).R))
+    x = Gaussian(mean(x), PSDMatrix(Matrix(x.Σ.R)))
+    R = isnothing(obs.R) ? nothing : PSDMatrix(Matrix(obs.R.R))
+    return update(x, _dense_measurement(x, obs)...; R)
 end
-function _update_dense(μ, Σ, obs)
-    H = Matrix(obs.H)
+function _dense_measurement(x, obs)
+    μ, Σ, H = mean(x), Matrix(cov(x)), Matrix(obs.H)
     S = H * Σ * H'
     isnothing(obs.R) || (S += Matrix(obs.R))
-    K = Σ * H' / S
-    return (; μ_F=μ - K * (obs.z + H * (μ - obs.m)), H, S, K)
+    return Gaussian(obs.z + H * (μ - obs.m), S), H
 end
 
 """
