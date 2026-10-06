@@ -45,24 +45,39 @@ end
 """
     LinearizedObservation(m, z, H, R=nothing)
 
-An observation ``y = h(x) + v``, ``v \\sim \\mathcal{N}(0, R)``, of the filter state ``x``,
-with ``h`` linearized at the point `m`:
+The observation ``y = h(x) + v``, ``v \\sim \\mathcal{N}(0, R)``, of the state ``x``,
+linearized at the point `m`:
 ```math
-h(x) - y ≈ z + H (x - m),
+h(x) - y ≈ z + H (x - m).
 ```
-where `z = h(m) - y` and `H` is the Jacobian of ``h`` at `m`. `R` is a `PSDMatrix`, or
-`nothing` for an exact observation.
+A first-order Taylor expansion gives `z = h(m) - y`, the negative of the innovation, and the
+Jacobian `H = h'(m)`; the examples below make other choices. The data ``y`` enters only
+through `z`. `m` has the dimension of the state, `z` that of the observation. `R` is the
+noise covariance as a `PSDMatrix`, or `nothing` for an exact observation.
 
-The ODE step observes ``y = 0`` through ``h(x) = E_1 x - f(E_0 x, t)`` and linearizes at the
-predicted mean ``μ``, so `m = μ`, `z = h(μ)` and `H = E_1 - J E_0`. Data ``y`` observed
-through a matrix ``C`` gives the linear ``h(x) = C E_0 x``, so `H = C E_0` and, with
-`m = μ`, `z = C E_0 μ - y`. An iterated update linearizes at its current iterate instead.
-A statistical linearization takes `m` as the mean of the distribution it linearizes over,
-gives `z = E[h(x)] - y`, and adds the covariance of its linearization error to `R`.
+[`update!`](@ref) evaluates the linearization at the mean ``μ`` of the state it conditions, as
+``z + H (μ - m)``, which is `z` if `m` is ``μ``.
 
-[`update!`](@ref) conditions a state on it. It dispatches on the types of the state and of
-`H`: an explicit matrix in the covariance structure of the state, or another type that
-implements it, such as an operator that applies `H` and `H'` matrix-free.
+How `m`, `z` and `H` are obtained depends on the observation and on how it is linearized.
+Examples:
+- The ODE step observes ``y = 0`` through the residual ``h(x) = E_1 x - f(E_0 x, t)`` of the
+  ODE ``u' = f(u, t)``, linearized at the predicted mean ``μ``: `m = μ`, `z = h(μ)` and
+  `H = E_1 - J E_0`, where `J` is the Jacobian of `f` in the `EK1`, its diagonal in the
+  `DiagonalEK1`, and `0` in the `EK0`.
+- Data, as in `DataUpdateCallback` and Fenrir, is linear, ``y = C E_0 x + v``, so
+  `H = C E_0` at any `m`; with `m = μ`, `z = C E_0 μ - y`.
+- An iterated extended Kalman filter, as in `ManifoldUpdate`, conditions the same prediction
+  ``\\mathcal{N}(μ, Σ)`` in every iteration and linearizes ``h`` at the conditioned mean of
+  the previous iteration, so `m = μ` only in the first.
+- A statistical linearization (not implemented yet), as in an unscented Kalman filter,
+  linearizes over a distribution ``\\mathcal{N}(m, Σ)``: `z = E[h(x)] - y`,
+  `H = Cov[h(x), x] Σ⁻¹`, and the covariance of its linearization error is added to `R`.
+
+`H` and `R` are matrices of the same structured type as the state covariance (`Matrix`,
+`IsometricKroneckerProduct` or `BlocksOfDiagonals`). Another type of `H` works with
+[`update!`](@ref) if the internal `_update_mean!` and `_update_cov!` have methods for it, as
+the `SolutionObservation` of a `ScaledSelection` does with a block-diagonal covariance; a
+matrix-free operator would add such methods.
 """
 struct LinearizedObservation{mT,zT,HT,RT}
     m::mT
