@@ -174,7 +174,7 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
             typeof(diffusionmodel),
             typeof(initialization),
             typeof(pn_observation_noise),
-            _typeof(covariance_factorization),
+            typeof(covariance_factorization),
             typeof(autodiff),
             typeof(concrete_jac),
         }(
@@ -191,10 +191,6 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
         )
     end
 end
-
-# `Type{T}` instead of `UnionAll`, so that `choose_covariance_structure` infers its result
-_typeof(x) = typeof(x)
-_typeof(T::Type) = Type{T}
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
@@ -400,107 +396,84 @@ Base.show(io::IO, ::MIME"text/plain", alg::ODEFilter) = show(io, alg)
 ########################################################################################
 # Covariance structure
 ########################################################################################
-"""
-    supports_covariance(input, S)
-
-Whether the covariance structure `S` can represent `input`: a component of an `ODEFilter`,
-its `ObservationNoise`, or the problem's `MassMatrix`.
-"""
-supports_covariance(::ZeroJacobian, S) = true
-supports_covariance(::DiagonalJacobian, S) = S !== IsometricKroneckerCovariance
-supports_covariance(::FullJacobian, S) = S === DenseCovariance
-supports_covariance(::IWP, S) = true
-supports_covariance(::AbstractGaussMarkovProcess, S) = S === DenseCovariance
-supports_covariance(::Union{DynamicDiffusion,FixedDiffusion}, S) = true
-supports_covariance(::DynamicMVDiffusion, S) = S === BlockDiagonalCovariance
-supports_covariance(diffusion::FixedMVDiffusion, S) =
-    S === BlockDiagonalCovariance || (S === DenseCovariance && !diffusion.calibrate)
-
-struct ObservationNoise{T}
-    value::T
-end
-supports_covariance(::ObservationNoise{<:Union{Nothing,Number,UniformScaling}}, S) = true
-supports_covariance(::ObservationNoise{<:Diagonal{<:Number,<:FillArrays.Fill}}, S) = true
-supports_covariance(::ObservationNoise{<:Diagonal}, S) = S !== IsometricKroneckerCovariance
-supports_covariance(::ObservationNoise, S) = S === DenseCovariance
-
-struct MassMatrix{T}
-    value::T
-end
-supports_covariance(::MassMatrix{<:UniformScaling}, S) = true
-supports_covariance(::MassMatrix{<:Diagonal}, S) = S !== IsometricKroneckerCovariance
-supports_covariance(::MassMatrix, S) = S === DenseCovariance
+estimates_per_dimension(diffusion) =
+    diffusion isa DynamicMVDiffusion ||
+    (diffusion isa FixedMVDiffusion && diffusion.calibrate)
 
 """
     choose_covariance_structure(alg::ODEFilter, mass_matrix)
 
-The first of `IsometricKroneckerCovariance`, `BlockDiagonalCovariance` and
-`DenseCovariance` that all settings of `alg` and the problem's `mass_matrix` support, or
-`alg.covariance_factorization` if it is set and supported. Dense covariances are chosen
-automatically only for a linearization that supports nothing else: a solver built for
-structured covariances needs `covariance_factorization=DenseCovariance` for them.
+The covariance structure for solving a problem with this `mass_matrix` with `alg`: its
+`covariance_factorization` if set, and otherwise the first of `IsometricKroneckerCovariance`,
+`BlockDiagonalCovariance` and `DenseCovariance` whose requirements all settings meet. Dense
+covariances are chosen automatically only for the `EK1`; the `EK0` and the `DiagonalEK1`
+use them only on request.
 """
 function choose_covariance_structure(alg::ODEFilter, mass_matrix)
-    inputs = (;
-        alg.linearization,
-        alg.prior,
-        alg.diffusionmodel,
-        pn_observation_noise=ObservationNoise(alg.pn_observation_noise),
-        mass_matrix=MassMatrix(mass_matrix),
+    (; linearization, prior, diffusionmodel, pn_observation_noise) = alg
+    kronecker = (
+        linearization=linearization isa ZeroJacobian,
+        prior=prior isa IWP,
+        diffusionmodel=diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion},
+        pn_observation_noise=pn_observation_noise isa Union{
+            Nothing,Number,UniformScaling,Diagonal{<:Number,<:FillArrays.Fill}},
+        mass_matrix=mass_matrix isa UniformScaling,
     )
-    supported(S) = all(map(input -> supports_covariance(input, S), Tuple(inputs)))
+    blockdiagonal = (
+        linearization=(!(linearization isa FullJacobian)),
+        prior=prior isa IWP,
+        pn_observation_noise=pn_observation_noise isa
+                             Union{Nothing,Number,UniformScaling,Diagonal},
+        mass_matrix=mass_matrix isa Union{UniformScaling,Diagonal},
+    )
+    dense = (diffusionmodel=(!estimates_per_dimension(diffusionmodel)),)
+
+    # `all` of the values, unlike of the named tuple, is evaluated at compile time
+    met(requirements) = all(values(requirements))
+    inputs = (; linearization, prior, diffusionmodel, pn_observation_noise, mass_matrix)
+    unmet(requirements) =
+        join((_describe(k, inputs[k]) for (k, met) in pairs(requirements) if !met), ", ")
     C = alg.covariance_factorization
     if !isnothing(C)
-        supported(C) && return _constant(C)
-        msg =
-            "`covariance_factorization = $C` is not supported by these inputs:\n" *
-            _restrictions(inputs, (C,))
-    elseif supported(IsometricKroneckerCovariance)
+        requirements =
+            C === IsometricKroneckerCovariance ? kronecker :
+            C === BlockDiagonalCovariance ? blockdiagonal : dense
+        met(requirements) && return C
+        throw(
+            ArgumentError(
+                "`covariance_factorization = $C` is ruled out by $(unmet(requirements))."),
+        )
+    elseif met(kronecker)
         return IsometricKroneckerCovariance
-    elseif supported(BlockDiagonalCovariance)
+    elseif met(blockdiagonal)
         return BlockDiagonalCovariance
-    elseif !supported(DenseCovariance)
-        msg =
-            "No covariance structure is supported by all of these inputs:\n" *
-            _restrictions(inputs, COVARIANCE_STRUCTURES)
-    elseif !supports_covariance(alg.linearization, BlockDiagonalCovariance)
-        return DenseCovariance
+    elseif !met(dense)
+        throw(
+            ArgumentError(
+                "No covariance structure fits: Kronecker covariances are ruled out by " *
+                "$(unmet(kronecker)), block-diagonal ones by $(unmet(blockdiagonal)), and " *
+                "dense ones by $(unmet(dense))."),
+        )
+    elseif !(linearization isa FullJacobian)
+        throw(
+            ArgumentError(
+                "Structured covariances are ruled out by $(unmet(blockdiagonal)). Dense " *
+                "covariances scale cubically with the ODE dimension. For them, use the " *
+                "`EK1`, or pass `covariance_factorization=DenseCovariance` to keep this solver.",
+            ),
+        )
     else
-        msg =
-            "These inputs rule out structured covariances:\n" *
-            _restrictions(inputs, (BlockDiagonalCovariance,)) * "\n" *
-            "Dense covariances scale cubically with the ODE dimension. For them, use " *
-            "the `EK1`, or pass `covariance_factorization=DenseCovariance` to keep " *
-            "this solver."
+        return DenseCovariance
     end
-    throw(ArgumentError(msg))
 end
 
-# A type read from a field is not a constant for inference, a static parameter is
-_constant(::Type{C}) where {C} = C
-
-const COVARIANCE_STRUCTURES =
-    (IsometricKroneckerCovariance, BlockDiagonalCovariance, DenseCovariance)
-
-# One line for each input that does not support all of `structures`
-function _restrictions(inputs, structures)
-    lines = String[]
-    for (name, input) in pairs(inputs)
-        supported = filter(S -> supports_covariance(input, S), COVARIANCE_STRUCTURES)
-        if !all(in(supported), structures)
-            push!(lines,
-                "- `$name = $(_describe(input))` supports only $(join(supported, ", "))" *
-                _hint(input))
-        end
+function _describe(name, value)
+    text = "`$name = $(value isa AbstractArray ? summary(value) : repr(value))`"
+    if value isa Matrix && isdiag(value)
+        text *= " (it is diagonal, so pass it as a `Diagonal`)"
     end
-    return join(lines, "\n")
+    return text
 end
-_describe(input) = repr(input)
-_describe(input::Union{ObservationNoise,MassMatrix}) = summary(input.value)
-_hint(input) = ""
-_hint(input::Union{ObservationNoise,MassMatrix}) =
-    !(input.value isa Diagonal) && input.value isa AbstractMatrix && isdiag(input.value) ?
-    "; it is diagonal, so pass it as a `Diagonal`" : ""
 
 # DAE-initialization hook.
 #

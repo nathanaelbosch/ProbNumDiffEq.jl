@@ -48,7 +48,7 @@ The package supports two major versions of several SciML packages at once (Ordin
 
 ### Covariance factorizations
 
-The same filter code runs on three matrix representations. `choose_covariance_structure` in `src/algorithms.jl` picks one in `alg_cache`: each input (linearization, prior, diffusion model, `pn_observation_noise`, mass matrix) states through `supports_covariance` which structures it supports, and the most structured one that all support is used, or the user's `covariance_factorization` if they all support it. Dense covariances are chosen automatically only for the `EK1`: the `EK0` and the `DiagonalEK1` throw instead, unless asked with `covariance_factorization=DenseCovariance`.
+The same filter code runs on three matrix representations. `choose_covariance_structure` in `src/algorithms.jl` picks one in `alg_cache`: it lists, for each structure, what it requires of the inputs (linearization, prior, diffusion model, `pn_observation_noise`, mass matrix), and uses the first structure whose requirements are all met, or the user's `covariance_factorization` if its requirements are met. Dense covariances are chosen automatically only for the `EK1`: the `EK0` and the `DiagonalEK1` throw instead, unless asked with `covariance_factorization=DenseCovariance`.
 
 | `CovarianceStructure` | Matrix type | Used for, by default |
 |---|---|---|
