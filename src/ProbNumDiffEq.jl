@@ -56,7 +56,7 @@ using ADTypes: ADTypes, AutoForwardDiff, AutoSparse
 # @reexport using GaussianDistributions
 
 @reexport using PSDMatrices
-using PSDMatrices: PSDMatrices, PSDMatrix, add_qr
+using PSDMatrices: PSDMatrices, PSDMatrix
 import PSDMatrices: X_A_Xt, X_A_Xt!
 
 stack(x) = copy(reduce(hcat, x)')
