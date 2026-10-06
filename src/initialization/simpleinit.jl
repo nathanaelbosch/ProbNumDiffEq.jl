@@ -16,5 +16,6 @@ function initial_update!(integ, cache, init::SimpleInit)
     end
 
     update_on_data!(x, Proj(0), view(u, :), nothing; cache)
-    update_on_derivative!(x, f.mass_matrix, 1, view(du, :); cache)
+    H, rows = derivative_observation(cache, f.mass_matrix, 1)
+    isempty(rows) || update_on_data!(x, H, view(du, rows), nothing; cache)
 end
