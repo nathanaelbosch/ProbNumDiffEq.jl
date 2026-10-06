@@ -64,8 +64,9 @@ Examples:
   ODE ``u' = f(u, t)``, linearized at the predicted mean ``μ``: `m = μ`, `z = h(μ)` and
   `H = E_1 - J E_0`, where `J` is the Jacobian of `f` in the `EK1`, its diagonal in the
   `DiagonalEK1`, and `0` in the `EK0`.
-- Data, as in `DataUpdateCallback` and Fenrir, is linear, ``y = C E_0 x + v``, so
-  `H = C E_0` at any `m`; with `m = μ`, `z = C E_0 μ - y`.
+- Data, as in `DataUpdateCallback` and Fenrir, is linear, ``y = C E_0 x + v``, so the
+  linearization is exact at any `m`. [`data_observation`](@ref) takes `m = 0`, which gives
+  `z = -y` and `H = C E_0`.
 - An iterated extended Kalman filter, as in `ManifoldUpdate`, conditions the same prediction
   ``\\mathcal{N}(μ, Σ)`` in every iteration and linearizes ``h`` at the conditioned mean of
   the previous iteration, so `m = μ` only in the first.
@@ -86,6 +87,16 @@ struct LinearizedObservation{mT,zT,HT,RT}
     R::RT
 end
 LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
+
+"""
+    data_observation(cache, H, y, R=nothing)
+
+The [`LinearizedObservation`](@ref) of data `y = H x + v`, `v ~ N(0, R)`, of the filter state
+`x` of `cache`. The model is linear, so its linearization at `m = 0` is exact:
+`h(x) - y = -y + H (x - 0)`, with `m = Zeros(D)` and `z = -y`.
+"""
+data_observation(cache, H, y, R=nothing) =
+    LinearizedObservation(Zeros{eltype(cache.x.μ)}(length(cache.x.μ)), -y, H, R)
 
 """
     update(x, obs::LinearizedObservation)
@@ -141,29 +152,32 @@ function update!(x_out, x_pred, obs::LinearizedObservation; cache)
 end
 
 """
-    update_on_data!(x, H, y, R; cache)
+    update!(x, obs::LinearizedObservation; cache)
 
-Condition the Gaussian `x` in place on data `y = H x + v`, `v ~ N(0, R)`, and return the
-result of [`update!`](@ref). The data enters [`update!`](@ref) through the residual
-`z = H μ - y` at the mean `μ` of `x`, which is exact for this linear model. `cache` is the
-solver's cache, from which `make_obssized_cache` takes the buffers for the size of
-`y`; since `x` is copied to `cache.x_tmp`, it must not be `cache.x_tmp`.
+Condition the Gaussian `x` on the observation `obs` in place: copy `x` to `cache.x_tmp` as
+the prediction, so neither `x` nor `obs.m` may be in `cache.x_tmp`, and call
+[`update!`](@ref) with the buffers of the solver's `cache` for the size of the observation,
+from `make_obssized_cache`. If `obs` is linearized at `x.μ`, which the update overwrites, it
+is moved to the copy. An observation of size 0 leaves `x` unchanged, with log-likelihood 0.
 """
-function update_on_data!(x, H, y, R; cache)
-    obs_cache = make_obssized_cache(cache; o=length(y))
-    x_pred = copy!(obs_cache.x_tmp, x)
-    z = view(mean(obs_cache.m_tmp), 1:length(y))
-    _matmul!(z, H, x_pred.μ)
-    z .-= y
-    obs = LinearizedObservation(x_pred.μ, z, H, R)
-    return update!(x, x_pred, obs; cache=obs_cache)
+function update!(x, obs::LinearizedObservation; cache)
+    o = length(obs.z)
+    if o == 0
+        T = eltype(x.μ)
+        return (; loglikelihood=zero(T), ztSinvz=zero(T), S=nothing)
+    end
+    x_pred = copy!(cache.x_tmp, x)
+    if obs.m === x.μ
+        obs = LinearizedObservation(x_pred.μ, obs.z, obs.H, obs.R)
+    end
+    return update!(x, x_pred, obs; cache=make_obssized_cache(cache; o))
 end
 
 """
     make_obssized_cache(cache; o)
 
-The buffers of `cache` that [`update_on_data!`](@ref) and [`update!`](@ref) use, sized for an
-`o`-dimensional observation: `cache` itself if `o` is the dimension `d` of the ODE, otherwise
+The buffers of `cache` that [`update!`](@ref) uses, sized for an `o`-dimensional
+observation: `cache` itself if `o` is the dimension `d` of the ODE, otherwise
 views (dense covariance) or the first `o` blocks (block-diagonal covariance). The Kronecker
 covariance only supports `o = d`.
 """
@@ -213,7 +227,9 @@ The mean of [`update!`](@ref): write ``μ^F`` into `x_out.μ`, and return the na
 An iterated update calls it for each linearization and [`update_cov!`](@ref) only for the
 last one. The second form takes the buffers explicitly; the first takes them from `cache`,
 and writes `S` into `cache.measurement.Σ`, `K` into `cache.C_Dxd` and `B` into
-`cache.K1`.
+`cache.K1`. If `obs.m` is not `x_pred.μ`, it also writes `z + H (μ - m)` into
+`cache.measurement.μ` and uses `x_out.μ` and `cache.C_d` as workspace, so `obs.z` must not be
+any of these.
 """
 function update_mean!(
     x_out,

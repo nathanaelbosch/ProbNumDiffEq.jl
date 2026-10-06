@@ -14,8 +14,7 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
             df = df.x[2]
         end
 
-        H, rows = derivative_observation(cache, o == 0 ? I : f.mass_matrix, o)
-        isempty(rows) || update_on_data!(x, H, view(df, rows), nothing; cache)
+        update!(x, derivative_observation(cache, o == 0 ? I : f.mass_matrix, o, df); cache)
     end
 end
 

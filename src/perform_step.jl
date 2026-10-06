@@ -104,8 +104,9 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     predict_mean!(x_pred.μ, xprev.μ, Ah)
     write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
 
-    # Measure
+    # Measure; the diffusion estimates read `obs.z` as the residual at the predicted mean
     obs = evaluate_ode!(integ, x_pred, tnew)
+    @assert obs.m === x_pred.μ
 
     # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
     if integ.opts.adaptive || isdynamic(cache.diffusionmodel)
