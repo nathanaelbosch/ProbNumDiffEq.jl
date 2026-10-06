@@ -29,6 +29,43 @@ end
 LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
 
 """
+    update(x, obs::LinearizedObservation)
+
+Condition the Gaussian `x` on the observation `obs` and return the result:
+```math
+\\begin{aligned}
+S &= H Σ H^T + R, \\\\
+K &= Σ H^T S^{-1}, \\\\
+μ^F &= μ - K (z + H (μ - m)), \\\\
+Σ^F &= Σ - K S K^T.
+\\end{aligned}
+```
+For a `PSDMatrix` covariance ``Σ = \\sqrt{Σ}^T \\sqrt{Σ}``, it computes ``Σ^F`` in Joseph
+form, ``(I - K H) Σ (I - K H)^T + K R K^T``, and returns it as a `PSDMatrix`. Both methods
+compute with dense matrices; for performance, use the non-allocating [`update!`](@ref).
+"""
+function update(x::Gaussian, obs::LinearizedObservation)
+    Σ = Matrix(cov(x))
+    (; μ_F, S, K) = _update_dense(mean(x), Σ, obs)
+    return Gaussian(μ_F, Σ - K * S * K')
+end
+function update(x::SRGaussian, obs::LinearizedObservation)
+    sqrtΣ = Matrix(x.Σ.R)
+    (; μ_F, H, K) = _update_dense(mean(x), sqrtΣ' * sqrtΣ, obs)
+    # √Σ^F is the triangular factor of [√Σ (I - K H)ᵀ; √R Kᵀ]
+    sqrtΣ_F = sqrtΣ * (I - K * H)'
+    isnothing(obs.R) || (sqrtΣ_F = [sqrtΣ_F; Matrix(obs.R.R) * K'])
+    return Gaussian(μ_F, PSDMatrix(qr(sqrtΣ_F).R))
+end
+function _update_dense(μ, Σ, obs)
+    H = Matrix(obs.H)
+    S = H * Σ * H'
+    isnothing(obs.R) || (S += Matrix(obs.R))
+    K = Σ * H' / S
+    return (; μ_F=μ - K * (obs.z + H * (μ - obs.m)), H, S, K)
+end
+
+"""
     update!(x_out, x_pred, obs::LinearizedObservation; cache)
 
 Condition the Gaussian `x_pred` on the observation `obs`, write the result into `x_out`, and
@@ -261,27 +298,4 @@ function _update_cov!(
     foreach_diagonal_block(
         _update_cov!, nblocks(H), Σ_out, Σ_pred, H, R, K, B, M_cache, KR_cache)
     return Σ_out
-end
-
-"""
-    update(x, obs::LinearizedObservation)
-
-Condition the Gaussian `x` on the observation `obs` and return the result, with dense
-matrices: the allocating reference for [`update!`](@ref),
-```math
-\\begin{aligned}
-S &= H Σ H^T + R, \\\\
-K &= Σ H^T S^{-1}, \\\\
-μ^F &= μ - K (z + H (μ - m)), \\\\
-Σ^F &= Σ - K S K^T.
-\\end{aligned}
-```
-"""
-function update(x::Gaussian, obs::LinearizedObservation)
-    μ, Σ = mean(x), Matrix(cov(x))
-    H = Matrix(obs.H)
-    S = H * Σ * H'
-    isnothing(obs.R) || (S += Matrix(obs.R))
-    K = Σ * H' / S
-    return Gaussian(μ - K * (obs.z + H * (μ - obs.m)), Σ - K * S * K')
 end

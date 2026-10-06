@@ -157,8 +157,12 @@ update_cache(FAC, D, o) = (;
 
         @testset "update" begin
             x_out = PNDE.update(x_pred, obs)
+            @test x_out.Σ isa PSDMatrix
             @test x_out.μ ≈ m
-            @test x_out.Σ ≈ P
+            @test Matrix(x_out.Σ) ≈ P
+            x_dense = PNDE.update(Gaussian(m_p, P_p), obs)
+            @test x_dense.μ ≈ m
+            @test x_dense.Σ ≈ P
         end
 
         x_out = copy(x_pred)
@@ -258,7 +262,7 @@ end
     @test ztSinvz ≈ z' * (S_dense \ z)
     x_ref = PNDE.update(x_pred, obs)
     @test x_out.μ ≈ x_ref.μ
-    @test Matrix(x_out.Σ) ≈ x_ref.Σ
+    @test Matrix(x_out.Σ) ≈ Matrix(x_ref.Σ)
 end
 
 @testset "SMOOTH" begin
