@@ -47,13 +47,31 @@ end
 """
     AbstractLinearization
 
-How an `ODEFilter` linearizes the ODE vector field, that is, which approximation of its
-Jacobian enters the observation matrix `H`: `ZeroJacobian` in the [`EK0`](@ref),
-`DiagonalJacobian` in the [`DiagonalEK1`](@ref) and `FullJacobian` in the [`EK1`](@ref).
+How an [`ODEFilter`](@ref) linearizes the ODE vector field, that is, which approximation of
+its Jacobian enters the observation matrix `H`.
 """
 abstract type AbstractLinearization end
+
+"""
+    ZeroJacobian()
+
+Linearize the ODE vector field with a zero Jacobian, as the [`EK0`](@ref) does.
+"""
 struct ZeroJacobian <: AbstractLinearization end
+
+"""
+    DiagonalJacobian()
+
+Linearize the ODE vector field with the diagonal of its Jacobian, as the
+[`DiagonalEK1`](@ref) does.
+"""
 struct DiagonalJacobian <: AbstractLinearization end
+
+"""
+    FullJacobian()
+
+Linearize the ODE vector field with its Jacobian, as the [`EK1`](@ref) does.
+"""
 struct FullJacobian <: AbstractLinearization end
 
 """
@@ -70,18 +88,43 @@ needs_jacobian(prior::IOUP) = prior.update_rate_parameter
 # Algorithm
 ########################################################################################
 """
-    ODEFilter(; linearization, prior, diffusionmodel, initialization, pn_observation_noise,
-              smooth, covariance_factorization, autodiff, standardtag, concrete_jac)
+    ODEFilter(; linearization, order=3, prior=IWP(order), diffusionmodel=DynamicDiffusion(),
+              smooth=true, initialization=TaylorModeInit(num_derivatives(prior)),
+              pn_observation_noise=nothing, covariance_factorization=nothing,
+              autodiff=AutoForwardDiff(), standardtag=true, concrete_jac=nothing)
 
-**Gaussian ODE filter.** The solvers [`EK0`](@ref), [`EK1`](@ref) and [`DiagonalEK1`](@ref)
-are `ODEFilter`s that differ only in their `linearization`; see them for the defaults.
+**Gaussian ODE filter**, the probabilistic ODE solver behind the [`EK0`](@ref), the
+[`EK1`](@ref) and the [`DiagonalEK1`](@ref). These are `ODEFilter`s with a fixed
+`linearization` and take all other keyword arguments below.
 
-- `covariance_factorization`: `IsometricKroneckerCovariance`, `BlockDiagonalCovariance`,
-  `DenseCovariance`, or `nothing` for the most structured one that all other settings and
-  the problem's mass matrix support.
-- `autodiff`: an `ADTypes` choice for the Jacobian, or `nothing`. It is used if the
-  `linearization` or the `prior` need a Jacobian, with `nothing` meaning
-  `AutoForwardDiff()`, and is set to `nothing` otherwise.
+# Arguments
+- `linearization::AbstractLinearization`: How the ODE vector field is linearized:
+  [`ZeroJacobian()`](@ref ZeroJacobian), [`DiagonalJacobian()`](@ref DiagonalJacobian) or
+  [`FullJacobian()`](@ref FullJacobian).
+- `order::Integer`: Order of the default integrated Wiener process (IWP) prior.
+- `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
+   By default, an `order`-times integrated Wiener process prior `IWP(order)`.
+   See also: [Priors](@ref).
+- `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
+- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
+- `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
+- `pn_observation_noise`: Covariance of noise on the observation of the ODE, as a number, a
+  `UniformScaling` or a matrix; `nothing` for none.
+- `covariance_factorization`: `IsometricKroneckerCovariance`, `BlockDiagonalCovariance` or
+  `DenseCovariance`. By default, the most structured one that all other settings and the
+  problem's mass matrix support. The `EK0` and the `DiagonalEK1` use `DenseCovariance` only
+  when it is set here, since dense covariances scale cubically with the ODE dimension.
+- `autodiff`: How to compute the Jacobian if the `linearization` or the `prior` need one,
+  e.g. `AutoForwardDiff()` or `AutoFiniteDiff()` from ADTypes.jl.
+- `standardtag`, `concrete_jac`: As for the implicit solvers of OrdinaryDiffEq.jl.
+
+For compatibility with OrdinaryDiffEq 6, the keywords `chunk_size`, `diff_type` and
+`autodiff=true`/`false` are folded into `autodiff`.
+
+# Examples
+```julia-repl
+julia> solve(prob, ODEFilter(linearization=FullJacobian(), order=5))
+```
 """
 struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
        OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm
@@ -97,15 +140,18 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
     concrete_jac::CJ
     function ODEFilter(;
         linearization,
-        prior,
-        diffusionmodel,
-        initialization,
-        pn_observation_noise,
-        smooth,
-        covariance_factorization,
-        autodiff,
-        standardtag,
-        concrete_jac,
+        order=3,
+        prior=IWP(order),
+        diffusionmodel=DynamicDiffusion(),
+        smooth=true,
+        initialization=TaylorModeInit(num_derivatives(prior)),
+        pn_observation_noise=nothing,
+        covariance_factorization=nothing,
+        autodiff=AutoForwardDiff(),
+        chunk_size=Val{0}(),
+        diff_type=Val{:forward}(),
+        standardtag=true,
+        concrete_jac=nothing,
     )
         if (isstatic(diffusionmodel) && diffusionmodel.calibrate) &&
            (!isnothing(pn_observation_noise) && !iszero(pn_observation_noise))
@@ -115,11 +161,13 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
                 ),
             )
         end
+        autodiff, _, _ = _process_AD_choice(autodiff, chunk_size, diff_type)
         if !(needs_jacobian(linearization) || needs_jacobian(prior))
             autodiff = nothing
         elseif isnothing(autodiff)
             autodiff = AutoForwardDiff()
         end
+        concrete_jac = _unwrap_val(concrete_jac)
         return new{
             typeof(linearization),
             typeof(prior),
@@ -138,7 +186,7 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
             smooth,
             covariance_factorization,
             autodiff,
-            standardtag,
+            _unwrap_val(standardtag),
             concrete_jac,
         )
     end
@@ -151,44 +199,13 @@ _typeof(T::Type) = Type{T}
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
 
-# The keyword arguments of `EK0`, `EK1` and `DiagonalEK1`, with their defaults. The
-# `chunk_size` and `diff_type` of OrdinaryDiffEq 6 are folded into `autodiff`.
-function _odefilter(
-    linearization;
-    order=3,
-    prior=IWP(order),
-    diffusionmodel=DynamicDiffusion(),
-    smooth=true,
-    initialization=TaylorModeInit(num_derivatives(prior)),
-    pn_observation_noise=nothing,
-    covariance_factorization=nothing,
-    autodiff=AutoForwardDiff(),
-    chunk_size=Val{0}(),
-    diff_type=Val{:forward}(),
-    standardtag=Val{true}(),
-    concrete_jac=nothing,
-)
-    autodiff, _, _ = _process_AD_choice(autodiff, chunk_size, diff_type)
-    return ODEFilter(;
-        linearization,
-        prior,
-        diffusionmodel,
-        initialization,
-        pn_observation_noise,
-        smooth,
-        covariance_factorization,
-        autodiff,
-        standardtag=_unwrap_val(standardtag),
-        concrete_jac=_unwrap_val(concrete_jac),
-    )
-end
-
 """
     EK0(; order=3,
           smooth=true,
           prior=IWP(order),
           diffusionmodel=DynamicDiffusion(),
-          initialization=TaylorModeInit(num_derivatives(prior)))
+          initialization=TaylorModeInit(num_derivatives(prior)),
+          kwargs...)
 
 **Gaussian ODE filter with zeroth-order vector field linearization.**
 
@@ -205,18 +222,8 @@ only dense covariances can represent, such as an `IOUP` or `Matern` prior, throw
 unless you pass `covariance_factorization=DenseCovariance`; dense covariances scale
 cubically with the problem size._
 
-# Arguments
-- `order::Integer`: Order of the integrated Wiener process (IWP) prior.
-- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
-- `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
-   By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
-   See also: [Priors](@ref).
-- `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
-- `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
-
-The keyword arguments of the [`EK1`](@ref) for computing Jacobians, such as `autodiff`,
-are used for a prior that needs a Jacobian, such as an [`IOUP`](@ref) with
-`update_rate_parameter=true`.
+The `EK0` is the [`ODEFilter`](@ref) with `linearization=ZeroJacobian()`; see there for all
+keyword arguments.
 
 # Examples
 ```julia-repl
@@ -225,7 +232,7 @@ julia> solve(prob, EK0())
 
 # [References](@ref references)
 """
-EK0(; kwargs...) = _odefilter(ZeroJacobian(); kwargs...)
+EK0(; kwargs...) = ODEFilter(; linearization=ZeroJacobian(), kwargs...)
 
 """
     EK1(; order=3,
@@ -242,20 +249,8 @@ and it generally produces more expressive posterior covariances than the [`EK0`]
 However, as typical implicit ODE solvers it scales cubically with the ODE dimension [Krämer et al. (2022)](@cite krämer21highdim),
 so if you're solving a high-dimensional non-stiff problem you might want to give the [`EK0`](@ref) a try.
 
-# Arguments
-- `order::Integer`: Order of the integrated Wiener process (IWP) prior.
-- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
-- `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
-   By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
-   See also: [Priors](@ref).
-- `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
-- `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
-
-Some additional `kwargs` relating to implicit solvers are supported;
-check out DifferentialEquations.jl's [Extra Options](https://diffeq.sciml.ai/stable/solvers/ode_solve/#Extra-Options) page.
-Right now, we support `autodiff`, `chunk_size`, and `diff_type`.
-In particular, `autodiff=false` can come in handy to use finite differences instead of
-ForwardDiff.jl to compute Jacobians.
+The `EK1` is the [`ODEFilter`](@ref) with `linearization=FullJacobian()`; see there for all
+keyword arguments.
 
 # Examples
 ```julia-repl
@@ -264,7 +259,7 @@ julia> solve(prob, EK1())
 
 # [References](@ref references)
 """
-EK1(; kwargs...) = _odefilter(FullJacobian(); kwargs...)
+EK1(; kwargs...) = ODEFilter(; linearization=FullJacobian(), kwargs...)
 
 """
     DiagonalEK1(; order=3,
@@ -293,18 +288,8 @@ unless you pass `covariance_factorization=DenseCovariance`.
     via automatic differentiation and only extracting the diagonal afterwards, resulting
     in O(d²) time and memory for the Jacobian computation.
 
-# Arguments
-- `order::Integer`: Order of the integrated Wiener process (IWP) prior.
-- `smooth::Bool`: Turn smoothing on/off; smoothing is required for dense output.
-- `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
-   By default, uses a 3-times integrated Wiener process prior `IWP(3)`.
-   See also: [Priors](@ref).
-- `diffusionmodel::ProbNumDiffEq.AbstractDiffusion`: See [Diffusion models and calibration](@ref).
-- `initialization::ProbNumDiffEq.InitializationScheme`: See [Initialization](@ref).
-
-Some additional `kwargs` relating to implicit solvers are supported;
-check out DifferentialEquations.jl's [Extra Options](https://diffeq.sciml.ai/stable/solvers/ode_solve/#Extra-Options) page.
-Right now, we support `autodiff`, `chunk_size`, and `diff_type`.
+The `DiagonalEK1` is the [`ODEFilter`](@ref) with `linearization=DiagonalJacobian()`; see
+there for all keyword arguments.
 
 # Examples
 ```julia-repl
@@ -313,7 +298,7 @@ julia> solve(prob, DiagonalEK1())
 
 # [References](@ref references)
 """
-DiagonalEK1(; kwargs...) = _odefilter(DiagonalJacobian(); kwargs...)
+DiagonalEK1(; kwargs...) = ODEFilter(; linearization=DiagonalJacobian(), kwargs...)
 
 """
     ExpEK(; L, order=3, kwargs...)
@@ -383,6 +368,34 @@ julia> solve(prob, RosenbrockExpEK())
 """
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
+
+_solver_name(::ZeroJacobian) = "EK0"
+_solver_name(::FullJacobian) = "EK1"
+_solver_name(::DiagonalJacobian) = "DiagonalEK1"
+_solver_name(::AbstractLinearization) = nothing
+
+# Shown as the call that constructs it, with the settings that differ from the defaults
+function Base.show(io::IO, alg::ODEFilter)
+    name = _solver_name(alg.linearization)
+    settings = Pair{Symbol,Any}[]
+    isnothing(name) && push!(settings, :linearization => alg.linearization)
+    q = num_derivatives(alg.prior)
+    if alg.prior != IWP(q)
+        push!(settings, :prior => alg.prior)
+    elseif q != 3
+        push!(settings, :order => q)
+    end
+    default = ODEFilter(; alg.linearization, alg.prior)
+    for field in fieldnames(ODEFilter)
+        field in (:linearization, :prior) && continue
+        value = getfield(alg, field)
+        isequal(value, getfield(default, field)) || push!(settings, field => value)
+    end
+    print(io, something(name, "ODEFilter"), "(")
+    join(io, (string(k, "=", repr(v; context=io)) for (k, v) in settings), ", ")
+    print(io, ")")
+end
+Base.show(io::IO, ::MIME"text/plain", alg::ODEFilter) = show(io, alg)
 
 ########################################################################################
 # Covariance structure
@@ -476,13 +489,18 @@ function _restrictions(inputs, structures)
         supported = filter(S -> supports_covariance(input, S), COVARIANCE_STRUCTURES)
         if !all(in(supported), structures)
             push!(lines,
-                "- `$name = $(_describe(input))` supports only $(join(supported, ", "))")
+                "- `$name = $(_describe(input))` supports only $(join(supported, ", "))" *
+                _hint(input))
         end
     end
     return join(lines, "\n")
 end
 _describe(input) = repr(input)
 _describe(input::Union{ObservationNoise,MassMatrix}) = summary(input.value)
+_hint(input) = ""
+_hint(input::Union{ObservationNoise,MassMatrix}) =
+    !(input.value isa Diagonal) && input.value isa AbstractMatrix && isdiag(input.value) ?
+    "; it is diagonal, so pass it as a `Diagonal`" : ""
 
 # DAE-initialization hook.
 #

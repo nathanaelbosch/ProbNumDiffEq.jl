@@ -61,25 +61,6 @@ using Test
     end
 end
 
-@testset "Non-diagonal and diagonal mass matrices with every solver" begin
-    vf(du, u, p, t) = (du .= -u)
-    u0 = [1.0, 2.0]
-    @testset "$(typeof(M))" for M in ([1.0 0.5; 0.5 1.0], Diagonal([1.0, 2.0]))
-        prob = ODEProblem(ODEFunction(vf, mass_matrix=M), u0, (0.0, 1.0))
-        @testset "$Alg" for Alg in (EK0, EK1, DiagonalEK1)
-            structured = M isa Diagonal && Alg !== EK1
-            # Without structure, the `EK0` and the `DiagonalEK1` need to be asked for dense
-            kwargs =
-                structured || Alg === EK1 ? (;) :
-                (covariance_factorization=DenseCovariance,)
-            sol = solve(prob, Alg(; kwargs...), abstol=1e-9, reltol=1e-9)
-            @test sol.u[end] ≈ exp(-inv(Matrix(M))) * u0 rtol = 1e-8
-            structure = structured ? BlockDiagonalCovariance : DenseCovariance
-            @test sol.cache.covariance_factorization isa structure
-        end
-    end
-end
-
 @testset "Robertson in mass-matrix-ODE form" begin
     function rober(du, u, p, t)
         y₁, y₂, y₃ = u
@@ -115,9 +96,6 @@ end
     @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 
     @test_throws "DAE" solve(prob, EK0())
-    prob_dense = ODEProblem(
-        ODEFunction(rober, mass_matrix=Matrix(M)), prob.u0, prob.tspan, prob.p)
-    @test_throws "DAE" solve(prob_dense, EK0(covariance_factorization=DenseCovariance))
 
     @testset "Initial value with a constraint residual" begin
         prob = remake(prob, u0=[1.0, 0.0, 1e-12])

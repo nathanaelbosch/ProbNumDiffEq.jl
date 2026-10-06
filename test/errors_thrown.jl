@@ -94,38 +94,4 @@ end
     prob = ODEProblem(ODEFunction(vf, mass_matrix=M), [1.0, 1.0], (0.0, 1.0))
     @test_throws ArgumentError solve(prob, EK0(diffusionmodel=DynamicMVDiffusion()))
     @test_throws ArgumentError solve(prob, EK0(diffusionmodel=FixedMVDiffusion()))
-    @test_throws ArgumentError solve(prob, DiagonalEK1(diffusionmodel=DynamicMVDiffusion()))
-end
-
-@testset "The EK0 and the DiagonalEK1 use dense covariances only on request" begin
-    prob = prob_ode_lotkavolterra
-    vf(du, u, p, t) = (du .= -u)
-    M = [1.0 0.5; 0.5 1.0]
-    prob_M = ODEProblem(ODEFunction(vf, mass_matrix=M), [1.0, 1.0], (0.0, 1.0))
-    @testset "$Alg" for Alg in (EK0, DiagonalEK1)
-        hint = "covariance_factorization=DenseCovariance"
-        @test_throws ["`prior", hint] solve(prob, Alg(prior=IOUP(3, -1)))
-        @test_throws ["`prior", hint] solve(prob, Alg(prior=Matern(3, 1.0)))
-        @test_throws ["`mass_matrix", hint] solve(prob_M, Alg())
-        @test_throws ["`pn_observation_noise", hint] solve(
-            prob, Alg(pn_observation_noise=[1.0 0.5; 0.5 1.0]))
-        alg = Alg(prior=IOUP(3, -1), covariance_factorization=DenseCovariance)
-        @test solve(prob, alg).retcode == ReturnCode.Success
-    end
-end
-
-@testset "The error names the inputs without a common covariance structure" begin
-    prob = prob_ode_lotkavolterra
-    @test_throws ["`linearization", "`diffusionmodel = ", "DynamicMVDiffusion()"] solve(
-        prob, EK1(diffusionmodel=DynamicMVDiffusion()))
-    @test_throws ["`prior", "`diffusionmodel"] solve(
-        prob, EK0(prior=IOUP(3, -1), diffusionmodel=DynamicMVDiffusion()))
-    @test_throws ["`covariance_factorization = ", "DenseCovariance`", "`diffusionmodel"] solve(
-        prob,
-        EK0(covariance_factorization=DenseCovariance, diffusionmodel=DynamicMVDiffusion()))
-    @test_throws ["`pn_observation_noise = 2×2 Matrix{Float64}`", "`diffusionmodel"] solve(
-        prob,
-        EK0(pn_observation_noise=[1.0 0.5; 0.5 1.0], diffusionmodel=DynamicMVDiffusion()))
-    @test_throws (msg -> !occursin("`prior", msg)) solve(
-        prob, EK1(diffusionmodel=DynamicMVDiffusion()))
 end

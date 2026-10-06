@@ -52,6 +52,20 @@ IOUP(num_derivatives; update_rate_parameter) = begin
     IOUP(num_derivatives, missing; update_rate_parameter)
 end
 
+function Base.show(io::IO, p::IOUP{T}) where {T}
+    q, r, update = num_derivatives(p), p.rate_parameter, p.update_rate_parameter
+    if T === Float64 && dim(p) == 1 && !update
+        print(io, "IOUP(", q, ", ", repr(r; context=io), ")")
+    elseif T === Float64 && dim(p) == 1 && ismissing(r)
+        print(io, "IOUP(", q, ", update_rate_parameter=true)")
+    else
+        print(io, _prior_name("IOUP", T), "(dim=", dim(p), ", num_derivatives=", q,
+            ", rate_parameter=", repr(r; context=io))
+        update && print(io, ", update_rate_parameter=true")
+        print(io, ")")
+    end
+end
+
 remake(
     p::IOUP{T};
     elType=T,

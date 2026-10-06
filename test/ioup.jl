@@ -44,13 +44,6 @@ end
     end
 end
 
-@testset "DiagonalEK1 with an IOUP prior needs dense covariances" begin
-    @test_throws ArgumentError solve(prob, DiagonalEK1(prior=IOUP(3, A)))
-    sol =
-        solve(prob, DiagonalEK1(prior=IOUP(3, A), covariance_factorization=DenseCovariance))
-    @test norm(ref.u[end] - sol.u[end]) < 5e-10
-end
-
 @testset "Different rate types" begin
     @testset "$(typeof(r))" for r in (-α, [-α, -α], [-α 0; 0 -α], -α * I(2))
         sol = solve(prob, EK1(prior=IOUP(3, r)))

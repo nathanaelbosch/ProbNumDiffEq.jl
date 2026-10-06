@@ -11,7 +11,7 @@ import Base:
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
     UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
-    isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
+    isdiag, isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 import Random: Random, AbstractRNG
@@ -114,7 +114,8 @@ include("initialization/common.jl")
 export TaylorModeInit, ClassicSolverInit, SimpleInit, ForwardDiffInit
 
 include("algorithms.jl")
-export EK0, EK1, DiagonalEK1
+export ODEFilter, EK0, EK1, DiagonalEK1
+export ZeroJacobian, DiagonalJacobian, FullJacobian
 export ExpEK, RosenbrockExpEK
 
 include("alg_utils.jl")
