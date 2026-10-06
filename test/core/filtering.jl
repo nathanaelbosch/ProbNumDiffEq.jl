@@ -225,7 +225,7 @@ end
 
     @test PNDE._matmul!(zeros(o), H, x_pred.μ) ≈ H_dense * x_pred.μ
 
-    # The block-wise update uses the first `o` blocks of the buffers
+    # The buffers have one block per observed dimension
     FAC = PNDE.BlockDiagonalCovariance{Float64}(o, q)
     z = rand(o)
     obs = PNDE.LinearizedObservation(x_pred.μ, z, H, PSDMatrix(RR))
