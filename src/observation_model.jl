@@ -22,6 +22,34 @@ function make_observation_model(cache, M, noise_cov; o)
     return H, R
 end
 
+"""
+    derivative_observation(cache, M, i, y)
+
+The [`data_observation`](@ref) `M u⁽ⁱ⁾ = y` of the `i`-th derivative `u⁽ⁱ⁾` of the solution,
+for the mass matrix `M`, without the zero rows of `M`. These rows, the algebraic equations of
+a DAE, say nothing about `u⁽ⁱ⁾` and would make `S = H Σ Hᵀ` singular. If all rows of `M` are
+zero, `z` is empty, and [`update!`](@ref) leaves the state unchanged. As in
+`make_observation_model`, `H` is the `SolutionObservation` of the remaining rows of `M` in
+the covariance structure of `cache`.
+"""
+function derivative_observation(cache, M, i, y)
+    M, rows = _nonzero_rows(M, cache.d)
+    H = SolutionObservation(M, cache.q, i)
+    return data_observation(
+        to_factorized_matrix(cache.covariance_factorization, H), view(y, rows))
+end
+# `M` without its zero rows, and the indices of the remaining rows
+_nonzero_rows(M::UniformScaling, d) = M, iszero(M.λ) ? (1:0) : (1:d)
+function _nonzero_rows(M::Diagonal, d)
+    rows = findall(!iszero, M.diag)
+    return length(rows) == d ? M : ScaledSelection(M.diag[rows], rows, d), rows
+end
+function _nonzero_rows(M::AbstractMatrix, d)
+    rows = findall(!iszero, eachrow(M))
+    return length(rows) == size(M, 1) ? M : M[rows, :], rows
+end
+_nonzero_rows(M, d) = _nonzero_rows(convert(AbstractMatrix, M), d)
+
 function check_observation_noise_cov(cov)
     _is_positive(cov) || nonpositive_noise_error()
     return nothing

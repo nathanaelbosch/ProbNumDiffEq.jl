@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, init::SimpleInit)
     @unpack u, f, p, t = integ
-    @unpack x, Proj = cache
+    @unpack x = cache
     du = integ.uprev
 
     f = _unwrap_f(f)
@@ -15,6 +15,6 @@ function initial_update!(integ, cache, init::SimpleInit)
         du = du.x[2]
     end
 
-    update!(x, data_observation(Proj(0), view(u, :)); cache)
+    update!(x, derivative_observation(cache, I, 0, u); cache)
     update!(x, derivative_observation(cache, f.mass_matrix, 1, du); cache)
 end

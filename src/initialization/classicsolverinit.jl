@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, ::ClassicSolverInit)
     @unpack u, f, p, t = integ
-    @unpack d, q, x, Proj = cache
+    @unpack q, x = cache
     @assert isinplace(f)
 
     if q > 5
@@ -11,11 +11,11 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
 
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
-    _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    update!(x, data_observation(Proj(0), _u); cache)
+    _u = is_secondorder ? u.x[2] : u
+    update!(x, derivative_observation(cache, I, 0, _u); cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.stats.nf += 1
-    update!(x, data_observation(Proj(1), view(du, :)); cache)
+    update!(x, derivative_observation(cache, I, 1, du); cache)
 
     if q < 2
         return
@@ -41,7 +41,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> _f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        update!(x, data_observation(Proj(2), ddfddu); cache)
+        update!(x, derivative_observation(cache, I, 2, ddfddu); cache)
         if q < 3
             return
         end

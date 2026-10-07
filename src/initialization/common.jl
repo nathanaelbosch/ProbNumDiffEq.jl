@@ -139,31 +139,3 @@ See also: [Initialization](@ref), [`TaylorModeInit`](@ref), [`ClassicSolverInit`
 function initial_update!(integ, cache)
     return initial_update!(integ, cache, integ.alg.initialization)
 end
-
-"""
-    derivative_observation(cache, M, i, y)
-
-The [`data_observation`](@ref) `M u⁽ⁱ⁾ = y` of the `i`-th derivative `u⁽ⁱ⁾` of the solution,
-for the mass matrix `M`, without the zero rows of `M`. These rows, the algebraic equations of
-a DAE, say nothing about `u⁽ⁱ⁾` and would make `S = H Σ Hᵀ` singular. If all rows of `M` are
-zero, the observation is empty, and [`update!`](@ref) leaves the state unchanged.
-"""
-function derivative_observation(cache, M, i, y)
-    H, rows = _derivative_observation(cache.covariance_factorization, cache, M, i)
-    return data_observation(H, view(y, rows))
-end
-# `H` for the nonzero `rows` of `M`
-function _derivative_observation(::DenseCovariance, cache, M, i)
-    H = M * cache.Proj(i)
-    rows = findall(!iszero, eachrow(H))
-    return length(rows) == cache.d ? H : H[rows, :], rows
-end
-_derivative_observation(::IsometricKroneckerCovariance, cache, M::UniformScaling, i) =
-    M * cache.Proj(i), iszero(M.λ) ? (1:0) : (1:cache.d)
-function _derivative_observation(C::BlockDiagonalCovariance, cache, M, i)
-    m = M isa UniformScaling ? fill(M.λ, cache.d) : M.diag
-    rows = findall(!iszero, m)
-    length(rows) == cache.d && return M * cache.Proj(i), rows
-    H = SolutionObservation(ScaledSelection(m[rows], rows, cache.d), cache.q, i)
-    return to_factorized_matrix(C, H), rows
-end
