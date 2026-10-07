@@ -43,6 +43,17 @@ end
 IWP(; dim, num_derivatives) = IWP{typeof(1.0)}(dim, num_derivatives)
 IWP(num_derivatives) = IWP(; dim=1, num_derivatives)
 
+function Base.show(io::IO, p::IWP{T}) where {T}
+    d, q = dim(p), num_derivatives(p)
+    if T !== Float64
+        print(io, "IWP{", T, "}(", d, ", ", q, ")")
+    elseif d == 1
+        print(io, "IWP(", q, ")")
+    else
+        print(io, "IWP(dim=", d, ", num_derivatives=", q, ")")
+    end
+end
+
 remake(
     p::IWP{T};
     elType=T,

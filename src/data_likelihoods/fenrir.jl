@@ -18,7 +18,7 @@ so use at your own risk!
 
 # Arguments
 - `prob::SciMLBase.AbstractODEProblem`: the initial value problem of interest
-- `alg::AbstractEK`: the probabilistic ODE solver to be used; use `EK1` for best results.
+- `alg::ODEFilter`: the probabilistic ODE solver to be used; use `EK1` for best results.
 - `data::NamedTuple{(:t, :u)}`: the data to be fitted
 - `observation_matrix::Union{AbstractMatrix,UniformScaling}`:
   the matrix which maps the ODE state to the measurements; typically a projection matrix.
@@ -39,7 +39,7 @@ so use at your own risk!
 """
 function fenrir_data_loglik(
     prob::SciMLBase.AbstractODEProblem,
-    alg::AbstractEK,
+    alg::ODEFilter,
     args...;
     # observation model
     observation_matrix=I,

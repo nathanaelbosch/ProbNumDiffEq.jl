@@ -27,6 +27,9 @@ to remove these limitations.
 """
 abstract type AbstractGaussMarkovProcess{elType} end
 
+# The constructor's name in `show`, with the element type if it is not the default `Float64`
+_prior_name(name, T) = T === Float64 ? name : string(name, "{", T, "}")
+
 ############################################################################################
 # Interface
 ############################################################################################

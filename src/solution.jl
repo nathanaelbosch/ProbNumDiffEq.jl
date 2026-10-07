@@ -83,7 +83,7 @@ SciMLBase.solution_new_retcode(sol::ProbODESolution, retcode) =
 # Used to build the initial empty solution in OrdinaryDiffEqCore.__init
 function SciMLBase.build_solution(
     prob::SciMLBase.AbstractODEProblem,
-    alg::AbstractEK,
+    alg::ODEFilter,
     t,
     u;
     k=nothing,

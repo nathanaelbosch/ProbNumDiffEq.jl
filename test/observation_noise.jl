@@ -14,15 +14,12 @@ d = length(prob.u0)
     [0.1 0.01; 0.01 0.1],
     PSDMatrix(0.1 * rand(d, d)),
 ))
-    if i <= 3
-        @test_nowarn solve(prob, EK0(pn_observation_noise=R))
-    else
-        @test_broken solve(prob, EK0(pn_observation_noise=R))
-    end
     if i <= 5
+        @test_nowarn solve(prob, EK0(pn_observation_noise=R))
         @test_nowarn solve(prob, DiagonalEK1(pn_observation_noise=R))
     else
-        @test_broken solve(prob, DiagonalEK1(pn_observation_noise=R))
+        @test_throws ArgumentError solve(prob, EK0(pn_observation_noise=R))
+        @test_throws ArgumentError solve(prob, DiagonalEK1(pn_observation_noise=R))
     end
     @test_nowarn solve(prob, EK1(pn_observation_noise=R))
 end

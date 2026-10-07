@@ -102,7 +102,8 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
     end
 end
 function estimate_local_diffusion(::FixedMVDiffusion, integ)
-    if integ.alg isa EK0 && integ.cache.covariance_factorization isa BlockDiagonalCovariance
+    if integ.alg.linearization isa ZeroJacobian &&
+       integ.cache.covariance_factorization isa BlockDiagonalCovariance
         return local_diagonal_diffusion(integ.cache)
     else
         # The local diffusion is stored as a `Diagonal` for multivariate models, so the
