@@ -185,35 +185,27 @@ _matmul!(A::IKP, B::IKP, c::Number) = begin
     return A
 end
 
-function _prepare_inputs_for_vectrick(A, x, v)
-    M = A.B
-    a, b = size(M)
-    V = reshape(transpose(v), (length(v) ÷ b, b)) |> transpose
-    X = reshape(transpose(x), (length(x) ÷ a, a)) |> transpose
-    return A.B, X, V
-end
-
-function mul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    mul!(X, N, V)
+# `(B ⊗ I_d) vec(V) = vec(V Bᵀ)` with the contiguous `V = reshape(v, d, :)`, as the state is
+# ordered derivative-major. The reshapes are of views: reshaping a `Vector` allocates.
+_reshaped_view(v::AbstractVector, d) = reshape(view(v, :), d, :)
+function mul_vectrick!(
+    x::AbstractVector,
+    A::IKP,
+    v::AbstractVector,
+    coeffs::Vararg{Number,N},
+) where {N}
+    _matmul!(_reshaped_view(x, A.rdim), _reshaped_view(v, A.rdim), A.B', coeffs...)
     return x
 end
 function mul_vectrick!(
-    x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    mul!(X, N, V, alpha, beta)
-    return x
-end
-
-function _matmul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    _matmul!(X, N, V)
-    return x
-end
-function _matmul_vectrick!(
-    x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    _matmul!(X, N, V, alpha, beta)
+    x::AbstractMatrix,
+    A::IKP,
+    v::AbstractMatrix,
+    coeffs::Vararg{Number,N},
+) where {N}
+    for i in axes(v, 2)
+        mul_vectrick!(view(x, :, i), A, view(v, :, i), coeffs...)
+    end
     return x
 end
 
@@ -227,12 +219,12 @@ end
 
 # fast_linalg.jl
 for TC in [:AbstractVector, :AbstractMatrix]
-    @eval _matmul!(C::$TC, A::IKP, B::$TC) = _matmul_vectrick!(C, A, B)
+    @eval _matmul!(C::$TC, A::IKP, B::$TC) = mul_vectrick!(C, A, B)
     @eval _matmul!(
         C::$TC{T},
         A::IKP{T},
         B::$TC{T},
-    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C, A, B)
+    ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C, A, B)
     @eval _matmul!(C::$TC, A::$TC, B::IKP) = _matmul!(C', B', A')'
     @eval _matmul!(
         C::$TC{T},
@@ -241,23 +233,23 @@ for TC in [:AbstractVector, :AbstractMatrix]
     ) where {T<:LinearAlgebra.BlasFloat} = _matmul!(C', B', A')'
 
     @eval _matmul!(C::$TC, A::IKP, B::$TC, alpha::Number, beta::Number) =
-        _matmul_vectrick!(C, A, B, alpha, beta)
+        mul_vectrick!(C, A, B, alpha, beta)
     @eval _matmul!(
         C::$TC{T},
         A::IKP{T},
         B::$TC{T},
         alpha::Number,
         beta::Number,
-    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C, A, B, alpha, beta)
+    ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C, A, B, alpha, beta)
     @eval _matmul!(C::$TC, A::$TC, B::IKP, alpha::Number, beta::Number) =
-        _matmul_vectrick!(C', B', A', alpha, beta)'
+        mul_vectrick!(C', B', A', alpha, beta)'
     @eval _matmul!(
         C::$TC{T},
         A::$TC{T},
         B::IKP{T},
         alpha::Number,
         beta::Number,
-    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C', B', A', alpha, beta)'
+    ) where {T<:LinearAlgebra.BlasFloat} = mul_vectrick!(C', B', A', alpha, beta)'
 end
 
 function Kronecker.ldiv_vec_trick!(x::AbstractVector, A::IKP, v::AbstractVector)
