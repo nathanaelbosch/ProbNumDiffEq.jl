@@ -72,8 +72,8 @@ function DataUpdateCallback(
             return nothing
         end
 
-        _, ll = measure_and_update!(
-            integ.cache.x, val, H, R, make_obssized_cache(integ.cache; o))
+        obs = data_observation(integ.cache, H, val, R)
+        ll = update!(integ.cache.x, obs; cache=integ.cache).loglikelihood
 
         if !isnothing(loglikelihood)
             loglikelihood.ll += ll
@@ -85,44 +85,4 @@ end
 function initial_data_loglik(u0, val, M, R::PSDMatrix)
     (u0 isa RecursiveArrayTools.ArrayPartition) && (u0 = u0.x[2]) # for 2ndOrderODEs
     return logpdf(Gaussian(M * vec(u0), Matrix(R)), val)
-end
-
-make_obscov_sqrt(PR::AbstractMatrix, H::AbstractMatrix, RR::AbstractMatrix) =
-    qr!([PR * H'; RR]).R
-make_obscov_sqrt(
-    PR::IsometricKroneckerProduct,
-    H::IsometricKroneckerProduct,
-    RR::IsometricKroneckerProduct,
-) =
-    IsometricKroneckerProduct(PR.rdim, make_obscov_sqrt(PR.B, H.B, RR.B))
-make_obscov_sqrt(PR::BlocksOfDiagonals, H::BlocksOfDiagonals, RR::BlocksOfDiagonals) =
-    BlocksOfDiagonals([
-        make_obscov_sqrt(blocks(PR)[i], blocks(H)[i], blocks(RR)[i]) for
-        i in eachindex(blocks(PR))
-    ])
-
-function make_obssized_cache(cache; o)
-    if o == cache.d
-        return cache
-    else
-        return make_obssized_cache(cache.covariance_factorization, cache; o)
-    end
-end
-function make_obssized_cache(::DenseCovariance, cache; o)
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
-    return (
-        K1=view(K1, :, 1:o),
-        C_dxd=view(C_dxd, 1:o, 1:o),
-        C_Dxd=view(C_Dxd, :, 1:o),
-        C_d=view(C_d, 1:o),
-        C_DxD=C_DxD,
-        m_tmp=m_tmp,
-        x_tmp=x_tmp,
-    )
-end
-function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
-    # The block-wise `update!` only uses the first `o` blocks of the matrix caches
-    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, m_tmp, x_tmp = cache
-    return (K1=K1, C_dxd=C_dxd, C_Dxd=C_Dxd, C_d=view(C_d, 1:o), C_DxD=C_DxD,
-        m_tmp=m_tmp, x_tmp=x_tmp)
 end

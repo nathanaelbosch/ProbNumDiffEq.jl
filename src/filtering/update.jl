@@ -4,7 +4,7 @@
 Update step in Kalman filtering for linear dynamics models.
 
 Given a Gaussian ``x = \\mathcal{N}(μ, Σ)``
-and a measurement ``z = \\mathcal{N}(\\hat{z}, S)``, with ``S = H Σ H^T``,
+and a measurement ``z = \\mathcal{N}(\\hat{z}, S)``, with ``S = H Σ H^T + R``,
 compute
 ```math
 \\begin{aligned}
@@ -15,8 +15,8 @@ K &= Σ^P H^T S^{-1}, \\\\
 ```
 and return an updated state `\\mathcal{N}(μ^F, Σ^F)`.
 Note that this assumes zero-measurements.
-When called with `ProbNumDiffEq.SquarerootMatrix` type arguments it performs the update in
-Joseph / square-root form.
+When called with a `PSDMatrix` covariance it performs the update in Joseph / square-root
+form, and takes the measurement noise `R` as a keyword argument.
 
 For better performance, we recommend to use the non-allocating [`update!`](@ref).
 """
@@ -30,169 +30,437 @@ function update(x::Gaussian, measurement::Gaussian, H::AbstractMatrix)
 
     return Gaussian(m_new, C_new)
 end
-function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix)
+function update(x::SRGaussian, measurement::Gaussian, H::AbstractMatrix; R=nothing)
     m, C = mean(x), cov(x)
     z, S = mean(measurement), cov(measurement)
 
-    K = C * H' * inv(S)
+    K = Matrix(C) * H' * inv(S)
     m_new = m - K * z
     C_new = X_A_Xt(C, (I - K * H))
+    isnothing(R) || (C_new = PSDMatrix(qr([C_new.R; R.R * K']).R))
 
     return Gaussian(m_new, C_new)
 end
 
 """
-    update!(x_out, x_pred, measurement, H, K_cache, M_cache, S_cache)
+    LinearizedObservation(m, z, H, R=nothing)
 
-In-place and square-root implementation of [`update`](@ref)
-which saves the result into `x_out`.
+The observation ``y = h(x) + v``, ``v \\sim \\mathcal{N}(0, R)``, of the state ``x``,
+linearized at the point `m`:
+```math
+h(x) - y ≈ z + H (x - m).
+```
+A first-order Taylor expansion gives `z = h(m) - y`, the negative of the innovation, and the
+Jacobian `H = h'(m)`; the examples below make other choices. The data ``y`` enters only
+through `z`. `m` has the dimension of the state, `z` that of the observation. `R` is the
+noise covariance as a `PSDMatrix`, or `nothing` for an exact observation.
 
-Implemented in Joseph Form to retain the `PSDMatrix` covariances:
+[`update!`](@ref) evaluates the linearization at the mean ``μ`` of the state it conditions, as
+``z + H (μ - m)``, which is `z` if `m` is ``μ``.
+
+How `m`, `z` and `H` are obtained depends on the observation and on how it is linearized.
+Examples:
+- The ODE step observes ``y = 0`` through the residual ``h(x) = E_1 x - f(E_0 x, t)`` of the
+  ODE ``u' = f(u, t)``, linearized at the predicted mean ``μ``: `m = μ`, `z = h(μ)` and
+  `H = E_1 - J E_0`, where `J` is the Jacobian of `f` in the `EK1`, its diagonal in the
+  `DiagonalEK1`, and `0` in the `EK0`.
+- Data, as in `DataUpdateCallback` and Fenrir, is linear, ``y = C E_0 x + v``, so the
+  linearization is exact at any `m`. [`data_observation`](@ref) takes `m = 0`, which gives
+  `z = -y` and `H = C E_0`.
+- An iterated extended Kalman filter, as in `ManifoldUpdate`, conditions the same prediction
+  ``\\mathcal{N}(μ, Σ)`` in every iteration and linearizes ``h`` at the conditioned mean of
+  the previous iteration, so `m = μ` only in the first.
+- A statistical linearization (not implemented yet), as in an unscented Kalman filter,
+  linearizes over a distribution ``\\mathcal{N}(m, Σ)``: `z = E[h(x)] - y`,
+  `H = Cov[h(x), x] Σ⁻¹`, and the covariance of its linearization error is added to `R`.
+
+`H` and `R` are matrices of the same structured type as the state covariance (`Matrix`,
+`IsometricKroneckerProduct` or `BlocksOfDiagonals`). Another type of `H` works with
+[`update!`](@ref) if the internal `_update_mean!` and `_update_cov!` have methods for it, as
+the `SolutionObservation` of a `ScaledSelection` does with a block-diagonal covariance; a
+matrix-free operator would add such methods.
+"""
+struct LinearizedObservation{mT,zT,HT,RT}
+    m::mT
+    z::zT
+    H::HT
+    R::RT
+end
+LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
+
+"""
+    data_observation(cache, H, y, R=nothing)
+
+The [`LinearizedObservation`](@ref) of data `y = H x + v`, `v ~ N(0, R)`, of the filter state
+`x` of `cache`. The model is linear, so its linearization at `m = 0` is exact:
+`h(x) - y = -y + H (x - 0)`, with `m = Zeros(D)` and `z = -y`.
+"""
+data_observation(cache, H, y, R=nothing) =
+    LinearizedObservation(Zeros{eltype(cache.x.μ)}(length(cache.x.μ)), -y, H, R)
+
+"""
+    update(x, obs::LinearizedObservation)
+
+[`update`](@ref) on the observation `obs`, with dense matrices: the measurement is
+``\\mathcal{N}(\\hat{z}, S)`` with ``\\hat{z} = z + H (μ - m)`` and ``S = H Σ H^T + R``.
+"""
+function update(x::Gaussian, obs::LinearizedObservation)
+    x = Gaussian(mean(x), Matrix(cov(x)))
+    return update(x, _dense_measurement(x, obs)...)
+end
+function update(x::SRGaussian, obs::LinearizedObservation)
+    x = Gaussian(mean(x), PSDMatrix(Matrix(x.Σ.R)))
+    return update(x, _dense_measurement(x, obs)...; R=obs.R)
+end
+function _dense_measurement(x, obs)
+    μ, Σ, H = mean(x), Matrix(cov(x)), Matrix(obs.H)
+    S = H * Σ * H'
+    isnothing(obs.R) || (S += Matrix(obs.R))
+    return Gaussian(obs.z + H * (μ - obs.m), S), H
+end
+
+"""
+    update!(x_out, x_pred, obs::LinearizedObservation; cache)
+
+Condition the Gaussian `x_pred` on the observation `obs`, write the result into `x_out`, and
+return the named tuple `(; loglikelihood, ztSinvz, S)`: the log-likelihood of the
+observation, the squared Mahalanobis distance ``\\hat{z}^T S^{-1} \\hat{z}`` of
+``\\hat{z} = z + H (μ - m)``, and its covariance `S = H Σ Hᵀ + R`, which is written into
+`cache.measurement.Σ`.
+
+This is [`update_mean!`](@ref) followed by [`update_cov!`](@ref). For an explicit `H`, it is
+the square-root Kalman update in Joseph form:
 ```math
 \\begin{aligned}
-K &= Σ^P H^T S^{-1}, \\\\
-μ^F &= μ + K (0 - \\hat{z}), \\\\
-\\sqrt{Σ}^F &= (I - KH) \\sqrt(Σ),
+S &= H Σ H^T + R, \\\\
+K &= Σ H^T S^{-1}, \\\\
+μ^F &= μ - K (z + H (μ - m)), \\\\
+Σ^F &= (I - K H) Σ (I - K H)^T + K R K^T.
 \\end{aligned}
 ```
-where ``\\sqrt{M}`` denotes the left square-root of a matrix M, i.e. ``M = \\sqrt{M} \\sqrt{M}^T``.
-
-To prevent allocations, write into caches `K_cache` and `M_cache`, both of size `D × D`,
-and `S_cache` of same type as `measurement.Σ`.
+`z + H (μ - m)` is the value of the linearization at the predicted mean ``μ``; it is `z` when
+`obs` is linearized at ``μ``. The square root of ``(I - K H) Σ (I - K H)^T`` is computed as
+``\\sqrt{Σ} - B K^T`` with ``B = \\sqrt{Σ} H^T``, in ``O(D^2 o)`` for an `o`-dimensional
+observation.
 
 See also: [`update`](@ref).
 """
-function update!(
+function update!(x_out, x_pred, obs::LinearizedObservation; cache)
+    (; loglikelihood, ztSinvz, S, K, B) = update_mean!(x_out, x_pred, obs; cache)
+    update_cov!(x_out, x_pred, obs, K, B; cache)
+    return (; loglikelihood, ztSinvz, S)
+end
+
+"""
+    update!(x, obs::LinearizedObservation; cache)
+
+Condition the Gaussian `x` on the observation `obs` in place: copy `x` to `cache.x_tmp` as
+the prediction, so neither `x` nor `obs.m` may be in `cache.x_tmp`, and call
+[`update!`](@ref) with the buffers of the solver's `cache` for the size of the observation,
+from `make_obssized_cache`. If `obs` is linearized at `x.μ`, which the update overwrites, it
+is moved to the copy. An observation of size 0 leaves `x` unchanged, with log-likelihood 0.
+"""
+function update!(x, obs::LinearizedObservation; cache)
+    o = length(obs.z)
+    if o == 0
+        T = eltype(x.μ)
+        return (; loglikelihood=zero(T), ztSinvz=zero(T), S=nothing)
+    end
+    x_pred = copy!(cache.x_tmp, x)
+    if obs.m === x.μ
+        obs = LinearizedObservation(x_pred.μ, obs.z, obs.H, obs.R)
+    end
+    return update!(x, x_pred, obs; cache=make_obssized_cache(cache; o))
+end
+
+"""
+    make_obssized_cache(cache; o)
+
+The buffers of `cache` that [`update!`](@ref) uses, sized for an `o`-dimensional
+observation: `cache` itself if `o` is the dimension `d` of the ODE, otherwise
+views (dense covariance) or the first `o` blocks (block-diagonal covariance). The Kronecker
+covariance only supports `o = d`.
+"""
+function make_obssized_cache(cache; o)
+    if o == cache.d
+        return cache
+    else
+        return make_obssized_cache(cache.covariance_factorization, cache; o)
+    end
+end
+function make_obssized_cache(::DenseCovariance, cache; o)
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement = cache
+    return (
+        K1=view(K1, :, 1:o),
+        C_dxd=view(C_dxd, 1:o, 1:o),
+        C_Dxd=view(C_Dxd, :, 1:o),
+        C_d=view(C_d, 1:o),
+        C_DxD=C_DxD,
+        measurement=Gaussian(view(measurement.μ, 1:o), view(measurement.Σ, 1:o, 1:o)),
+    )
+end
+function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
+    @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement = cache
+    first_blocks(M) = BlocksOfDiagonals(blocks(M)[1:o])
+    return (
+        K1=first_blocks(K1),
+        C_dxd=first_blocks(C_dxd),
+        C_Dxd=first_blocks(C_Dxd),
+        C_d=view(C_d, 1:o),
+        C_DxD=first_blocks(C_DxD),
+        measurement=Gaussian(view(measurement.μ, 1:o), first_blocks(measurement.Σ)),
+    )
+end
+
+"""
+    update_mean!(x_out, x_pred, obs::LinearizedObservation; cache)
+    update_mean!(x_out, x_pred, obs::LinearizedObservation,
+                 K1_cache, K2_cache, measurement_cache, C_dxd, C_d)
+
+The mean of [`update!`](@ref): write ``μ^F`` into `x_out.μ`, and return the named tuple
+`(; loglikelihood, ztSinvz, S, K, B)` with the gain `K` and `B = √Σ Hᵀ` for
+[`update_cov!`](@ref).
+An iterated update calls it for each linearization and [`update_cov!`](@ref) only for the
+last one. The second form takes the buffers explicitly; the first takes them from `cache`,
+and writes `S` into `cache.measurement.Σ`, `K` into `cache.C_Dxd` and `B` into
+`cache.K1`. If `obs.m` is not `x_pred.μ`, it also writes `z + H (μ - m)` into
+`cache.measurement.μ` and uses `x_out.μ` and `cache.C_d` as workspace, so `obs.z` must not be
+any of these.
+"""
+function update_mean!(
+    x_out,
+    x_pred,
+    obs::LinearizedObservation,
+    K1_cache,
+    K2_cache,
+    measurement_cache,
+    C_dxd,
+    C_d,
+)
+    (; m, H, R) = obs
+    # z + H (μ - m) = z - H (m - μ), with x_out.μ and C_d as buffers
+    z = if m === x_pred.μ
+        obs.z
+    else
+        Δ = x_out.μ .= m .- x_pred.μ
+        measurement_cache.μ .= obs.z .- _matmul!(C_d, H, Δ)
+    end
+    return _update_mean!(x_out, x_pred, z, H, R, K1_cache, K2_cache, measurement_cache.Σ,
+        C_dxd, C_d)
+end
+function update_mean!(x_out, x_pred, obs::LinearizedObservation; cache)
+    @unpack K1, C_Dxd, measurement, C_dxd, C_d = cache
+    return update_mean!(x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d)
+end
+
+function _update_mean!(
     x_out::SRGaussian,
     x_pred::SRGaussian,
-    measurement::Gaussian,
+    z::AbstractVecOrMat,
     H::AbstractMatrix,
+    R::Union{Nothing,PSDMatrix},
     K1_cache::AbstractMatrix,
     K2_cache::AbstractMatrix,
-    M_cache::AbstractMatrix,
+    S_cache::AbstractMatrix,
     C_dxd::AbstractMatrix,
-    C_d::AbstractArray;
-    R::Union{Nothing,PSDMatrix}=nothing,
+    C_d::AbstractArray,
 )
-    z, S = measurement.μ, measurement.Σ
     m_p, P_p = x_pred.μ, x_pred.Σ
 
+    # S = K1ᵀ K1 + R with K1 = √Σ Hᵀ
+    K1 = _matmul!(K1_cache, P_p.R, H')
+    S = _matmul!(S_cache, K1', K1)
+    isnothing(R) || add!(S, _matmul!(C_dxd, R.R', R.R))
+
     if (isnothing(R) || iszero(R)) && iszero(P_p)
-        copy!(x_out, x_pred)
-        if iszero(z)
-            return x_out, convert(eltype(z), Inf)
-        else
-            return x_out, convert(eltype(z), -Inf)
-        end
+        copy!(x_out.μ, m_p)
+        loglikelihood = convert(eltype(z), iszero(z) ? Inf : -Inf)
+        ztSinvz = convert(eltype(z), iszero(z) ? 0 : Inf)
+        return (; loglikelihood, ztSinvz, S, K=fill!(K2_cache, 0), B=K1)
     end
 
-    D = size(m_p, 1)
-
-    # K = P_p * H' / S
-    _S = if S isa PSDMatrix
-        _matmul!(C_dxd, S.R', S.R)
-    else
-        copy!(C_dxd, S)
-    end
-
-    K = if P_p isa PSDMatrix
-        _matmul!(K1_cache, P_p.R, H')
-        _matmul!(K2_cache, P_p.R', K1_cache)
-    else
-        _matmul!(K2_cache, P_p, H')
-    end
-
-    _S = make_hermitian_if_fowarddiff(_S)
+    _S = make_hermitian_if_fowarddiff(copy!(C_dxd, S))
     S_chol = length(_S) == 1 ? _S[1] : cholesky!(_S)
-    rdiv!(K, S_chol)
+    K = rdiv!(_matmul!(K2_cache, P_p.R', K1), S_chol)
 
-    loglikelihood = zero(eltype(K))
-    loglikelihood = pn_logpdf!(measurement, S_chol, C_d)
+    (; loglikelihood, ztSinvz) = pn_logpdf!(C_d, z, S_chol)
 
-    # x_out.μ .= m_p .+ K * (0 .- z)
     x_out.μ .= m_p .- _matmul!(x_out.μ, K, z)
-
-    # M_cache .= I(D) .- mul!(M_cache, K, H)
-    _matmul!(M_cache, K, H, -1.0, 0.0)
-    @inbounds @simd ivdep for i in 1:D
-        M_cache[i, i] += 1
-    end
-
-    fast_X_A_Xt!(x_out.Σ, P_p, M_cache)
-
-    if !isnothing(R)
-        # M = Matrix(x_out.Σ) + K * Matrix(R) * K'
-        _matmul!(M_cache, x_out.Σ.R', x_out.Σ.R)
-        _matmul!(K1_cache, K, R.R')
-        _matmul!(M_cache, K1_cache, K1_cache', 1, 1)
-        chol = cholesky!(Symmetric(M_cache), check=false)
-        if issuccess(chol)
-            copy!(x_out.Σ.R, chol.U)
-        else
-            x_out.Σ.R .= triangularize!([x_out.Σ.R; K1_cache']; cachemat=M_cache)
-        end
-    end
-
-    return x_out, loglikelihood
+    return (; loglikelihood, ztSinvz, S, K, B=K1)
 end
-function pn_logpdf!(measurement, S_chol, tmpmean)
-    μ = reshape(measurement.μ, :)
-    Σ = S_chol
-
-    d = length(μ)
-    z = ldiv!(Σ, copy!(tmpmean, μ))
-
-    # With a Kronecker covariance `S ⊗ I`, `μ` stacks `d ÷ size(S, 1)` independent columns
-    return -0.5 * μ'z - 0.5 * d * log(2π) - 0.5 * (d ÷ size(Σ, 1)) * logdet(Σ)
+function pn_logpdf!(v, z, S_chol)
+    μ = reshape(z, :)
+    w = ldiv!(S_chol, copy!(reshape(v, :), μ))
+    n = length(μ)
+    ztSinvz = μ'w
+    # With a Kronecker covariance `S ⊗ I`, `μ` stacks `n ÷ size(S, 1)` independent columns
+    loglikelihood =
+        -0.5 * ztSinvz - 0.5 * n * log(2π) -
+        0.5 * (n ÷ size(S_chol, 1)) * logdet(S_chol)
+    return (; loglikelihood, ztSinvz)
 end
-
-function update!(
+function _update_mean!(
     x_out::SRGaussian{T,<:IsometricKroneckerProduct},
     x_pred::SRGaussian{T,<:IsometricKroneckerProduct},
-    measurement::Gaussian{
-        <:AbstractVector,<:Union{<:KroneckerPSD{T},<:IsometricKroneckerProduct}},
+    z::AbstractVector,
     H::IsometricKroneckerProduct,
+    R::Union{Nothing,KroneckerPSD},
     K1_cache::IsometricKroneckerProduct,
     K2_cache::IsometricKroneckerProduct,
-    M_cache::IsometricKroneckerProduct,
+    S_cache::IsometricKroneckerProduct,
     C_dxd::IsometricKroneckerProduct,
-    C_d::AbstractVector;
-    R::Union{Nothing,KroneckerPSD{T}}=nothing,
+    C_d::AbstractVector,
 ) where {T}
     d = H.rdim
-    args = (x_out, x_pred, measurement, H, K1_cache, K2_cache, M_cache, C_dxd)
-    # `C_d` is workspace for the flattened measurement, so it is not converted
-    _, loglikelihood = update!(
-        map(x -> _kronecker_factor(x, d), args)..., C_d; R=_kronecker_factor(R, d))
-    return x_out, loglikelihood
+    args = (x_out, x_pred, z, H, R, K1_cache, K2_cache, S_cache, C_dxd)
+    # `C_d` is workspace for the flattened residual, so it is not converted
+    (; loglikelihood, ztSinvz) =
+        _update_mean!(map(x -> _kronecker_factor(x, d), args)..., C_d)
+    return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
 end
-function update!(
+function _update_mean!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},
     x_pred::SRGaussian{T,<:BlocksOfDiagonals},
-    measurement::Gaussian{
-        <:AbstractVector,<:Union{<:BlocksOfDiagonalsPSD{T},<:BlocksOfDiagonals}},
+    z::AbstractVector,
     H::BlocksOfDiagonals,
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
     K1_cache::BlocksOfDiagonals,
     K2_cache::BlocksOfDiagonals,
-    M_cache::BlocksOfDiagonals,
+    S_cache::BlocksOfDiagonals,
     C_dxd::BlocksOfDiagonals,
-    C_d::AbstractVector;
-    R::Union{Nothing,BlocksOfDiagonalsPSD{T}}=nothing,
+    C_d::AbstractVector,
 ) where {T}
     d = nblocks(H)
-    args = (x_out, x_pred, measurement, H, K1_cache, K2_cache, M_cache, C_dxd, C_d)
-    loglikelihood = zero(T)
+    args = (x_out, x_pred, z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
+    loglikelihood, ztSinvz = zero(T), zero(T)
     for i in 1:d
-        _, ll = update!(
-            map(x -> _diagonal_block(x, i, d), args)...; R=_diagonal_block(R, i, d))
-        loglikelihood += ll
+        block = _update_mean!(map(x -> _diagonal_block(x, i, d), args)...)
+        loglikelihood += block.loglikelihood
+        ztSinvz += block.ztSinvz
     end
-    return x_out, loglikelihood
+    return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
 end
 
-# Short-hand with cache
-function update!(x_out, x, measurement, H; cache, R=nothing)
-    @unpack K1, m_tmp, C_DxD, C_dxd, C_Dxd, C_d = cache
-    K2 = C_Dxd
-    return update!(x_out, x, measurement, H, K1, K2, C_DxD, C_dxd, C_d; R)
+"""
+    update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B; cache)
+    update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B, M_cache, KR_cache)
+
+The covariance of [`update!`](@ref): write ``Σ^F`` into `x_out.Σ`, for the gain `K` and
+`B = √Σ Hᵀ` that [`update_mean!`](@ref) returned for the same `x_pred` and `obs`.
+"""
+function update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B, M_cache, KR_cache)
+    _update_cov!(x_out.Σ, x_pred.Σ, obs.H, obs.R, K, B, M_cache, KR_cache)
+    return x_out
+end
+update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B; cache) =
+    update_cov!(x_out, x_pred, obs, K, B, cache.C_DxD, cache.K1)
+
+function _update_cov!(
+    Σ_out::PSDMatrix,
+    Σ_pred::PSDMatrix,
+    H::AbstractMatrix,
+    R::Union{Nothing,PSDMatrix},
+    K::AbstractMatrix,
+    B::AbstractMatrix,
+    M_cache::AbstractMatrix,
+    KR_cache::AbstractMatrix,
+)
+    if (isnothing(R) || iszero(R)) && iszero(Σ_pred)
+        copy!(Σ_out.R, Σ_pred.R)
+        return Σ_out
+    end
+
+    # √Σ (I - K H)ᵀ = √Σ - B Kᵀ
+    _matmul!(copy!(Σ_out.R, Σ_pred.R), B, K', -1.0, 1.0)
+
+    if !isnothing(R)
+        # Σ^F = √Σ^Fᵀ √Σ^F + KR KRᵀ with KR = K √Rᵀ
+        M = _matmul!(M_cache, Σ_out.R', Σ_out.R)
+        KR = _matmul!(KR_cache, K, R.R')
+        _matmul!(M, KR, KR', 1, 1)
+        chol = cholesky!(Symmetric(M), check=false)
+        if issuccess(chol)
+            copy!(Σ_out.R, chol.U)
+        else
+            Σ_out.R .= triangularize!([Σ_out.R; KR']; cachemat=M)
+        end
+    end
+
+    return Σ_out
+end
+function _update_cov!(
+    Σ_out::KroneckerPSD,
+    Σ_pred::KroneckerPSD,
+    H::IsometricKroneckerProduct,
+    R::Union{Nothing,KroneckerPSD},
+    K::IsometricKroneckerProduct,
+    B::IsometricKroneckerProduct,
+    M_cache::IsometricKroneckerProduct,
+    KR_cache::IsometricKroneckerProduct,
+)
+    on_kronecker_factors(
+        _update_cov!, H.rdim, Σ_out, Σ_pred, H, R, K, B, M_cache, KR_cache)
+    return Σ_out
+end
+function _update_cov!(
+    Σ_out::BlocksOfDiagonalsPSD,
+    Σ_pred::BlocksOfDiagonalsPSD,
+    H::BlocksOfDiagonals,
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K::BlocksOfDiagonals,
+    B::BlocksOfDiagonals,
+    M_cache::BlocksOfDiagonals,
+    KR_cache::BlocksOfDiagonals,
+)
+    foreach_diagonal_block(
+        _update_cov!, nblocks(H), Σ_out, Σ_pred, H, R, K, B, M_cache, KR_cache)
+    return Σ_out
+end
+
+# With a block-diagonal covariance, a `ScaledSelection` observation decouples into one scalar
+# observation `m[k] eᵢᵀ x_{dims[k]}` per row `k`, each of a single state block. So the update
+# is one scalar update per observed block, and unobserved blocks keep the prediction.
+function _update_mean!(
+    x_out::SRGaussian{T,<:BlocksOfDiagonals},
+    x_pred::SRGaussian{T,<:BlocksOfDiagonals},
+    z::AbstractVector,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K1_cache::BlocksOfDiagonals,
+    K2_cache::BlocksOfDiagonals,
+    S_cache::BlocksOfDiagonals,
+    C_dxd::BlocksOfDiagonals,
+    C_d::AbstractVector,
+) where {T}
+    d, o = nblocks(x_out.Σ.R), length(H.M.dims)
+    o < d && copy!(x_out.μ, x_pred.μ)
+    args = (z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
+    loglikelihood, ztSinvz = zero(T), zero(T)
+    for (k, i) in enumerate(H.M.dims)
+        block = _update_mean!(
+            _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+        loglikelihood += block.loglikelihood
+        ztSinvz += block.ztSinvz
+    end
+    return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
+end
+function _update_cov!(
+    Σ_out::BlocksOfDiagonalsPSD,
+    Σ_pred::BlocksOfDiagonalsPSD,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K::BlocksOfDiagonals,
+    B::BlocksOfDiagonals,
+    M_cache::BlocksOfDiagonals,
+    KR_cache::BlocksOfDiagonals,
+)
+    d, o = nblocks(Σ_out.R), length(H.M.dims)
+    o < d && copy!(Σ_out.R, Σ_pred.R)
+    args = (H, R, K, B, M_cache, KR_cache)
+    for (k, i) in enumerate(H.M.dims)
+        _update_cov!(_diagonal_block(Σ_out, i, d), _diagonal_block(Σ_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+    end
+    return Σ_out
 end

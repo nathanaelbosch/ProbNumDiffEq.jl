@@ -1,12 +1,11 @@
-function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-15)
-    m, C = mean(cache.x), cov(cache.x)
+function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
+    x_pred = cache.x
 
     # Skip update if cov is exactly zero
-    iszero(C.R) && return nothing
+    iszero(x_pred.Σ.R) && return nothing
 
     @unpack SolProj, tmp, x_tmp, x_tmp2 = cache
-    D = cache.d * (cache.q + 1)
-    z_tmp = residualf(mul!(tmp, SolProj, m))
+    z_tmp = residualf(mul!(tmp, SolProj, x_pred.μ))
     result = DiffResults.JacobianResult(z_tmp, tmp)
     d = length(z_tmp)
     d <= cache.d || throw(
@@ -15,60 +14,36 @@ function manifoldupdate!(cache, residualf; maxiters=100, ϵ₁=1e-25, ϵ₂=1e-1
             "only $(cache.d)-dimensional; `ManifoldUpdate` requires " *
             "`length(residual(u)) <= length(u)`."))
 
-    _H = view(cache.H, 1:d, :)
-    _K1 = view(cache.C_2DxD, 1:D, 1:d)
-    _K2 = view(cache.C_2DxD, (D+1):(2D), 1:d)
-    S = PSDMatrix(view(cache.C_Dxd, :, 1:d))
-    S_gram = view(cache.C_dxd, 1:d, 1:d)
+    H = view(cache.H, 1:d, :)
+    obs_cache = make_obssized_cache(cache; o=d)
 
-    m_tmp, C_tmp = mean(x_tmp), cov(x_tmp)
+    steptol = isnothing(steptol) ? sqrt(eps(eltype(x_pred.μ))) : steptol
 
-    m_i = copy!(mean(x_tmp2), m)
+    # Linearize at the current iterate m_i, and update the prediction
+    x_out = x_tmp
+    m_i = x_pred.μ
     for i in 1:maxiters
         u_i = mul!(tmp, SolProj, m_i)
-
         ForwardDiff.jacobian!(result, residualf, u_i)
-        z = DiffResults.value(result)
-        J = DiffResults.jacobian(result)
+        mul!(H, DiffResults.jacobian(result), SolProj)
+        obs = LinearizedObservation(m_i, DiffResults.value(result), H)
 
-        mul!(_H, J, SolProj)
-        fast_X_A_Xt!(S, C, _H)  # S.R = C.R * H'
+        (; S, K, B) = try
+            update_mean!(x_out, x_pred, obs; cache=obs_cache)
+        catch e
+            e isa PosDefException ? manifold_rankerror(u_i) : rethrow()
+        end
+        length(S) == 1 && iszero(S[1]) && manifold_rankerror(u_i)
 
-        # m_i_new, C_i_new = update(x, Gaussian(z .+ (H * (m - m_i)), S), H)
-        S_chol = cholesky_or_rankerror!(
-            make_hermitian_if_fowarddiff(_matmul!(S_gram, S.R', S.R)), u_i)
-        copyto!(_K1, S.R)
-        rdiv!(_K1, S_chol)
-        K = _matmul!(_K2, C.R', _K1)
-
-        m_tmp .= m_i .- m
-        mul!(z_tmp, _H, m_tmp)
-        z_tmp .-= z
-        mul!(m_tmp, K, z_tmp)
-        m_i_new = m_tmp .+= m
-
-        if (norm(z) < ϵ₂ && norm(m_i_new .- m_i) < ϵ₁) || (i == maxiters)
-            # C_tmp.R = C.R * (I - K * H)' = C.R - S.R * K'
-            copy!(C_tmp.R, C.R)
-            _matmul!(C_tmp.R, S.R, K', -1.0, 1.0)
+        if norm(x_out.μ .- m_i) <= steptol * norm(x_out.μ) || i == maxiters
+            update_cov!(x_out, x_pred, obs, K, B; cache=obs_cache)
             break
         end
-        m_i = m_i_new
+        m_i = copy!(x_tmp2.μ, x_out.μ)
     end
 
-    copy!(cache.x, Gaussian(m_tmp, C_tmp))
-
+    copy!(cache.x, x_out)
     return nothing
-end
-
-function cholesky_or_rankerror!(S, u)
-    if length(S) == 1
-        iszero(S[1]) && manifold_rankerror(u)
-        return S[1]
-    end
-    chol = cholesky!(Symmetric(S), check=false)
-    issuccess(chol) || manifold_rankerror(u)
-    return chol
 end
 
 manifold_rankerror(u) = throw(
@@ -81,7 +56,7 @@ manifold_rankerror(u) = throw(
 )
 
 """
-    ManifoldUpdate(residual::Function)
+    ManifoldUpdate(residual::Function; maxiters=100, steptol=sqrt(eps(T)))
 
 Update the state to satisfy a zero residual function via iterated extended Kalman filtering.
 
@@ -99,18 +74,21 @@ Its Jacobian must have full row rank.
 # Additional keyword arguments
 - `maxiters::Int`: Maximum number of IEKF iterations.
   Setting this to 1 results in a single standard EKF update.
+- `steptol`: The iteration stops once a step changes the mean of the state by at most
+  `steptol` relative to it. The iteration converges quadratically, so the default, the
+  square root of the machine epsilon of the state's element type `T`, leaves an error at
+  the level of the machine epsilon.
 """
 function ManifoldUpdate(
     residual::Function,
     args...;
     maxiters=100,
-    ϵ₁=1e-25,
-    ϵ₂=1e-15,
+    steptol=nothing,
     kwargs...,
 )
     condition(u, t, integ) = true
     affect!(integ) = begin
-        manifoldupdate!(integ.cache, residual; maxiters=maxiters, ϵ₁=ϵ₁, ϵ₂=ϵ₂)
+        manifoldupdate!(integ.cache, residual; maxiters, steptol)
         mul!(view(integ.u, :), integ.cache.SolProj, integ.cache.x.μ)
     end
     return DiscreteCallback(condition, affect!, args...; kwargs...)

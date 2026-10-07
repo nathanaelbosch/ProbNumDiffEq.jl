@@ -141,56 +141,29 @@ function initial_update!(integ, cache)
 end
 
 """
-    init_condition_on!(x, H, data, cache)
+    derivative_observation(cache, M, i, y)
 
-Condition `x` on `data` with linear measurement function `H`. Used only for initialization.
-
-Rows of `H` that are zero, such as those of `M * Proj(o)` for a mass matrix `M` with zero
-rows, are treated as unobserved; see [`_unobserve_zero_rows!`](@ref).
-
-Don't use this as a Kalman update! The function has quite a few assumptions, that only
-really work out in the specific context of initialization. If you actually want to update,
-use [`update`](@ref) or [`update!`](@ref).
+The [`data_observation`](@ref) `M u⁽ⁱ⁾ = y` of the `i`-th derivative `u⁽ⁱ⁾` of the solution,
+for the mass matrix `M`, without the zero rows of `M`. These rows, the algebraic equations of
+a DAE, say nothing about `u⁽ⁱ⁾` and would make `S = H Σ Hᵀ` singular. If all rows of `M` are
+zero, the observation is empty, and [`update!`](@ref) leaves the state unchanged.
 """
-function init_condition_on!(
-    x::SRGaussian,
-    H::AbstractMatrix,
-    data::AbstractVector,
-    cache,
-)
-    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, m_tmp, C_d = cache
-
-    # measurement mean
-    _matmul!(m_tmp.μ, H, x.μ)
-    m_tmp.μ .-= data
-
-    # measurement cov
-    _matmul!(C_Dxd, x.Σ.R, H')
-    _matmul!(m_tmp.Σ, C_Dxd', C_Dxd)
-    _unobserve_zero_rows!(m_tmp.Σ, H)
-    copy!(x_tmp, x)
-    update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
+function derivative_observation(cache, M, i, y)
+    H, rows = _derivative_observation(cache.covariance_factorization, cache, M, i)
+    return data_observation(cache, H, view(y, rows))
 end
-
-"""
-    _unobserve_zero_rows!(S, H)
-
-Set `S[i, i] = 1` for every zero row `i` of `H`, so that the update with measurement
-covariance `S = H Σ Hᵀ` ignores the measurements in these rows.
-
-A zero row `i` of `H` makes row and column `i` of `S` zero, so `S` is singular. With
-`S[i, i] = 1`, `S` can be factorized, and column `i` of the gain `Σ Hᵀ S⁻¹` is zero, so the
-mean and covariance are updated only on the other rows.
-"""
-function _unobserve_zero_rows!(S::AbstractMatrix, H::AbstractMatrix)
-    for i in axes(H, 1)
-        if iszero(view(H, i, :))
-            S[i, i] = 1
-        end
-    end
-    return S
+# `H` for the nonzero `rows` of `M`
+function _derivative_observation(::DenseCovariance, cache, M, i)
+    H = M * cache.Proj(i)
+    rows = findall(!iszero, eachrow(H))
+    return length(rows) == cache.d ? H : H[rows, :], rows
 end
-_unobserve_zero_rows!(S::IsometricKroneckerProduct, H::IsometricKroneckerProduct) =
-    (on_kronecker_factors(_unobserve_zero_rows!, H.rdim, S, H); S)
-_unobserve_zero_rows!(S::BlocksOfDiagonals, H::BlocksOfDiagonals) =
-    (foreach_diagonal_block(_unobserve_zero_rows!, nblocks(H), S, H); S)
+_derivative_observation(::IsometricKroneckerCovariance, cache, M::UniformScaling, i) =
+    M * cache.Proj(i), iszero(M.λ) ? (1:0) : (1:cache.d)
+function _derivative_observation(C::BlockDiagonalCovariance, cache, M, i)
+    m = M isa UniformScaling ? fill(M.λ, cache.d) : M.diag
+    rows = findall(!iszero, m)
+    length(rows) == cache.d && return M * cache.Proj(i), rows
+    H = SolutionObservation(ScaledSelection(m[rows], rows, cache.d), cache.q, i)
+    return to_factorized_matrix(C, H), rows
+end

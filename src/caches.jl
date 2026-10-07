@@ -43,7 +43,6 @@ mutable struct EKCache{
     x_tmp::xType
     x_tmp2::xType
     measurement::measType
-    m_tmp::measType
     pu_tmp::puType
     H::HType
     du::duType
@@ -227,7 +226,6 @@ function OrdinaryDiffEqCore.alg_cache(
     x_filt = copy(x0)
     x_tmp = copy(x0)
     x_tmp2 = copy(x0)
-    m_tmp = copy(measurement)
     err_tmp = copy(du)
 
     # Things for calc_J
@@ -258,7 +256,7 @@ function OrdinaryDiffEqCore.alg_cache(
         P, PI, E0, E1, E2,
         u, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
-        measurement, m_tmp, pu_tmp,
+        measurement, pu_tmp,
         H, du, ddu, K,
         C_d, C_dxd, C_Dxd, C_DxD, C_2DxD, C_3DxD, C_2Dx2D,
         backward_kernel,
