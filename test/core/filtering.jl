@@ -221,7 +221,7 @@ update_cache(FAC, D, o) = (;
         @testset "Data at m = 0, against the residual at the mean" begin
             # `(-y) - H (0 - μ)` rounds exactly as `H μ - y`
             y = rand(o)
-            obs_data = PNDE.data_observation((; x=x_pred), H, y, R)
+            obs_data = PNDE.data_observation(H, y, R)
             @test obs_data.m isa Zeros
             obs_μ = PNDE.LinearizedObservation(
                 x_pred.μ, PNDE._matmul!(zeros(o), H, x_pred.μ) .- y, H, R)
@@ -265,6 +265,7 @@ end
     M = PNDE.ScaledSelection(m, dims, d)
     H = PNDE.SolutionObservation(M, q, i)
     H_dense = dense(M)
+    @test size(H) == size(H_dense)
     blockdiag(f, n) = BlocksOfDiagonals([f() for _ in 1:n])
     x_pred = Gaussian(
         rand(D),

@@ -1,0 +1,56 @@
+"""
+    LinearizedObservation(m, z, H, R=nothing)
+
+The observation ``y = h(x) + v``, ``v \\sim \\mathcal{N}(0, R)``, of the state ``x``,
+linearized at the point `m`:
+```math
+h(x) - y ≈ z + H (x - m).
+```
+A first-order Taylor expansion gives `z = h(m) - y`, the negative of the innovation, and the
+Jacobian `H = h'(m)`; the examples below make other choices. The data ``y`` enters only
+through `z`. `m` has the dimension of the state, `z` that of the observation. `R` is the
+noise covariance as a `PSDMatrix`, or `nothing` for an exact observation.
+
+[`update!`](@ref) evaluates the linearization at the mean ``μ`` of the state it conditions, as
+``z + H (μ - m)``, which is `z` if `m` is ``μ``.
+
+How `m`, `z` and `H` are obtained depends on the observation and on how it is linearized.
+Examples:
+- The ODE step observes ``y = 0`` through the residual ``h(x) = E_1 x - f(E_0 x, t)`` of the
+  ODE ``u' = f(u, t)``, linearized at the predicted mean ``μ``: `m = μ`, `z = h(μ)` and
+  `H = E_1 - J E_0`, where `J` is the Jacobian of `f` in the `EK1`, its diagonal in the
+  `DiagonalEK1`, and `0` in the `EK0`.
+- Data, as in `DataUpdateCallback` and Fenrir, is linear, ``y = C E_0 x + v``, so the
+  linearization is exact at any `m`. [`data_observation`](@ref) takes `m = 0`, which gives
+  `z = -y` and `H = C E_0`.
+- An iterated extended Kalman filter, as in `ManifoldUpdate`, conditions the same prediction
+  ``\\mathcal{N}(μ, Σ)`` in every iteration and linearizes ``h`` at the conditioned mean of
+  the previous iteration, so `m = μ` only in the first.
+- A statistical linearization (not implemented yet), as in an unscented Kalman filter,
+  linearizes over a distribution ``\\mathcal{N}(m, Σ)``: `z = E[h(x)] - y`,
+  `H = Cov[h(x), x] Σ⁻¹`, and the covariance of its linearization error is added to `R`.
+
+`H` and `R` are matrices of the same structured type as the state covariance (`Matrix`,
+`IsometricKroneckerProduct` or `BlocksOfDiagonals`). Another type of `H` works with
+[`update!`](@ref) if the internal `_update_mean!` and `_update_cov!` have methods for it, and
+`_matmul!` if `m` is not the mean, as for [`data_observation`](@ref), which also needs
+`size(H, 2)`. The `SolutionObservation` of a `ScaledSelection` has these methods for a
+block-diagonal covariance; a matrix-free operator would add them.
+"""
+struct LinearizedObservation{mT,zT,HT,RT}
+    m::mT
+    z::zT
+    H::HT
+    R::RT
+end
+LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
+
+"""
+    data_observation(H, y, R=nothing)
+
+The [`LinearizedObservation`](@ref) of data `y = H x + v`, `v ~ N(0, R)`, of the state `x`.
+The model is linear, so its linearization at `m = 0` is exact:
+`h(x) - y = -y + H (x - 0)`, with `m = Zeros(D)`, `D = size(H, 2)`, and `z = -y`.
+"""
+data_observation(H, y, R=nothing) =
+    LinearizedObservation(Zeros{eltype(y)}(size(H, 2)), -y, H, R)

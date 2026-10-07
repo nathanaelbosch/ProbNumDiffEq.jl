@@ -12,10 +12,10 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
     _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    update!(x, data_observation(cache, Proj(0), _u); cache)
+    update!(x, data_observation(Proj(0), _u); cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.stats.nf += 1
-    update!(x, data_observation(cache, Proj(1), view(du, :)); cache)
+    update!(x, data_observation(Proj(1), view(du, :)); cache)
 
     if q < 2
         return
@@ -41,7 +41,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> _f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        update!(x, data_observation(cache, Proj(2), ddfddu); cache)
+        update!(x, data_observation(Proj(2), ddfddu); cache)
         if q < 3
             return
         end
@@ -121,7 +121,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
             C_2Dx2D=cache.C_2Dx2D, diffusion=cache.default_diffusion)
         push!(backward_kernels, copy(backward_kernel))
 
-        update!(x_filt, x_pred, data_observation(cache, H, u); cache)
+        update!(x_filt, x_pred, data_observation(H, u); cache)
         push!(filts, copy(x_filt))
 
         x = x_filt

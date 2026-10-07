@@ -150,7 +150,7 @@ zero, the observation is empty, and [`update!`](@ref) leaves the state unchanged
 """
 function derivative_observation(cache, M, i, y)
     H, rows = _derivative_observation(cache.covariance_factorization, cache, M, i)
-    return data_observation(cache, H, view(y, rows))
+    return data_observation(H, view(y, rows))
 end
 # `H` for the nonzero `rows` of `M`
 function _derivative_observation(::DenseCovariance, cache, M, i)

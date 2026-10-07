@@ -72,7 +72,7 @@ function DataUpdateCallback(
             return nothing
         end
 
-        obs = data_observation(integ.cache, H, val, R)
+        obs = data_observation(H, val, R)
         ll = update!(integ.cache.x, obs; cache=integ.cache).loglikelihood
 
         if !isnothing(loglikelihood)

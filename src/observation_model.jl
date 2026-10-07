@@ -49,6 +49,8 @@ struct SolutionObservation{MT}
     derivative::Int
 end
 SolutionObservation(M, q) = SolutionObservation(M, q, 0)
+size(H::SolutionObservation{<:AbstractMatrix}) = (size(H.M, 1), size(H.M, 2) * (H.q + 1))
+size(H::SolutionObservation{<:AbstractMatrix}, k::Int) = size(H)[k]
 
 """
     ScaledSelection(m, dims, d)
@@ -101,8 +103,7 @@ to_factorized_matrix(
 to_factorized_matrix(::IsometricKroneckerCovariance, ::SolutionObservation) =
     kronecker_matrix_error()
 # `eᵢᵀ ⊗ Diagonal(m)` has the blocks `m[j] eᵢᵀ`. A `ScaledSelection` is kept as it is: its
-# row `k` reads only state block `dims[k]`, see the methods below and its update in
-# `filtering/update.jl`.
+# row `k` reads only state block `dims[k]`, see the methods below, including its update.
 to_factorized_matrix(
     C::BlockDiagonalCovariance{T}, H::SolutionObservation{<:UniformScaling},
 ) where {T} = BlocksOfDiagonals([_ei_row(T, C.q, H.derivative, H.M.λ) for _ in 1:C.d])
@@ -130,6 +131,54 @@ _diagonal_block(H::SolutionObservation{<:ScaledSelection}, k, o) =
     _ei_row(eltype(H.M), H.q, H.derivative, H.M.m[k])
 _matmul!(z::AbstractVector, H::SolutionObservation{<:ScaledSelection}, μ::AbstractVector) =
     z .= H.M.m .* view(μ, H.derivative * H.M.d .+ H.M.dims)
+
+# With a block-diagonal covariance, a `ScaledSelection` observation decouples into one scalar
+# observation `m[k] eᵢᵀ x_{dims[k]}` per row `k`, each of a single state block. So the update
+# is one scalar update per observed block, and unobserved blocks keep the prediction.
+function _update_mean!(
+    x_out::SRGaussian{T,<:BlocksOfDiagonals},
+    x_pred::SRGaussian{T,<:BlocksOfDiagonals},
+    z::AbstractVector,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K1_cache::BlocksOfDiagonals,
+    K2_cache::BlocksOfDiagonals,
+    S_cache::BlocksOfDiagonals,
+    C_dxd::BlocksOfDiagonals,
+    C_d::AbstractVector,
+) where {T}
+    d, o = nblocks(x_out.Σ.R), length(H.M.dims)
+    o < d && copy!(x_out.μ, x_pred.μ)
+    args = (z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
+    loglikelihood, ztSinvz = zero(T), zero(T)
+    for (k, i) in enumerate(H.M.dims)
+        block = _update_mean!(
+            _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+        loglikelihood += block.loglikelihood
+        ztSinvz += block.ztSinvz
+    end
+    return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
+end
+function _update_cov!(
+    Σ_out::BlocksOfDiagonalsPSD,
+    Σ_pred::BlocksOfDiagonalsPSD,
+    H::SolutionObservation{<:ScaledSelection},
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K::BlocksOfDiagonals,
+    B::BlocksOfDiagonals,
+    M_cache::BlocksOfDiagonals,
+    KR_cache::BlocksOfDiagonals,
+)
+    d, o = nblocks(Σ_out.R), length(H.M.dims)
+    o < d && copy!(Σ_out.R, Σ_pred.R)
+    args = (H, R, K, B, M_cache, KR_cache)
+    for (k, i) in enumerate(H.M.dims)
+        _update_cov!(_diagonal_block(Σ_out, i, d), _diagonal_block(Σ_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+    end
+    return Σ_out
+end
 
 nonpositive_noise_error() =
     throw(ArgumentError("The observation noise covariance must be positive definite."))
