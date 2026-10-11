@@ -93,14 +93,15 @@ needs_jacobian(prior::IOUP) = prior.update_rate_parameter
               pn_observation_noise=nothing, covariance_factorization=nothing,
               autodiff=AutoForwardDiff(), standardtag=true, concrete_jac=nothing)
 
-**Gaussian ODE filter**, the probabilistic ODE solver behind the [`EK0`](@ref), the
-[`EK1`](@ref) and the [`DiagonalEK1`](@ref). These are `ODEFilter`s with a fixed
-`linearization` and take all other keyword arguments below.
+**Gaussian ODE filter**, the primary class of probabilistic ODE solvers in ProbNumDiffEq.jl.
+Solvers such as [`EK0`](@ref), [`EK1`](@ref) and [`DiagonalEK1`](@ref) are short-hands
+for particular kinds of `ODEFilter`s. Using this constructor directly allows for the
+most flexibility.
 
 # Arguments
 - `linearization::AbstractLinearization`: How the ODE vector field is linearized:
-  [`ZeroJacobian()`](@ref ZeroJacobian), [`DiagonalJacobian()`](@ref DiagonalJacobian) or
-  [`FullJacobian()`](@ref FullJacobian).
+  `ZeroJacobian()` as in the [`EK0`](@ref), `DiagonalJacobian()` as in the
+  [`DiagonalEK1`](@ref), or `FullJacobian()` as in the [`EK1`](@ref).
 - `order::Integer`: Order of the default integrated Wiener process (IWP) prior.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, an `order`-times integrated Wiener process prior `IWP(order)`.
@@ -213,13 +214,14 @@ Whenever possible this solver will use a Kronecker-factored implementation to ac
 linear scaling and to get the best runtimes. This can currently be done only with an
 `IWP` prior (default), with a scalar diffusion model (either `DynamicDiffusion` or
 `FixedDiffusion`). Otherwise it uses block-diagonal covariances, which also scale linearly,
-for example with a multivariate diffusion model or a `Diagonal` mass matrix. _Settings that
-only dense covariances can represent, such as an `IOUP` or `Matern` prior, throw an error
-unless you pass `covariance_factorization=DenseCovariance`; dense covariances scale
-cubically with the problem size._
+for example with a multivariate diffusion model or a `Diagonal` mass matrix.
 
-The `EK0` is the [`ODEFilter`](@ref) with `linearization=ZeroJacobian()`; see there for all
-keyword arguments.
+_Settings that only dense covariances can represent, such as an `IOUP` or `Matern` prior or
+a non-diagonal mass matrix, throw an error unless you pass
+`covariance_factorization=DenseCovariance`, as dense covariances scale cubically with the
+problem size._
+
+The `EK0` is the [`ODEFilter`](@ref) with `linearization=ZeroJacobian()`; see there for all keyword arguments.
 
 # Examples
 ```julia-repl
@@ -245,8 +247,7 @@ and it generally produces more expressive posterior covariances than the [`EK0`]
 However, as typical implicit ODE solvers it scales cubically with the ODE dimension [Krämer et al. (2022)](@cite krämer21highdim),
 so if you're solving a high-dimensional non-stiff problem you might want to give the [`EK0`](@ref) a try.
 
-The `EK1` is the [`ODEFilter`](@ref) with `linearization=FullJacobian()`; see there for all
-keyword arguments.
+The `EK1` is the [`ODEFilter`](@ref) with `linearization=FullJacobian()`; see there for all keyword arguments.
 
 # Examples
 ```julia-repl
@@ -270,9 +271,12 @@ EK1(; kwargs...) = ODEFilter(; linearization=FullJacobian(), kwargs...)
 A semi-implicit solver that approximates the Jacobian as diagonal, using a block-diagonal
 covariance representation to achieve linear scaling with the ODE dimension
 [Krämer et al. (2022)](@cite krämer21highdim). This makes it suitable for high-dimensional problems where
-the full [`EK1`](@ref) would be too expensive. Settings that only dense covariances can
-represent, such as an `IOUP` or `Matern` prior or a non-diagonal mass matrix, throw an error
-unless you pass `covariance_factorization=DenseCovariance`.
+the full [`EK1`](@ref) would be too expensive.
+
+_Settings that only dense covariances can represent, such as an `IOUP` or `Matern` prior or
+a non-diagonal mass matrix, throw an error unless you pass
+`covariance_factorization=DenseCovariance`, as dense covariances scale cubically with the
+problem size._
 
 !!! tip "Providing a Jacobian for linear scaling"
     For truly linear O(d) time and memory complexity, provide both a custom Jacobian
@@ -306,8 +310,8 @@ that provide improved stability by essentially solving the linear part of the OD
 In probabilistic numerics, this amounts to including the linear part into the prior model
 of the solver.
 
-`ExpEK` is therefore just a short-hand for [`EK0`](@ref) with [`IOUP`](@ref) prior, which
-needs dense covariances:
+`ExpEK` is therefore just a short-hand for [`EK0`](@ref) with [`IOUP`](@ref) prior and
+dense covariances:
 ```julia
 ExpEK(; order=3, L, kwargs...) =
     EK0(; prior=IOUP(order, L), covariance_factorization=DenseCovariance, kwargs...)
@@ -316,14 +320,16 @@ ExpEK(; order=3, L, kwargs...) =
 See also [`RosenbrockExpEK`](@ref), [`EK0`](@ref), [`EK1`](@ref).
 
 # Arguments
-See [`EK0`](@ref) for available keyword arguments.
+- `L`: Rate parameter of the [`IOUP`](@ref) prior, i.e. the linear part of the ODE.
+- `order::Integer`: Order of the [`IOUP`](@ref) prior.
+
+All other keyword arguments of [`ODEFilter`](@ref) are supported, except `prior`.
 
 # Examples
 ```julia-repl
 julia> prob = ODEProblem((du, u, p, t) -> (@. du = - u + sin(u)), [1.0], (0.0, 10.0))
 julia> solve(prob, ExpEK(L=-1))
 ```
-
 
 # Reference
 * [Bosch et al. (2023)](@cite bosch23expint) "Probabilistic Exponential Integrators", NeurIPS
@@ -351,7 +357,9 @@ RosenbrockExpEK(; order=3, kwargs...) = EK1(; prior=IOUP(order, update_rate_para
 See also [`ExpEK`](@ref), [`EK0`](@ref), [`EK1`](@ref).
 
 # Arguments
-See [`EK1`](@ref) for available keyword arguments.
+- `order::Integer`: Order of the [`IOUP`](@ref) prior.
+
+All other keyword arguments of [`ODEFilter`](@ref) are supported, except `prior`.
 
 # Examples
 ```julia-repl
@@ -403,11 +411,11 @@ estimates_per_dimension(diffusion) =
 """
     choose_covariance_structure(alg::ODEFilter, mass_matrix)
 
-The covariance structure for solving a problem with this `mass_matrix` with `alg`: its
-`covariance_factorization` if set, and otherwise the first of `IsometricKroneckerCovariance`,
-`BlockDiagonalCovariance` and `DenseCovariance` whose requirements all settings meet. Dense
-covariances are chosen automatically only for the `EK1`; the `EK0` and the `DiagonalEK1`
-use them only on request.
+The covariance structure for solving a problem with this `mass_matrix` with algorithm `alg`:
+its `covariance_factorization` if set, and otherwise the first of
+`IsometricKroneckerCovariance`, `BlockDiagonalCovariance` and `DenseCovariance` whose
+requirements all settings meet. Dense covariances are chosen automatically only for the
+`EK1`; the `EK0` and the `DiagonalEK1` use them only on request.
 """
 function choose_covariance_structure(alg::ODEFilter, mass_matrix)
     (; linearization, prior, diffusionmodel, pn_observation_noise) = alg

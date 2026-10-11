@@ -21,7 +21,7 @@ In particular:
 ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
 
 - **Algorithm:** `ODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm`
-  - `./src/algorithms.jl` provides the algorithm; `EK0`, `EK1` and `DiagonalEK1` are functions that return an `ODEFilter` and differ only in its `linearization`
+  - `./src/algorithms.jl` provides the algorithm; `EK0`, `EK1` and `DiagonalEK1` are functions that return different kinds of `ODEFilter`s.
   - `./src/alg_utils.jl` implements many traits (relating to automatic differentiation, step-size control, etc), from the fields of the `ODEFilter`
 - **Cache:** `EKCache <: AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache`
   - `./src/caches.jl` implements the cache and its main constructor: `OrdinaryDiffEq.alg_cache`

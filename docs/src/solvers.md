@@ -1,6 +1,6 @@
 # Solvers
 
-ProbNumDiffEq.jl provides three solvers: the [`EK1`](@ref), the [`DiagonalEK1`](@ref) and the [`EK0`](@ref). All three are [`ODEFilter`](@ref)s, based on extended Kalman filtering and smoothing, and differ in how they linearize the vector field: with its Jacobian, with the diagonal of its Jacobian, or without a Jacobian.
+ProbNumDiffEq.jl provides various probabilistic ODE solvers based on extended Kalman filtering and smoothing.
 
 **Which solver should I use?**
 - Use the [`EK1`](@ref) to get the best uncertainty quantification and to solve stiff problems.
@@ -17,9 +17,6 @@ EK1
 DiagonalEK1
 EK0
 ODEFilter
-ZeroJacobian
-DiagonalJacobian
-FullJacobian
 ```
 
 ### Probabilistic Exponential Integrators
