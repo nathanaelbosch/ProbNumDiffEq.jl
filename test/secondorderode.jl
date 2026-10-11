@@ -32,7 +32,7 @@ appxsol = solve(prob_base, Vern9(), abstol=1e-9, reltol=1e-6)
         EK1(),
         EK0(initialization=ForwardDiffInit(2)),
         EK1(initialization=ForwardDiffInit(2)),
-        # EK1(initialization=ClassicSolverInit()), # unstable for this problem
+        EK1(initialization=ClassicSolverInit(Tsit5())),
         EK1(diffusionmodel=FixedDiffusion()),
         EK0(diffusionmodel=FixedMVDiffusion()),
         EK0(diffusionmodel=DynamicMVDiffusion()),
@@ -52,4 +52,14 @@ appxsol = solve(prob_base, Vern9(), abstol=1e-9, reltol=1e-6)
 end
 @testset "ClassicSolverInit" begin
     @test_nowarn solve(prob_iip, EK1(initialization=ClassicSolverInit(Tsit5())))
+
+    @testset "Initial state of the $alg with order $q" for alg in (EK0, EK1, DiagonalEK1),
+        q in 1:3
+
+        integ = init(prob_iip, alg(order=q, initialization=ClassicSolverInit(Tsit5())))
+        μ, Proj = integ.cache.x.μ, integ.cache.Proj
+        @test Proj(0) * μ ≈ u0
+        @test Proj(1) * μ ≈ du0
+        q ≥ 2 && @test Proj(2) * μ ≈ -u0 / norm(u0)^3
+    end
 end
