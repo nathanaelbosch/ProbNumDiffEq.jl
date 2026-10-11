@@ -140,21 +140,10 @@ function initial_update!(integ, cache)
     return initial_update!(integ, cache, integ.alg.initialization)
 end
 
-"""
-    derivative_observation(cache, M, deriv, y)
-
-The [`linear_observation`](@ref) `M u⁽ⁱ⁾ = y` of the derivative `i = deriv` of the solution,
-for the mass matrix `M`, without the zero rows of `M`. These rows, the algebraic equations of
-a DAE, say nothing about `u⁽ⁱ⁾` and would make `S = H Σ Hᵀ` singular. If all rows of `M` are
-zero, `z` is empty, and [`update!`](@ref) leaves the state unchanged.
-"""
-function derivative_observation(cache, M, deriv, y)
-    M, rows = _nonzero_rows(M, cache.d)
-    H = solution_observation_matrix(cache.covariance_factorization, M, deriv)
-    return linear_observation(H, view(y, rows))
-end
-# `M` without its zero rows, and the indices of the remaining rows. Without any, `H` is not
-# used, so `M` is kept.
+# The mass matrix `M` without its zero rows, and the indices of the remaining rows. These rows,
+# the algebraic equations of a DAE, say nothing about the derivative `M u⁽ⁱ⁾` that an
+# initialization observes, and would make `S = H Σ Hᵀ` singular. Without any rows, the
+# observation is empty and `update!` returns before it uses `H`, so `M` is kept.
 _nonzero_rows(M::UniformScaling, d) = M, iszero(M.λ) ? (1:0) : (1:d)
 function _nonzero_rows(M::Diagonal, d)
     rows = findall(!iszero, M.diag)
