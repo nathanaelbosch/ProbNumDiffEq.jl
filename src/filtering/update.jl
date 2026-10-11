@@ -286,11 +286,11 @@ function _update_mean!(
     C_dxd::BlocksOfDiagonals,
     C_d::AbstractVector,
 ) where {T}
-    d, o = nblocks(x_out.Σ.R), length(H.dims)
+    d, o = nblocks(x_out.Σ.R), length(H.selected_dimensions)
     o < d && copy!(x_out.μ, x_pred.μ)
     args = (z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
     loglikelihood, ztSinvz = zero(T), zero(T)
-    for (k, i) in enumerate(H.dims)
+    for (k, i) in enumerate(H.selected_dimensions)
         block = _update_mean!(
             _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
             map(x -> _diagonal_block(x, k, o), args)...)
@@ -385,10 +385,10 @@ function _update_cov!(
     M_cache::BlocksOfDiagonals,
     KR_cache::BlocksOfDiagonals,
 )
-    d, o = nblocks(Σ_out.R), length(H.dims)
+    d, o = nblocks(Σ_out.R), length(H.selected_dimensions)
     o < d && copy!(Σ_out.R, Σ_pred.R)
     args = (H, R, K, B, M_cache, KR_cache)
-    for (k, i) in enumerate(H.dims)
+    for (k, i) in enumerate(H.selected_dimensions)
         _update_cov!(_diagonal_block(Σ_out, i, d), _diagonal_block(Σ_pred, i, d),
             map(x -> _diagonal_block(x, k, o), args)...)
     end

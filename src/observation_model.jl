@@ -32,21 +32,22 @@ _is_positive(cov::Diagonal) = all(>(0), cov.diag)
 _is_positive(cov::AbstractMatrix) = isposdef(Matrix(cov))
 
 """
-    ScaledSelection(m, dims, d)
+    ScaledSelection(scales, selected_dimensions, d)
 
-The `o×d` matrix `diag(m) * Π`, where `Π` consists of the rows `dims` of the `d×d` identity:
-row `k` has its only nonzero entry `m[k]` in column `dims[k]`, and no column is used twice.
-For `o = d` it is a generalized permutation matrix. As an observation matrix it observes
-`m[k] * u[dims[k]]`.
+The `o×d` matrix `diag(scales) * Π`, where `Π` consists of the rows `selected_dimensions` of
+the `d×d` identity: row `k` has its only nonzero entry `scales[k]` in column
+`selected_dimensions[k]`, and no column is used twice. For `o = d` it is a generalized
+permutation matrix. As an observation matrix it observes
+`scales[k] * u[selected_dimensions[k]]`.
 """
 struct ScaledSelection{T,V<:AbstractVector{T}} <: AbstractMatrix{T}
-    m::V
-    dims::Vector{Int}
+    scales::V
+    selected_dimensions::Vector{Int}
     d::Int
 end
-size(M::ScaledSelection) = (length(M.dims), M.d)
+size(M::ScaledSelection) = (length(M.selected_dimensions), M.d)
 Base.getindex(M::ScaledSelection, k::Int, i::Int) =
-    M.dims[k] == i ? M.m[k] : zero(eltype(M))
+    M.selected_dimensions[k] == i ? M.scales[k] : zero(eltype(M))
 
 # `M` in its most structured type
 _structured(M::Number) = M * I
@@ -55,9 +56,10 @@ _structured(M::Diagonal) = M
 function _structured(M::AbstractMatrix)
     nonzeros = [findall(!iszero, row) for row in eachrow(M)]
     all(nz -> length(nz) == 1, nonzeros) || return M
-    dims = only.(nonzeros)
-    allunique(dims) || return M
-    return ScaledSelection([M[k, i] for (k, i) in enumerate(dims)], dims, size(M, 2))
+    selected_dimensions = only.(nonzeros)
+    allunique(selected_dimensions) || return M
+    scales = [M[k, i] for (k, i) in enumerate(selected_dimensions)]
+    return ScaledSelection(scales, selected_dimensions, size(M, 2))
 end
 
 _has_zero_row(M::UniformScaling) = iszero(M.λ)
@@ -105,7 +107,11 @@ solution_observation_matrix(
 solution_observation_matrix(
     C::BlockDiagonalCovariance{T}, M::ScaledSelection; deriv=0,
 ) where {T} =
-    BlocksOfScaledSelections([_ei_row(T, C.q, deriv, m) for m in M.m], M.dims, C.d)
+    BlocksOfScaledSelections(
+        [_ei_row(T, C.q, deriv, m) for m in M.scales],
+        M.selected_dimensions,
+        C.d,
+    )
 solution_observation_matrix(::BlockDiagonalCovariance, M; deriv=0) = selection_error()
 
 _noise_fits(::DenseCovariance, noise_cov) = true

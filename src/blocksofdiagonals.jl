@@ -390,7 +390,7 @@ end
 const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}
 
 """
-    BlocksOfScaledSelections(blocks, dims, d)
+    BlocksOfScaledSelections(blocks, selected_dimensions, d)
 
 A block matrix whose blocks are scaled selection matrices.
 
@@ -401,33 +401,35 @@ keeping the covariance block-diagonal and the whole computation efficient (i.e. 
 scaling in the ODE dimension).
 
 It behaves like a [`BlocksOfDiagonals`](@ref) matrix with `d` blocks, but instead of having
-one for each state dimension only the dimensions `dims` have a block as all other dimensions
-are not observed. The `dims` must be distinct, and the `blocks` of equal size.
+one for each state dimension only the `selected_dimensions` have a block as all other
+dimensions are not observed. The `selected_dimensions` must be distinct, and the `blocks` of
+equal size.
 """
 struct BlocksOfScaledSelections{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}
-    dims::Vector{Int}
+    selected_dimensions::Vector{Int}
     d::Int
     function BlocksOfScaledSelections(
-        blocks::Vector{V}, dims, d,
+        blocks::Vector{V}, selected_dimensions, d,
     ) where {T,V<:AbstractMatrix{T}}
-        @assert !isempty(blocks) && length(blocks) == length(dims)
+        @assert !isempty(blocks) && length(blocks) == length(selected_dimensions)
         @assert all(b -> size(b) == size(blocks[1]), blocks)
-        @assert allunique(dims) && all(in(1:d), dims)
-        return new{T,V}(blocks, dims, d)
+        @assert allunique(selected_dimensions) && all(in(1:d), selected_dimensions)
+        return new{T,V}(blocks, selected_dimensions, d)
     end
 end
-size(H::BlocksOfScaledSelections) = (length(H.dims), H.d) .* size(H.blocks[1])
+size(H::BlocksOfScaledSelections) =
+    (length(H.selected_dimensions), H.d) .* size(H.blocks[1])
 function Base.getindex(H::BlocksOfScaledSelections{T}, i::Integer, j::Integer) where {T}
     @boundscheck checkbounds(H, i, j)
-    o = length(H.dims)
+    o = length(H.selected_dimensions)
     k = mod1(i, o)
-    H.dims[k] == mod1(j, H.d) || return zero(T)
+    H.selected_dimensions[k] == mod1(j, H.d) || return zero(T)
     return H.blocks[k][cld(i, o), cld(j, H.d)]
 end
 function _matmul!(z::AbstractVector, H::BlocksOfScaledSelections, x::AbstractVector)
-    o = length(H.dims)
-    for (k, i) in enumerate(H.dims)
+    o = length(H.selected_dimensions)
+    for (k, i) in enumerate(H.selected_dimensions)
         _matmul!(view(z, k:o:length(z)), H.blocks[k], view(x, i:H.d:length(x)))
     end
     return z

@@ -255,9 +255,9 @@ end
     end
 
     # `M` observes `2 u⁽ⁱ⁾[3]` and `-u⁽ⁱ⁾[1]`, so dimension 2 keeps its prediction
-    m, dims = [2.0, -1.0], [3, 1]
-    o, D = length(dims), d * (q + 1)
-    M = PNDE.ScaledSelection(m, dims, d)
+    scales, selected_dimensions = [2.0, -1.0], [3, 1]
+    o, D = length(selected_dimensions), d * (q + 1)
+    M = PNDE.ScaledSelection(scales, selected_dimensions, d)
     C = PNDE.BlockDiagonalCovariance{Float64}(d, q)
     H = PNDE.solution_observation_matrix(C, M; deriv)
     H_dense = dense(M)
