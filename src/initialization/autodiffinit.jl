@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, init::AutodiffInitializationScheme)
     @unpack u, f, p, t = integ
-    @unpack q, x, Proj = cache
+    @unpack d, q, x = cache
 
     f = _unwrap_f(f)
 
@@ -14,14 +14,9 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
             df = df.x[2]
         end
 
-        df = view(df, :)
-
-        H = if o == 0
-            Proj(o)
-        else
-            f.mass_matrix * Proj(o)
-        end
-        init_condition_on!(x, H, df, cache)
+        M, rows = _nonzero_rows(o == 0 ? I : f.mass_matrix, d)
+        H = solution_observation_matrix(cache.covariance_factorization, M; deriv=o)
+        update!(x, linear_observation(H, view(df, rows)); cache)
     end
 end
 

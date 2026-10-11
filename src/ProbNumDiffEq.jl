@@ -11,7 +11,8 @@ import Base:
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
     UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
-    isdiag, isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!
+    isdiag, isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!,
+    PosDefException
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
 import Random: Random, AbstractRNG
@@ -48,7 +49,7 @@ using Octavian: matmul!
 import Kronecker
 using ArrayAllocators: calloc
 using FiniteHorizonGramians: FiniteHorizonGramians
-using FillArrays: FillArrays, Eye, Fill
+using FillArrays: FillArrays, Eye, Fill, Zeros
 using MatrixEquations: plyapc
 using DiffEqCallbacks: PresetTimeCallback
 using ADTypes: ADTypes, AutoForwardDiff, AutoSparse
@@ -135,6 +136,7 @@ include("integrator_utils.jl")
 include("filtering/markov_kernel.jl")
 include("filtering/structured_covariances.jl")
 include("filtering/predict.jl")
+include("filtering/linearized_observation.jl")
 include("filtering/update.jl")
 include("filtering/smooth.jl")
 include("measurement_models.jl")

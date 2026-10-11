@@ -140,57 +140,15 @@ function initial_update!(integ, cache)
     return initial_update!(integ, cache, integ.alg.initialization)
 end
 
-"""
-    init_condition_on!(x, H, data, cache)
-
-Condition `x` on `data` with linear measurement function `H`. Used only for initialization.
-
-Rows of `H` that are zero, such as those of `M * Proj(o)` for a mass matrix `M` with zero
-rows, are treated as unobserved; see [`_unobserve_zero_rows!`](@ref).
-
-Don't use this as a Kalman update! The function has quite a few assumptions, that only
-really work out in the specific context of initialization. If you actually want to update,
-use [`update`](@ref) or [`update!`](@ref).
-"""
-function init_condition_on!(
-    x::SRGaussian,
-    H::AbstractMatrix,
-    data::AbstractVector,
-    cache,
-)
-    @unpack x_tmp, K1, C_Dxd, C_DxD, C_dxd, m_tmp, C_d = cache
-
-    # measurement mean
-    _matmul!(m_tmp.μ, H, x.μ)
-    m_tmp.μ .-= data
-
-    # measurement cov
-    _matmul!(C_Dxd, x.Σ.R, H')
-    _matmul!(m_tmp.Σ, C_Dxd', C_Dxd)
-    _unobserve_zero_rows!(m_tmp.Σ, H)
-    copy!(x_tmp, x)
-    update!(x, x_tmp, m_tmp, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
+# Drop the zero rows of `M`, the algebraic equations of a DAE, as they make `S` singular.
+# Without any rows left, the observation is empty and `H` is unused.
+_nonzero_rows(M::UniformScaling, d) = M, iszero(M.λ) ? (1:0) : (1:d)
+function _nonzero_rows(M::Diagonal, d)
+    rows = findall(!iszero, M.diag)
+    return length(rows) in (0, d) ? M : ScaledSelection(M.diag[rows], rows, d), rows
 end
-
-"""
-    _unobserve_zero_rows!(S, H)
-
-Set `S[i, i] = 1` for every zero row `i` of `H`, so that the update with measurement
-covariance `S = H Σ Hᵀ` ignores the measurements in these rows.
-
-A zero row `i` of `H` makes row and column `i` of `S` zero, so `S` is singular. With
-`S[i, i] = 1`, `S` can be factorized, and column `i` of the gain `Σ Hᵀ S⁻¹` is zero, so the
-mean and covariance are updated only on the other rows.
-"""
-function _unobserve_zero_rows!(S::AbstractMatrix, H::AbstractMatrix)
-    for i in axes(H, 1)
-        if iszero(view(H, i, :))
-            S[i, i] = 1
-        end
-    end
-    return S
+function _nonzero_rows(M::AbstractMatrix, d)
+    rows = findall(!iszero, eachrow(M))
+    return length(rows) == size(M, 1) ? M : M[rows, :], rows
 end
-_unobserve_zero_rows!(S::IsometricKroneckerProduct, H::IsometricKroneckerProduct) =
-    (on_kronecker_factors(_unobserve_zero_rows!, H.rdim, S, H); S)
-_unobserve_zero_rows!(S::BlocksOfDiagonals, H::BlocksOfDiagonals) =
-    (foreach_diagonal_block(_unobserve_zero_rows!, nblocks(H), S, H); S)
+_nonzero_rows(M, d) = _nonzero_rows(convert(AbstractMatrix, M), d)

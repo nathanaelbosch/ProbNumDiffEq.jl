@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, ::ClassicSolverInit)
     @unpack u, f, p, t = integ
-    @unpack d, q, x, Proj = cache
+    @unpack q, x, E0, E1, E2 = cache
     @assert isinplace(f)
 
     if q > 5
@@ -11,11 +11,11 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
 
     # Initialize on u0; taking special care for DynamicalODEProblems
     is_secondorder = integ.f isa DynamicalODEFunction
-    _u = is_secondorder ? view(u.x[2], :) : view(u, :)
-    init_condition_on!(x, Proj(0), _u, cache)
+    _u = is_secondorder ? u.x[2] : u
+    update!(x, linear_observation(E0, view(_u, :)); cache)
     is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
     integ.stats.nf += 1
-    init_condition_on!(x, Proj(1), view(du, :), cache)
+    update!(x, linear_observation(E1, view(du, :)); cache)
 
     if q < 2
         return
@@ -41,7 +41,7 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
             ForwardDiff.jacobian!(ddu, (du, u) -> _f(du, u, p, t), du, u)
         end
         ddfddu = ddu * view(du, :) + view(dfdt, :)
-        init_condition_on!(x, Proj(2), ddfddu, cache)
+        update!(x, linear_observation(E2, ddfddu); cache)
         if q < 3
             return
         end
@@ -93,8 +93,8 @@ end
 function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
     @unpack A, Q = cache
     # @unpack Ah, Qh = cache
-    @unpack x, x_pred, x_filt, measurement, x_tmp = cache
-    @unpack K1, C_Dxd, C_DxD, C_dxd, C_3DxD, C_d = cache
+    @unpack x, x_pred, x_filt, x_tmp = cache
+    @unpack C_DxD, C_3DxD = cache
     @unpack backward_kernel = cache
 
     # Predict forward:
@@ -121,11 +121,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
             C_2Dx2D=cache.C_2Dx2D, diffusion=cache.default_diffusion)
         push!(backward_kernels, copy(backward_kernel))
 
-        measurement.μ .= H * x_pred.μ .- u
-        _matmul!(C_Dxd, x_pred.Σ.R, H')
-        _matmul!(measurement.Σ, C_Dxd', C_Dxd)
-
-        update!(x_filt, x_pred, measurement, H, K1, C_Dxd, C_DxD, C_dxd, C_d)
+        update!(x_filt, x_pred, linear_observation(H, u); cache)
         push!(filts, copy(x_filt))
 
         x = x_filt

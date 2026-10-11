@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, init::SimpleInit)
     @unpack u, f, p, t = integ
-    @unpack x, Proj = cache
+    @unpack x, d, E0 = cache
     du = integ.uprev
 
     f = _unwrap_f(f)
@@ -15,6 +15,8 @@ function initial_update!(integ, cache, init::SimpleInit)
         du = du.x[2]
     end
 
-    init_condition_on!(x, Proj(0), view(u, :), cache)
-    init_condition_on!(x, f.mass_matrix * Proj(1), view(du, :), cache)
+    update!(x, linear_observation(E0, view(u, :)); cache)
+    M, rows = _nonzero_rows(f.mass_matrix, d)
+    H = solution_observation_matrix(cache.covariance_factorization, M; deriv=1)
+    update!(x, linear_observation(H, view(du, rows)); cache)
 end

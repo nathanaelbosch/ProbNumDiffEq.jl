@@ -55,6 +55,7 @@ _on_diagonal_block(f, i, d, args, kwargs) = f(
 )
 
 _diagonal_block(M::BlocksOfDiagonals, i, d) = blocks(M)[i]
+_diagonal_block(H::BlocksOfScaledSelections, i, d) = H.blocks[i]
 _diagonal_block(v::AbstractVector, i, d) = view(v, i:d:length(v))
 _diagonal_block(D::Diagonal, i, d) = D.diag[i]
 _diagonal_block(M::PSDMatrix, i, d) = PSDMatrix(_diagonal_block(M.R, i, d))
