@@ -47,7 +47,7 @@ end
 
 Condition `x` on the observation `obs`, with dense copies of all matrices. This is
 `update(x, measurement, H)` with the measurement ``\\mathcal{N}(\\hat{z}, S)``, where
-``\\hat{z} = z + H (μ - m)`` and ``S = H Σ H^T + R``.
+``\\hat{z} = r + H (μ - m)`` and ``S = H Σ H^T + R``.
 """
 function update(x::Gaussian, obs::LinearizedObservation)
     x = Gaussian(mean(x), Matrix(cov(x)))
@@ -61,7 +61,7 @@ function _dense_measurement(x, obs)
     μ, Σ, H = mean(x), Matrix(cov(x)), Matrix(obs.H)
     S = H * Σ * H'
     isnothing(obs.R) || (S += Matrix(obs.R))
-    return Gaussian(obs.z + H * (μ - obs.m), S), H
+    return Gaussian(obs.r + H * (μ - obs.m), S), H
 end
 
 """
@@ -71,7 +71,7 @@ Condition the Gaussian `x_pred` on the observation `obs` and write the result in
 with the square-root Kalman update in Joseph form:
 ```math
 \\begin{aligned}
-\\hat{z} &= z + H (μ - m), \\\\
+\\hat{z} &= r + H (μ - m), \\\\
 S &= H Σ H^T + R, \\\\
 K &= Σ H^T S^{-1}, \\\\
 μ^F &= μ - K \\hat{z}, \\\\
@@ -99,14 +99,14 @@ solver's `cache`. `x` is first copied to `cache.x_tmp`, so neither `x` nor `obs.
 stored there, but `obs.m` may be `x.μ`. An observation of size 0 leaves `x` unchanged.
 """
 function update!(x, obs::LinearizedObservation; cache)
-    o = length(obs.z)
+    o = length(obs.r)
     if o == 0
         T = eltype(x.μ)
         return (; loglikelihood=zero(T), ztSinvz=zero(T), S=nothing)
     end
     x_pred = copy!(cache.x_tmp, x)
     if obs.m === x.μ
-        obs = LinearizedObservation(x_pred.μ, obs.z, obs.H, obs.R)
+        obs = LinearizedObservation(x_pred.μ, obs.r, obs.H, obs.R)
     end
     return update!(x, x_pred, obs; cache=make_obssized_cache(cache; o))
 end
@@ -158,7 +158,7 @@ end
 The mean part of [`update!`](@ref): write ``μ^F`` into `x_out.μ` and return
 `(; loglikelihood, ztSinvz, S, K, B)`, with the gain `K` and `B = x_pred.Σ.R * H'` for
 [`update_cov!`](@ref). An iterated update calls it for every linearization, and
-[`update_cov!`](@ref) only for the last one. `obs.z` must not be stored in `x_out.μ` or
+[`update_cov!`](@ref) only for the last one. `obs.r` must not be stored in `x_out.μ` or
 `cache.C_d`, which serve as workspace.
 """
 function update_mean!(
@@ -172,12 +172,12 @@ function update_mean!(
     C_d,
 )
     (; m, H, R) = obs
-    # z + H (μ - m) = z - H (m - μ)
+    # r + H (μ - m) = r - H (m - μ)
     z = if m === x_pred.μ
-        obs.z
+        obs.r
     else
         Δ = x_out.μ .= m .- x_pred.μ
-        measurement_cache.μ .= obs.z .- _matmul!(C_d, H, Δ)
+        measurement_cache.μ .= obs.r .- _matmul!(C_d, H, Δ)
     end
     return _update_mean!(x_out, x_pred, z, H, R, K1_cache, K2_cache, measurement_cache.Σ,
         C_dxd, C_d)

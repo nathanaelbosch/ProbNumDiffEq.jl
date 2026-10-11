@@ -157,7 +157,7 @@ end
     evaluate_ode!(integ, x_pred, t)
 
 Evaluate the ODE at the mean of `x_pred` and return the [`LinearizedObservation`](@ref) of
-its residual there, with `z` and `H` in `integ.cache.measurement.μ` and `integ.cache.H`.
+its residual there, with `r` and `H` in `integ.cache.measurement.μ` and `integ.cache.H`.
 """
 function evaluate_ode!(integ, x_pred, t)
     @unpack measurement, H, R = integ.cache

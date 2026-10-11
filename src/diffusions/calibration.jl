@@ -76,7 +76,7 @@ The global quasi-MLE diffusion estimate Corresponds to
 [\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{jj},
 ```
 where ``z_i`` is the residual at the predicted mean in step ``i`` and ``S_i`` its
-covariance. For the current step, they are `obs.z` and the `upd.S` returned by
+covariance. For the current step, they are `obs.r` and the `upd.S` returned by
 [`update!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
@@ -90,7 +90,7 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ, obs, upd)
     @unpack C_d = integ.cache
     diffusion_increment = let
         diag!(C_d, upd.S)
-        @.. C_d = obs.z^2 / C_d
+        @.. C_d = obs.r^2 / C_d
         Diagonal(C_d)
     end
 
