@@ -394,9 +394,10 @@ const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}
 
 A block matrix whose blocks are scaled selections, just as those of a
 [`BlocksOfDiagonals`](@ref) are diagonal matrices: block `(r, c)` is the
-`ScaledSelection(m, dims, d)` with `m[k] = blocks[k][r, c]`. For example,
-`H = M Eᵢ = eᵢᵀ ⊗ M` for a `ScaledSelection` `M` is a single row of blocks, with `M` in the
-block of the `i`-th derivative and zeros elsewhere.
+`ScaledSelection(m, dims, d)` with `m[k] = blocks[k][r, c]`. For example, the observation
+matrix `H = M Eᵢ = eᵢᵀ ⊗ M` of `solution_observation_matrix`, where `Eᵢ` selects the `i`-th
+derivative and a `ScaledSelection` `M` some of the dimensions, is a single row of blocks,
+with `M` in the block of the `i`-th derivative and zeros elsewhere.
 
 Like a `BlocksOfDiagonals`, it acts on the state blocks separately,
 `(H x)[k:o:end] = blocks[k] * x[dims[k]:d:end]` with `o = length(dims)`, so with a

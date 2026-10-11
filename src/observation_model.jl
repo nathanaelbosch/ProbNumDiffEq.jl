@@ -71,9 +71,14 @@ _ei_row(::Type{T}, q, deriv, λ) where {T} = [zeros(T, 1, deriv) T(λ) zeros(T, 
     solution_observation_matrix(C::CovarianceStructure, M, deriv=0)
 
 The observation matrix `H` that maps the filter state `x` to `M u⁽ⁱ⁾`, the `i`-th derivative
-of the ODE solution times `M`, with `i = deriv`. It has the matrix type of the covariance
-structure `C`, which limits `M`: a Kronecker `C` needs `M = λI`, and a block-diagonal `C` an
-`M` that observes each dimension separately (`λI`, `Diagonal` or `ScaledSelection`).
+of the ODE solution times `M`, with `i = deriv`. In the derivative-major state,
+`Eᵢ = eᵢᵀ ⊗ I_d` selects the `i`-th derivative, with the unit vector `eᵢ ∈ ℝ^(q+1)` counted
+from `e₀`. So `H = M Eᵢ = (1 ⊗ M)(eᵢᵀ ⊗ I_d) = eᵢᵀ ⊗ M`: `eᵢᵀ` acts on the derivatives and
+`M` on the `d` dimensions.
+
+`H` has the matrix type of the covariance structure `C`, which limits `M`: a Kronecker `C`
+needs `M = λI`, and a block-diagonal `C` an `M` that observes each dimension separately
+(`λI`, `Diagonal` or `ScaledSelection`).
 """
 solution_observation_matrix(C::CovarianceStructure, M) =
     solution_observation_matrix(C, M, 0)
