@@ -140,10 +140,8 @@ function initial_update!(integ, cache)
     return initial_update!(integ, cache, integ.alg.initialization)
 end
 
-# `M` without its zero rows, and the indices of the other rows. A zero row of a mass matrix
-# is an algebraic equation of a DAE: it does not involve `u⁽ⁱ⁾`, and would make
-# `S = H Σ Hᵀ` singular. With no rows left, the observation is empty and `update!` ignores
-# `H`.
+# Drop the zero rows of `M`, the algebraic equations of a DAE, as they make `S` singular.
+# Without any rows left, the observation is empty and `H` is unused.
 _nonzero_rows(M::UniformScaling, d) = M, iszero(M.λ) ? (1:0) : (1:d)
 function _nonzero_rows(M::Diagonal, d)
     rows = findall(!iszero, M.diag)

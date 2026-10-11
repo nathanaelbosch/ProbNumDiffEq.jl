@@ -70,14 +70,10 @@ _ei_row(::Type{T}, q, deriv, λ) where {T} = [zeros(T, 1, deriv) T(λ) zeros(T, 
 """
     solution_observation_matrix(C::CovarianceStructure, M, deriv=0)
 
-The observation matrix `H = M Eᵢ` in the covariance structure `C`. It observes `M u⁽ⁱ⁾`,
-the derivative `i = deriv` of the ODE solution `u` times a matrix `M` with `d` columns.
-
-With the derivative-major state `x = vec(X)`, `X ∈ ℝ^(d×(q+1))`, it is `H x = M X eᵢ`, so
-`H = eᵢᵀ ⊗ M` and all its structure is in `M`. A dense `C` takes any `M`, and an
-isometric-Kronecker `C` only `λI`. A block-diagonal `C` gives a `BlocksOfDiagonals` for
-`λI` or a `Diagonal`, and a `BlocksOfScaledSelections` for a `ScaledSelection`. Other `M`
-throw an error.
+The observation matrix `H` that maps the filter state `x` to `M u⁽ⁱ⁾`, the `i`-th derivative
+of the ODE solution times `M`, with `i = deriv`. It has the matrix type of the covariance
+structure `C`, which limits `M`: a Kronecker `C` needs `M = λI`, and a block-diagonal `C` an
+`M` that observes each dimension separately (`λI`, `Diagonal` or `ScaledSelection`).
 """
 solution_observation_matrix(C::CovarianceStructure, M) =
     solution_observation_matrix(C, M, 0)
@@ -92,8 +88,7 @@ solution_observation_matrix(
 ) where {T} = IsometricKroneckerProduct(C.d, _ei_row(T, C.q, deriv, M.λ))
 solution_observation_matrix(::IsometricKroneckerCovariance, M, deriv) =
     kronecker_matrix_error()
-# `eᵢᵀ ⊗ Diagonal(m)` has the blocks `m[j] eᵢᵀ`; a `ScaledSelection` has them only for the
-# dimensions it observes
+# `eᵢᵀ ⊗ Diagonal(m)` has the blocks `m[j] eᵢᵀ`
 solution_observation_matrix(
     C::BlockDiagonalCovariance{T}, M::UniformScaling, deriv,
 ) where {T} = BlocksOfDiagonals([_ei_row(T, C.q, deriv, M.λ) for _ in 1:C.d])

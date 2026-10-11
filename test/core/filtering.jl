@@ -125,7 +125,7 @@ update_cache(FAC, D, o) = (;
 )
 
 @testset "UPDATE" begin
-    # A scalar observation of a 5-dimensional state: one block in every covariance structure
+    # One scalar observation: a single block in every covariance structure
     D, o = 5, 1
     m_p = rand(D)
     _P_p_R = IsometricKroneckerProduct(o, Matrix(UpperTriangular(rand(D, D))))
@@ -242,7 +242,6 @@ update_cache(FAC, D, o) = (;
 end
 
 @testset "solution_observation_matrix of the derivative $deriv" for deriv in 0:2
-    # `H = M Eᵢ` observes `M u⁽ⁱ⁾`, `i = deriv`: `M` in the columns of `u⁽ⁱ⁾`
     d, q = 3, 2
     dense(M) = [zeros(size(M, 1), d * deriv) Matrix(M) zeros(size(M, 1), d * (q - deriv))]
     @testset "$(nameof(FAC)), $(typeof(M))" for (FAC, M) in (

@@ -104,7 +104,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     predict_mean!(x_pred.μ, xprev.μ, Ah)
     write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
 
-    # Measure. The diffusion estimates use `obs.z` as the residual at the predicted mean.
+    # Measure. The diffusion estimates need the residual at the predicted mean.
     obs = evaluate_ode!(integ, x_pred, tnew)
     @assert obs.m === x_pred.μ
 

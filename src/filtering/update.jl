@@ -227,7 +227,7 @@ function pn_logpdf!(v, z, S_chol)
     w = ldiv!(S_chol, copy!(reshape(v, :), μ))
     n = length(μ)
     ztSinvz = μ'w
-    # With a Kronecker covariance `S ⊗ I`, `μ` stacks `n ÷ size(S, 1)` independent columns
+    # logdet(S ⊗ I_k) = k logdet(S), with k = n ÷ size(S, 1)
     loglikelihood =
         -0.5 * ztSinvz - 0.5 * n * log(2π) -
         0.5 * (n ÷ size(S_chol, 1)) * logdet(S_chol)
@@ -247,7 +247,7 @@ function _update_mean!(
 ) where {T}
     d = H.rdim
     args = (x_out, x_pred, z, H, R, K1_cache, K2_cache, S_cache, C_dxd)
-    # `C_d` is workspace for the flattened residual, so it is not converted
+    # `C_d` is not converted: it holds the flattened residual
     (; loglikelihood, ztSinvz) =
         _update_mean!(map(x -> _kronecker_factor(x, d), args)..., C_d)
     return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)

@@ -43,8 +43,8 @@ LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
 """
     linear_observation(H, y, R=nothing)
 
-The [`LinearizedObservation`](@ref) of `y` in the linear model
-``y \\sim \\mathcal{N}(H x, R)``, linearized at `m = 0`, which is exact and gives `z = -y`.
+The [`LinearizedObservation`](@ref) of the data `y` in the linear model
+``y \\sim \\mathcal{N}(H x, R)``. A linear model needs no linearization, so it is exact.
 """
 linear_observation(H, y, R=nothing) =
     LinearizedObservation(Zeros{eltype(y)}(size(H, 2)), -y, H, R)
