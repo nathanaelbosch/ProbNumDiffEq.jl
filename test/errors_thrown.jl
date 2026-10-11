@@ -35,9 +35,9 @@ end
 @testset "Backward-in-time solves are not supported" begin
     f(du, u, p, t) = (du .= -u)
     prob = ODEProblem(f, [1.0], (1.0, 0.0))
-    @testset "$(nameof(typeof(alg)))" for alg in (EK0(), EK1(), DiagonalEK1())
-        @test_throws ArgumentError solve(prob, alg)
-        @test_throws ArgumentError solve(prob, alg; adaptive=false, dt=-0.1)
+    @testset "$Alg" for Alg in (EK0, EK1, DiagonalEK1)
+        @test_throws ArgumentError solve(prob, Alg())
+        @test_throws ArgumentError solve(prob, Alg(); adaptive=false, dt=-0.1)
     end
 end
 
@@ -79,8 +79,8 @@ end
     # An uncalibrated `FixedMVDiffusion` is a given diffusion and works with every solver
     D = FixedMVDiffusion([1.0, 2.0], false)
     @test solve(prob, EK1(diffusionmodel=D)).retcode == ReturnCode.Success
-    @test solve(prob, EK0(prior=IOUP(3, -1), diffusionmodel=D)).retcode ==
-          ReturnCode.Success
+    alg = EK0(prior=IOUP(3, -1), diffusionmodel=D, covariance_factorization=DenseCovariance)
+    @test solve(prob, alg).retcode == ReturnCode.Success
     # A Kronecker covariance cannot hold a per-dimension diffusion at all
     @test_throws ArgumentError solve(
         prob,
@@ -88,20 +88,10 @@ end
     )
 end
 
-@testset "Non-diagonal mass matrix with block-diagonal covariances" begin
+@testset "Non-diagonal mass matrix with per-dimension diffusion estimates" begin
     vf(du, u, p, t) = (du .= -u)
     M = [1.0 0.5; 0.5 1.0]
     prob = ODEProblem(ODEFunction(vf, mass_matrix=M), [1.0, 1.0], (0.0, 1.0))
-    @test_throws ArgumentError solve(prob, DiagonalEK1())
     @test_throws ArgumentError solve(prob, EK0(diffusionmodel=DynamicMVDiffusion()))
     @test_throws ArgumentError solve(prob, EK0(diffusionmodel=FixedMVDiffusion()))
-    # A diagonal mass matrix works, as long as it is passed as a `Diagonal`
-    prob_diag = ODEProblem(
-        ODEFunction(vf, mass_matrix=Diagonal([1.0, 2.0])), [1.0, 1.0], (0.0, 1.0))
-    @test solve(prob_diag, DiagonalEK1()).retcode == ReturnCode.Success
-    prob_diag_dense = ODEProblem(
-        ODEFunction(vf, mass_matrix=[1.0 0.0; 0.0 2.0]), [1.0, 1.0], (0.0, 1.0))
-    @test_throws ArgumentError solve(prob_diag_dense, DiagonalEK1())
-    # The dense `EK1` supports non-diagonal mass matrices
-    @test solve(prob, EK1()).retcode == ReturnCode.Success
 end

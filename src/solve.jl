@@ -1,7 +1,7 @@
 
 function SciMLBase.__init(
     prob::SciMLBase.AbstractODEProblem{uType,tType,false},
-    alg::AbstractEK,
+    alg::ODEFilter,
     args...;
     kwargs...,
 ) where {uType,tType}

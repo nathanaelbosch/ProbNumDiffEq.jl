@@ -95,7 +95,7 @@ end
     sol = solve(prob, DiagonalEK1(order=3))
     @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 
-    @test_throws ArgumentError solve(prob, EK0())
+    @test_throws "DAE" solve(prob, EK0())
 
     @testset "Initial value with a constraint residual" begin
         prob = remake(prob, u0=[1.0, 0.0, 1e-12])

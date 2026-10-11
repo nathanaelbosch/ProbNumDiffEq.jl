@@ -1,5 +1,5 @@
 """
-    SciMLBase.postamble!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK})
+    SciMLBase.postamble!(integ::OrdinaryDiffEqCore.ODEIntegrator{<:ODEFilter})
 
 ProbNumDiffEq.jl-specific implementation of SciMLBase's `postamble!` hook.
 
@@ -7,7 +7,7 @@ In addition to calling `OrdinaryDiffEqCore._postamble!(integ)`, calibrate the di
 smooth the solution.
 """
 function SciMLBase.postamble!(
-    integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
+    integ::OrdinaryDiffEqCore.ODEIntegrator{<:ODEFilter},
 )
     # OrdinaryDiffEqCore.jl-related calls:
     OrdinaryDiffEqCore._postamble!(integ)
@@ -153,7 +153,7 @@ end
 
 "Extends `OrdinaryDiffEqCore._savevalues!` to save ProbNumDiffEq.jl-specific things."
 function DiffEqBase.savevalues!(
-    integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
+    integ::OrdinaryDiffEqCore.ODEIntegrator{<:ODEFilter},
     force_save=false,
     reduce_size=true,
 )
@@ -179,7 +179,7 @@ function DiffEqBase.savevalues!(
 end
 
 function OrdinaryDiffEqCore.update_uprev!(
-    integ::OrdinaryDiffEqCore.ODEIntegrator{<:AbstractEK},
+    integ::OrdinaryDiffEqCore.ODEIntegrator{<:ODEFilter},
 )
     @assert !OrdinaryDiffEqCore.alg_extrapolates(integ.alg)
     @assert isinplace(integ.sol.prob)

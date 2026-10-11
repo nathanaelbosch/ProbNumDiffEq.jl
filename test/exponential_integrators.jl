@@ -38,4 +38,11 @@ using Test
     @test solros.stats.nf < sol0.stats.nf
     @test length(solros) < length(sol1)
     @test solros.stats.nf < sol1.stats.nf
+
+    # On a linear ODE, the updated rate parameter is the one of the `ExpEK`
+    solek0ros = solve(prob,
+        EK0(prior=IOUP(3, update_rate_parameter=true),
+            covariance_factorization=DenseCovariance))
+    @test solek0ros.t ≈ solexp.t
+    @test solek0ros.u ≈ solexp.u
 end

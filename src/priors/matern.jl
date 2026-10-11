@@ -48,6 +48,16 @@ Matern(; dim, num_derivatives, lengthscale) =
 Matern(num_derivatives, lengthscale) =
     Matern(; dim=1, num_derivatives, lengthscale)
 
+function Base.show(io::IO, p::Matern{T}) where {T}
+    q, l = num_derivatives(p), repr(p.lengthscale; context=io)
+    if T === Float64 && dim(p) == 1
+        print(io, "Matern(", q, ", ", l, ")")
+    else
+        print(io, _prior_name("Matern", T), "(dim=", dim(p), ", num_derivatives=", q,
+            ", lengthscale=", l, ")")
+    end
+end
+
 remake(
     p::Matern{T};
     elType=T,

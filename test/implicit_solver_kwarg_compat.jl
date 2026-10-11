@@ -21,3 +21,7 @@ sol2 = solve(prob, EK1(autodiff=false))
 # explicit chunk sizes
 @test solve(prob, EK1(autodiff=AutoForwardDiff(chunksize=2))).retcode == ReturnCode.Success
 @test solve(prob, DiagonalEK1(chunk_size=2)).retcode == ReturnCode.Success
+
+# `remake` sets up AD once a component needs a Jacobian
+@test EK0().autodiff === nothing
+@test remake(EK0(), prior=IOUP(3, update_rate_parameter=true)).autodiff isa AutoForwardDiff

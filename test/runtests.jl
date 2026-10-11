@@ -43,6 +43,12 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Measurement Models" begin
                 include("core/measurement_models.jl")
             end
+            @timedsafetestset "Covariance structure" begin
+                include("core/covariance_structure.jl")
+            end
+            @timedsafetestset "Printing" begin
+                include("core/printing.jl")
+            end
             #
             @timedsafetestset "State Initialization" begin
                 include("state_init.jl")

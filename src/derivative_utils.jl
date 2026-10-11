@@ -2,16 +2,16 @@ function calc_H!(H, integ, cache)
     @unpack f = integ
     @unpack d, E1, E2 = cache
 
-    if integ.alg isa EK0
+    if integ.alg.linearization isa ZeroJacobian
         calc_H_EK0!(H, integ, cache)
-    elseif integ.alg isa EK1
+    elseif integ.alg.linearization isa FullJacobian
         calc_H_EK0!(H, integ, cache)
         ddu = cache.ddu
         # @assert integ.u == @view x_pred.μ[1:(q+1):end]
         OrdinaryDiffEqDifferentiation.calc_J!(ddu, integ, cache, true)
         _ddu = size(ddu, 2) != d ? view(ddu, 1:d, :) : ddu
         _matmul!(H, _ddu, cache.SolProj, -1.0, 1.0)
-    elseif integ.alg isa DiagonalEK1
+    elseif integ.alg.linearization isa DiagonalJacobian
         calc_H_EK0!(H, integ, cache)
         ddu = cache.ddu
         OrdinaryDiffEqDifferentiation.calc_J!(ddu, integ, cache, true)
@@ -27,7 +27,7 @@ function calc_H!(H, integ, cache)
         end
         _matmul!(H, ddu_diag, cache.SolProj, -1.0, 1.0)
     else
-        error("Unknown algorithm")
+        error("Unknown linearization")
     end
     return nothing
 end

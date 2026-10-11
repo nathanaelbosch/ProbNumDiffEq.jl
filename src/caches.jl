@@ -73,7 +73,7 @@ OrdinaryDiffEqCore.get_fsalfirstlast(cache::AbstractODEFilterCache, rate_prototy
     (nothing, nothing)
 
 function OrdinaryDiffEqCore.alg_cache(
-    alg::AbstractEK,
+    alg::ODEFilter,
     u,
     rate_prototype,
     ::Type{uEltypeNoUnits},
@@ -105,24 +105,14 @@ function OrdinaryDiffEqCore.alg_cache(
     # uElType = eltype(u_vec)
     uElType = uBottomEltypeNoUnits
 
-    FAC = alg.covariance_factorization{uElType}(d, q)
-    if FAC isa IsometricKroneckerCovariance && !(f.mass_matrix isa UniformScaling)
+    FAC = choose_covariance_structure(alg, f.mass_matrix){uElType}(d, q)
+    if !needs_jacobian(alg.linearization) && _has_zero_row(f.mass_matrix)
         throw(
             ArgumentError(
-                "The selected algorithm uses an efficient Kronecker-factorized " *
-                "implementation which is incompatible with the provided mass matrix. " *
-                "Try using the `EK1` instead."),
-        )
-    end
-    if FAC isa BlockDiagonalCovariance &&
-       !(f.mass_matrix isa Union{UniformScaling,Diagonal})
-        throw(
-            ArgumentError(
-                "The selected algorithm uses a block-diagonal covariance factorization, " *
-                "which requires the measurement matrix `M * E1` to be block-diagonal. " *
-                "This only holds for a `UniformScaling` or `Diagonal` mass matrix `M`, " *
-                "but the provided mass matrix is a `$(nameof(typeof(f.mass_matrix)))`. " *
-                "Try passing the mass matrix as a `Diagonal`, or use the `EK1` instead."),
+                "The mass matrix has a zero row, so the problem is a DAE. Its algebraic " *
+                "equations enter the solver only through the Jacobian, so they are " *
+                "ignored by a solver without one, such as the `EK0`. Use the `EK1` " *
+                "or the `DiagonalEK1` instead."),
         )
     end
 
@@ -192,7 +182,7 @@ function OrdinaryDiffEqCore.alg_cache(
 
     # Caches
     du = is_secondorder_ode ? similar(u.x[2]) : similar(u)
-    ddu = if alg isa EK0
+    ddu = if !needs_jacobian(alg.linearization)
         nothing
     elseif !isnothing(f.jac_prototype)
         f.jac_prototype
@@ -235,7 +225,7 @@ function OrdinaryDiffEqCore.alg_cache(
     du1 = similar(rate_prototype)
     dw1 = zero(u)
     atmp = similar(u, uEltypeNoUnits)
-    if OrdinaryDiffEqCore.isimplicit(alg)
+    if !isnothing(alg.autodiff)
         jac_config = OrdinaryDiffEqDifferentiation.build_jac_config(
             alg, f, uf, du1, uprev, u, tmp, dw1,
         )

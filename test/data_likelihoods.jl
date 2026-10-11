@@ -51,8 +51,8 @@ kwargs = (
         EK0(diffusionmodel=FixedDiffusion()),
         EK0(diffusionmodel=FixedMVDiffusion(rand(2), false)),
         EK0(diffusionmodel=DynamicMVDiffusion()),
-        EK0(prior=IOUP(3, -1)),
-        EK0(prior=Matern(3, 1.5)),
+        EK0(prior=IOUP(3, -1), covariance_factorization=DenseCovariance),
+        EK0(prior=Matern(3, 1.5), covariance_factorization=DenseCovariance),
         # EK1
         EK1(),
         EK1(diffusionmodel=FixedDiffusion()),
@@ -233,9 +233,10 @@ end
     # and `Eye`s are isotropic, `Diagonal`s uncorrelated, and other matrices general
     @testset "$alg" for alg in (EK0(), DiagonalEK1(), EK1())
         supported =
-            alg isa EK1 || Σ isa Union{Number,UniformScaling} ||
+            alg.linearization isa PNDE.FullJacobian ||
+            Σ isa Union{Number,UniformScaling} ||
             Σ isa Diagonal{<:Number,<:FillArrays.Fill} ||
-            (alg isa DiagonalEK1 && Σ isa Diagonal)
+            (alg.linearization isa PNDE.DiagonalJacobian && Σ isa Diagonal)
         if supported
             compare_data_likelihoods(alg; kwargs..., observation_noise_cov=Σ)
         else
