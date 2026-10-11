@@ -32,9 +32,3 @@ end
     @test_throws ["`covariance_factorization", "`diffusionmodel"] choose_covariance_structure(
         EK0(covariance_factorization=K, diffusionmodel=DynamicMVDiffusion()), I)
 end
-
-@testset "Printed as the call that constructs it" begin
-    @test repr(EK0()) == "EK0()"
-    @test repr(DiagonalEK1(order=5, smooth=false)) == "DiagonalEK1(order=5, smooth=false)"
-    @test "$(ODEFilter(linearization=FullJacobian(), order=5))" == "EK1(order=5)"
-end

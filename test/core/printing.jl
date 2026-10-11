@@ -5,6 +5,7 @@ import ProbNumDiffEq as PNDE
     @test repr(EK0()) == "EK0()"
     @test repr(DiagonalEK1(order=5, smooth=false)) == "DiagonalEK1(order=5, smooth=false)"
     @test "$(ODEFilter(linearization=FullJacobian(), order=5))" == "EK1(order=5)"
+    @test sprint(show, MIME"text/plain"(), EK1(smooth=false)) == "EK1(smooth=false)"
 end
 
 @testset "Priors are printed as the call that constructs them" begin
