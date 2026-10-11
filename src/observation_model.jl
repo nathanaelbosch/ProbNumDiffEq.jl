@@ -68,7 +68,7 @@ _has_zero_row(M::AbstractMatrix) = any(iszero, eachrow(M))
 _ei_row(::Type{T}, q, deriv, λ) where {T} = [zeros(T, 1, deriv) T(λ) zeros(T, 1, q - deriv)]
 
 """
-    solution_observation_matrix(C::CovarianceStructure, M, deriv=0)
+    solution_observation_matrix(C::CovarianceStructure, M; deriv=0)
 
 The observation matrix `H` that maps the filter state `x` to `M u⁽ⁱ⁾`, the `i`-th derivative
 of the ODE solution times `M`, with `i = deriv`. In the derivative-major state,
@@ -80,30 +80,31 @@ from `e₀`. So `H = M Eᵢ = (1 ⊗ M)(eᵢᵀ ⊗ I_d) = eᵢᵀ ⊗ M`: `eᵢ
 needs `M = λI`, and a block-diagonal `C` an `M` that observes each dimension separately
 (`λI`, `Diagonal` or `ScaledSelection`).
 """
-solution_observation_matrix(C::CovarianceStructure, M) =
-    solution_observation_matrix(C, M, 0)
-function solution_observation_matrix(C::DenseCovariance{T}, M, deriv) where {T}
+function solution_observation_matrix end
+function solution_observation_matrix(C::DenseCovariance{T}, M; deriv=0) where {T}
     M = M isa UniformScaling ? Matrix{T}(M, C.d, C.d) : Matrix{T}(M)
     o = size(M, 1)
     return [zeros(T, o, C.d * deriv) M zeros(T, o, C.d * (C.q - deriv))]
 end
 # `eᵢᵀ ⊗ λI = (λ eᵢᵀ) ⊗ I_d`; no other `M` gives the form `B ⊗ I_d`
 solution_observation_matrix(
-    C::IsometricKroneckerCovariance{T}, M::UniformScaling, deriv,
+    C::IsometricKroneckerCovariance{T}, M::UniformScaling; deriv=0,
 ) where {T} = IsometricKroneckerProduct(C.d, _ei_row(T, C.q, deriv, M.λ))
-solution_observation_matrix(::IsometricKroneckerCovariance, M, deriv) =
+solution_observation_matrix(::IsometricKroneckerCovariance, M; deriv=0) =
     kronecker_matrix_error()
 # `eᵢᵀ ⊗ Diagonal(m)` has the blocks `m[j] eᵢᵀ`
 solution_observation_matrix(
-    C::BlockDiagonalCovariance{T}, M::UniformScaling, deriv,
+    C::BlockDiagonalCovariance{T}, M::UniformScaling; deriv=0,
 ) where {T} = BlocksOfDiagonals([_ei_row(T, C.q, deriv, M.λ) for _ in 1:C.d])
-solution_observation_matrix(C::BlockDiagonalCovariance{T}, M::Diagonal, deriv) where {T} =
+solution_observation_matrix(
+    C::BlockDiagonalCovariance{T}, M::Diagonal; deriv=0,
+) where {T} =
     BlocksOfDiagonals([_ei_row(T, C.q, deriv, m) for m in M.diag])
 solution_observation_matrix(
-    C::BlockDiagonalCovariance{T}, M::ScaledSelection, deriv,
+    C::BlockDiagonalCovariance{T}, M::ScaledSelection; deriv=0,
 ) where {T} =
     BlocksOfScaledSelections([_ei_row(T, C.q, deriv, m) for m in M.m], M.dims, C.d)
-solution_observation_matrix(::BlockDiagonalCovariance, M, deriv) = selection_error()
+solution_observation_matrix(::BlockDiagonalCovariance, M; deriv=0) = selection_error()
 
 _noise_fits(::DenseCovariance, noise_cov) = true
 _noise_fits(::IsometricKroneckerCovariance, noise_cov) =

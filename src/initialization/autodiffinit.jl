@@ -15,7 +15,7 @@ function initial_update!(integ, cache, init::AutodiffInitializationScheme)
         end
 
         M, rows = _nonzero_rows(o == 0 ? I : f.mass_matrix, d)
-        H = solution_observation_matrix(cache.covariance_factorization, M, o)
+        H = solution_observation_matrix(cache.covariance_factorization, M; deriv=o)
         update!(x, linear_observation(H, view(df, rows)); cache)
     end
 end

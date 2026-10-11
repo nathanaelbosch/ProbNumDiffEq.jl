@@ -17,6 +17,6 @@ function initial_update!(integ, cache, init::SimpleInit)
 
     update!(x, linear_observation(E0, view(u, :)); cache)
     M, rows = _nonzero_rows(f.mass_matrix, d)
-    H = solution_observation_matrix(cache.covariance_factorization, M, 1)
+    H = solution_observation_matrix(cache.covariance_factorization, M; deriv=1)
     update!(x, linear_observation(H, view(du, rows)); cache)
 end

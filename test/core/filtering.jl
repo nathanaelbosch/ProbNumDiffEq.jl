@@ -250,7 +250,7 @@ end
         (PNDE.BlockDiagonalCovariance, 2.0I),
         (PNDE.BlockDiagonalCovariance, Diagonal(rand(d))),
     )
-        H = PNDE.solution_observation_matrix(FAC{Float64}(d, q), M, deriv)
+        H = PNDE.solution_observation_matrix(FAC{Float64}(d, q), M; deriv)
         @test Matrix(H) == dense(M isa UniformScaling ? Matrix(M, d, d) : M)
     end
 
@@ -259,7 +259,7 @@ end
     o, D = length(dims), d * (q + 1)
     M = PNDE.ScaledSelection(m, dims, d)
     C = PNDE.BlockDiagonalCovariance{Float64}(d, q)
-    H = PNDE.solution_observation_matrix(C, M, deriv)
+    H = PNDE.solution_observation_matrix(C, M; deriv)
     H_dense = dense(M)
     @test H isa PNDE.BlocksOfScaledSelections
     @test_throws AssertionError PNDE.BlocksOfScaledSelections([rand(1, 3)], [1, 2], d)
