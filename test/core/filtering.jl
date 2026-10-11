@@ -125,8 +125,7 @@ update_cache(FAC, D, o) = (;
 )
 
 @testset "UPDATE" begin
-    # A scalar observation of a 5-dimensional state, which is a single block in each
-    # covariance structure
+    # A scalar observation of a 5-dimensional state: one block in every covariance structure
     D, o = 5, 1
     m_p = rand(D)
     _P_p_R = IsometricKroneckerProduct(o, Matrix(UpperTriangular(rand(D, D))))
@@ -188,7 +187,7 @@ update_cache(FAC, D, o) = (;
             ("another point", m_p + rand(D)),
             ("zero", Zeros(D)),
         )
-            # The same affine model, written at `m_lin`
+            # The same affine model, linearized at `m_lin`
             obs_lin = PNDE.LinearizedObservation(m_lin, z + HM * (m_lin - m_p), H, R)
             x_lin = copy(x_pred)
             res_lin = PNDE.update!(x_lin, x_pred, obs_lin; cache)
@@ -205,21 +204,20 @@ update_cache(FAC, D, o) = (;
             @test PNDE.update!(x_ip, obs; cache=cache_ip).loglikelihood ≈ LL
             @test x_ip.μ ≈ m
             @test Matrix(x_ip.Σ) ≈ P
-            # An observation linearized at `x.μ` itself, which the update overwrites
+            # Linearized at `x.μ` itself, which the update overwrites
             x_ip = copy(x_pred)
             obs_x = PNDE.LinearizedObservation(x_ip.μ, z, H, R)
             @test PNDE.update!(x_ip, obs_x; cache=cache_ip).loglikelihood ≈ LL
             @test x_ip.μ ≈ m
             @test Matrix(x_ip.Σ) ≈ P
-            # An empty observation leaves the state unchanged
             x_ip = copy(x_pred)
             obs_empty = PNDE.LinearizedObservation(m_p, zeros(0), H, R)
             @test PNDE.update!(x_ip, obs_empty; cache=cache_ip).loglikelihood == 0
             @test x_ip == x_pred
         end
 
-        @testset "Data at m = 0, against the residual at the mean" begin
-            # `(-y) - H (0 - μ)` rounds exactly as `H μ - y`
+        @testset "linear_observation, against linearizing at the mean" begin
+            # `(-y) - H (0 - μ)` is exactly `H μ - y` in floating point
             y = rand(o)
             obs_data = PNDE.linear_observation(H, y, R)
             @test obs_data.m isa Zeros
@@ -244,8 +242,7 @@ update_cache(FAC, D, o) = (;
 end
 
 @testset "solution_observation_matrix of the derivative $deriv" for deriv in 0:2
-    # `H = eᵢᵀ ⊗ M` observes `M u⁽ⁱ⁾`, `i = deriv`; densely, `H = [0 ⋯ 0 M 0 ⋯ 0]` with `M`
-    # in block `i`
+    # `H = M Eᵢ` observes `M u⁽ⁱ⁾`, `i = deriv`: `M` in the columns of `u⁽ⁱ⁾`
     d, q = 3, 2
     dense(M) = [zeros(size(M, 1), d * deriv) Matrix(M) zeros(size(M, 1), d * (q - deriv))]
     @testset "$(nameof(FAC)), $(typeof(M))" for (FAC, M) in (
@@ -258,10 +255,7 @@ end
         @test Matrix(H) == dense(M isa UniformScaling ? Matrix(M, d, d) : M)
     end
 
-    # Row `k` of a `ScaledSelection` observes `m[k]` times derivative `deriv` of dimension
-    # `dims[k]`. With a block-diagonal covariance, it is a `BlocksOfScaledSelections`;
-    # compare `_matmul!` and `update!` with the dense `H`; dimension 2 is not observed and
-    # keeps its prediction.
+    # `M` observes `2 u⁽ⁱ⁾[3]` and `-u⁽ⁱ⁾[1]`, so dimension 2 keeps its prediction
     m, dims = [2.0, -1.0], [3, 1]
     o, D = length(dims), d * (q + 1)
     M = PNDE.ScaledSelection(m, dims, d)
@@ -269,7 +263,6 @@ end
     H = PNDE.solution_observation_matrix(C, M, deriv)
     H_dense = dense(M)
     @test H isa PNDE.BlocksOfScaledSelections
-    # Blocks of one size, one per distinct dimension
     @test_throws AssertionError PNDE.BlocksOfScaledSelections([rand(1, 3)], [1, 2], d)
     @test_throws AssertionError PNDE.BlocksOfScaledSelections(
         [rand(1, 3), rand(1, 2)], [1, 2], d)

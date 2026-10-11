@@ -39,9 +39,8 @@ The global quasi-MLE diffusion estimate Corresponds to
 ```math
 \hat{σ}^2_N = \frac{1}{Nd} \sum_{i=1}^N z_i^T S_i^{-1} z_i,
 ```
-where ``z_i`` is the residual of the observation `obs` in each step and ``S_i`` its
-covariance; `upd` is what [`update!`](@ref) returned for it, with
-``z_i^T S_i^{-1} z_i`` as `upd.ztSinvz`.
+where ``z_i`` is the residual in step ``i`` and ``S_i`` its covariance. For the current
+step, ``z_n^T S_n^{-1} z_n`` is `upd.ztSinvz`, as returned by [`update!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
 \hat{σ}^2_n = \hat{σ}^2_{n-1} + ((z_n^T S_n^{-1} z_n) / d - \hat{σ}^2_{n-1}) / n.
@@ -76,8 +75,8 @@ The global quasi-MLE diffusion estimate Corresponds to
 ```math
 [\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{jj},
 ```
-where ``z_i`` is the residual `obs.z` at the predicted mean (`obs.m = μ`, as from
-[`evaluate_ode!`](@ref)) in each step and ``S_i`` its covariance `upd.S`, as returned by
+where ``z_i`` is the residual at the predicted mean in step ``i`` and ``S_i`` its
+covariance. For the current step, they are `obs.z` and the `upd.S` returned by
 [`update!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
@@ -116,9 +115,8 @@ Corresponds to
 ```math
 σ² = zᵀ (H Q H^T)⁻¹ z / d,
 ```
-where ``z`` is the residual at the predicted mean, the `z` of a
-[`LinearizedObservation`](@ref) with `m = μ` as from [`evaluate_ode!`](@ref), and `HQH` is
-computed by [`observed_process_noise!`](@ref).
+where ``z`` is the residual at the predicted mean and `HQH` is ``H Q H^T``, from
+[`evaluate_ode!`](@ref) and [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
@@ -140,9 +138,8 @@ Corresponds to
 ```math
 Σ_{ii} = z_i^2 / (H Q H^T)_{ii},
 ```
-where ``z`` is the residual at the predicted mean, the `z` of a
-[`LinearizedObservation`](@ref) with `m = μ` as from [`evaluate_ode!`](@ref), and `HQH` is
-computed by [`observed_process_noise!`](@ref).
+where ``z`` is the residual at the predicted mean and `HQH` is ``H Q H^T``, from
+[`evaluate_ode!`](@ref) and [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS

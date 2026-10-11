@@ -19,7 +19,6 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
 
     steptol = isnothing(steptol) ? sqrt(eps(eltype(x_pred.μ))) : steptol
 
-    # Linearize at the current iterate m_i, and update the prediction
     x_out = x_tmp
     m_i = x_pred.μ
     for i in 1:maxiters
@@ -75,9 +74,7 @@ Its Jacobian must have full row rank.
 - `maxiters::Int`: Maximum number of IEKF iterations.
   Setting this to 1 results in a single standard EKF update.
 - `steptol`: The iteration stops once a step changes the mean of the state by at most
-  `steptol` relative to it. The iteration converges quadratically, so the default, the
-  square root of the machine epsilon of the state's element type `T`, leaves an error at
-  the level of the machine epsilon.
+  `steptol` times its norm. Defaults to `sqrt(eps(T))` for the state's element type `T`.
 """
 function ManifoldUpdate(
     residual::Function,

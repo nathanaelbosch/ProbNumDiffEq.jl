@@ -2,9 +2,9 @@
     make_observation_model(cache, M, noise_cov; o)
 
 Return `(H, R)` such that `o`-dimensional data `y` is modelled as `y = H x + N(0, R)`, with
-`x` the filter state, `H = M E₀` from `solution_observation_matrix` and `R = noise_cov`,
-both in the covariance structure of `cache`. Throw an error if `M` or `noise_cov` do not fit
-the data, or can not be represented in that covariance structure.
+`x` the filter state, `H = M E₀` and `R = noise_cov`, both in the covariance structure of
+`cache`. Throw an error if `M` or `noise_cov` do not fit the data, or cannot be represented
+in that covariance structure.
 """
 function make_observation_model(cache, M, noise_cov; o)
     d, fac = cache.d, cache.covariance_factorization
@@ -65,27 +65,22 @@ _has_zero_row(M::Diagonal) = any(iszero, M.diag)
 _has_zero_row(::ScaledSelection) = false
 _has_zero_row(M::AbstractMatrix) = any(iszero, eachrow(M))
 
-# `λ eᵢᵀ`, a row of length `q + 1`, with `i = deriv`
 _ei_row(::Type{T}, q, deriv, λ) where {T} = [zeros(T, 1, deriv) T(λ) zeros(T, 1, q - deriv)]
 
 """
     solution_observation_matrix(C::CovarianceStructure, M, deriv=0)
 
-The observation matrix `H = M Eᵢ = eᵢᵀ ⊗ M` of the filter state in the covariance structure
-`C`, which observes `M u⁽ⁱ⁾`, the derivative `i = deriv` of the ODE solution `u` times a
-matrix `M` with `d` columns. Data observes `u`; the initializations observe higher
-derivatives.
+The observation matrix `H = M Eᵢ` in the covariance structure `C`. It observes `M u⁽ⁱ⁾`,
+the derivative `i = deriv` of the ODE solution `u` times a matrix `M` with `d` columns.
 
-With the derivative-major state `x = vec(X)`, `X ∈ ℝ^(d×(q+1))`, it is `H x = M X eᵢ`. So
-all structure of `H` is in `M`, which is a `UniformScaling`, a `Diagonal`, a
-`ScaledSelection` or a general matrix. A dense `C` takes any `M`, an isometric-Kronecker `C`
-only `λI`, and a block-diagonal `C` takes `λI` and `Diagonal` as a `BlocksOfDiagonals` and a
-`ScaledSelection` as a `BlocksOfScaledSelections`; other `M` throw an error.
+With the derivative-major state `x = vec(X)`, `X ∈ ℝ^(d×(q+1))`, it is `H x = M X eᵢ`, so
+`H = eᵢᵀ ⊗ M` and all its structure is in `M`. A dense `C` takes any `M`, and an
+isometric-Kronecker `C` only `λI`. A block-diagonal `C` gives a `BlocksOfDiagonals` for
+`λI` or a `Diagonal`, and a `BlocksOfScaledSelections` for a `ScaledSelection`. Other `M`
+throw an error.
 """
 solution_observation_matrix(C::CovarianceStructure, M) =
     solution_observation_matrix(C, M, 0)
-# Entries `i d + 1` to `(i + 1) d` of the derivative-major state are `u⁽ⁱ⁾`, so
-# `H = [0 ⋯ 0 M 0 ⋯ 0]`
 function solution_observation_matrix(C::DenseCovariance{T}, M, deriv) where {T}
     M = M isa UniformScaling ? Matrix{T}(M, C.d, C.d) : Matrix{T}(M)
     o = size(M, 1)

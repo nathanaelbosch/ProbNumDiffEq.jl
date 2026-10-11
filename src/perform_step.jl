@@ -71,7 +71,7 @@ Basically consists of the following steps
 - Compute local diffusion and local error estimate
 - If the step is rejected, terminate here; Else continue
 - Predict the covariance
-- Kalman update step, which builds the measurement covariance `S`
+- Kalman update step
 - (optional) Update the global diffusion MLE
 
 As in OrdinaryDiffEqCore.jl, this step is not necessarily successful!
@@ -104,7 +104,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     predict_mean!(x_pred.μ, xprev.μ, Ah)
     write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
 
-    # Measure; the diffusion estimates read `obs.z` as the residual at the predicted mean
+    # Measure. The diffusion estimates use `obs.z` as the residual at the predicted mean.
     obs = evaluate_ode!(integ, x_pred, tnew)
     @assert obs.m === x_pred.μ
 
@@ -156,12 +156,8 @@ end
 """
     evaluate_ode!(integ, x_pred, t)
 
-Evaluate the ODE vector field and, if using the [`EK1`](@ref), its Jacobian, and return the
-[`LinearizedObservation`](@ref) of the ODE residual at the mean of `x_pred`.
-
-Its residual `z` and Jacobian `H` are written into `integ.cache.measurement.μ` and
-`integ.cache.H`. Jacobians are computed either with the supplied `f.jac`, or via automatic
-differentiation, as in OrdinaryDiffEqCore.jl.
+Evaluate the ODE at the mean of `x_pred` and return the [`LinearizedObservation`](@ref) of
+its residual there, with `z` and `H` in `integ.cache.measurement.μ` and `integ.cache.H`.
 """
 function evaluate_ode!(integ, x_pred, t)
     @unpack measurement, H, R = integ.cache
@@ -177,11 +173,9 @@ end
 """
     observed_process_noise!(cache, obs)
 
-Return the covariance ``H Q(h) H^T`` of the process noise of one step, observed through the
-Jacobian `H` of the [`LinearizedObservation`](@ref) `obs`, as a `PSDMatrix` with the factor
-``\\sqrt{Q(h)} H^T`` in `cache.C_Dxd`. With unit diffusion, it is the covariance of the
-residual `z` if the previous state were known exactly; the local diffusion estimate and
-[`estimate_errors!`](@ref) are both computed from it.
+Return the covariance ``H Q(h) H^T`` of the process noise of one step, seen through the
+Jacobian `H` of `obs`, as a `PSDMatrix` with the factor ``\\sqrt{Q(h)} H^T`` in
+`cache.C_Dxd`.
 """
 observed_process_noise!(cache::AbstractODEFilterCache, obs) =
     PSDMatrix(_matmul!(cache.C_Dxd, cache.Qh.R, obs.H'))
@@ -233,8 +227,8 @@ Computes a local error estimate, as
 ```math
 E_i = ( σ_{loc,i}^2 ⋅ (H Q(h) H^T)_{ii} )^(1/2)
 ```
-with `HQH` from [`observed_process_noise!`](@ref) and the local diffusion ``σ_{loc}^2``, a
-scalar or a `Diagonal` with one entry per dimension. A `Diagonal` with unequal entries
+where `HQH` is ``H Q(h) H^T`` from [`observed_process_noise!`](@ref) and ``σ_{loc}^2`` is
+`cache.local_diffusion`, a scalar or a `Diagonal`. A `Diagonal` with unequal entries
 requires that row `i` of `H` observes only dimension `i`, as with block-diagonal
 covariances. The estimate is written into `cache.C_d`.
 """

@@ -392,15 +392,14 @@ const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}
 """
     BlocksOfScaledSelections(blocks, dims, d)
 
-The matrix `H = Σₖ Bₖ ⊗ eₖ e_{jₖ}ᵀ`, with blocks `Bₖ = blocks[k]` of equal size, distinct
-dimensions `jₖ = dims[k]` in `1:d`, `eₖ ∈ ℝᵒ`, `o = length(dims)`, and `e_{jₖ} ∈ ℝᵈ`.
+The matrix `H = Σₖ Bₖ ⊗ eₖ e_{jₖ}ᵀ` with `Bₖ = blocks[k]` and `jₖ = dims[k]`, where
+`eₖ ∈ ℝᵒ`, `e_{jₖ} ∈ ℝᵈ` and `o = length(dims)`. The blocks have equal size, and the
+entries of `dims` are distinct and in `1:d`.
 
-As a block matrix, its blocks are the `o×d` scaled selections
-`diag(B₁[r, c], …, B_o[r, c]) S`, with `S` the rows `dims` of `I_d`, where those of a
-[`BlocksOfDiagonals`](@ref) are diagonal: `H` is the rows `dims` of the `BlocksOfDiagonals`
-with block `jₖ` equal to `Bₖ`. Row block `k` reads only the state block `jₖ`,
-`(H x)ₖ = Bₖ x[jₖ:d:end]`, so with a block-diagonal covariance, the update with `H` is one
-update per observed block.
+As a block matrix, its blocks are scaled selections of the dimensions `dims`, where those of
+a [`BlocksOfDiagonals`](@ref) are diagonal. `H` observes only the state blocks `dims`,
+`(H x)[k:o:end] = Bₖ x[jₖ:d:end]`, so with a block-diagonal covariance, the update with `H`
+is one update per observed block.
 """
 struct BlocksOfScaledSelections{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}

@@ -1,5 +1,5 @@
 """
-    update(x, measurement, H)
+    update(x, measurement, H; R=nothing)
 
 Update step in Kalman filtering for linear dynamics models.
 
@@ -16,7 +16,7 @@ K &= Σ^P H^T S^{-1}, \\\\
 and return an updated state `\\mathcal{N}(μ^F, Σ^F)`.
 Note that this assumes zero-measurements.
 When called with a `PSDMatrix` covariance it performs the update in Joseph / square-root
-form, and takes the measurement noise `R` as a keyword argument.
+form.
 
 For better performance, we recommend to use the non-allocating [`update!`](@ref).
 """
@@ -45,8 +45,9 @@ end
 """
     update(x, obs::LinearizedObservation)
 
-[`update`](@ref) on the observation `obs`, with dense matrices: the measurement is
-``\\mathcal{N}(\\hat{z}, S)`` with ``\\hat{z} = z + H (μ - m)`` and ``S = H Σ H^T + R``.
+Condition `x` on the observation `obs`, with dense copies of all matrices. This is
+`update(x, measurement, H)` with the measurement ``\\mathcal{N}(\\hat{z}, S)``, where
+``\\hat{z} = z + H (μ - m)`` and ``S = H Σ H^T + R``.
 """
 function update(x::Gaussian, obs::LinearizedObservation)
     x = Gaussian(mean(x), Matrix(cov(x)))
@@ -66,26 +67,21 @@ end
 """
     update!(x_out, x_pred, obs::LinearizedObservation; cache)
 
-Condition the Gaussian `x_pred` on the observation `obs`, write the result into `x_out`, and
-return the named tuple `(; loglikelihood, ztSinvz, S)`: the log-likelihood of the
-observation, the squared Mahalanobis distance ``\\hat{z}^T S^{-1} \\hat{z}`` of
-``\\hat{z} = z + H (μ - m)``, and its covariance `S = H Σ Hᵀ + R`, which is written into
-`cache.measurement.Σ`.
-
-This is [`update_mean!`](@ref) followed by [`update_cov!`](@ref). For an explicit `H`, it is
-the square-root Kalman update in Joseph form:
+Condition the Gaussian `x_pred` on the observation `obs` and write the result into `x_out`,
+with the square-root Kalman update in Joseph form:
 ```math
 \\begin{aligned}
+\\hat{z} &= z + H (μ - m), \\\\
 S &= H Σ H^T + R, \\\\
 K &= Σ H^T S^{-1}, \\\\
-μ^F &= μ - K (z + H (μ - m)), \\\\
+μ^F &= μ - K \\hat{z}, \\\\
 Σ^F &= (I - K H) Σ (I - K H)^T + K R K^T.
 \\end{aligned}
 ```
-`z + H (μ - m)` is the value of the linearization at the predicted mean ``μ``; it is `z` when
-`obs` is linearized at ``μ``. The square root of ``(I - K H) Σ (I - K H)^T`` is computed as
-``\\sqrt{Σ} - B K^T`` with ``B = \\sqrt{Σ} H^T``, in ``O(D^2 o)`` for an `o`-dimensional
-observation.
+Return `(; loglikelihood, ztSinvz, S)`: the log-likelihood of the observation,
+``\\hat{z}^T S^{-1} \\hat{z}``, and ``S``.
+
+This is [`update_mean!`](@ref) followed by [`update_cov!`](@ref).
 
 See also: [`update`](@ref).
 """
@@ -98,11 +94,9 @@ end
 """
     update!(x, obs::LinearizedObservation; cache)
 
-Condition the Gaussian `x` on the observation `obs` in place: copy `x` to `cache.x_tmp` as
-the prediction, so neither `x` nor `obs.m` may be in `cache.x_tmp`, and call
-[`update!`](@ref) with the buffers of the solver's `cache` for the size of the observation,
-from `make_obssized_cache`. If `obs` is linearized at `x.μ`, which the update overwrites, it
-is moved to the copy. An observation of size 0 leaves `x` unchanged, with log-likelihood 0.
+Condition the Gaussian `x` on the observation `obs` in place, with the buffers of the
+solver's `cache`. `x` is first copied to `cache.x_tmp`, so neither `x` nor `obs.m` may be
+stored there, but `obs.m` may be `x.μ`. An observation of size 0 leaves `x` unchanged.
 """
 function update!(x, obs::LinearizedObservation; cache)
     o = length(obs.z)
@@ -161,15 +155,11 @@ end
     update_mean!(x_out, x_pred, obs::LinearizedObservation,
                  K1_cache, K2_cache, measurement_cache, C_dxd, C_d)
 
-The mean of [`update!`](@ref): write ``μ^F`` into `x_out.μ`, and return the named tuple
-`(; loglikelihood, ztSinvz, S, K, B)` with the gain `K` and `B = √Σ Hᵀ` for
-[`update_cov!`](@ref).
-An iterated update calls it for each linearization and [`update_cov!`](@ref) only for the
-last one. The second form takes the buffers explicitly; the first takes them from `cache`,
-and writes `S` into `cache.measurement.Σ`, `K` into `cache.C_Dxd` and `B` into
-`cache.K1`. If `obs.m` is not `x_pred.μ`, it also writes `z + H (μ - m)` into
-`cache.measurement.μ` and uses `x_out.μ` and `cache.C_d` as workspace, so `obs.z` must not be
-any of these.
+The mean part of [`update!`](@ref): write ``μ^F`` into `x_out.μ` and return
+`(; loglikelihood, ztSinvz, S, K, B)`, with the gain `K` and `B = x_pred.Σ.R * H'` for
+[`update_cov!`](@ref). An iterated update calls it for every linearization, and
+[`update_cov!`](@ref) only for the last one. `obs.z` must not be stored in `x_out.μ` or
+`cache.C_d`, which serve as workspace.
 """
 function update_mean!(
     x_out,
@@ -182,7 +172,7 @@ function update_mean!(
     C_d,
 )
     (; m, H, R) = obs
-    # z + H (μ - m) = z - H (m - μ), with x_out.μ and C_d as buffers
+    # z + H (μ - m) = z - H (m - μ)
     z = if m === x_pred.μ
         obs.z
     else
@@ -284,8 +274,6 @@ function _update_mean!(
     end
     return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
 end
-# A `BlocksOfScaledSelections` observation decouples into one observation of each state
-# block `dims[k]`, and the blocks it does not observe keep the prediction
 function _update_mean!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},
     x_pred::SRGaussian{T,<:BlocksOfDiagonals},
@@ -316,8 +304,8 @@ end
     update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B; cache)
     update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B, M_cache, KR_cache)
 
-The covariance of [`update!`](@ref): write ``Σ^F`` into `x_out.Σ`, for the gain `K` and
-`B = √Σ Hᵀ` that [`update_mean!`](@ref) returned for the same `x_pred` and `obs`.
+The covariance part of [`update!`](@ref): write ``Σ^F`` into `x_out.Σ`, with the `K` and `B`
+that [`update_mean!`](@ref) returned for the same `x_pred` and `obs`.
 """
 function update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B, M_cache, KR_cache)
     _update_cov!(x_out.Σ, x_pred.Σ, obs.H, obs.R, K, B, M_cache, KR_cache)
@@ -345,7 +333,7 @@ function _update_cov!(
     _matmul!(copy!(Σ_out.R, Σ_pred.R), B, K', -1.0, 1.0)
 
     if !isnothing(R)
-        # Σ^F = √Σ^Fᵀ √Σ^F + KR KRᵀ with KR = K √Rᵀ
+        # Σ^F = (I - K H) Σ (I - K H)ᵀ + KR KRᵀ with KR = K √Rᵀ
         M = _matmul!(M_cache, Σ_out.R', Σ_out.R)
         KR = _matmul!(KR_cache, K, R.R')
         _matmul!(M, KR, KR', 1, 1)
