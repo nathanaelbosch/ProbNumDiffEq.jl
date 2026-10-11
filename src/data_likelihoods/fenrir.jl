@@ -91,11 +91,8 @@ function fit_pnsolution_to_data!(
     # First update on the last data point, if it lies at the end of the solution
     data_idx = length(data.u)
     if sol.t[end] == data.t[data_idx]
-        (; loglikelihood) = update!(
-            x_posterior[end],
-            linear_observation(H, data.u[data_idx], observation_noise_cov);
-            cache,
-        )
+        obs = linear_observation(H, data.u[data_idx], observation_noise_cov)
+        (; loglikelihood) = update!(x_posterior[end], obs; cache)
         LL += loglikelihood
         data_idx -= 1
     end
@@ -112,11 +109,8 @@ function fit_pnsolution_to_data!(
         marginalize!(x_posterior[i], x_posterior[i+1], K; C_DxD, C_3DxD)
 
         if data_idx > 0 && sol.t[i] == data.t[data_idx]
-            (; loglikelihood) = update!(
-                x_posterior[i],
-                linear_observation(H, data.u[data_idx], observation_noise_cov);
-                cache,
-            )
+            obs = linear_observation(H, data.u[data_idx], observation_noise_cov)
+            (; loglikelihood) = update!(x_posterior[i], obs; cache)
             LL += loglikelihood
             data_idx -= 1
         end
