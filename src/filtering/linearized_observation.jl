@@ -33,7 +33,7 @@ Examples:
 
 `H` and `R` are matrices of the same structured type as the state covariance (`Matrix`,
 `IsometricKroneckerProduct` or `BlocksOfDiagonals`); with a `BlocksOfDiagonals` covariance,
-`H` can also be a `PartialBlocksOfDiagonals`, which observes only some of the blocks.
+`H` can also be a `BlocksOfScaledSelections`, which observes only some of the blocks.
 Another type of `H` works with [`update!`](@ref) if the internal `_update_mean!` and
 `_update_cov!` have methods for it, and `_matmul!` if `m` is not the mean, as for
 [`linear_observation`](@ref), which also needs `size(H, 2)`. A matrix-free operator would add

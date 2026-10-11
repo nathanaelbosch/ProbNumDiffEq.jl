@@ -80,7 +80,7 @@ With the derivative-major state `x = vec(X)`, `X ∈ ℝ^(d×(q+1))`, it is `H x
 all structure of `H` is in `M`, which is a `UniformScaling`, a `Diagonal`, a
 `ScaledSelection` or a general matrix. A dense `C` takes any `M`, an isometric-Kronecker `C`
 only `λI`, and a block-diagonal `C` takes `λI` and `Diagonal` as a `BlocksOfDiagonals` and a
-`ScaledSelection` as a `PartialBlocksOfDiagonals`; other `M` throw an error.
+`ScaledSelection` as a `BlocksOfScaledSelections`; other `M` throw an error.
 """
 solution_observation_matrix(C::CovarianceStructure, M) =
     solution_observation_matrix(C, M, 0)
@@ -107,7 +107,7 @@ solution_observation_matrix(C::BlockDiagonalCovariance{T}, M::Diagonal, deriv) w
 solution_observation_matrix(
     C::BlockDiagonalCovariance{T}, M::ScaledSelection, deriv,
 ) where {T} =
-    PartialBlocksOfDiagonals([_ei_row(T, C.q, deriv, m) for m in M.m], M.dims, C.d)
+    BlocksOfScaledSelections([_ei_row(T, C.q, deriv, m) for m in M.m], M.dims, C.d)
 solution_observation_matrix(::BlockDiagonalCovariance, M, deriv) = selection_error()
 
 _noise_fits(::DenseCovariance, noise_cov) = true

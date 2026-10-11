@@ -259,16 +259,23 @@ end
     end
 
     # Row `k` of a `ScaledSelection` observes `m[k]` times derivative `deriv` of dimension
-    # `dims[k]`. With a block-diagonal covariance, it is a `PartialBlocksOfDiagonals`; compare
-    # `_matmul!` and `update!` with the dense `H`; dimension 2 is not observed and keeps its
-    # prediction.
+    # `dims[k]`. With a block-diagonal covariance, it is a `BlocksOfScaledSelections`;
+    # compare `_matmul!` and `update!` with the dense `H`; dimension 2 is not observed and
+    # keeps its prediction.
     m, dims = [2.0, -1.0], [3, 1]
     o, D = length(dims), d * (q + 1)
     M = PNDE.ScaledSelection(m, dims, d)
     C = PNDE.BlockDiagonalCovariance{Float64}(d, q)
     H = PNDE.solution_observation_matrix(C, M, deriv)
     H_dense = dense(M)
-    @test H isa PNDE.PartialBlocksOfDiagonals
+    @test H isa PNDE.BlocksOfScaledSelections
+    # Blocks of one size, one per distinct dimension
+    @test_throws AssertionError PNDE.BlocksOfScaledSelections([rand(1, 3)], [1, 2], d)
+    @test_throws AssertionError PNDE.BlocksOfScaledSelections(
+        [rand(1, 3), rand(1, 2)], [1, 2], d)
+    @test_throws AssertionError PNDE.BlocksOfScaledSelections(
+        [rand(1, 3), rand(1, 3)], [1, 1], d)
+    @test_throws AssertionError PNDE.BlocksOfScaledSelections([rand(1, 3)], [d + 1], d)
     @test Matrix(H) == H_dense
     blockdiag(f, n) = BlocksOfDiagonals([f() for _ in 1:n])
     x_pred = Gaussian(

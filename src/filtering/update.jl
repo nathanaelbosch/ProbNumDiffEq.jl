@@ -284,13 +284,13 @@ function _update_mean!(
     end
     return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
 end
-# A `PartialBlocksOfDiagonals` observation decouples into one observation of each state block
-# `dims[k]`, and the blocks it does not observe keep the prediction
+# A `BlocksOfScaledSelections` observation decouples into one observation of each state
+# block `dims[k]`, and the blocks it does not observe keep the prediction
 function _update_mean!(
     x_out::SRGaussian{T,<:BlocksOfDiagonals},
     x_pred::SRGaussian{T,<:BlocksOfDiagonals},
     z::AbstractVector,
-    H::PartialBlocksOfDiagonals,
+    H::BlocksOfScaledSelections,
     R::Union{Nothing,BlocksOfDiagonalsPSD},
     K1_cache::BlocksOfDiagonals,
     K2_cache::BlocksOfDiagonals,
@@ -390,7 +390,7 @@ end
 function _update_cov!(
     Σ_out::BlocksOfDiagonalsPSD,
     Σ_pred::BlocksOfDiagonalsPSD,
-    H::PartialBlocksOfDiagonals,
+    H::BlocksOfScaledSelections,
     R::Union{Nothing,BlocksOfDiagonalsPSD},
     K::BlocksOfDiagonals,
     B::BlocksOfDiagonals,

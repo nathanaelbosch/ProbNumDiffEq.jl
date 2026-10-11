@@ -390,28 +390,40 @@ end
 const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}
 
 """
-    PartialBlocksOfDiagonals(blocks, dims, d)
+    BlocksOfScaledSelections(blocks, dims, d)
 
-A [`BlocksOfDiagonals`](@ref) matrix with `d` blocks, of which only the blocks `dims` have
-rows, in the order of `dims`: block `dims[k]` is `blocks[k]`, in the rows `k:o:end`,
-`o = length(dims)`, and the columns `dims[k]:d:end`. As an observation matrix it observes
-only the dimensions `dims`, each from its own state block, so the update keeps a
-block-diagonal covariance.
+The matrix `H = Σₖ Bₖ ⊗ eₖ e_{jₖ}ᵀ`, with blocks `Bₖ = blocks[k]` of equal size, distinct
+dimensions `jₖ = dims[k]` in `1:d`, `eₖ ∈ ℝᵒ`, `o = length(dims)`, and `e_{jₖ} ∈ ℝᵈ`.
+
+As a block matrix, its blocks are the `o×d` scaled selections
+`diag(B₁[r, c], …, B_o[r, c]) S`, with `S` the rows `dims` of `I_d`, where those of a
+[`BlocksOfDiagonals`](@ref) are diagonal: `H` is the rows `dims` of the `BlocksOfDiagonals`
+with block `jₖ` equal to `Bₖ`. Row block `k` reads only the state block `jₖ`,
+`(H x)ₖ = Bₖ x[jₖ:d:end]`, so with a block-diagonal covariance, the update with `H` is one
+update per observed block.
 """
-struct PartialBlocksOfDiagonals{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
+struct BlocksOfScaledSelections{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}
     dims::Vector{Int}
     d::Int
+    function BlocksOfScaledSelections(
+        blocks::Vector{V}, dims, d,
+    ) where {T,V<:AbstractMatrix{T}}
+        @assert !isempty(blocks) && length(blocks) == length(dims)
+        @assert all(b -> size(b) == size(blocks[1]), blocks)
+        @assert allunique(dims) && all(in(1:d), dims)
+        return new{T,V}(blocks, dims, d)
+    end
 end
-size(H::PartialBlocksOfDiagonals) = (length(H.dims), H.d) .* size(H.blocks[1])
-function Base.getindex(H::PartialBlocksOfDiagonals{T}, i::Integer, j::Integer) where {T}
+size(H::BlocksOfScaledSelections) = (length(H.dims), H.d) .* size(H.blocks[1])
+function Base.getindex(H::BlocksOfScaledSelections{T}, i::Integer, j::Integer) where {T}
     @boundscheck checkbounds(H, i, j)
     o = length(H.dims)
     k = mod1(i, o)
     H.dims[k] == mod1(j, H.d) || return zero(T)
     return H.blocks[k][cld(i, o), cld(j, H.d)]
 end
-function _matmul!(z::AbstractVector, H::PartialBlocksOfDiagonals, x::AbstractVector)
+function _matmul!(z::AbstractVector, H::BlocksOfScaledSelections, x::AbstractVector)
     o = length(H.dims)
     for (k, i) in enumerate(H.dims)
         _matmul!(view(z, k:o:length(z)), H.blocks[k], view(x, i:H.d:length(x)))
