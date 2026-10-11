@@ -75,12 +75,12 @@ that picks the `i`-th derivative from the filter state, and `M` is an observatio
 in the covariance structure `C`. Since `Eᵢ = eᵢᵀ ⊗ I_d`, `H` can also be written as
 `H = M Eᵢ = (1 ⊗ M)(eᵢᵀ ⊗ I_d) = eᵢᵀ ⊗ M`.
 
-`H` is constructed to be compatible to the specified covariance structure `C`. This
+`H` is constructed to be compatible with the specified covariance structure `C`. This
 limits the type that `M` can have: a Kronecker `C` needs `M = λI`; a block-diagonal
 `C` needs an `M` that observes each dimension separately (`λI`, `Diagonal` or
 `ScaledSelection`). Dense `C` can take any `M`.
 
-The `deriv` argument specifies which derivative `i` is observed.
+The `deriv` argument specifies which derivative `i` is observed, by default `0`.
 """
 function solution_observation_matrix end
 function solution_observation_matrix(C::DenseCovariance{T}, M; deriv=0) where {T}

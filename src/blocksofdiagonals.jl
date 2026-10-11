@@ -389,13 +389,12 @@ end
 
 const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}
 
-
 """
     BlocksOfScaledSelections(blocks, dims, d)
 
 A block matrix whose blocks are scaled selection matrices.
 
-The primary usecase of this object is to represent an observation matrix `H` that observes
+The primary use case of this object is to represent an observation matrix `H` that observes
 only some of the dimensions of a state, individually without mixing them. In such a case
 the update can still be done block-wise and no cross-dimension correlations are introduced,
 keeping the covariance block-diagonal and the whole computation efficient (i.e. with linear
