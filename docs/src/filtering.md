@@ -13,7 +13,7 @@ ProbNumDiffEq.predict!
 ProbNumDiffEq.LinearizedObservation
 ProbNumDiffEq.update
 ProbNumDiffEq.update!
-ProbNumDiffEq.data_observation
+ProbNumDiffEq.linear_observation
 ProbNumDiffEq.update_mean!
 ProbNumDiffEq.update_cov!
 ```

@@ -388,3 +388,33 @@ function Base.hcat(M1::BlocksOfDiagonals, M2::BlocksOfDiagonals)
 end
 
 const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}
+
+"""
+    PartialBlocksOfDiagonals(blocks, dims, d)
+
+A [`BlocksOfDiagonals`](@ref) matrix with `d` blocks, of which only the blocks `dims` have
+rows, in the order of `dims`: block `dims[k]` is `blocks[k]`, in the rows `k:o:end`,
+`o = length(dims)`, and the columns `dims[k]:d:end`. As an observation matrix it observes
+only the dimensions `dims`, each from its own state block, so the update keeps a
+block-diagonal covariance.
+"""
+struct PartialBlocksOfDiagonals{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
+    blocks::Vector{V}
+    dims::Vector{Int}
+    d::Int
+end
+size(H::PartialBlocksOfDiagonals) = (length(H.dims), H.d) .* size(H.blocks[1])
+function Base.getindex(H::PartialBlocksOfDiagonals{T}, i::Integer, j::Integer) where {T}
+    @boundscheck checkbounds(H, i, j)
+    o = length(H.dims)
+    k = mod1(i, o)
+    H.dims[k] == mod1(j, H.d) || return zero(T)
+    return H.blocks[k][cld(i, o), cld(j, H.d)]
+end
+function _matmul!(z::AbstractVector, H::PartialBlocksOfDiagonals, x::AbstractVector)
+    o = length(H.dims)
+    for (k, i) in enumerate(H.dims)
+        _matmul!(view(z, k:o:length(z)), H.blocks[k], view(x, i:H.d:length(x)))
+    end
+    return z
+end

@@ -93,7 +93,7 @@ function fit_pnsolution_to_data!(
     if sol.t[end] == data.t[data_idx]
         (; loglikelihood) = update!(
             x_posterior[end],
-            data_observation(H, data.u[data_idx], observation_noise_cov);
+            linear_observation(H, data.u[data_idx], observation_noise_cov);
             cache,
         )
         LL += loglikelihood
@@ -114,7 +114,7 @@ function fit_pnsolution_to_data!(
         if data_idx > 0 && sol.t[i] == data.t[data_idx]
             (; loglikelihood) = update!(
                 x_posterior[i],
-                data_observation(H, data.u[data_idx], observation_noise_cov);
+                linear_observation(H, data.u[data_idx], observation_noise_cov);
                 cache,
             )
             LL += loglikelihood

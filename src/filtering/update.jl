@@ -284,6 +284,33 @@ function _update_mean!(
     end
     return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
 end
+# A `PartialBlocksOfDiagonals` observation decouples into one observation of each state block
+# `dims[k]`, and the blocks it does not observe keep the prediction
+function _update_mean!(
+    x_out::SRGaussian{T,<:BlocksOfDiagonals},
+    x_pred::SRGaussian{T,<:BlocksOfDiagonals},
+    z::AbstractVector,
+    H::PartialBlocksOfDiagonals,
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K1_cache::BlocksOfDiagonals,
+    K2_cache::BlocksOfDiagonals,
+    S_cache::BlocksOfDiagonals,
+    C_dxd::BlocksOfDiagonals,
+    C_d::AbstractVector,
+) where {T}
+    d, o = nblocks(x_out.Σ.R), length(H.dims)
+    o < d && copy!(x_out.μ, x_pred.μ)
+    args = (z, H, R, K1_cache, K2_cache, S_cache, C_dxd, C_d)
+    loglikelihood, ztSinvz = zero(T), zero(T)
+    for (k, i) in enumerate(H.dims)
+        block = _update_mean!(
+            _diagonal_block(x_out, i, d), _diagonal_block(x_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+        loglikelihood += block.loglikelihood
+        ztSinvz += block.ztSinvz
+    end
+    return (; loglikelihood, ztSinvz, S=S_cache, K=K2_cache, B=K1_cache)
+end
 
 """
     update_cov!(x_out, x_pred, obs::LinearizedObservation, K, B; cache)
@@ -358,5 +385,24 @@ function _update_cov!(
 )
     foreach_diagonal_block(
         _update_cov!, nblocks(H), Σ_out, Σ_pred, H, R, K, B, M_cache, KR_cache)
+    return Σ_out
+end
+function _update_cov!(
+    Σ_out::BlocksOfDiagonalsPSD,
+    Σ_pred::BlocksOfDiagonalsPSD,
+    H::PartialBlocksOfDiagonals,
+    R::Union{Nothing,BlocksOfDiagonalsPSD},
+    K::BlocksOfDiagonals,
+    B::BlocksOfDiagonals,
+    M_cache::BlocksOfDiagonals,
+    KR_cache::BlocksOfDiagonals,
+)
+    d, o = nblocks(Σ_out.R), length(H.dims)
+    o < d && copy!(Σ_out.R, Σ_pred.R)
+    args = (H, R, K, B, M_cache, KR_cache)
+    for (k, i) in enumerate(H.dims)
+        _update_cov!(_diagonal_block(Σ_out, i, d), _diagonal_block(Σ_pred, i, d),
+            map(x -> _diagonal_block(x, k, o), args)...)
+    end
     return Σ_out
 end

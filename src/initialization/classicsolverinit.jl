@@ -121,7 +121,7 @@ function rk_init_improve(cache::AbstractODEFilterCache, ts, us, dt)
             C_2Dx2D=cache.C_2Dx2D, diffusion=cache.default_diffusion)
         push!(backward_kernels, copy(backward_kernel))
 
-        update!(x_filt, x_pred, data_observation(H, u); cache)
+        update!(x_filt, x_pred, linear_observation(H, u); cache)
         push!(filts, copy(x_filt))
 
         x = x_filt
