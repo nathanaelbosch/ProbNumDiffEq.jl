@@ -69,9 +69,9 @@ quasi-maximum-likelihood-estimated from the whole solve.
 
 **With `calibrate=true`, supported by the [`EK0`](@ref) with the [`IWP`](@ref) prior (the
 default) and by the [`DiagonalEK1`](@ref).** With `calibrate=false`, the given
-`initial_diffusion` is used as is, and every solver supports it. Only the `EK0` with the
-`IWP` prior uses a per-dimension diffusion in the local error estimate for adaptive step
-size selection; all other setups use a scalar estimate there.
+`initial_diffusion` is used as is, and every solver supports it. The setups that support
+`calibrate=true` also use a per-dimension diffusion in the local error estimate for adaptive
+step size selection; all other setups use a scalar estimate there.
 
 A multi-variate version of [`FixedDiffusion`](@ref), where instead of an isotropic matrix,
 a diagonal matrix is estimated. This can be helpful to get more expressive posterior
@@ -104,8 +104,7 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
     end
 end
 function estimate_local_diffusion(::FixedMVDiffusion, integ, obs, HQH)
-    if integ.alg.linearization isa ZeroJacobian &&
-       integ.cache.covariance_factorization isa BlockDiagonalCovariance
+    if integ.cache.covariance_factorization isa BlockDiagonalCovariance
         return local_diagonal_diffusion(integ.cache, obs.r, HQH)
     else
         # The local diffusion is stored as a `Diagonal` for multivariate models, so the
