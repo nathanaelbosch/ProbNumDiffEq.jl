@@ -1,27 +1,21 @@
 """
     LinearizedObservation(m, z, H, R=nothing)
 
-The observation ``y = h(x) + v``, ``v \\sim \\mathcal{N}(0, R)``, of the state ``x``,
-linearized at the point `m`:
-```math
-h(x) - y ≈ z + H (x - m).
-```
-A first-order Taylor expansion gives `z = h(m) - y` and `H = h'(m)`, but the examples below
-show other choices. For an affine model ``y \\sim \\mathcal{N}(H x + b, R)``, it is
-`z = H m + b - y`. `R` is the noise covariance as a `PSDMatrix`, or `nothing` for an exact
-observation.
-
-[`update!`](@ref) evaluates the linearization at the mean ``μ`` of the state it conditions,
-as ``z + H (μ - m)``, which is `z` if `m` is ``μ``.
+Linear(ized) observation of a state ``x``, of the form `\\mathcal{N}(H (x - m) + r, R)`,
+observed to be zero. This typically results from linearizing a nonlinear observation
+model ``h(x)`` at a point `m`, with `r = h(m)` and `H = J_h(m)` the Jacobian of `h` at `m`,
+as is the standard case in ODE filtering.
 
 Examples:
-- The ODE step observes ``y = 0`` through the residual ``h(x) = E_1 x - f(E_0 x, t)`` of the
-  ODE ``u' = f(u, t)``, linearized at the predicted mean ``μ``: `m = μ`, `z = h(μ)` and
-  `H = E_1 - J E_0`, where `J` is the Jacobian of `f` in the `EK1`, its diagonal in the
-  `DiagonalEK1`, and `0` in the `EK0`.
-- Data, as in `DataUpdateCallback` and Fenrir, is linear, ``y = C E_0 x + v``, so the
-  linearization is exact at any `m`. [`linear_observation`](@ref) takes `m = 0`, which gives
-  `z = -y` and `H = C E_0`.
+- The ODE filter's nonlinear observation model ``h(x) = E_1 x - f(E_0 x, t)`` is at each
+  step linearized at the predicted mean ``μ``, leading to `m = μ`, `z = h(μ)` and
+  `H = E_1 - J E_0`, where `J` is the Jacobian of `f` in the `EK1` (or its diagonal in the
+  `DiagonalEK1`, or `0` in the `EK0`).
+- Non-zero observations, such as external observations of the ODE trajectory, can also be
+  represented in this model by simply shifting the observation model by the observation `y`.
+  That is since a linear observation ``y \\sim \\mathcal{N}(M E_0 x, R)`` is equivalent to
+  ``0 \\sim \\mathcal{N}(M E_0 x - y, R)``, we obtain `H = M E_0`, `m = 0` as we do not have
+  to linearize, and `z = -y`.
 - An iterated extended Kalman filter, as in `ManifoldUpdate`, conditions the same prediction
   ``\\mathcal{N}(μ, Σ)`` in every iteration and linearizes ``h`` at the conditioned mean of
   the previous iteration, so `m = μ` only in the first.
@@ -43,8 +37,8 @@ LinearizedObservation(m, z, H) = LinearizedObservation(m, z, H, nothing)
 """
     linear_observation(H, y, R=nothing)
 
-The [`LinearizedObservation`](@ref) of the data `y` in the linear model
-``y \\sim \\mathcal{N}(H x, R)``. A linear model needs no linearization, so it is exact.
+Builds the [`LinearizedObservation`](@ref) corresponding to the the linear model
+``y \\sim \\mathcal{N}(H x, R)`` with observation `y`.
 """
 linear_observation(H, y, R=nothing) =
     LinearizedObservation(Zeros{eltype(y)}(size(H, 2)), -y, H, R)

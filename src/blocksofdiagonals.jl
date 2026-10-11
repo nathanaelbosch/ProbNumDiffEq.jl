@@ -389,20 +389,21 @@ end
 
 const BlocksOfDiagonalsPSD{T} = PSDMatrix{T,<:BlocksOfDiagonals}
 
+
 """
     BlocksOfScaledSelections(blocks, dims, d)
 
-A block matrix whose blocks are scaled selections, just as those of a
-[`BlocksOfDiagonals`](@ref) are diagonal matrices: block `(r, c)` is the
-`ScaledSelection(m, dims, d)` with `m[k] = blocks[k][r, c]`. For example, the observation
-matrix `H = M Eᵢ = eᵢᵀ ⊗ M` of `solution_observation_matrix`, where `Eᵢ` selects the `i`-th
-derivative and a `ScaledSelection` `M` some of the dimensions, is a single row of blocks,
-with `M` in the block of the `i`-th derivative and zeros elsewhere.
+A block matrix whose blocks are scaled selection matrices.
 
-Like a `BlocksOfDiagonals`, it acts on the state blocks separately,
-`(H x)[k:o:end] = blocks[k] * x[dims[k]:d:end]` with `o = length(dims)`, so with a
-block-diagonal covariance the update is one update per observed dimension. The `blocks`
-have equal size, and the `dims` are distinct and in `1:d`.
+The primary usecase of this object is to represent an observation matrix `H` that observes
+only some of the dimensions of a state, individually without mixing them. In such a case
+the update can still be done block-wise and no cross-dimension correlations are introduced,
+keeping the covariance block-diagonal and the whole computation efficient (i.e. with linear
+scaling in the ODE dimension).
+
+It behaves like a [`BlocksOfDiagonals`](@ref) matrix with `d` blocks, but instead of having
+one for each state dimension only the dimensions `dims` have a block as all other dimensions
+are not observed. The `dims` must be distinct, and the `blocks` of equal size.
 """
 struct BlocksOfScaledSelections{T<:Number,V<:AbstractMatrix{T}} <: AbstractMatrix{T}
     blocks::Vector{V}
