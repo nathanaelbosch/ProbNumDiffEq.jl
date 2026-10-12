@@ -138,4 +138,18 @@ import ODEProblemLibrary: prob_ode_fitzhughnagumo
             @test Matrix(solM.pu[end].Σ) ≈ Matrix(solI.pu[end].Σ)
         end
     end
+
+    @testset "`FixedMVDiffusion` estimates the local diffusion per dimension: $S" for S in (
+        EK0,
+        DiagonalEK1,
+    )
+        λ = [-1.0, -100.0]
+        prob = ODEProblem((du, u, p, t) -> (du .= λ .* u), [1.0, 1.0], (0.0, 1.0))
+        function local_diffusion(D)
+            integ = init(prob, S(diffusionmodel=D))
+            step!(integ)
+            return integ.cache.local_diffusion
+        end
+        @test local_diffusion(FixedMVDiffusion()) ≈ local_diffusion(DynamicMVDiffusion())
+    end
 end
