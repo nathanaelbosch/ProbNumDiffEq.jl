@@ -50,12 +50,6 @@ Whether a component of an `ODEFilter` needs the Jacobian of the ODE vector field
 needs_jacobian(::ZeroJacobian) = false
 needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
 
-# The name that an `ODEFilter` with this linearization prints as
-_solver_name(::ZeroJacobian) = "EK0"
-_solver_name(::FullJacobian) = "EK1"
-_solver_name(::DiagonalJacobian) = "DiagonalEK1"
-_solver_name(::AbstractLinearization) = nothing
-
 """
     make_linearization_cache(linearization, C::CovarianceStructure, u, f)
 

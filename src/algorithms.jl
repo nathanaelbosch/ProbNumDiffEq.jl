@@ -333,6 +333,11 @@ julia> solve(prob, RosenbrockExpEK())
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
 
+_solver_name(::ZeroJacobian) = "EK0"
+_solver_name(::FullJacobian) = "EK1"
+_solver_name(::DiagonalJacobian) = "DiagonalEK1"
+_solver_name(::AbstractLinearization) = nothing
+
 # Shown as the call that constructs it, with the settings that differ from the defaults
 function Base.show(io::IO, alg::ODEFilter)
     name = _solver_name(alg.linearization)
