@@ -41,51 +41,6 @@ else
     end
 end
 
-########################################################################################
-# Linearizations
-########################################################################################
-"""
-    AbstractLinearization
-
-How an [`ODEFilter`](@ref) linearizes the observation of the ODE in each step.
-
-A linearization `L <: AbstractLinearization` has methods for
-- `linearize_observation!(::L, integ, m::AbstractVector)`, or for `x::Gaussian` if it
-  linearizes at a distribution instead of a point;
-- `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
-- `needs_jacobian(::L)`.
-"""
-abstract type AbstractLinearization end
-
-"""
-    ZeroJacobian()
-
-Linearize the ODE vector field with a zero Jacobian, as the [`EK0`](@ref) does.
-"""
-struct ZeroJacobian <: AbstractLinearization end
-
-"""
-    DiagonalJacobian()
-
-Linearize the ODE vector field with the diagonal of its Jacobian, as the
-[`DiagonalEK1`](@ref) does.
-"""
-struct DiagonalJacobian <: AbstractLinearization end
-
-"""
-    FullJacobian()
-
-Linearize the ODE vector field with its Jacobian, as the [`EK1`](@ref) does.
-"""
-struct FullJacobian <: AbstractLinearization end
-
-"""
-    needs_jacobian(component)
-
-Whether a component of an `ODEFilter` needs the Jacobian of the ODE vector field.
-"""
-needs_jacobian(::ZeroJacobian) = false
-needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
 needs_jacobian(::AbstractGaussMarkovProcess) = false
 needs_jacobian(prior::IOUP) = prior.update_rate_parameter
 
@@ -377,11 +332,6 @@ julia> solve(prob, RosenbrockExpEK())
 """
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
-
-_solver_name(::ZeroJacobian) = "EK0"
-_solver_name(::FullJacobian) = "EK1"
-_solver_name(::DiagonalJacobian) = "DiagonalEK1"
-_solver_name(::AbstractLinearization) = nothing
 
 # Shown as the call that constructs it, with the settings that differ from the defaults
 function Base.show(io::IO, alg::ODEFilter)
