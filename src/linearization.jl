@@ -4,19 +4,28 @@
 How an [`ODEFilter`](@ref) linearizes the observation of the ODE in each step.
 
 A linearization `L <: AbstractLinearization` has methods for
-- `linearize_observation!(::L, integ, m::AbstractVector)`, or for `x::Gaussian` if it
-  linearizes at a distribution instead of a point;
+- `linearize_observation!(::L, integ, x::Gaussian)`, to linearize at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`.
 """
 abstract type AbstractLinearization end
 
 """
+    AbstractTaylorLinearization <: AbstractLinearization
+
+A linearization by a Taylor expansion of the ODE vector field at a point. At a `Gaussian`,
+it linearizes at the mean. Its subtypes implement
+`linearize_observation!(::L, integ, m::AbstractVector)` at a point `m`, instead of the
+method for a `Gaussian`.
+"""
+abstract type AbstractTaylorLinearization <: AbstractLinearization end
+
+"""
     ZeroJacobian()
 
 Linearize the ODE vector field with a zero Jacobian, as the [`EK0`](@ref) does.
 """
-struct ZeroJacobian <: AbstractLinearization end
+struct ZeroJacobian <: AbstractTaylorLinearization end
 
 """
     DiagonalJacobian()
@@ -24,14 +33,14 @@ struct ZeroJacobian <: AbstractLinearization end
 Linearize the ODE vector field with the diagonal of its Jacobian, as the
 [`DiagonalEK1`](@ref) does.
 """
-struct DiagonalJacobian <: AbstractLinearization end
+struct DiagonalJacobian <: AbstractTaylorLinearization end
 
 """
     FullJacobian()
 
 Linearize the ODE vector field with its Jacobian, as the [`EK1`](@ref) does.
 """
-struct FullJacobian <: AbstractLinearization end
+struct FullJacobian <: AbstractTaylorLinearization end
 
 """
     needs_jacobian(component)
@@ -66,16 +75,17 @@ function make_linearization_cache(
 end
 
 """
-    linearize_observation!(linearization, integ, x)
+    linearize_observation!(linearization, integ, x::Gaussian)
+    linearize_observation!(::AbstractTaylorLinearization, integ, m::AbstractVector)
 
-Linearize the observation of the ODE at the end of the current step at `x`, and return it as
-a [`LinearizedObservation`](@ref). The observation is ``h(x) = 0``, with
-``h(x) = M E_1 x - f(E_0 x, t)``, or ``h(x) = E_2 x - f(E_1 x, E_0 x, t)`` for second-order
-ODEs. `x` is a point or a `Gaussian`; linearizations at a point use the Gaussian's mean.
-Linearizations with a Jacobian write the solution at that point into `integ.u`, where
+Linearize the observation of the ODE at the end of the current step at the distribution
+`x`, and return it as a [`LinearizedObservation`](@ref). The observation is ``h(x) = 0``,
+with ``h(x) = M E_1 x - f(E_0 x, t)``, or ``h(x) = E_2 x - f(E_1 x, E_0 x, t)`` for
+second-order ODEs. A Taylor linearization linearizes at the mean of `x`, or at any point
+`m`. Those with a Jacobian write the solution at that point into `integ.u`, where
 OrdinaryDiffEq evaluates the Jacobian.
 """
-linearize_observation!(linearization::AbstractLinearization, integ, x::Gaussian) =
+linearize_observation!(linearization::AbstractTaylorLinearization, integ, x::Gaussian) =
     linearize_observation!(linearization, integ, x.μ)
 
 function linearize_observation!(::ZeroJacobian, integ, m::AbstractVector)
