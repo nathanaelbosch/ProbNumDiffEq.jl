@@ -25,12 +25,12 @@ E0, E1 = PNDE.projection(d, q)(0), PNDE.projection(d, q)(1)
     m = collect(range(0.5, 1.5, length=d * (q + 1)))
     @assert m != integ.cache.x_pred.μ
 
-    obs = PNDE.linearize_observation!(integ.alg.linearization, integ, m)
+    obs = PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m)
     @test obs.m === m
     @test obs.r ≈ M * E1 * m - f(E0 * m, prob.p, t)
     J = ForwardDiff.jacobian(u -> f(u, prob.p, t), E0 * m)
     @test Matrix(obs.H) ≈ M * E1 - approx(J) * E0
 
     x = integ.cache.x_pred
-    @test PNDE.linearize_observation!(integ.alg.linearization, integ, x).m === x.μ
+    @test PNDE.linearize_ode_observation!(integ.alg.linearization, integ, x).m === x.μ
 end

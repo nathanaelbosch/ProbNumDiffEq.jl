@@ -106,7 +106,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
 
     # The diffusion estimates need the residual at the predicted mean
-    obs = linearize_observation!(integ.alg.linearization, integ, x_pred)
+    obs = linearize_ode_observation!(integ.alg.linearization, integ, x_pred)
     @assert obs.m === x_pred.μ
 
     # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected

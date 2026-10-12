@@ -4,7 +4,7 @@
 How an [`ODEFilter`](@ref) linearizes the observation of the ODE in each step.
 
 A linearization `L <: AbstractLinearization` has methods for
-- `linearize_observation!(::L, integ, x::Gaussian)`, to linearize at the distribution `x`;
+- `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`.
 """
@@ -15,7 +15,7 @@ abstract type AbstractLinearization end
 
 A linearization by a Taylor expansion of the ODE vector field at a point. At a `Gaussian`,
 it linearizes at the mean. Its subtypes implement
-`linearize_observation!(::L, integ, m::AbstractVector)` at a point `m`, instead of the
+`linearize_ode_observation!(::L, integ, m::AbstractVector)` at a point `m`, instead of the
 method for a `Gaussian`.
 """
 abstract type AbstractTaylorLinearization <: AbstractLinearization end
@@ -59,9 +59,9 @@ _solver_name(::AbstractLinearization) = nothing
 """
     make_linearization_cache(linearization, C::CovarianceStructure, u, f)
 
-The buffers that [`linearize_observation!`](@ref) writes into, for the covariance structure
-`C`, the ODE state `u` and the ODE function `f`. Built once per solve, and stored in
-`integ.cache.linearization_cache`.
+The buffers that [`linearize_ode_observation!`](@ref) writes into, for the covariance
+structure `C`, the ODE state `u` and the ODE function `f`. Built once per solve, and stored
+in `integ.cache.linearization_cache`.
 """
 function make_linearization_cache(::ZeroJacobian, C::CovarianceStructure{T}, u, f) where {T}
     d, D = C.d, C.d * (C.q + 1)
@@ -75,8 +75,8 @@ function make_linearization_cache(
 end
 
 """
-    linearize_observation!(linearization, integ, x::Gaussian)
-    linearize_observation!(::AbstractTaylorLinearization, integ, m::AbstractVector)
+    linearize_ode_observation!(linearization, integ, x::Gaussian)
+    linearize_ode_observation!(::AbstractTaylorLinearization, integ, m::AbstractVector)
 
 Linearize the observation of the ODE at the end of the current step at the distribution
 `x`, and return it as a [`LinearizedObservation`](@ref). The observation is ``h(x) = 0``,
@@ -85,10 +85,10 @@ second-order ODEs. A Taylor linearization linearizes at the mean of `x`, or at a
 `m`. Those with a Jacobian write the solution at that point into `integ.u`, where
 OrdinaryDiffEq evaluates the Jacobian.
 """
-linearize_observation!(linearization::AbstractTaylorLinearization, integ, x::Gaussian) =
-    linearize_observation!(linearization, integ, x.μ)
+linearize_ode_observation!(linearization::AbstractTaylorLinearization, integ, x::Gaussian) =
+    linearize_ode_observation!(linearization, integ, x.μ)
 
-function linearize_observation!(::ZeroJacobian, integ, m::AbstractVector)
+function linearize_ode_observation!(::ZeroJacobian, integ, m::AbstractVector)
     (; f, p, t, dt) = integ
     (; measurement_model, linearization_cache, E1, E2, R) = integ.cache
     (; r, H) = linearization_cache
@@ -109,11 +109,11 @@ function linearize_observation!(::ZeroJacobian, integ, m::AbstractVector)
     return LinearizedObservation(m, r, H, R)
 end
 
-function linearize_observation!(
+function linearize_ode_observation!(
     linearization::Union{FullJacobian,DiagonalJacobian}, integ, m::AbstractVector,
 )
     (; d, SolProj, linearization_cache) = integ.cache
-    obs = linearize_observation!(ZeroJacobian(), integ, m)
+    obs = linearize_ode_observation!(ZeroJacobian(), integ, m)
     write_into_solution!(integ.u, m, integ.f; cache=integ.cache)
     J = linearization_cache.J
     OrdinaryDiffEqDifferentiation.calc_J!(J, integ, integ.cache, true)
