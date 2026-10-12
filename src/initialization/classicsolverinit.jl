@@ -28,9 +28,8 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         dfdt = copy(u)
         ForwardDiff.derivative!(dfdt, (du, t) -> _f(du, u, p, t), du, t)
 
-        ddu =
-            !isnothing(f.jac_prototype) ? similar(f.jac_prototype) :
-            zeros(eltype(u), length(u), length(u))
+        n = length(u)
+        ddu = isnothing(f.jac_prototype) ? zeros(eltype(u), n, n) : similar(f.jac_prototype)
         if !isnothing(f.jac)
             f.jac(ddu, u, p, t)
         else
