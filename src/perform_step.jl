@@ -69,7 +69,8 @@ Perform the ODE filter step.
 Basically consists of the following steps
 - Compute the current transition and diffusion matrices
 - Predict mean
-- Linearize the observation of the ODE at the predicted state
+- Linearize the observation of the ODE at the predicted state, which evaluates the ODE and,
+  depending on the linearization, its Jacobian
 - Compute local diffusion and local error estimate
 - If the step is rejected, terminate here; Else continue
 - Predict the covariance
