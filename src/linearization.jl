@@ -127,3 +127,72 @@ function jacobian_approximation(::DiagonalJacobian, J, d)
         return BlocksOfDiagonals([[topleft[i, i] topright[i, i];] for i in 1:d])
     end
 end
+
+"""
+    Prediction()
+
+Linearize the ODE at the predicted state, as the extended Kalman filter does. This is the
+default `linearize_at` of an [`ODEFilter`](@ref).
+"""
+struct Prediction end
+
+"""
+    Posterior(; maxiters=20, tol=1e-2)
+
+Linearize the ODE at the posterior mean, which itself depends on the linearization and is
+found by iteration: starting from the predicted mean, linearize, update the mean, and repeat
+until the update changes the solution by less than `tol` in units of `abstol` and `reltol`,
+for at most `maxiters` iterations. The covariance comes from the last linearization. With
+adaptive steps, a step whose iteration does not converge is rejected.
+
+With the linearizations of the [`EK0`](@ref), [`EK1`](@ref) and [`DiagonalEK1`](@ref), this
+is the iterated extended Kalman filter (IEKF) [Bosch (2026)](@cite bosch26stable).
+
+# Examples
+```julia-repl
+julia> solve(prob, DiagonalEK1(linearize_at=Posterior()))
+```
+"""
+struct Posterior{T}
+    maxiters::Int
+    tol::T
+    function Posterior(; maxiters=20, tol=1e-2)
+        maxiters >= 1 || throw(ArgumentError("`maxiters` must be at least 1."))
+        return new{typeof(tol)}(maxiters, tol)
+    end
+end
+Base.show(io::IO, p::Posterior) =
+    print(io, "Posterior(maxiters=", p.maxiters, ", tol=", p.tol, ")")
+
+"""
+    linearize_and_update_mean!(linearize_at, x_filt, x_pred, obs, integ)
+
+Linearize the ODE where `linearize_at` says, starting from `obs`, the linearization at the
+predicted mean, and write the mean of `x_pred` conditioned on it into `x_filt`. Return
+`(; obs, upd, converged)`: the linearization, what [`update_mean!`](@ref) returned for it, and
+whether the search for it converged.
+"""
+linearize_and_update_mean!(::Prediction, x_filt, x_pred, obs, integ) =
+    (; obs, upd=update_mean!(x_filt, x_pred, obs; cache=integ.cache), converged=true)
+function linearize_and_update_mean!(alg::Posterior, x_filt, x_pred, obs, integ)
+    relinearize(m) = linearize_ode_observation!(integ.alg.linearization, integ, m)
+    small_step(μ, m) = scaled_step(integ, μ, m) < alg.tol
+    it = iterated_update_mean!(x_filt, x_pred, obs, relinearize, small_step;
+        alg.maxiters, m_cache=integ.cache.x_tmp2.μ, cache=integ.cache)
+    integ.stats.nnonliniter += it.iterations
+    it.converged || (integ.stats.nnonlinconvfail += 1)
+    return (; it.obs, it.upd, it.converged)
+end
+
+# The norm of the change of the solution from the state mean `m` to `μ`, scaled with `abstol`
+# and `reltol` relative to the solution at `m`
+function scaled_step(integ, μ, m)
+    (; tmp, atmp) = integ.cache
+    t = integ.t + integ.dt
+    write_into_solution!(tmp, μ, integ.f; cache=integ.cache)
+    write_into_solution!(atmp, m, integ.f; cache=integ.cache)
+    tmp .-= atmp
+    DiffEqBase.calculate_residuals!(tmp, tmp, atmp, atmp, integ.opts.abstol,
+        integ.opts.reltol, integ.opts.internalnorm, t)
+    return integ.opts.internalnorm(tmp, t)
+end

@@ -31,7 +31,7 @@ invquad(v, M::PSDMatrix; v_cache, M_cache) =
     invquad(v, _matmul!(M_cache, M.R', M.R); v_cache, M_cache)
 
 @doc raw"""
-    estimate_global_diffusion(::FixedDiffusion, integ, obs, upd)
+    estimate_global_diffusion(::FixedDiffusion, integ, upd)
 
 Updates the global quasi-MLE diffusion estimate on the current measuremnt.
 
@@ -40,7 +40,7 @@ The global quasi-MLE diffusion estimate Corresponds to
 \hat{σ}^2_N = \frac{1}{Nd} \sum_{i=1}^N z_i^T S_i^{-1} z_i,
 ```
 where ``z_i`` is the residual in step ``i`` and ``S_i`` its covariance. For the current
-step, ``z_n^T S_n^{-1} z_n`` is `upd.ztSinvz`, as returned by [`update!`](@ref).
+step, ``z_n^T S_n^{-1} z_n`` is `upd.ztSinvz`, as returned by [`update_mean!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
 \hat{σ}^2_n = \hat{σ}^2_{n-1} + ((z_n^T S_n^{-1} z_n) / d - \hat{σ}^2_{n-1}) / n.
@@ -49,7 +49,7 @@ This function updates the iteratively computed global diffusion estimate by comp
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function estimate_global_diffusion(::FixedDiffusion, integ, obs, upd)
+function estimate_global_diffusion(::FixedDiffusion, integ, upd)
     diffusion_increment = upd.ztSinvz / integ.cache.d
 
     new_mle_diffusion = if integ.success_iter == 0
@@ -65,7 +65,7 @@ function estimate_global_diffusion(::FixedDiffusion, integ, obs, upd)
 end
 
 @doc raw"""
-    estimate_global_diffusion(::FixedMVDiffusion, integ, obs, upd)
+    estimate_global_diffusion(::FixedMVDiffusion, integ, upd)
 
 Updates the multivariate global quasi-MLE diffusion estimate on the current measuremnt.
 
@@ -75,9 +75,8 @@ The global quasi-MLE diffusion estimate Corresponds to
 ```math
 [\hat{Σ}^2_N]_{jj} = \frac{1}{N} \sum_{i=1}^N [z_i]_j^2 / [S_i]_{jj},
 ```
-where ``z_i`` is the residual at the predicted mean in step ``i`` and ``S_i`` its
-covariance. For the current step, they are `obs.r` and the `upd.S` returned by
-[`update!`](@ref).
+where ``z_i`` is the residual in step ``i`` and ``S_i`` its covariance. For the current
+step, they are `upd.z` and `upd.S`, as returned by [`update_mean!`](@ref).
 This function updates the iteratively computed global diffusion estimate by computing
 ```math
 [\hat{Σ}^2_n]_{jj} = [\hat{Σ}^2_{n-1}]_{jj} + ([z_n]_j^2 / [S_n]_{jj} - [\hat{Σ}^2_{n-1}]_{jj}) / n.
@@ -86,11 +85,11 @@ This function updates the iteratively computed global diffusion estimate by comp
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function estimate_global_diffusion(::FixedMVDiffusion, integ, obs, upd)
+function estimate_global_diffusion(::FixedMVDiffusion, integ, upd)
     @unpack C_d = integ.cache
     diffusion_increment = let
         diag!(C_d, upd.S)
-        @.. C_d = obs.r^2 / C_d
+        @.. C_d = upd.z^2 / C_d
         Diagonal(C_d)
     end
 

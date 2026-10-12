@@ -19,6 +19,12 @@ EK0
 ODEFilter
 ```
 
+### Linearization point
+```@docs
+Prediction
+Posterior
+```
+
 ### Probabilistic Exponential Integrators
 ```@docs
 ExpEK
@@ -35,4 +41,5 @@ Canonical = false
 tronarp18probsol
 krämer21highdim
 bosch23expint
+bosch26stable
 ```

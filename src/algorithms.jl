@@ -48,8 +48,9 @@ needs_jacobian(prior::IOUP) = prior.update_rate_parameter
 # Algorithm
 ########################################################################################
 """
-    ODEFilter(; linearization, order=3, prior=IWP(order), diffusionmodel=DynamicDiffusion(),
-              smooth=true, initialization=TaylorModeInit(num_derivatives(prior)),
+    ODEFilter(; linearization, linearize_at=Prediction(), order=3, prior=IWP(order),
+              diffusionmodel=DynamicDiffusion(), smooth=true,
+              initialization=TaylorModeInit(num_derivatives(prior)),
               pn_observation_noise=nothing, covariance_factorization=nothing,
               autodiff=AutoForwardDiff(), standardtag=true, concrete_jac=nothing)
 
@@ -62,6 +63,8 @@ most flexibility.
 - `linearization::AbstractLinearization`: How the ODE vector field is linearized:
   `ZeroJacobian()` as in the [`EK0`](@ref), `DiagonalJacobian()` as in the
   [`DiagonalEK1`](@ref), or `FullJacobian()` as in the [`EK1`](@ref).
+- `linearize_at`: Where to linearize: `Prediction()` at the predicted state, or `Posterior()`
+  at the posterior, which iterates as the IEKF does; see [`Posterior`](@ref).
 - `order::Integer`: Order of the default integrated Wiener process (IWP) prior.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, an `order`-times integrated Wiener process prior `IWP(order)`.
@@ -87,9 +90,10 @@ For compatibility with OrdinaryDiffEq 6, the keywords `chunk_size`, `diff_type` 
 julia> solve(prob, ODEFilter(linearization=FullJacobian(), order=5))
 ```
 """
-struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
+struct ODEFilter{LT,LAT,PT,DT,IT,RT,CF,AD,CJ} <:
        OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm
     linearization::LT
+    linearize_at::LAT
     prior::PT
     diffusionmodel::DT
     initialization::IT
@@ -101,6 +105,7 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
     concrete_jac::CJ
     function ODEFilter(;
         linearization,
+        linearize_at=Prediction(),
         order=3,
         prior=IWP(order),
         diffusionmodel=DynamicDiffusion(),
@@ -131,6 +136,7 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
         concrete_jac = _unwrap_val(concrete_jac)
         return new{
             typeof(linearization),
+            typeof(linearize_at),
             typeof(prior),
             typeof(diffusionmodel),
             typeof(initialization),
@@ -140,6 +146,7 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
             typeof(concrete_jac),
         }(
             linearization,
+            linearize_at,
             prior,
             diffusionmodel,
             initialization,

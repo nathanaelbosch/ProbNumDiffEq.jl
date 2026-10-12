@@ -156,10 +156,10 @@ end
                  K1_cache, K2_cache, measurement_cache, C_dxd, C_d)
 
 The mean part of [`update!`](@ref): write ``μ^F`` into `x_out.μ` and return
-`(; loglikelihood, ztSinvz, S, K, B)`, with the gain `K` and `B = x_pred.Σ.R * H'` for
-[`update_cov!`](@ref). An iterated update calls it for every linearization, and
-[`update_cov!`](@ref) only for the last one. `obs.r` must not be stored in `x_out.μ` or
-`cache.C_d`, which serve as workspace.
+`(; loglikelihood, ztSinvz, S, K, B, z)`, with the gain `K` and `B = x_pred.Σ.R * H'` for
+[`update_cov!`](@ref), and `z` ``= \\hat{z}``. An iterated update calls it for every
+linearization, and [`update_cov!`](@ref) only for the last one. `obs.r` must not be stored
+in `x_out.μ` or `cache.C_d`, which serve as workspace.
 """
 function update_mean!(
     x_out,
@@ -179,8 +179,9 @@ function update_mean!(
         Δ = x_out.μ .= m .- x_pred.μ
         measurement_cache.μ .= obs.r .- _matmul!(C_d, H, Δ)
     end
-    return _update_mean!(x_out, x_pred, z, H, R, K1_cache, K2_cache, measurement_cache.Σ,
+    upd = _update_mean!(x_out, x_pred, z, H, R, K1_cache, K2_cache, measurement_cache.Σ,
         C_dxd, C_d)
+    return (; upd..., z)
 end
 function update_mean!(x_out, x_pred, obs::LinearizedObservation; cache)
     @unpack K1, C_Dxd, measurement, C_dxd, C_d = cache
@@ -393,4 +394,30 @@ function _update_cov!(
             map(x -> _diagonal_block(x, k, o), args)...)
     end
     return Σ_out
+end
+
+"""
+    iterated_update_mean!(x_out, x_pred, obs, relinearize, converged; maxiters, m_cache, cache)
+
+Condition the mean of `x_pred` on a nonlinear observation with the iterated extended Kalman
+filter: update the mean with `obs`, linearize again at the result with `relinearize(m)`, and
+repeat until `converged(μ, m)` holds for the updated mean `μ` and the linearization point `m`,
+or for at most `maxiters` updates. The linearization points are copied into `m_cache`.
+
+Return `(; obs, upd, iterations, converged)`, with the last linearization `obs` and what
+[`update_mean!`](@ref) returned for it; [`update_cov!`](@ref) with them completes the update.
+"""
+function iterated_update_mean!(
+    x_out, x_pred, obs, relinearize, converged; maxiters, m_cache, cache,
+)
+    upd = update_mean!(x_out, x_pred, obs; cache)
+    iterations = 1
+    isconverged = converged(x_out.μ, obs.m)
+    while !isconverged && iterations < maxiters
+        obs = relinearize(copy!(m_cache, x_out.μ))
+        upd = update_mean!(x_out, x_pred, obs; cache)
+        iterations += 1
+        isconverged = converged(x_out.μ, obs.m)
+    end
+    return (; obs, upd, iterations, converged=isconverged)
 end

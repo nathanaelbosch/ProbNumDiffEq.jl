@@ -118,6 +118,7 @@ include("linearization.jl")
 include("algorithms.jl")
 export ODEFilter, EK0, EK1, DiagonalEK1
 export ZeroJacobian, DiagonalJacobian, FullJacobian
+export Prediction, Posterior
 export ExpEK, RosenbrockExpEK
 
 include("alg_utils.jl")
