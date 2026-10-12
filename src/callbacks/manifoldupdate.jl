@@ -14,7 +14,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
             "only $(cache.d)-dimensional; `ManifoldUpdate` requires " *
             "`length(residual(u)) <= length(u)`."))
 
-    H = view(cache.H, 1:d, :)
+    H = view(cache.C_dxD, 1:d, :)
     obs_cache = make_obssized_cache(cache; o=d)
 
     steptol = isnothing(steptol) ? sqrt(eps(eltype(x_pred.μ))) : steptol

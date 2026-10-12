@@ -43,6 +43,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Measurement Models" begin
                 include("core/measurement_models.jl")
             end
+            @timedsafetestset "Linearization" begin
+                include("core/linearization.jl")
+            end
             @timedsafetestset "Covariance structure" begin
                 include("core/covariance_structure.jl")
             end

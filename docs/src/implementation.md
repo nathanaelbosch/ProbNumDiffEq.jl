@@ -27,6 +27,8 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
   - `./src/caches.jl` implements the cache and its main constructor: `OrdinaryDiffEq.alg_cache`
 - **Initialization and `perform_step!`:** via `OrdinaryDiffEq.initialize!` and `OrdinaryDiffEq.perform_step!`.
   Implemented in `./src/perform_step.jl`.
+- **Linearization:** `perform_step!` gets the observation of the ODE from `linearize_observation!(alg.linearization, integ, x_pred)`, which evaluates the ODE and, for the `EK1` and `DiagonalEK1`, its Jacobian with `OrdinaryDiffEq.calc_J!`.
+  Implemented in `./src/linearization.jl`; the docstring of `AbstractLinearization` lists what a new linearization implements.
 - **Custom postamble** by overloading `SciMLBase.postamble!` (which should always call `OrdinaryDiffEqCore._postamble!`).
   This is where we do the "smoothing" of the solution.
   Implemented in `./src/integrator_utils.jl`.

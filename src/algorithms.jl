@@ -47,8 +47,13 @@ end
 """
     AbstractLinearization
 
-How an [`ODEFilter`](@ref) linearizes the ODE vector field, that is, which approximation of
-its Jacobian enters the observation matrix `H`.
+How an [`ODEFilter`](@ref) linearizes the observation of the ODE in each step.
+
+A linearization `L <: AbstractLinearization` has methods for
+- `linearize_observation!(::L, integ, m::AbstractVector)`, or for `x::Gaussian` if it
+  linearizes at a distribution instead of a point;
+- `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
+- `needs_jacobian(::L)`.
 """
 abstract type AbstractLinearization end
 

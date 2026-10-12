@@ -52,11 +52,13 @@ end
 
 # Dispatch on the ODE function, not on `u`: first-order problems can also have an
 # `ArrayPartition` state, so `u isa ArrayPartition` does not imply a second-order ODE.
+# The state is ordered derivative-major: `E0 μ` is `μ[1:d]` and `E1 μ` is `μ[(d+1):2d]`.
 write_into_solution!(u, μ, ::SciMLBase.AbstractODEFunction; cache::EKCache) =
-    _matmul!(view(u, :), cache.E0, μ)
+    view(u, :) .= view(μ, 1:cache.d)
 function write_into_solution!(u, μ, ::DynamicalODEFunction; cache::EKCache)
-    _matmul!(view(u.x[2], :), cache.E0, μ)
-    _matmul!(view(u.x[1], :), cache.E1, μ)
+    d = cache.d
+    view(u.x[2], :) .= view(μ, 1:d)
+    view(u.x[1], :) .= view(μ, (d+1):2d)
 end
 
 """
@@ -67,7 +69,7 @@ Perform the ODE filter step.
 Basically consists of the following steps
 - Compute the current transition and diffusion matrices
 - Predict mean
-- Evaluate the ODE (and Jacobian) at the predicted mean; Build measurement mean `z`
+- Linearize the observation of the ODE at the predicted state
 - Compute local diffusion and local error estimate
 - If the step is rejected, terminate here; Else continue
 - Predict the covariance
@@ -78,12 +80,10 @@ As in OrdinaryDiffEqCore.jl, this step is not necessarily successful!
 For that functionality, use `OrdinaryDiffEqCore.step!(integ)`.
 """
 function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=false)
-    @unpack t, dt = integ
+    @unpack dt = integ
     @unpack d = integ.cache
     @unpack xprev, x_pred, x_filt, err_tmp = integ.cache
     @unpack A, Q, Ah, Qh, P, PI = integ.cache
-
-    tnew = t + dt
 
     if make_new_transitions(integ, cache, repeat_step)
         # Rosenbrock-style update of the IOUP rate parameter
@@ -104,8 +104,8 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     predict_mean!(x_pred.μ, xprev.μ, Ah)
     write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
 
-    # Measure. The diffusion estimates need the residual at the predicted mean.
-    obs = evaluate_ode!(integ, x_pred, tnew)
+    # The diffusion estimates need the residual at the predicted mean
+    obs = linearize_observation!(integ.alg.linearization, integ, x_pred)
     @assert obs.m === x_pred.μ
 
     # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
@@ -151,23 +151,6 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     copy!(integ.cache.x, integ.cache.x_filt)
 
     return nothing
-end
-
-"""
-    evaluate_ode!(integ, x_pred, t)
-
-Evaluate the ODE at the mean of `x_pred` and return the [`LinearizedObservation`](@ref) of
-its residual there, with `r` and `H` in `integ.cache.measurement.μ` and `integ.cache.H`.
-"""
-function evaluate_ode!(integ, x_pred, t)
-    @unpack measurement, H, R = integ.cache
-
-    integ.cache.measurement_model(measurement.μ, x_pred.μ, integ.p, t)
-    integ.stats.nf += 1
-
-    calc_H!(H, integ, integ.cache)
-
-    return LinearizedObservation(x_pred.μ, measurement.μ, H, R)
 end
 
 """
