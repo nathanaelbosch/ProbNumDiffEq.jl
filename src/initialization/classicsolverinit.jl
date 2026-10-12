@@ -1,6 +1,6 @@
 function initial_update!(integ, cache, ::ClassicSolverInit)
     @unpack u, f, p, t = integ
-    @unpack q, x, E0, E1, E2 = cache
+    @unpack q, x, Proj, E2 = cache
     @assert isinplace(f)
 
     if q > 5
@@ -9,15 +9,21 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
 
     @unpack du = cache
 
-    # Initialize on u0; taking special care for DynamicalODEProblems
-    is_secondorder = integ.f isa DynamicalODEFunction
-    _u = is_secondorder ? u.x[2] : u
-    update!(x, linear_observation(E0, view(_u, :)); cache)
-    is_secondorder ? f.f1(du, u.x[1], u.x[2], p, t) : f(du, u, p, t)
+    # The initial values and the ODE give the derivatives up to the order of the ODE
+    if integ.f isa DynamicalODEFunction
+        du0, u0 = u.x
+        f.f1(du, du0, u0, p, t)
+        derivatives = (u0, du0, du)
+    else
+        f(du, u, p, t)
+        derivatives = (u, du)
+    end
     integ.stats.nf += 1
-    update!(x, linear_observation(E1, view(du, :)); cache)
+    for (o, df) in zip(0:q, derivatives)
+        update!(x, linear_observation(Proj(o), view(df, :)); cache)
+    end
 
-    if q < 2
+    if q < length(derivatives)
         return
     end
 
