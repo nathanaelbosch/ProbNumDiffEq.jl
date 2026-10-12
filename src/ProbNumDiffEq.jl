@@ -114,6 +114,7 @@ export FixedDiffusion, DynamicDiffusion, FixedMVDiffusion, DynamicMVDiffusion
 include("initialization/common.jl")
 export TaylorModeInit, ClassicSolverInit, SimpleInit, ForwardDiffInit
 
+include("linearization.jl")
 include("algorithms.jl")
 export ODEFilter, EK0, EK1, DiagonalEK1
 export ZeroJacobian, DiagonalJacobian, FullJacobian
@@ -140,7 +141,6 @@ include("filtering/linearized_observation.jl")
 include("filtering/update.jl")
 include("filtering/smooth.jl")
 include("measurement_models.jl")
-include("derivative_utils.jl")
 include("perform_step.jl")
 include("projection.jl")
 include("solve.jl")

@@ -34,13 +34,8 @@ function initial_update!(integ, cache, ::ClassicSolverInit)
         dfdt = copy(u)
         ForwardDiff.derivative!(dfdt, (du, t) -> _f(du, u, p, t), du, t)
 
-        # Allocate ddu locally if the cache doesn't have it (e.g. EK0)
-        ddu = cache.ddu
-        if isnothing(ddu)
-            ddu =
-                !isnothing(f.jac_prototype) ? similar(f.jac_prototype) :
-                zeros(eltype(u), length(u), length(u))
-        end
+        n = length(u)
+        ddu = isnothing(f.jac_prototype) ? zeros(eltype(u), n, n) : similar(f.jac_prototype)
         if !isnothing(f.jac)
             f.jac(ddu, u, p, t)
         else

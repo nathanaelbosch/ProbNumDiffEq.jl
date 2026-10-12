@@ -41,46 +41,6 @@ else
     end
 end
 
-########################################################################################
-# Linearizations
-########################################################################################
-"""
-    AbstractLinearization
-
-How an [`ODEFilter`](@ref) linearizes the ODE vector field, that is, which approximation of
-its Jacobian enters the observation matrix `H`.
-"""
-abstract type AbstractLinearization end
-
-"""
-    ZeroJacobian()
-
-Linearize the ODE vector field with a zero Jacobian, as the [`EK0`](@ref) does.
-"""
-struct ZeroJacobian <: AbstractLinearization end
-
-"""
-    DiagonalJacobian()
-
-Linearize the ODE vector field with the diagonal of its Jacobian, as the
-[`DiagonalEK1`](@ref) does.
-"""
-struct DiagonalJacobian <: AbstractLinearization end
-
-"""
-    FullJacobian()
-
-Linearize the ODE vector field with its Jacobian, as the [`EK1`](@ref) does.
-"""
-struct FullJacobian <: AbstractLinearization end
-
-"""
-    needs_jacobian(component)
-
-Whether a component of an `ODEFilter` needs the Jacobian of the ODE vector field.
-"""
-needs_jacobian(::ZeroJacobian) = false
-needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
 needs_jacobian(::AbstractGaussMarkovProcess) = false
 needs_jacobian(prior::IOUP) = prior.update_rate_parameter
 

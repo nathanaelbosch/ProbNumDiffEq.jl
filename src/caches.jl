@@ -5,7 +5,7 @@ mutable struct EKCache{
     RType,CFacType,ProjType,SolProjType,PType,PIType,EType,uType,duType,xType,PriorType,
     AType,QType,
     FType,LType,FHGMethodType,FHGCacheType,
-    HType,vecType,dduType,matType,bkType,diffusionType,diffModelType,measModType,measType,
+    vecType,matType,bkType,diffusionType,diffModelType,measModType,linCacheType,measType,
     puType,llType,dtType,rateType,UF,JC,uNoUnitsType,
 } <: AbstractODEFilterCache
     # Constants
@@ -23,6 +23,7 @@ mutable struct EKCache{
     FHG_cache::FHGCacheType
     diffusionmodel::diffModelType
     measurement_model::measModType
+    linearization_cache::linCacheType
     R::RType
     Proj::ProjType
     SolProj::SolProjType
@@ -44,12 +45,11 @@ mutable struct EKCache{
     x_tmp2::xType
     measurement::measType
     pu_tmp::puType
-    H::HType
     du::duType
-    ddu::dduType
     K1::matType
     C_d::vecType
     C_dxd::matType
+    C_dxD::matType
     C_Dxd::matType
     C_DxD::matType
     C_2DxD::matType
@@ -174,20 +174,13 @@ function OrdinaryDiffEqCore.alg_cache(
     R =
         isnothing(alg.pn_observation_noise) ? nothing :
         to_factorized_matrix(FAC, cov2psdmatrix(alg.pn_observation_noise; d))
-    H = factorized_similar(FAC, d, D)
+    linearization_cache = make_linearization_cache(alg.linearization, FAC, u, f)
     v = similar(Array{uElType}, d)
     S = factorized_zeros(FAC, d, d)
     measurement = Gaussian(v, S)
 
     # Caches
     du = is_secondorder_ode ? similar(u.x[2]) : similar(u)
-    ddu = if !needs_jacobian(alg.linearization)
-        nothing
-    elseif !isnothing(f.jac_prototype)
-        f.jac_prototype
-    else
-        zeros(uElType, length(u), length(u))
-    end
     _d = is_secondorder_ode ? 2d : d
     pu_tmp = Gaussian(
         similar(Array{uElType}, _d),
@@ -198,6 +191,7 @@ function OrdinaryDiffEqCore.alg_cache(
 
     C_d = similar(Array{uElType}, d)
     C_dxd = factorized_similar(FAC, d, d)
+    C_dxD = factorized_similar(FAC, d, D)
     C_Dxd = factorized_similar(FAC, D, d)
     C_DxD = factorized_similar(FAC, D, D)
     C_2DxD = factorized_similar(FAC, 2D, D)
@@ -236,19 +230,20 @@ function OrdinaryDiffEqCore.alg_cache(
         typeof(R),typeof(FAC),typeof(Proj),typeof(SolProj),typeof(P),typeof(PI),typeof(E0),
         uType,typeof(du),typeof(x0),typeof(prior),typeof(A),typeof(Q),
         typeof(F),typeof(L),typeof(FHG_method),typeof(FHG_cache),
-        typeof(H),typeof(C_d),typeof(ddu),matType,
+        typeof(C_d),matType,
         typeof(backward_kernel),typeof(initdiff),
-        typeof(diffmodel),typeof(measurement_model),typeof(measurement),typeof(pu_tmp),
+        typeof(diffmodel),typeof(measurement_model),typeof(linearization_cache),
+        typeof(measurement),typeof(pu_tmp),
         uEltypeNoUnits,typeof(dt),typeof(du1),typeof(uf),typeof(jac_config),typeof(atmp),
     }(
         d, q, FAC, prior, A, Q, Ah, Qh, F, L, FHG_method, FHG_cache, diffmodel,
-        measurement_model, R, Proj, SolProj,
+        measurement_model, linearization_cache, R, Proj, SolProj,
         P, PI, E0, E1, E2,
         u, tmp, atmp,
         x0, xprev, x_pred, x_filt, x_tmp, x_tmp2,
         measurement, pu_tmp,
-        H, du, ddu, K,
-        C_d, C_dxd, C_Dxd, C_DxD, C_2DxD, C_3DxD, C_2Dx2D,
+        du, K,
+        C_d, C_dxd, C_dxD, C_Dxd, C_DxD, C_2DxD, C_3DxD, C_2Dx2D,
         backward_kernel,
         initdiff, initdiff * NaN, initdiff * NaN,
         err_tmp, ll, dt, du1, uf, jac_config,

@@ -116,7 +116,7 @@ Corresponds to
 σ² = zᵀ (H Q H^T)⁻¹ z / d,
 ```
 where ``z`` is the residual at the predicted mean and `HQH` is ``H Q H^T``, from
-[`evaluate_ode!`](@ref) and [`observed_process_noise!`](@ref).
+[`linearize_ode_observation!`](@ref) and [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
@@ -139,7 +139,7 @@ Corresponds to
 Σ_{ii} = z_i^2 / (H Q H^T)_{ii},
 ```
 where ``z`` is the residual at the predicted mean and `HQH` is ``H Q H^T``, from
-[`evaluate_ode!`](@ref) and [`observed_process_noise!`](@ref).
+[`linearize_ode_observation!`](@ref) and [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
