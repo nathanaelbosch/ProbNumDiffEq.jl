@@ -5,6 +5,7 @@ ProbNumDiffEq.jl provides various probabilistic ODE solvers based on extended Ka
 **Which solver should I use?**
 - Use the [`EK1`](@ref) to get the best uncertainty quantification and to solve stiff problems.
 - Use the [`DiagonalEK1`](@ref) for high-dimensional problems for which the [`EK1`](@ref) is too expensive.
+- Use the [`MatfreeEK1`](@ref) for problems that are both high-dimensional and stiff, if you can provide Jacobian-vector and vector-Jacobian products.
 - Use the [`EK0`](@ref) to get the fastest runtimes and to solve high-dimensional problems.
 
 The [`EK1`](@ref) and the [`DiagonalEK1`](@ref) are compatible with DAEs in mass-matrix ODE form.
@@ -15,6 +16,7 @@ They also specialize on second-order ODEs: If the problem is of type [`SecondOrd
 ```@docs
 EK1
 DiagonalEK1
+MatfreeEK1
 EK0
 ODEFilter
 ```
