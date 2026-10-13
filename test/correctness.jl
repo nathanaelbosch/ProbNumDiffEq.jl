@@ -47,6 +47,15 @@ CONSTANT_ALGS = (
     DiagonalEK1(order=3, smooth=true, diffusionmodel=DynamicDiffusion()) => 1e-7,
     DiagonalEK1(
         order=3, smooth=true, initialization=ClassicSolverInit(Tsit5())) => 1e-7,
+    # Iterated linearization
+    ODEFilter(linearization=Iterated(ZeroJacobian()), order=3, smooth=true) => 1e-7,
+    ODEFilter(linearization=Iterated(FullJacobian()), order=3, smooth=true) => 1e-8,
+    ODEFilter(
+        linearization=Iterated(DiagonalJacobian()),
+        order=3,
+        smooth=true,
+        diffusionmodel=FixedMVDiffusion(),
+    ) => 1e-7,
     # Priors
     EK0(prior=IOUP(3, -1), smooth=true, covariance_factorization=DenseCovariance) =>
         2e-9,
@@ -57,6 +66,14 @@ CONSTANT_ALGS = (
     EK1(prior=Matern(4, 0.1), smooth=true, diffusionmodel=FixedDiffusion()) => 2e-5,
 )
 ADAPTIVE_ALGS = (
+    ODEFilter(linearization=Iterated(ZeroJacobian()), order=3) => 1e-4,
+    ODEFilter(linearization=Iterated(FullJacobian()), order=3) => 1e-5,
+    ODEFilter(linearization=Iterated(DiagonalJacobian()), order=3) => 1e-4,
+    ODEFilter(
+        linearization=Iterated(DiagonalJacobian()),
+        order=3,
+        diffusionmodel=DynamicMVDiffusion(),
+    ) => 1e-4,
     EK0(order=2) => 2e-4,
     EK0(order=3) => 1e-4,
     EK0(order=5) => 1e-5,
