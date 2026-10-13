@@ -22,4 +22,13 @@ d = length(prob.u0)
         @test_throws ArgumentError solve(prob, DiagonalEK1(pn_observation_noise=R))
     end
     @test_nowarn solve(prob, EK1(pn_observation_noise=R))
+
+    @testset "Iterated $L" for L in (ZeroJacobian(), FullJacobian(), DiagonalJacobian())
+        alg = ODEFilter(linearization=Iterated(L), pn_observation_noise=R)
+        if i <= 5 || L isa FullJacobian
+            @test_nowarn solve(prob, alg)
+        else
+            @test_throws ArgumentError solve(prob, alg)
+        end
+    end
 end

@@ -16,6 +16,11 @@ using Test
         @test sol.u[end] ≈ ref.u[end] rtol = 1e-10
     end
 
+    @testset "Iterated $L" for L in (ZeroJacobian(), FullJacobian(), DiagonalJacobian())
+        sol = solve(prob, ODEFilter(linearization=Iterated(L), order=3))
+        @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
+    end
+
     @testset "Kronecker working" begin
         N = 10
         prob = ODEProblem(f, ones(N), (0.0, 1.0))
@@ -95,7 +100,16 @@ end
     sol = solve(prob, DiagonalEK1(order=3))
     @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
 
+    @testset "Iterated $L" for L in (FullJacobian(), DiagonalJacobian())
+        sol = solve(prob, ODEFilter(linearization=Iterated(L), order=3))
+        @test sol.retcode == ReturnCode.Success
+        @test sol.u[end] ≈ ref.u[end] rtol = 1e-8
+        # The iteration satisfies the algebraic equation at every step
+        @test all(u -> abs(sum(u) - 1) < 1e-8, sol.u)
+    end
+
     @test_throws "DAE" solve(prob, EK0())
+    @test_throws "DAE" solve(prob, ODEFilter(linearization=Iterated(ZeroJacobian())))
 
     @testset "Initial value with a constraint residual" begin
         prob = remake(prob, u0=[1.0, 0.0, 1e-12])
