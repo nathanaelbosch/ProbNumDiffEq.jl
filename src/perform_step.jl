@@ -74,8 +74,9 @@ Basically consists of the following steps
 - Compute local diffusion and local error estimate
 - If the step is rejected, terminate here; Else continue
 - Predict the covariance
-- Kalman update step; with `linearize_at=Posterior()`, iterated until the mean converges, and
-  rejected with adaptive steps if it does not
+- Refine the linearization, which [`Iterated`](@ref) does by iterating until the mean
+  converges; with adaptive steps, reject the step if it does not
+- Kalman update step
 - (optional) Update the global diffusion MLE
 
 As in OrdinaryDiffEqCore.jl, this step is not necessarily successful!
@@ -138,13 +139,10 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     end
 
     # Update state and save the ODE solution value
-    (; obs, upd, converged) =
-        linearize_and_update_mean!(integ.alg.linearize_at, x_filt, x_pred, obs, integ)
-    if !converged && integ.opts.adaptive
-        integ.force_stepfail = true
-        return
-    end
-    update_cov!(x_filt, x_pred, obs, upd.K, upd.B; cache)
+    obs, mean_update =
+        refine_linearization!(integ.alg.linearization, integ, x_filt, x_pred, obs)
+    integ.force_stepfail && return
+    upd = update!(x_filt, x_pred, obs; cache, mean_update)
     write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
 
     cache.log_likelihood = upd.loglikelihood

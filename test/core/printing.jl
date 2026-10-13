@@ -6,8 +6,10 @@ import ProbNumDiffEq as PNDE
     @test repr(DiagonalEK1(order=5, smooth=false)) == "DiagonalEK1(order=5, smooth=false)"
     @test "$(ODEFilter(linearization=FullJacobian(), order=5))" == "EK1(order=5)"
     @test sprint(show, MIME"text/plain"(), EK1(smooth=false)) == "EK1(smooth=false)"
-    @test repr(DiagonalEK1(linearize_at=Posterior(maxiters=5))) ==
-          "DiagonalEK1(linearize_at=Posterior(maxiters=5, tol=0.01))"
+    @test repr(ODEFilter(linearization=Iterated(DiagonalJacobian()))) ==
+          "ODEFilter(linearization=Iterated(DiagonalJacobian()))"
+    @test repr(Iterated(FullJacobian(), maxiters=5)) ==
+          "Iterated(FullJacobian(), maxiters=5)"
 end
 
 @testset "Priors are printed as the call that constructs them" begin

@@ -16,6 +16,12 @@ Mdiag = Diagonal([1.0, 2.0])
         EK1(diffusionmodel=FixedMVDiffusion([1.0, 2.0], false)), M) === D
 end
 
+@testset "Iterated linearizations use the structure of the one they wrap" begin
+    for (L, C) in ((ZeroJacobian(), K), (DiagonalJacobian(), B), (FullJacobian(), D))
+        @test choose_covariance_structure(ODEFilter(linearization=Iterated(L)), I) === C
+    end
+end
+
 @testset "The EK0 and the DiagonalEK1 use dense covariances only on request" begin
     hint = "covariance_factorization=DenseCovariance"
     @test_throws ["`prior", hint] choose_covariance_structure(EK0(prior=IOUP(3, -1)), I)

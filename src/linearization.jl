@@ -6,7 +6,9 @@ How an [`ODEFilter`](@ref) linearizes the observation of the ODE in each step.
 A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
-- `needs_jacobian(::L)`.
+- `needs_jacobian(::L)`;
+- optionally `refine_linearization!(::L, integ, x_filt, x_pred, obs)`, which may change the
+  linearization once the whole prediction is known.
 """
 abstract type AbstractLinearization end
 
@@ -129,70 +131,87 @@ function jacobian_approximation(::DiagonalJacobian, J, d)
 end
 
 """
-    Prediction()
+    Iterated(linearization; maxiters=20, tol=1e-2)
 
-Linearize the ODE at the predicted state, as the extended Kalman filter does. This is the
-default `linearize_at` of an [`ODEFilter`](@ref).
-"""
-struct Prediction end
-
-"""
-    Posterior(; maxiters=20, tol=1e-2)
-
-Linearize the ODE at the posterior mean, which itself depends on the linearization and is
-found by iteration: starting from the predicted mean, linearize, update the mean, and repeat
+Linearize the ODE at the posterior mean that `linearization` gives, found by iteration:
+starting from the predicted mean, linearize with `linearization`, update the mean, and repeat
 until the update changes the solution by less than `tol` in units of `abstol` and `reltol`,
 for at most `maxiters` iterations. The covariance comes from the last linearization. With
 adaptive steps, a step whose iteration does not converge is rejected.
 
-With the linearizations of the [`EK0`](@ref), [`EK1`](@ref) and [`DiagonalEK1`](@ref), this
-is the iterated extended Kalman filter (IEKF) [Bosch (2026)](@cite bosch26stable).
+With `ZeroJacobian()`, `DiagonalJacobian()` or `FullJacobian()`, this is the iterated
+extended Kalman filter (IEKF) [Bosch (2026)](@cite bosch26stable).
 
 # Examples
 ```julia-repl
-julia> solve(prob, DiagonalEK1(linearize_at=Posterior()))
+julia> solve(prob, ODEFilter(linearization=Iterated(DiagonalJacobian())))
 ```
 """
-struct Posterior{T}
+struct Iterated{L<:AbstractTaylorLinearization,T} <: AbstractLinearization
+    linearization::L
     maxiters::Int
     tol::T
-    function Posterior(; maxiters=20, tol=1e-2)
+    function Iterated(linearization::AbstractTaylorLinearization; maxiters=20, tol=1e-2)
         maxiters >= 1 || throw(ArgumentError("`maxiters` must be at least 1."))
-        return new{typeof(tol)}(maxiters, tol)
+        return new{typeof(linearization),typeof(tol)}(linearization, maxiters, tol)
     end
 end
-Base.show(io::IO, p::Posterior) =
-    print(io, "Posterior(maxiters=", p.maxiters, ", tol=", p.tol, ")")
-
-"""
-    linearize_and_update_mean!(linearize_at, x_filt, x_pred, obs, integ)
-
-Linearize the ODE where `linearize_at` says, starting from `obs`, the linearization at the
-predicted mean, and write the mean of `x_pred` conditioned on it into `x_filt`. Return
-`(; obs, upd, converged)`: the linearization, what [`update_mean!`](@ref) returned for it, and
-whether the search for it converged.
-"""
-linearize_and_update_mean!(::Prediction, x_filt, x_pred, obs, integ) =
-    (; obs, upd=update_mean!(x_filt, x_pred, obs; cache=integ.cache), converged=true)
-function linearize_and_update_mean!(alg::Posterior, x_filt, x_pred, obs, integ)
-    relinearize(m) = linearize_ode_observation!(integ.alg.linearization, integ, m)
-    small_step(μ, m) = scaled_step(integ, μ, m) < alg.tol
-    it = iterated_update_mean!(x_filt, x_pred, obs, relinearize, small_step;
-        alg.maxiters, m_cache=integ.cache.x_tmp2.μ, cache=integ.cache)
-    integ.stats.nnonliniter += it.iterations
-    it.converged || (integ.stats.nnonlinconvfail += 1)
-    return (; it.obs, it.upd, it.converged)
+function Base.show(io::IO, it::Iterated)
+    print(io, "Iterated(", it.linearization)
+    it.maxiters == 20 || print(io, ", maxiters=", it.maxiters)
+    it.tol == 1e-2 || print(io, ", tol=", it.tol)
+    print(io, ")")
 end
 
-# The norm of the change of the solution from the state mean `m` to `μ`, scaled with `abstol`
+needs_jacobian(it::Iterated) = needs_jacobian(it.linearization)
+
+# The Taylor linearization that a linearization is based on
+base_linearization(linearization::AbstractLinearization) = linearization
+base_linearization(it::Iterated) = it.linearization
+
+# The buffers of the wrapped linearization, the linearization points, and two solutions for
+# the stopping rule
+function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f) where {T}
+    return (; make_linearization_cache(it.linearization, C, u, f)...,
+        point=similar(Array{T}, C.d * (C.q + 1)), u_new=similar(u), u_old=similar(u))
+end
+
+# The first linearization, at the predicted mean, is the wrapped one's;
+# `refine_linearization!` iterates
+linearize_ode_observation!(it::Iterated, integ, x) =
+    linearize_ode_observation!(it.linearization, integ, x)
+
+"""
+    refine_linearization!(linearization, integ, x_filt, x_pred, obs)
+
+Refine `obs`, the linearization of the ODE at the predicted mean, once the whole prediction
+`x_pred` is known. Return the linearization for the update and, if the refinement already
+conditioned the mean of `x_pred` on it, what [`update_mean!`](@ref) returned, with the mean
+in `x_filt`; otherwise `nothing`. By default, return `(obs, nothing)`.
+"""
+refine_linearization!(::AbstractLinearization, integ, x_filt, x_pred, obs) = (obs, nothing)
+function refine_linearization!(it::Iterated, integ, x_filt, x_pred, obs)
+    relinearize(m) = linearize_ode_observation!(it.linearization, integ, m)
+    small_change(μ, m) = scaled_change(integ, μ, m) < it.tol
+    r = iterated_update_mean!(x_filt, x_pred, obs, relinearize, small_change;
+        it.maxiters, m_cache=integ.cache.linearization_cache.point, cache=integ.cache)
+    integ.stats.nnonliniter += r.iterations
+    if !r.converged
+        integ.stats.nnonlinconvfail += 1
+        integ.opts.adaptive && (integ.force_stepfail = true)
+    end
+    return r.obs, r.upd
+end
+
+# The norm of the change of the solution from the state mean `m` to `μ`, in units of `abstol`
 # and `reltol` relative to the solution at `m`
-function scaled_step(integ, μ, m)
-    (; tmp, atmp) = integ.cache
+function scaled_change(integ, μ, m)
+    (; u_new, u_old) = integ.cache.linearization_cache
     t = integ.t + integ.dt
-    write_into_solution!(tmp, μ, integ.f; cache=integ.cache)
-    write_into_solution!(atmp, m, integ.f; cache=integ.cache)
-    tmp .-= atmp
-    DiffEqBase.calculate_residuals!(tmp, tmp, atmp, atmp, integ.opts.abstol,
+    write_into_solution!(u_new, μ, integ.f; cache=integ.cache)
+    write_into_solution!(u_old, m, integ.f; cache=integ.cache)
+    u_new .-= u_old
+    DiffEqBase.calculate_residuals!(u_new, u_new, u_old, u_old, integ.opts.abstol,
         integ.opts.reltol, integ.opts.internalnorm, t)
-    return integ.opts.internalnorm(tmp, t)
+    return integ.opts.internalnorm(u_new, t)
 end

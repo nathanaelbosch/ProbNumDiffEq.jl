@@ -19,10 +19,9 @@ EK0
 ODEFilter
 ```
 
-### Linearization point
+### Iterated linearization (IEKF)
 ```@docs
-Prediction
-Posterior
+Iterated
 ```
 
 ### Probabilistic Exponential Integrators
