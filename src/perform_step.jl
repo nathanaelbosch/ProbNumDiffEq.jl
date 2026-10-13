@@ -114,6 +114,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
         HQH = observed_process_noise!(cache, obs)
         cache.local_diffusion =
             estimate_local_diffusion(cache.diffusionmodel, integ, obs, HQH)
+        linear_solve_failed(obs) && return reject_step!(integ)
         if integ.opts.adaptive
             _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, HQH))
             _EEst = _get_EEst(integ)
@@ -138,6 +139,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
 
     # Update state and save the ODE solution value
     upd = update!(x_filt, x_pred, obs, integ)
+    linear_solve_failed(obs) && reject_step!(integ)
     integ.force_stepfail && return
     write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
 
@@ -162,6 +164,22 @@ The update of the ODE step, as the linearization of the solver defines it.
 """
 update!(x_filt, x_pred, obs, integ) =
     update!(integ.alg.linearization, x_filt, x_pred, obs, integ)
+
+"""
+    linear_solve_failed(obs)
+
+Whether an iterative linear solve on the observation `obs` did not converge in the current
+step, which then gets rejected. Only the [`MatfreeEK1`](@ref) solves iteratively.
+"""
+linear_solve_failed(::LinearizedObservation) = false
+
+# As OrdinaryDiffEq rejects a step when the Newton iteration of an implicit solver fails:
+# with adaptive steps the step is retried with a smaller one, with fixed steps the solve
+# stops with `ReturnCode.ConvergenceFailure` if the retry fails too
+function reject_step!(integ)
+    integ.force_stepfail = true
+    return nothing
+end
 
 """
     observed_process_noise!(cache, obs)

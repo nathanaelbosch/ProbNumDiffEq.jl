@@ -44,11 +44,25 @@ Linearize the ODE vector field with its Jacobian, as the [`EK1`](@ref) does.
 struct FullJacobian <: AbstractTaylorLinearization end
 
 """
+    MatrixFreeJacobian(; nprobes=nothing, diagonal_jacobian=nothing)
+
+Linearize the ODE vector field with its Jacobian, accessed only through the products
+`f.jvp` and `f.vjp`, as the [`MatfreeEK1`](@ref) does. The settings are those of the
+[`MatfreeEK1`](@ref).
+"""
+struct MatrixFreeJacobian{DJ} <: AbstractTaylorLinearization
+    nprobes::Union{Nothing,Int}
+    diagonal_jacobian::DJ
+end
+MatrixFreeJacobian(; nprobes=nothing, diagonal_jacobian=nothing) =
+    MatrixFreeJacobian(nprobes, diagonal_jacobian)
+
+"""
     needs_jacobian(component)
 
 Whether a component of an `ODEFilter` needs the Jacobian of the ODE vector field.
 """
-needs_jacobian(::ZeroJacobian) = false
+needs_jacobian(::Union{ZeroJacobian,MatrixFreeJacobian}) = false
 needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
 
 """

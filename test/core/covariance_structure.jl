@@ -11,6 +11,7 @@ Mdiag = Diagonal([1.0, 2.0])
     @test choose_covariance_structure(EK0(pn_observation_noise=Mdiag), I) === B
     @test choose_covariance_structure(EK0(), Mdiag) === B
     @test choose_covariance_structure(DiagonalEK1(), I) === B
+    @test choose_covariance_structure(MatfreeEK1(), I) === B
     @test choose_covariance_structure(EK1(), I) === D
     @test choose_covariance_structure(
         EK1(diffusionmodel=FixedMVDiffusion([1.0, 2.0], false)), M) === D
@@ -37,4 +38,11 @@ end
         EK1(diffusionmodel=DynamicMVDiffusion()), I)
     @test_throws ["`covariance_factorization", "`diffusionmodel"] choose_covariance_structure(
         EK0(covariance_factorization=K, diffusionmodel=DynamicMVDiffusion()), I)
+end
+
+@testset "The MatfreeEK1 has no dense covariances" begin
+    @test_throws ["`prior", "`linearization"] choose_covariance_structure(
+        MatfreeEK1(prior=IOUP(3, -1)), I)
+    @test_throws "`linearization" choose_covariance_structure(
+        MatfreeEK1(covariance_factorization=D), I)
 end
