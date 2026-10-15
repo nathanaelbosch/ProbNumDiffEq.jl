@@ -18,3 +18,4 @@ a posteriori
 posteriori
 linearize
 [Ll]inearization(s)?
+linearizes
