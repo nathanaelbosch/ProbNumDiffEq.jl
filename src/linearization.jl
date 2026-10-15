@@ -7,8 +7,7 @@ A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`;
-- optionally `refine_linearization!(::L, integ, x_filt, x_pred, obs)`, which may change the
-  linearization once the whole prediction is known.
+- optionally [`linearize_and_update!`](@ref), if the linearization depends on the update.
 """
 abstract type AbstractLinearization end
 
@@ -176,21 +175,24 @@ function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f)
         point=similar(Array{T}, C.d * (C.q + 1)), u_new=similar(u), u_old=similar(u))
 end
 
-# The first linearization, at the predicted mean, is the wrapped one's;
-# `refine_linearization!` iterates
+# The first linearization, at the predicted mean, is the wrapped one's; the iteration starts there
 linearize_ode_observation!(it::Iterated, integ, x) =
     linearize_ode_observation!(it.linearization, integ, x)
 
 """
-    refine_linearization!(linearization, integ, x_filt, x_pred, obs)
+    linearize_and_update!(linearization, integ, x_filt, x_pred, obs)
 
-Refine `obs`, the linearization of the ODE at the predicted mean, once the whole prediction
-`x_pred` is known. Return the linearization for the update and, if the refinement already
-conditioned the mean of `x_pred` on it, what [`update_mean!`](@ref) returned, with the mean
-in `x_filt`; otherwise `nothing`. By default, return `(obs, nothing)`.
+Condition the prediction `x_pred` on the observation of the ODE, linearized with
+`linearization`, and write the result into `x_filt`. `obs` is the linearization at the
+predicted mean. Return what [`update!`](@ref) returns, or, if the step is rejected,
+leave `integ.force_stepfail` set.
+
+By default, this is the [`update!`](@ref) with `obs`. [`Iterated`](@ref) linearizes
+again at the updated mean until it converges, and updates the covariance once.
 """
-refine_linearization!(::AbstractLinearization, integ, x_filt, x_pred, obs) = (obs, nothing)
-function refine_linearization!(it::Iterated, integ, x_filt, x_pred, obs)
+linearize_and_update!(::AbstractLinearization, integ, x_filt, x_pred, obs) =
+    update!(x_filt, x_pred, obs; cache=integ.cache)
+function linearize_and_update!(it::Iterated, integ, x_filt, x_pred, obs)
     relinearize(m) = linearize_ode_observation!(it.linearization, integ, m)
     small_change(μ, m) = scaled_change(integ, μ, m) < it.tol
     r = iterated_update_mean!(x_filt, x_pred, obs, relinearize, small_change;
@@ -198,9 +200,14 @@ function refine_linearization!(it::Iterated, integ, x_filt, x_pred, obs)
     integ.stats.nnonliniter += r.iterations
     if !r.converged
         integ.stats.nnonlinconvfail += 1
-        integ.opts.adaptive && (integ.force_stepfail = true)
+        if integ.opts.adaptive
+            integ.force_stepfail = true
+            return nothing
+        end
     end
-    return r.obs, r.upd
+    (; K, B, loglikelihood, ztSinvz, S, z) = r.upd
+    update_cov!(x_filt, x_pred, r.obs, K, B; cache=integ.cache)
+    return (; loglikelihood, ztSinvz, S, z)
 end
 
 # The norm of the change of the solution from the state mean `m` to `μ`, in units of `abstol`

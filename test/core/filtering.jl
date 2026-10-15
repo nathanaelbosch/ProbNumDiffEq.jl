@@ -259,11 +259,11 @@ end
         x_out = copy(x_pred)
         it = iterate!(x_out; converged=(μ, m) -> false, maxiters=1)
         @test (it.iterations, it.converged) == (1, false)
-        upd = PNDE.update!(x_out, x_pred, it.obs; cache, mean_update=it.upd)
+        PNDE.update_cov!(x_out, x_pred, it.obs, it.upd.K, it.upd.B; cache)
         x_ref = copy(x_pred)
         upd_ref = PNDE.update!(x_ref, x_pred, obs; cache)
         @test x_out == x_ref
-        @test upd.loglikelihood == upd_ref.loglikelihood
+        @test it.upd.loglikelihood == upd_ref.loglikelihood
     end
 
     @testset "Converged" begin
@@ -279,7 +279,7 @@ end
             @test h(μ) ≈ zeros(o) atol = 1e-10
         end
         # The covariance comes from the last linearization
-        PNDE.update!(x_out, x_pred, it.obs; cache, mean_update=it.upd)
+        PNDE.update_cov!(x_out, x_pred, it.obs, it.upd.K, it.upd.B; cache)
         @test Matrix(x_out.Σ) ≈ Matrix(PNDE.update(x_pred, it.obs).Σ)
         @test it.upd.z ≈ it.obs.r + J(it.obs.m) * (x_pred.μ - it.obs.m)
     end

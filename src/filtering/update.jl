@@ -81,16 +81,14 @@ K &= Σ H^T S^{-1}, \\\\
 Return `(; loglikelihood, ztSinvz, S, z)`: the log-likelihood of the observation,
 ``\\hat{z}^T S^{-1} \\hat{z}``, ``S`` and ``\\hat{z}``.
 
-This is [`update_mean!`](@ref) followed by [`update_cov!`](@ref). If `update_mean!` was
-already called for the same arguments, as in an iterated update, pass what it returned as
-`mean_update` to only update the covariance.
+This is [`update_mean!`](@ref) followed by [`update_cov!`](@ref).
 
 See also: [`update`](@ref).
 """
-function update!(x_out, x_pred, obs::LinearizedObservation; cache, mean_update=nothing)
-    upd = isnothing(mean_update) ? update_mean!(x_out, x_pred, obs; cache) : mean_update
-    update_cov!(x_out, x_pred, obs, upd.K, upd.B; cache)
-    return (; upd.loglikelihood, upd.ztSinvz, upd.S, upd.z)
+function update!(x_out, x_pred, obs::LinearizedObservation; cache)
+    (; loglikelihood, ztSinvz, S, z, K, B) = update_mean!(x_out, x_pred, obs; cache)
+    update_cov!(x_out, x_pred, obs, K, B; cache)
+    return (; loglikelihood, ztSinvz, S, z)
 end
 
 """
@@ -407,8 +405,7 @@ repeat until `converged(μ, m)` holds for the updated mean `μ` and the lineariz
 or for at most `maxiters` updates. The linearization points are copied into `m_cache`.
 
 Return `(; obs, upd, iterations, converged)`, with the last linearization `obs` and what
-[`update_mean!`](@ref) returned for it; [`update!`](@ref) with `mean_update=upd` completes
-the update.
+[`update_mean!`](@ref) returned for it; [`update_cov!`](@ref) with them completes the update.
 """
 function iterated_update_mean!(
     x_out, x_pred, obs, relinearize, converged; maxiters, m_cache, cache,
