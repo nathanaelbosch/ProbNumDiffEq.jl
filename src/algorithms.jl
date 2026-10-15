@@ -62,7 +62,7 @@ most flexibility.
 - `linearization::AbstractLinearization`: How the ODE vector field is linearized:
   `ZeroJacobian()` as in the [`EK0`](@ref), `DiagonalJacobian()` as in the
   [`DiagonalEK1`](@ref), or `FullJacobian()` as in the [`EK1`](@ref). [`Iterated`](@ref)
-  wraps one of them to linearize at the posterior, as the IEKF does.
+  wraps one of them to linearize at the posterior.
 - `order::Integer`: Order of the default integrated Wiener process (IWP) prior.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, an `order`-times integrated Wiener process prior `IWP(order)`.

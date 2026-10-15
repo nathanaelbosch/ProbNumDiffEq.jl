@@ -19,7 +19,7 @@ EK0
 ODEFilter
 ```
 
-### Iterated linearization (IEKF)
+### Iterated linearization
 ```@docs
 Iterated
 ```
