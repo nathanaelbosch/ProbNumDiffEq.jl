@@ -93,19 +93,39 @@ end
     end
 end
 
-@testset "Calibration and error estimate" begin
-    H = jacobian_products()
-    RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
+RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
+function observed_process_noise(H)
+    H.cache.has_HQH_diag[] = false
+    return PNDE.ObservedProcessNoise(
+        PNDE.ObservedCovariance(H, PNDE.first_two_columns!(H.cache.Qcols, RQ)), RQ)
+end
+
+@testset "Calibration" begin
+    HQH = observed_process_noise(jacobian_products())
     HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
-    PNDE.estimate_observed_diagonal!(H.cache.HQH_diag, RQ, H, PNDE.DIAGONAL_PROBES)
-    HQH = PNDE.ObservedProcessNoise(PNDE.ObservedCovariance(H, H.cache.Qcols))
-    PNDE.first_two_columns!(H.cache.Qcols, RQ)
     z = randn(rng, d)
     # CG approaches zᵀ S⁻¹ z from below; its tolerance for the calibration is 0.1
     exact = z' * (HQH_dense \ z)
     @test PNDE.invquad(z, HQH) ≈ exact rtol = 0.15
     @test PNDE.invquad(z, HQH) <= exact
-    @test PNDE.diag!(zeros(d), HQH) == H.cache.HQH_diag
+end
+
+@testset "The diagonal of H Q Hᵀ is estimated once per step, when first needed" begin
+    # Without a diagonal Jacobian, the calibration needs it for its preconditioner
+    H = jacobian_products()
+    HQH = observed_process_noise(H)
+    @test !H.cache.has_HQH_diag[]
+    PNDE.invquad(randn(rng, d), HQH)
+    @test H.cache.has_HQH_diag[]
+    estimate = copy(H.cache.HQH_diag)
+    @test PNDE.diag!(zeros(d), HQH) == estimate
+    # With one, only the error estimate needs it
+    H = jacobian_products(; diagonal_jacobian=diagonal_jacobian!)
+    HQH = observed_process_noise(H)
+    PNDE.invquad(randn(rng, d), HQH)
+    @test !H.cache.has_HQH_diag[]
+    PNDE.diag!(zeros(d), HQH)
+    @test H.cache.has_HQH_diag[]
 end
 
 @testset "Linearization" begin
