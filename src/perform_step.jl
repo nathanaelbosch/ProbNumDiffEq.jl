@@ -74,9 +74,7 @@ Basically consists of the following steps
 - Compute local diffusion and local error estimate
 - If the step is rejected, terminate here; Else continue
 - Predict the covariance
-- Kalman update step, with the linearization at the predicted mean, or with the one that
-  [`Iterated`](@ref) finds by iterating; with adaptive steps, reject the step if that does
-  not converge
+- Kalman update step
 - (optional) Update the global diffusion MLE
 
 As in OrdinaryDiffEqCore.jl, this step is not necessarily successful!

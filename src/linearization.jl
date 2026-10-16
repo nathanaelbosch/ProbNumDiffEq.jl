@@ -7,7 +7,8 @@ A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`;
-- optionally `update!(::L, x_filt, x_pred, obs, integ)`, if the linearization depends on the update.
+- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step, which by default
+  is the Kalman update with the observation `obs` at the predicted mean.
 """
 abstract type AbstractLinearization end
 
@@ -164,26 +165,21 @@ end
 
 needs_jacobian(it::Iterated) = needs_jacobian(it.linearization)
 
-# The buffers of the wrapped linearization, the linearization points, and two solutions for
-# the stopping rule
 function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f) where {T}
     return (; make_linearization_cache(it.linearization, C, u, f)...,
         point=similar(Array{T}, C.d * (C.q + 1)), u_new=similar(u), u_old=similar(u))
 end
 
-# The first linearization, at the predicted mean, is the wrapped one's; the iteration starts there
 linearize_ode_observation!(it::Iterated, integ, x) =
     linearize_ode_observation!(it.linearization, integ, x)
 
 """
     update!(linearization, x_filt, x_pred, obs, integ)
 
-The update of the ODE step: condition the prediction `x_pred` on the observation of the ODE
-and write the result into `x_filt`. `obs` is its linearization at the predicted mean. If the
-step is rejected, leave `integ.force_stepfail` set.
-
-By default, this is the [`update!`](@ref) with `obs`. [`Iterated`](@ref) linearizes again at
-the updated mean until it converges, and updates the covariance once.
+The update of the ODE step: condition the prediction `x_pred` on `obs`, the linearization of
+the ODE at the predicted mean, and write the result into `x_filt`. [`Iterated`](@ref)
+linearizes again at the updated mean until it converges, and rejects the step with
+`integ.force_stepfail` if it does not.
 """
 update!(::AbstractLinearization, x_filt, x_pred, obs, integ) =
     update!(x_filt, x_pred, obs; cache=integ.cache)
@@ -205,8 +201,7 @@ function update!(it::Iterated, x_filt, x_pred, obs, integ)
     return (; loglikelihood, ztSinvz, S, z)
 end
 
-# The norm of the change of the solution from the state mean `m` to `μ`, in units of `abstol`
-# and `reltol` relative to the solution at `m`
+# Relative to the solution at `m`, which makes the iteration stop earlier than relative to `uprev`
 function scaled_change(integ, μ, m)
     (; u_new, u_old) = integ.cache.linearization_cache
     t = integ.t + integ.dt
