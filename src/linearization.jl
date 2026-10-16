@@ -7,7 +7,7 @@ A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`;
-- optionally [`linearize_and_update!`](@ref), if the linearization depends on the update.
+- optionally `update!(::L, x_filt, x_pred, obs, integ)`, if the linearization depends on the update.
 """
 abstract type AbstractLinearization end
 
@@ -180,19 +180,18 @@ linearize_ode_observation!(it::Iterated, integ, x) =
     linearize_ode_observation!(it.linearization, integ, x)
 
 """
-    linearize_and_update!(linearization, integ, x_filt, x_pred, obs)
+    update!(linearization, x_filt, x_pred, obs, integ)
 
-Condition the prediction `x_pred` on the observation of the ODE, linearized with
-`linearization`, and write the result into `x_filt`. `obs` is the linearization at the
-predicted mean. Return what [`update!`](@ref) returns, or, if the step is rejected,
-leave `integ.force_stepfail` set.
+The update of the ODE step: condition the prediction `x_pred` on the observation of the ODE
+and write the result into `x_filt`. `obs` is its linearization at the predicted mean. If the
+step is rejected, leave `integ.force_stepfail` set.
 
-By default, this is the [`update!`](@ref) with `obs`. [`Iterated`](@ref) linearizes
-again at the updated mean until it converges, and updates the covariance once.
+By default, this is the [`update!`](@ref) with `obs`. [`Iterated`](@ref) linearizes again at
+the updated mean until it converges, and updates the covariance once.
 """
-linearize_and_update!(::AbstractLinearization, integ, x_filt, x_pred, obs) =
+update!(::AbstractLinearization, x_filt, x_pred, obs, integ) =
     update!(x_filt, x_pred, obs; cache=integ.cache)
-function linearize_and_update!(it::Iterated, integ, x_filt, x_pred, obs)
+function update!(it::Iterated, x_filt, x_pred, obs, integ)
     relinearize(m) = linearize_ode_observation!(it.linearization, integ, m)
     small_change(μ, m) = scaled_change(integ, μ, m) < it.tol
     r = iterated_update_mean!(x_filt, x_pred, obs, relinearize, small_change;
