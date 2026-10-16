@@ -164,10 +164,6 @@ end
 
 needs_jacobian(it::Iterated) = needs_jacobian(it.linearization)
 
-# The Taylor linearization that a linearization is based on
-base_linearization(linearization::AbstractLinearization) = linearization
-base_linearization(it::Iterated) = it.linearization
-
 # The buffers of the wrapped linearization, the linearization points, and two solutions for
 # the stopping rule
 function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f) where {T}

@@ -380,7 +380,8 @@ requirements all settings meet. Dense covariances are chosen automatically only 
 """
 function choose_covariance_structure(alg::ODEFilter, mass_matrix)
     (; prior, diffusionmodel, pn_observation_noise) = alg
-    linearization = base_linearization(alg.linearization)
+    linearization =
+        alg.linearization isa Iterated ? alg.linearization.linearization : alg.linearization
     kronecker = (
         linearization=linearization isa ZeroJacobian,
         prior=prior isa IWP,
