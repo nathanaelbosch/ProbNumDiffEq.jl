@@ -2,18 +2,21 @@
 
 This file provides guidance to coding agents working with code in this repository.
 
-ProbNumDiffEq.jl provides probabilistic numerical ODE solvers ("ODE filters": `EK0`, `EK1`, `DiagonalEK1`; `ExpEK`/`RosenbrockExpEK` are constructors for `EK0`/`EK1` with an `IOUP` prior) for the SciML/DifferentialEquations.jl ecosystem. They solve ODEs by Gaussian filtering and smoothing, so they return a posterior distribution instead of only a point estimate.
+ProbNumDiffEq.jl provides probabilistic numerical ODE solvers ("ODE filters": `EK0`, `EK1`, `DiagonalEK1`; `ExpEK`/`RosenbrockExpEK` are constructors for `EK0`/`EK1` with an `IOUP` prior) for the SciML/DifferentialEquations.jl ecosystem.
+They solve ODEs by Gaussian filtering and smoothing, so they return a posterior distribution instead of only a point estimate.
 
 ## Commands
 
-Tests are split into groups via the `GROUP` env var: `Core`, `Solvers`, `Interface`, `CodeQuality` (Aqua, JET, ExplicitImports), `Downstream` (= Solvers + Interface), or `All` (default). CI runs each group separately.
+Tests are split into groups via the `GROUP` env var: `Core`, `Solvers`, `Interface`, `CodeQuality` (Aqua, JET, ExplicitImports), `Downstream` (= Solvers + Interface), or `All` (default).
+CI runs each group separately.
 
 ```sh
 julia --project -e 'using Pkg; Pkg.test()'                  # all tests
 GROUP=Core julia --project -e 'using Pkg; Pkg.test()'       # one group
 ```
 
-Each test file is standalone (brings its own `using` statements), so a single file can be run in the test environment. `test/Project.toml` points to the local package through `[sources]`, so instantiate it once (creates a gitignored `test/Manifest.toml`):
+Each test file is standalone (brings its own `using` statements), so a single file can be run in the test environment.
+`test/Project.toml` points to the local package through `[sources]`, so instantiate it once (creates a gitignored `test/Manifest.toml`):
 
 ```sh
 julia --project=test -e 'using Pkg; Pkg.instantiate()'  # once
@@ -35,21 +38,44 @@ CI also runs doctests: `julia --project=docs -e 'using Documenter: doctest; usin
 
 ## Architecture
 
-All solvers are one type, `ODEFilter <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm` (`src/algorithms.jl`); `EK0`, `EK1` and `DiagonalEK1` are functions that return it and differ only in its `linearization` (`ZeroJacobian`, `FullJacobian`, `DiagonalJacobian`). Code that depends on the solver dispatches on the field, not on the solver name. The linearization builds the ODE's observation in each step with `linearize_ode_observation!` (`src/linearization.jl`), into buffers it allocates once per solve with `make_linearization_cache` and that are stored in `cache.linearization_cache`. A new linearization is a subtype of `AbstractLinearization` with these two methods and `needs_jacobian`; `perform_step!` needs no change. `linearize_ode_observation!` takes the predicted `Gaussian`; Taylor linearizations, the subtypes of `AbstractTaylorLinearization` such as the three existing ones, linearize at its mean and implement the method for a point instead. `Iterated(L)` wraps a Taylor linearization to linearize at the posterior instead: its `update!(linearization, x_filt, x_pred, obs, integ)` repeats the linearization and the mean update until the mean converges (`iterated_update_mean!`), then updates the covariance. The solvers reuse OrdinaryDiffEq's integrator loop, step-size control and Jacobian machinery by overloading its hooks; `docs/src/implementation.md` maps each hook to its file.
+All solvers are one type, `ODEFilter <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm` (`src/algorithms.jl`); `EK0`, `EK1` and `DiagonalEK1` are functions that return it and differ only in its `linearization` (`ZeroJacobian`, `FullJacobian`, `DiagonalJacobian`).
+Code that depends on the solver dispatches on the field, not on the solver name.
+The linearization builds the ODE's observation in each step with `linearize_ode_observation!` (`src/linearization.jl`), into buffers it allocates once per solve with `make_linearization_cache` and that are stored in `cache.linearization_cache`.
+A new linearization is a subtype of `AbstractLinearization` with these two methods and `needs_jacobian`; `perform_step!` needs no change.
+`linearize_ode_observation!` takes the predicted `Gaussian`; Taylor linearizations, the subtypes of `AbstractTaylorLinearization` such as the three existing ones, linearize at its mean and implement the method for a point instead.
+`Iterated(L)` wraps a Taylor linearization to linearize at the posterior instead: its `update!(linearization, x_filt, x_pred, obs, integ)` repeats the linearization and the mean update until the mean converges (`iterated_update_mean!`), then updates the covariance.
+The solvers reuse OrdinaryDiffEq's integrator loop, step-size control and Jacobian machinery by overloading its hooks; `docs/src/implementation.md` maps each hook to its file.
 
-The package supports two major versions of several SciML packages at once (OrdinaryDiffEqCore 3/4, OrdinaryDiffEqDifferentiation 2/3, DiffEqBase 6/7, SciMLBase 2/3). Differences between them are bridged with `@static if isdefined(OrdinaryDiffEqCore, :name)` shims (for example `_set_EEst!`/`_get_EEst` in `perform_step.jl`, `_process_AD_choice` in `algorithms.jl`). Keep both branches working when editing them.
+The package supports two major versions of several SciML packages at once (OrdinaryDiffEqCore 3/4, OrdinaryDiffEqDifferentiation 2/3, DiffEqBase 6/7, SciMLBase 2/3).
+Differences between them are bridged with `@static if isdefined(OrdinaryDiffEqCore, :name)` shims (for example `_set_EEst!`/`_get_EEst` in `perform_step.jl`, `_process_AD_choice` in `algorithms.jl`).
+Keep both branches working when editing them.
 
 ### State representation
 
-- The filter state has dimension `D = d*(q+1)` (`d` = ODE dimension, `q` = prior order, i.e. number of modeled derivatives). It is ordered derivative-major: the first `d` entries are `u`, the next `d` are `u'`, and so on. `Proj(i)` / `cache.E0`, `E1`, `E2` extract the i-th derivative.
-- Gaussians (`src/gaussians.jl`) hold covariances in square-root form as `PSDMatrices.PSDMatrix` (Σ = RᵀR). Predict, update and smooth (`src/filtering/`) propagate the factor `R` via QR and never form Σ explicitly.
-- Every place that conditions the state on an observation (the ODE step, `ManifoldUpdate`, `DataUpdateCallback`, Fenrir, the initializations) builds a `LinearizedObservation(m, r, H, R)` (`src/filtering/linearized_observation.jl`): the observation `y = h(x) + v`, `v ~ N(0, R)`, linearized at `m` as `h(x) - y ≈ r + H (x - m)`. `update!` conditions on it as `update_mean!` followed by `update_cov!`, so that an iterated update (`ManifoldUpdate`, `Iterated`) computes the covariance only for its last linearization. Data is linear, `y ~ N(H x, R)`, and `linear_observation(H, y, R)` builds it as `LinearizedObservation(Zeros(D), -y, H, R)`. `update!(x, obs; cache)` conditions `x` in place: it copies `x` to `cache.x_tmp` and sizes the buffers to the observation with `make_obssized_cache`. `src/filtering/` names no type of the ODE filter, so the observation matrices of the ODE state, `H = M Eᵢ`, are built by `solution_observation_matrix` in `src/observation_model.jl`. With a block-diagonal covariance, `H` can also be a `BlocksOfScaledSelections`, which `update!` handles block by block. The ODE step first linearizes at the predicted mean, `m = μ`, because the local diffusion and the error estimate read `obs.r` as the residual there; `linearize_ode_observation!` also takes other points, as `Iterated` needs. The local diffusion and the error estimate share `H Q Hᵀ` from `observed_process_noise!`, and the global diffusion reuses what `update!` returns, including the residual `z = r + H (μ - m)`.
-- Priors (`src/priors/`: `IWP`, `IOUP`, `Matern`) are Gauss–Markov processes discretized into a transition `Ah, Qh` for step `h`. `make_transition_matrices!` also computes preconditioners `P, PI` and the preconditioned `A = P Ah PI`, `Q = P Qh Pᵀ`. The filtering step uses `Ah, Qh`; dense output and sampling use the preconditioned `A, Q` for numerical stability.
-- Diffusion models (`src/diffusions/`) are static (`FixedDiffusion`, `FixedMVDiffusion`: calibrated once after the solve) or dynamic (`DynamicDiffusion`, `DynamicMVDiffusion`: estimated in every step). The multivariate (`MV`) ones estimate one diffusion per ODE dimension and need block-diagonal covariances (see below).
+- The filter state has dimension `D = d*(q+1)` (`d` = ODE dimension, `q` = prior order, i.e. number of modeled derivatives).
+  It is ordered derivative-major: the first `d` entries are `u`, the next `d` are `u'`, and so on.
+  `Proj(i)` / `cache.E0`, `E1`, `E2` extract the i-th derivative.
+- Gaussians (`src/gaussians.jl`) hold covariances in square-root form as `PSDMatrices.PSDMatrix` (Σ = RᵀR).
+  Predict, update and smooth (`src/filtering/`) propagate the factor `R` via QR and never form Σ explicitly.
+- Every place that conditions the state on an observation (the ODE step, `ManifoldUpdate`, `DataUpdateCallback`, Fenrir, the initializations) builds a `LinearizedObservation(m, r, H, R)` (`src/filtering/linearized_observation.jl`): the observation `y = h(x) + v`, `v ~ N(0, R)`, linearized at `m` as `h(x) - y ≈ r + H (x - m)`.
+  `update!` conditions on it as `update_mean!` followed by `update_cov!`, so that an iterated update (`ManifoldUpdate`, `Iterated`) computes the covariance only for its last linearization.
+  Data is linear, `y ~ N(H x, R)`, and `linear_observation(H, y, R)` builds it as `LinearizedObservation(Zeros(D), -y, H, R)`.
+  `update!(x, obs; cache)` conditions `x` in place: it copies `x` to `cache.x_tmp` and sizes the buffers to the observation with `make_obssized_cache`.
+  `src/filtering/` names no type of the ODE filter, so the observation matrices of the ODE state, `H = M Eᵢ`, are built by `solution_observation_matrix` in `src/observation_model.jl`.
+  With a block-diagonal covariance, `H` can also be a `BlocksOfScaledSelections`, which `update!` handles block by block.
+  The ODE step first linearizes at the predicted mean, `m = μ`, because the local diffusion and the error estimate read `obs.r` as the residual there; `linearize_ode_observation!` also takes other points, as `Iterated` needs.
+  The local diffusion and the error estimate share `H Q Hᵀ` from `observed_process_noise!`, and the global diffusion reuses what `update!` returns, including the residual `z = r + H (μ - m)`.
+- Priors (`src/priors/`: `IWP`, `IOUP`, `Matern`) are Gauss–Markov processes discretized into a transition `Ah, Qh` for step `h`.
+  `make_transition_matrices!` also computes preconditioners `P, PI` and the preconditioned `A = P Ah PI`, `Q = P Qh Pᵀ`.
+  The filtering step uses `Ah, Qh`; dense output and sampling use the preconditioned `A, Q` for numerical stability.
+- Diffusion models (`src/diffusions/`) are static (`FixedDiffusion`, `FixedMVDiffusion`: calibrated once after the solve) or dynamic (`DynamicDiffusion`, `DynamicMVDiffusion`: estimated in every step).
+  The multivariate (`MV`) ones estimate one diffusion per ODE dimension and need block-diagonal covariances (see below).
 
 ### Covariance factorizations
 
-The same filter code runs on three matrix representations. `choose_covariance_structure` in `src/algorithms.jl` picks one in `alg_cache`: it lists, for each structure, what it requires of the inputs (linearization, prior, diffusion model, `pn_observation_noise`, mass matrix), and uses the first structure whose requirements are all met, or the user's `covariance_factorization` if its requirements are met. Dense covariances are chosen automatically only for the `EK1`: the `EK0` and the `DiagonalEK1` throw instead, unless asked with `covariance_factorization=DenseCovariance`.
+The same filter code runs on three matrix representations.
+`choose_covariance_structure` in `src/algorithms.jl` picks one in `alg_cache`: it lists, for each structure, what it requires of the inputs (linearization, prior, diffusion model, `pn_observation_noise`, mass matrix), and uses the first structure whose requirements are all met, or the user's `covariance_factorization` if its requirements are met.
+Dense covariances are chosen automatically only for the `EK1`: the `EK0` and the `DiagonalEK1` throw instead, unless asked with `covariance_factorization=DenseCovariance`.
 
 | `CovarianceStructure` | Matrix type | Used for, by default |
 |---|---|---|
@@ -57,21 +83,30 @@ The same filter code runs on three matrix representations. `choose_covariance_st
 | `BlockDiagonalCovariance` | `BlocksOfDiagonals` (`src/blocksofdiagonals.jl`) | `DiagonalEK1`, or `EK0` with multivariate diffusion |
 | `DenseCovariance` | `Matrix` | `EK1`; `EK0` and `DiagonalEK1` only on request, as in `ExpEK` |
 
-All cache matrices are created through `factorized_similar` / `factorized_zeros` / `to_factorized_matrix` (`src/covariance_structure.jl`), so their types follow the chosen structure. Any new linear-algebra operation used in the solve (predict, update, smoothing, marginalization, `diag!`, `_matmul!`, …) therefore needs a method for each of the three types. Plain linear algebra (matrix products, sums, the Kronecker vec trick, as used for the means in `predict_mean!` and `marginalize_mean!`) is overloaded on the structured types in `src/kronecker.jl` and `src/blocksofdiagonals.jl`. Filtering steps, which need QR, Cholesky or views into caches, are written once as a dense method; the Kronecker method calls it on the Kronecker factors through `on_kronecker_factors`, and the block-diagonal method calls it once per block through `foreach_diagonal_block` (`src/filtering/structured_covariances.jl`). Structured results are tested against dense ones in `test/core/`. Dense output and sampling must also keep the structure.
+All cache matrices are created through `factorized_similar` / `factorized_zeros` / `to_factorized_matrix` (`src/covariance_structure.jl`), so their types follow the chosen structure.
+Any new linear-algebra operation used in the solve (predict, update, smoothing, marginalization, `diag!`, `_matmul!`, …) therefore needs a method for each of the three types.
+Plain linear algebra (matrix products, sums, the Kronecker vec trick, as used for the means in `predict_mean!` and `marginalize_mean!`) is overloaded on the structured types in `src/kronecker.jl` and `src/blocksofdiagonals.jl`.
+Filtering steps, which need QR, Cholesky or views into caches, are written once as a dense method; the Kronecker method calls it on the Kronecker factors through `on_kronecker_factors`, and the block-diagonal method calls it once per block through `foreach_diagonal_block` (`src/filtering/structured_covariances.jl`).
+Structured results are tested against dense ones in `test/core/`.
+Dense output and sampling must also keep the structure.
 
 ### Performance conventions
 
 - Avoid allocations in `perform_step!`: temporaries are preallocated in `EKCache` and named by shape (`C_d`, `C_dxd`, `C_Dxd`, `C_DxD`, `C_2DxD`, `C_3DxD`).
-- Use `_matmul!` (`src/fast_linalg.jl`) instead of `mul!`. It dispatches to Octavian.jl for BLAS-type dense matrices and to FastBroadcast (`@..`) for diagonal and scalar factors.
+- Use `_matmul!` (`src/fast_linalg.jl`) instead of `mul!`.
+  It dispatches to Octavian.jl for BLAS-type dense matrices and to FastBroadcast (`@..`) for diagonal and scalar factors.
 - `test/complexity.jl` asserts that the Kronecker `EK0` scales linearly in `d`; `test/core/fast_linalg.jl` covers `_matmul!`.
 
 ## Conventions enforced by tests
 
-- **Explicit imports** (CodeQuality group, `test/explicit_imports.jl`): every name is imported explicitly and from its owner module, not through a re-exporting package. Deliberate uses of non-public API stay module-qualified and must be listed in `NONPUBLIC_ACCESSES` there; package internals used by `ext/` go in `OWN_INTERNALS_USED_BY_EXTENSIONS`.
+- **Explicit imports** (CodeQuality group, `test/explicit_imports.jl`): every name is imported explicitly and from its owner module, not through a re-exporting package.
+  Deliberate uses of non-public API stay module-qualified and must be listed in `NONPUBLIC_ACCESSES` there; package internals used by `ext/` go in `OWN_INTERNALS_USED_BY_EXTENSIONS`.
 - **Aqua.jl and JET.jl** run in the same group (`JET.test_package` with `target_modules=(ProbNumDiffEq,)`).
 - Citations in docstrings use explicit display text, `[Author (Year)](@cite key)`, with keys from `docs/src/refs.bib`, so REPL help stays readable.
 
 ## Style
 
-- Keep code comments rare. Add one only when the code cannot say it: a non-obvious invariant, or the formula behind terse in-place linear algebra.
+- Keep code comments rare.
+  Add one only when the code cannot say it: a non-obvious invariant, or the formula behind terse in-place linear algebra.
 - PRs are squash-merged and their description is taken from the commit message, so write commit messages in Markdown with code in backticks.
+- Write Markdown with one sentence per line, so that diffs show only the changed sentences.
