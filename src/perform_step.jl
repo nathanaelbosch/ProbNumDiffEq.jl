@@ -139,7 +139,7 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
     end
 
     # Update state and save the ODE solution value
-    upd = linearize_and_update!(integ.alg.linearization, integ, x_filt, x_pred, obs)
+    upd = update!(x_filt, x_pred, obs, integ)
     integ.force_stepfail && return
     write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
 
@@ -156,6 +156,17 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
 
     return nothing
 end
+
+"""
+    update!(x_filt, x_pred, obs, integ)
+
+The update of the ODE step: condition the prediction `x_pred` on the observation `obs` of
+the ODE, linearized at the predicted mean, and write the result into `x_filt`. The
+linearization of the solver may change `obs` on the way, see
+[`linearize_and_update!`](@ref).
+"""
+update!(x_filt, x_pred, obs, integ) =
+    linearize_and_update!(integ.alg.linearization, integ, x_filt, x_pred, obs)
 
 """
     observed_process_noise!(cache, obs)

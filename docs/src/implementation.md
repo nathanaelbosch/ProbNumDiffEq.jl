@@ -29,7 +29,7 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
   Implemented in `./src/perform_step.jl`.
 - **Linearization:** `perform_step!` gets the observation of the ODE from `linearize_ode_observation!(alg.linearization, integ, x_pred)`, which evaluates the ODE and, for the `EK1` and `DiagonalEK1`, its Jacobian with `OrdinaryDiffEq.calc_J!`.
   Implemented in `./src/linearization.jl`; the docstring of `AbstractLinearization` lists what a new linearization implements.
-  After the covariance prediction, `linearize_and_update!` conditions on it; `Iterated` repeats the linearization at the updated mean until it converges. The calibration and the error estimate use the linearization at the predicted mean.
+  After the covariance prediction, the update of the step, `update!(x_filt, x_pred, obs, integ)`, calls `linearize_and_update!` of the linearization, which conditions on it; `Iterated` repeats the linearization at the updated mean until it converges. The calibration and the error estimate use the linearization at the predicted mean.
 - **Custom postamble** by overloading `SciMLBase.postamble!` (which should always call `OrdinaryDiffEqCore._postamble!`).
   This is where we do the "smoothing" of the solution.
   Implemented in `./src/integrator_utils.jl`.
