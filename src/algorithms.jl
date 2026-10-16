@@ -61,7 +61,8 @@ most flexibility.
 # Arguments
 - `linearization::AbstractLinearization`: How the ODE vector field is linearized:
   `ZeroJacobian()` as in the [`EK0`](@ref), `DiagonalJacobian()` as in the
-  [`DiagonalEK1`](@ref), or `FullJacobian()` as in the [`EK1`](@ref).
+  [`DiagonalEK1`](@ref), or `FullJacobian()` as in the [`EK1`](@ref). [`Iterated`](@ref)
+  wraps one of them to linearize at the posterior.
 - `order::Integer`: Order of the default integrated Wiener process (IWP) prior.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, an `order`-times integrated Wiener process prior `IWP(order)`.
@@ -378,7 +379,9 @@ requirements all settings meet. Dense covariances are chosen automatically only 
 `EK1`; the `EK0` and the `DiagonalEK1` use them only on request.
 """
 function choose_covariance_structure(alg::ODEFilter, mass_matrix)
-    (; linearization, prior, diffusionmodel, pn_observation_noise) = alg
+    (; prior, diffusionmodel, pn_observation_noise) = alg
+    linearization =
+        alg.linearization isa Iterated ? alg.linearization.linearization : alg.linearization
     kronecker = (
         linearization=linearization isa ZeroJacobian,
         prior=prior isa IWP,

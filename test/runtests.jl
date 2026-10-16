@@ -79,6 +79,9 @@ const GROUP = get(ENV, "GROUP", "All")
             @timedsafetestset "Stiff Problem" begin
                 include("stiff_problem.jl")
             end
+            @timedsafetestset "Iterated linearization (IEKF)" begin
+                include("iterated_linearization.jl")
+            end
             @timedtestset "Test all diffusion models" begin
                 include("diffusions.jl")
             end

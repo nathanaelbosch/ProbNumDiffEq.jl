@@ -41,6 +41,9 @@ appxsol = solve(prob_base, Vern9(), abstol=1e-9, reltol=1e-6)
         DiagonalEK1(diffusionmodel=FixedDiffusion()),
         DiagonalEK1(diffusionmodel=FixedMVDiffusion()),
         DiagonalEK1(diffusionmodel=DynamicMVDiffusion()),
+        ODEFilter(linearization=Iterated(ZeroJacobian())),
+        ODEFilter(linearization=Iterated(FullJacobian())),
+        ODEFilter(linearization=Iterated(DiagonalJacobian())),
     )
         sol = solve(_prob, alg)
 

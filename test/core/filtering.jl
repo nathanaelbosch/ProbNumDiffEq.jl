@@ -241,6 +241,55 @@ update_cache(FAC, D, o) = (;
     end
 end
 
+@testset "Iterated update, noise: $noise" for noise in (false, true)
+    # The observation h(x) = 0 of a two-dimensional ODE with one derivative
+    D, o = 4, 2
+    h(x) = [x[3] - sin(x[1]) - x[2], x[4] - x[1] * x[2]]
+    J(x) = [-cos(x[1]) -1 1 0; -x[2] -x[1] 0 1]
+    R = noise ? PSDMatrix(sqrt(0.1) * Matrix(1.0I, o, o)) : nothing
+    linearize(m) = PNDE.LinearizedObservation(m, h(m), J(m), R)
+    x_pred =
+        Gaussian([0.5, 1.0, 0.0, 0.0], PSDMatrix(Matrix(UpperTriangular(rand(D, D) + I))))
+    obs = linearize(x_pred.μ)
+    cache = update_cache(PNDE.DenseCovariance{Float64}(o, D), D, o)
+    iterate!(x_out; converged, maxiters) = PNDE.iterated_update_mean!(
+        x_out, x_pred, obs, linearize, converged; maxiters, m_cache=zeros(D), cache)
+
+    @testset "One iteration is the update" begin
+        x_out = copy(x_pred)
+        it = iterate!(x_out; converged=(μ, m) -> false, maxiters=1)
+        @test (it.iterations, it.converged) == (1, false)
+        PNDE.update_cov!(x_out, x_pred, it.obs, it.upd.K, it.upd.B; cache)
+        x_ref = copy(x_pred)
+        upd_ref = PNDE.update!(x_ref, x_pred, obs; cache)
+        @test x_out == x_ref
+        @test it.upd.loglikelihood == upd_ref.loglikelihood
+    end
+
+    @testset "Converged" begin
+        x_out = copy(x_pred)
+        it = iterate!(x_out; converged=(μ, m) -> norm(μ - m) < 1e-12, maxiters=50)
+        @test it.converged
+        @test 2 < it.iterations < 50
+        # The mean is the mode of the posterior; without noise it satisfies h(μ) = 0
+        μ, Σ = x_out.μ, Matrix(x_pred.Σ)
+        if noise
+            @test Σ \ (μ - x_pred.μ) + J(μ)' * (Matrix(R) \ h(μ)) ≈ zeros(D) atol = 1e-8
+        else
+            @test h(μ) ≈ zeros(o) atol = 1e-10
+        end
+        # The covariance comes from the last linearization
+        PNDE.update_cov!(x_out, x_pred, it.obs, it.upd.K, it.upd.B; cache)
+        @test Matrix(x_out.Σ) ≈ Matrix(PNDE.update(x_pred, it.obs).Σ)
+        @test it.upd.z ≈ it.obs.r + J(it.obs.m) * (x_pred.μ - it.obs.m)
+    end
+
+    @testset "Not converged" begin
+        it = iterate!(copy(x_pred); converged=(μ, m) -> false, maxiters=3)
+        @test (it.iterations, it.converged) == (3, false)
+    end
+end
+
 @testset "solution_observation_matrix of the derivative $deriv" for deriv in 0:2
     d, q = 3, 2
     dense(M) = [zeros(size(M, 1), d * deriv) Matrix(M) zeros(size(M, 1), d * (q - deriv))]

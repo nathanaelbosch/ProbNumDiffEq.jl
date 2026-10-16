@@ -6,7 +6,8 @@ How an [`ODEFilter`](@ref) linearizes the observation of the ODE in each step.
 A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
-- `needs_jacobian(::L)`.
+- `needs_jacobian(::L)`;
+- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step.
 """
 abstract type AbstractLinearization end
 
@@ -126,4 +127,86 @@ function jacobian_approximation(::DiagonalJacobian, J, d)
         topright = view(J, 1:d, (d+1):2d)
         return BlocksOfDiagonals([[topleft[i, i] topright[i, i];] for i in 1:d])
     end
+end
+
+"""
+    Iterated(linearization; maxiters=20, tol=1e-2)
+
+Linearize the ODE at the posterior instead of the prediction, by linearizing and updating
+again and again until the solution changes by less than `tol` (relative to `abstol` and
+`reltol`), but at most `maxiters` times. This is the iterated extended Kalman filter
+[Bosch (2026)](@cite bosch26stable).
+
+With adaptive steps, a step that does not converge is rejected. With fixed steps, it is
+accepted and counted in `sol.stats.nnonlinconvfail`.
+
+# Examples
+```julia-repl
+julia> solve(prob, ODEFilter(linearization=Iterated(DiagonalJacobian())))
+```
+"""
+struct Iterated{L<:AbstractTaylorLinearization,T} <: AbstractLinearization
+    linearization::L
+    maxiters::Int
+    tol::T
+    function Iterated(linearization::AbstractTaylorLinearization; maxiters=20, tol=1e-2)
+        maxiters >= 1 || throw(ArgumentError("`maxiters` must be at least 1."))
+        tol > 0 || throw(ArgumentError("`tol` must be positive."))
+        return new{typeof(linearization),typeof(tol)}(linearization, maxiters, tol)
+    end
+end
+function Base.show(io::IO, it::Iterated)
+    print(io, "Iterated(", it.linearization)
+    it.maxiters == 20 || print(io, ", maxiters=", it.maxiters)
+    it.tol == 1e-2 || print(io, ", tol=", it.tol)
+    print(io, ")")
+end
+
+needs_jacobian(it::Iterated) = needs_jacobian(it.linearization)
+
+function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f) where {T}
+    return (; make_linearization_cache(it.linearization, C, u, f)...,
+        point=similar(Array{T}, C.d * (C.q + 1)), u_new=similar(u), u_old=similar(u))
+end
+
+linearize_ode_observation!(it::Iterated, integ, x) =
+    linearize_ode_observation!(it.linearization, integ, x)
+
+"""
+    update!(linearization, x_filt, x_pred, obs, integ)
+
+The update of the ODE step: condition `x_pred` on the observation `obs`, linearized at the
+predicted mean, and write the result into `x_filt`. [`Iterated`](@ref) linearizes again
+until it converges.
+"""
+update!(::AbstractLinearization, x_filt, x_pred, obs, integ) =
+    update!(x_filt, x_pred, obs; cache=integ.cache)
+function update!(it::Iterated, x_filt, x_pred, obs, integ)
+    relinearize(m) = linearize_ode_observation!(it.linearization, integ, m)
+    small_change(μ, m) = scaled_change(integ, μ, m) < it.tol
+    r = iterated_update_mean!(x_filt, x_pred, obs, relinearize, small_change;
+        it.maxiters, m_cache=integ.cache.linearization_cache.point, cache=integ.cache)
+    integ.stats.nnonliniter += r.iterations
+    if !r.converged
+        integ.stats.nnonlinconvfail += 1
+        if integ.opts.adaptive
+            integ.force_stepfail = true
+            return nothing
+        end
+    end
+    (; K, B, loglikelihood, ztSinvz, S, z) = r.upd
+    update_cov!(x_filt, x_pred, r.obs, K, B; cache=integ.cache)
+    return (; loglikelihood, ztSinvz, S, z)
+end
+
+# Relative to the solution at `m`, which makes the iteration stop earlier than relative to `uprev`
+function scaled_change(integ, μ, m)
+    (; u_new, u_old) = integ.cache.linearization_cache
+    t = integ.t + integ.dt
+    write_into_solution!(u_new, μ, integ.f; cache=integ.cache)
+    write_into_solution!(u_old, m, integ.f; cache=integ.cache)
+    u_new .-= u_old
+    DiffEqBase.calculate_residuals!(u_new, u_new, u_old, u_old, integ.opts.abstol,
+        integ.opts.reltol, integ.opts.internalnorm, t)
+    return integ.opts.internalnorm(u_new, t)
 end

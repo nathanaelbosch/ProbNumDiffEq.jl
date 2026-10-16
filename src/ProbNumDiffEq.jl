@@ -117,7 +117,7 @@ export TaylorModeInit, ClassicSolverInit, SimpleInit, ForwardDiffInit
 include("linearization.jl")
 include("algorithms.jl")
 export ODEFilter, EK0, EK1, DiagonalEK1
-export ZeroJacobian, DiagonalJacobian, FullJacobian
+export ZeroJacobian, DiagonalJacobian, FullJacobian, Iterated
 export ExpEK, RosenbrockExpEK
 
 include("alg_utils.jl")
