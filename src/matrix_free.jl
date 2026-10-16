@@ -60,7 +60,7 @@ function make_linearization_cache(
         failed=Ref(false),
         v=vec(), Jv=vec(), a=vec(), e0=vec(), z=vec(),
         Σcols=(zeros(T, D), zeros(T, D)), Qcols=(zeros(T, D), zeros(T, D)),
-        P=vec(), sqrtP=vec(), PQ=vec(), HQH_diag=vec(),
+        P=vec(), sqrtP=vec(), PQ=vec(), HQH_diag=vec(), has_HQH_diag=Ref(false),
         ξ=zeros(T, D), Ξ=zeros(T, D, m), G=zeros(T, D, m), B=zeros(T, d, m),
         Y=zeros(T, m, q + 1), M=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}),
@@ -333,26 +333,40 @@ end
 """
     ObservedProcessNoise
 
-``H Q(h) H^T`` for a matrix-free observation, from [`observed_process_noise!`](@ref).
-`invquad` solves with it by preconditioned CG, for the calibration, and `diag!` returns its
-diagonal estimated from probes, for the error estimate.
+``H Q(h) H^T`` for a matrix-free observation, from [`observed_process_noise!`](@ref), with
+the square root `Q_R` of ``Q(h)``. `invquad` solves with it by preconditioned CG, for the
+calibration, and `diag!` returns its diagonal estimated from probes, for the error estimate.
 """
-struct ObservedProcessNoise{ST}
+struct ObservedProcessNoise{ST,RT}
     S::ST
+    Q_R::RT
 end
 
 function observed_process_noise!(cache::AbstractODEFilterCache, obs::MatrixFreeObservation)
     H = obs.H
     S = ObservedCovariance(H, first_two_columns!(H.cache.Qcols, cache.Qh.R))
-    estimate_observed_diagonal!(H.cache.HQH_diag, cache.Qh.R, H, DIAGONAL_PROBES)
-    return ObservedProcessNoise(S)
+    H.cache.has_HQH_diag[] = false
+    return ObservedProcessNoise(S, cache.Qh.R)
 end
 
-diag!(v::AbstractVector, HQH::ObservedProcessNoise) = copy!(v, HQH.S.H.cache.HQH_diag)
+# The diagonal of H Q(h) Hᵀ, estimated from probes at its first use in a step: the error
+# estimate needs it with adaptive steps, and the calibration without a diagonal Jacobian
+function estimated_diagonal!(HQH::ObservedProcessNoise)
+    c = HQH.S.H.cache
+    if !c.has_HQH_diag[]
+        estimate_observed_diagonal!(c.HQH_diag, HQH.Q_R, HQH.S.H, DIAGONAL_PROBES)
+        c.has_HQH_diag[] = true
+    end
+    return c.HQH_diag
+end
+
+diag!(v::AbstractVector, HQH::ObservedProcessNoise) = copy!(v, estimated_diagonal!(HQH))
 
 function invquad(z, HQH::ObservedProcessNoise; kwargs...)
     (; S) = HQH
     c = S.H.cache
-    P = isnothing(c.diagonal_jacobian) ? c.HQH_diag : diagonal_jacobian_diag!(c.PQ, S)
+    P =
+        isnothing(c.diagonal_jacobian) ? estimated_diagonal!(HQH) :
+        diagonal_jacobian_diag!(c.PQ, S)
     return dot(z, cg_solve!(c, S, z, P, oftype(S.H.rtol, CALIBRATION_RTOL)))
 end
