@@ -57,3 +57,4 @@ end
 end
 
 @test_throws ArgumentError Iterated(FullJacobian(), maxiters=0)
+@test_throws ArgumentError Iterated(FullJacobian(), tol=0)

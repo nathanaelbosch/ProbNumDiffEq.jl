@@ -137,7 +137,8 @@ Linearize the ODE at the posterior mean that `linearization` gives, found by ite
 starting from the predicted mean, linearize with `linearization`, update the mean, and repeat
 until the update changes the solution by less than `tol` in units of `abstol` and `reltol`,
 for at most `maxiters` iterations. The covariance comes from the last linearization. With
-adaptive steps, a step whose iteration does not converge is rejected.
+adaptive steps, a step whose iteration does not converge is rejected; with fixed steps it is
+accepted and counted in `sol.stats.nnonlinconvfail`.
 
 With `ZeroJacobian()`, `DiagonalJacobian()` or `FullJacobian()`, this is the iterated
 extended Kalman filter (IEKF) [Bosch (2026)](@cite bosch26stable).
@@ -153,6 +154,7 @@ struct Iterated{L<:AbstractTaylorLinearization,T} <: AbstractLinearization
     tol::T
     function Iterated(linearization::AbstractTaylorLinearization; maxiters=20, tol=1e-2)
         maxiters >= 1 || throw(ArgumentError("`maxiters` must be at least 1."))
+        tol > 0 || throw(ArgumentError("`tol` must be positive."))
         return new{typeof(linearization),typeof(tol)}(linearization, maxiters, tol)
     end
 end
