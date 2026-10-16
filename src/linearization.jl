@@ -7,8 +7,7 @@ A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`;
-- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step, which by default
-  is the Kalman update with the observation `obs` at the predicted mean.
+- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step.
 """
 abstract type AbstractLinearization end
 
@@ -133,15 +132,13 @@ end
 """
     Iterated(linearization; maxiters=20, tol=1e-2)
 
-Linearize the ODE at the posterior mean that `linearization` gives, found by iteration:
-starting from the predicted mean, linearize with `linearization`, update the mean, and repeat
-until the update changes the solution by less than `tol` in units of `abstol` and `reltol`,
-for at most `maxiters` iterations. The covariance comes from the last linearization. With
-adaptive steps, a step whose iteration does not converge is rejected; with fixed steps it is
-accepted and counted in `sol.stats.nnonlinconvfail`.
+Linearize the ODE at the posterior instead of the prediction, by linearizing and updating
+again and again until the solution changes by less than `tol` (relative to `abstol` and
+`reltol`), but at most `maxiters` times. This is the iterated extended Kalman filter
+[Bosch (2026)](@cite bosch26stable).
 
-With `ZeroJacobian()`, `DiagonalJacobian()` or `FullJacobian()`, this is the iterated
-extended Kalman filter (IEKF) [Bosch (2026)](@cite bosch26stable).
+With adaptive steps, a step that does not converge is rejected. With fixed steps, it is
+accepted and counted in `sol.stats.nnonlinconvfail`.
 
 # Examples
 ```julia-repl
@@ -178,10 +175,9 @@ linearize_ode_observation!(it::Iterated, integ, x) =
 """
     update!(linearization, x_filt, x_pred, obs, integ)
 
-The update of the ODE step: condition the prediction `x_pred` on `obs`, the linearization of
-the ODE at the predicted mean, and write the result into `x_filt`. [`Iterated`](@ref)
-linearizes again at the updated mean until it converges, and rejects the step with
-`integ.force_stepfail` if it does not.
+The update of the ODE step: condition `x_pred` on the observation `obs`, linearized at the
+predicted mean, and write the result into `x_filt`. [`Iterated`](@ref) linearizes again
+until it converges.
 """
 update!(::AbstractLinearization, x_filt, x_pred, obs, integ) =
     update!(x_filt, x_pred, obs; cache=integ.cache)

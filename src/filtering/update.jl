@@ -399,13 +399,10 @@ end
 """
     iterated_update_mean!(x_out, x_pred, obs, relinearize, converged; maxiters, m_cache, cache)
 
-Condition the mean of `x_pred` on a nonlinear observation with the iterated extended Kalman
-filter: update the mean with `obs`, linearize again at the result with `relinearize(m)`, and
-repeat until `converged(μ, m)` holds for the updated mean `μ` and the linearization point `m`,
-or for at most `maxiters` updates. The linearization points are copied into `m_cache`.
-
-Return `(; obs, upd, iterations, converged)`, with the last linearization `obs` and what
-[`update_mean!`](@ref) returned for it; [`update_cov!`](@ref) with them completes the update.
+Update the mean of `x_pred` with `obs`, linearize again at the result with `relinearize`,
+and repeat until `converged(μ, m)` holds or `maxiters` is reached. Return the last `obs`, what
+[`update_mean!`](@ref) returned for it, the number of iterations, and whether it converged.
+[`update_cov!`](@ref) completes the update.
 """
 function iterated_update_mean!(
     x_out, x_pred, obs, relinearize, converged; maxiters, m_cache, cache,
