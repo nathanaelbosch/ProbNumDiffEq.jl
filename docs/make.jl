@@ -30,7 +30,6 @@ makedocs(
     sitename="ProbNumDiffEq.jl",
     format=Documenter.HTML(
         assets=[
-            "assets/citations.css",
             asset(
                 "https://cloud.umami.is/script.js",
                 class=:js,
