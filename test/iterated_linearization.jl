@@ -56,5 +56,17 @@ end
     @test sol.stats.naccept == 100
 end
 
+@testset "A step rejected during the iteration ends the update" begin
+    integ = init(prob, ODEFilter(linearization=Iterated(FullJacobian())))
+    (; x_pred, x_filt) = integ.cache
+    obs = ProbNumDiffEq.linearize_ode_observation!(integ.alg.linearization, integ, x_pred)
+    integ.force_stepfail = true  # as by a linear solve that did not converge
+    @test isnothing(
+        ProbNumDiffEq.update!(integ.alg.linearization, x_filt, x_pred, obs, integ),
+    )
+    @test integ.stats.nnonliniter == 1
+    @test integ.stats.nnonlinconvfail == 0
+end
+
 @test_throws ArgumentError Iterated(FullJacobian(), maxiters=0)
 @test_throws ArgumentError Iterated(FullJacobian(), tol=0)

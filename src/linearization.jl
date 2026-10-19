@@ -198,9 +198,13 @@ update!(::AbstractLinearization, x_filt, x_pred, obs, integ) =
 function update!(it::Iterated, x_filt, x_pred, obs, integ)
     relinearize(m) = linearize_ode_observation!(it.linearization, integ, m)
     small_change(μ, m) = scaled_change(integ, μ, m) < it.tol
+    # A step rejected meanwhile, by a linear solve that did not converge, ends the iteration
+    rejected() = integ.force_stepfail
     r = iterated_update_mean!(x_filt, x_pred, obs, relinearize, small_change;
-        it.maxiters, m_cache=integ.cache.linearization_cache.point, cache=integ.cache)
+        it.maxiters, stop=rejected, m_cache=integ.cache.linearization_cache.point,
+        cache=integ.cache)
     integ.stats.nnonliniter += r.iterations
+    rejected() && return nothing
     if !r.converged
         integ.stats.nnonlinconvfail += 1
         if integ.opts.adaptive
