@@ -48,13 +48,15 @@ function make_linearization_cache(
     D = d * (q + 1)
     m = something(linearization.nprobes, 2(q + 1))
     vec() = zeros(T, d)
+    observed_covariance() =
+        (; ΣEᵀ=(zeros(T, D), zeros(T, D)), diagonal=vec(), has_diagonal=Ref(false))
     has_block_gmres = 2m <= d
     return (;
         r=vec(), u=vec(),
         diagonal_jacobian=isnothing(linearization.diagonal_jacobian) ? nothing : vec(),
         v=vec(), Jv=vec(), a=vec(), e0=vec(), z=vec(),
-        Σcols=(zeros(T, D), zeros(T, D)), Qcols=(zeros(T, D), zeros(T, D)),
-        P=vec(), sqrtP=vec(), PQ=vec(), HQH_diag=vec(), has_HQH_diag=Ref(false),
+        HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(),
+        P=vec(), sqrtP=vec(), PQ=vec(),
         ξ=zeros(T, D), Ξ=zeros(T, D, m), G=zeros(T, D, m), B=zeros(T, d, m),
         Y=zeros(T, m, q + 1), M=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}),
@@ -65,21 +67,22 @@ function make_linearization_cache(
 end
 
 """
-    JacobianProducts(u, integ, cache)
+    MatrixFreeObservationOperator(u, integ, cache)
 
-The Jacobian ``H = E_1 - J E_0`` of the observation of the ODE at the point `u`, as an
-operator: products with ``J`` and ``J^T`` call `f.jvp` and `f.vjp` of the integrator
+The observation matrix ``H = E_1 - J E_0`` as an operator, with the Jacobian ``J`` of the
+ODE at `u`: products with ``J`` and ``J^T`` call `f.jvp` and `f.vjp` of the integrator
 `integ`. Its random number generator draws the probes, its `reltol` sets the tolerance of
 the linear solves, and its statistics count the products and the solves. `cache` holds the
 buffers of the linearization.
 """
-struct JacobianProducts{U,I,C}
+struct MatrixFreeObservationOperator{U,I,C}
     u::U
     integ::I
     cache::C
 end
 
-const MatrixFreeObservation = LinearizedObservation{<:Any,<:Any,<:JacobianProducts}
+const MatrixFreeLinearizedObservation =
+    LinearizedObservation{<:Any,<:Any,<:MatrixFreeObservationOperator}
 
 # The `rng` that `solve` takes on OrdinaryDiffEq 7; older versions have none
 @static if isdefined(SciMLBase, :has_rng)
@@ -100,87 +103,146 @@ function linearize_ode_observation!(
     copy!(c.u, view(m, 1:d))
     isnothing(c.diagonal_jacobian) ||
         linearization.diagonal_jacobian(c.diagonal_jacobian, c.u, p, t)
-    return LinearizedObservation(m, c.r, JacobianProducts(c.u, integ, c), R)
+    return LinearizedObservation(m, c.r, MatrixFreeObservationOperator(c.u, integ, c), R)
 end
 
-# `v` is copied into a buffer first, since `f.jvp` and `f.vjp` may require a `Vector`
-function jvp!(out, H::JacobianProducts, v)
+"""
+    jvp!(Jv, H::MatrixFreeObservationOperator, v)
+
+``J v`` for the Jacobian ``J`` of the ODE in `H`, from `f.jvp`. `v` is copied into a buffer
+first, since `f.jvp` may require a `Vector`.
+"""
+function jvp!(out, H::MatrixFreeObservationOperator, v)
     (; f, p, t, dt) = H.integ
     f.jvp(out, copy!(H.cache.v, v), H.u, p, t + dt)
     H.integ.sol.pnstats.njvp += 1
     return out
 end
-function vjp!(out, H::JacobianProducts, v)
+
+"""
+    vjp!(Jᵀw, H::MatrixFreeObservationOperator, w)
+
+``J^T w`` for the Jacobian ``J`` of the ODE in `H`, from `f.vjp`. `w` is copied into a
+buffer first, since `f.vjp` may require a `Vector`.
+"""
+function vjp!(out, H::MatrixFreeObservationOperator, w)
     (; f, p, t, dt) = H.integ
-    f.vjp(out, copy!(H.cache.v, v), H.u, p, t + dt)
+    f.vjp(out, copy!(H.cache.v, w), H.u, p, t + dt)
     H.integ.sol.pnstats.nvjp += 1
     return out
 end
 
+# H x = E₁ x - J E₀ x
+function mul!(y::AbstractVector, H::MatrixFreeObservationOperator, x::AbstractVector)
+    d = length(y)
+    @views jvp!(y, H, x[1:d])
+    @views y .= x[(d+1):2d] .- y
+    return y
+end
+function mul!(Y::AbstractMatrix, H::MatrixFreeObservationOperator, X::AbstractMatrix)
+    for j in axes(X, 2)
+        mul!(view(Y, :, j), H, view(X, :, j))
+    end
+    return Y
+end
+
 # The tolerance of the linear solves: the solver's `reltol`, capped at 1e-2
-function krylov_rtol(H::JacobianProducts)
+function krylov_rtol(H::MatrixFreeObservationOperator)
     T = eltype(H.u)
     return min(T(1e-2), T(minimum(H.integ.opts.reltol)))
 end
 
-# The first two columns of the blocks of `Σ = RᵀR`, in the derivative-major order of the
-# state. `H` reads only derivatives 0 and 1, so `H Σ Hᵀ` and `Σ Hᵀ` need no other entries.
-function first_two_columns!((c0, c1), R::BlocksOfDiagonals)
+"""
+    MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, buffers)
+
+``Σ H^T`` as an operator, for the block-diagonal ``Σ = R^T R``:
+``Σ H^T w = Σ E_1^T w - Σ E_0^T J^T w``. ``Σ E_0^T`` and ``Σ E_1^T`` are the columns of each
+block of ``Σ`` for the derivatives 0 and 1; they have one nonzero per row, so they are
+stored as vectors, in `buffers`.
+"""
+struct MatrixFreeCrossCovariance{HT,V}
+    H::HT
+    ΣE₀ᵀ::V
+    ΣE₁ᵀ::V
+end
+function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, (ΣE₀ᵀ, ΣE₁ᵀ))
     d = nblocks(R)
     for (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
-        c0[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
-        c1[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 2))
+        ΣE₀ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
+        ΣE₁ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 2))
     end
-    return (c0, c1)
+    return MatrixFreeCrossCovariance(H, ΣE₀ᵀ, ΣE₁ᵀ)
 end
 
-"""
-    ObservedCovariance(H::JacobianProducts, Σcols)
-
-``H Σ H^T`` as an operator for Krylov.jl, for a block-diagonal ``Σ`` given by the first
-two columns of its blocks, `Σcols`.
-"""
-struct ObservedCovariance{HT,C}
-    H::HT
-    Σcols::C
-end
-size(S::ObservedCovariance) = (length(S.H.u), length(S.H.u))
-size(S::ObservedCovariance, i::Integer) = length(S.H.u)
-eltype(S::ObservedCovariance) = eltype(S.H.u)
-
-# H Σ Hᵀ w = (Σ₁₀ a + Σ₁₁ w) - J (Σ₀₀ a + Σ₀₁ w), with a = -Jᵀ w
-function mul!(y::AbstractVector, S::ObservedCovariance, w::AbstractVector)
-    (; a, e0, Jv) = S.H.cache
-    c0, c1 = S.Σcols
+# Σ Hᵀ w = Σ E₁ᵀ w - Σ E₀ᵀ (Jᵀ w)
+function mul!(out::AbstractVector, C::MatrixFreeCrossCovariance, w::AbstractVector)
+    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = C
+    a = H.cache.a
     d = length(a)
-    vjp!(a, S.H, w)
+    vjp!(a, H, w)
     @.. a = -a
-    @views e0 .= c0[1:d] .* a .+ c1[1:d] .* w
-    @views y .= c0[(d+1):2d] .* a .+ c1[(d+1):2d] .* w
-    jvp!(Jv, S.H, e0)
+    for k in 0:(length(out)÷d-1)
+        idx = (k*d+1):((k+1)*d)
+        @views out[idx] .= ΣE₀ᵀ[idx] .* a .+ ΣE₁ᵀ[idx] .* w
+    end
+    return out
+end
+
+"""
+    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers)
+
+``H Σ H^T`` as an operator for Krylov.jl, for the block-diagonal ``Σ = R^T R``: the
+covariance ``Σ`` seen through ``H``, as ``S`` in the update, or ``H Q(h) H^T`` from
+[`observed_process_noise!`](@ref). Its field `C` is the cross-covariance ``Σ H^T``, and
+`diag!` returns its diagonal, estimated from probes at its first use.
+"""
+struct MatrixFreeObservedCovariance{CT,RT,V}
+    C::CT
+    R::RT
+    diagonal::V
+    has_diagonal::Base.RefValue{Bool}
+end
+function MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers)
+    buffers.has_diagonal[] = false
+    C = MatrixFreeCrossCovariance(H, R, buffers.ΣEᵀ)
+    return MatrixFreeObservedCovariance(C, R, buffers.diagonal, buffers.has_diagonal)
+end
+size(S::MatrixFreeObservedCovariance) = (length(S.C.H.u), length(S.C.H.u))
+size(S::MatrixFreeObservedCovariance, i::Integer) = length(S.C.H.u)
+eltype(S::MatrixFreeObservedCovariance) = eltype(S.C.H.u)
+
+# H Σ Hᵀ w = E₁ Σ Hᵀ w - J E₀ Σ Hᵀ w, forming only the derivatives 0 and 1 of Σ Hᵀ w
+function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVector)
+    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
+    (; a, e0, Jv) = H.cache
+    d = length(a)
+    vjp!(a, H, w)
+    @.. a = -a
+    @views e0 .= ΣE₀ᵀ[1:d] .* a .+ ΣE₁ᵀ[1:d] .* w
+    @views y .= ΣE₀ᵀ[(d+1):2d] .* a .+ ΣE₁ᵀ[(d+1):2d] .* w
+    jvp!(Jv, H, e0)
     y .-= Jv
     return y
 end
-function mul!(Y::AbstractMatrix, S::ObservedCovariance, W::AbstractMatrix)
+function mul!(Y::AbstractMatrix, S::MatrixFreeObservedCovariance, W::AbstractMatrix)
     for j in axes(W, 2)
         mul!(view(Y, :, j), S, view(W, :, j))
     end
     return Y
 end
 
-# Σ Hᵀ w = Σ (E₀ᵀ a + E₁ᵀ w), with a = -Jᵀ w
-function gain_times!(out, S::ObservedCovariance, w)
-    (; a) = S.H.cache
-    c0, c1 = S.Σcols
-    d = length(a)
-    vjp!(a, S.H, w)
-    @.. a = -a
-    for k in 0:(length(out)÷d-1)
-        idx = (k*d+1):((k+1)*d)
-        @views out[idx] .= c0[idx] .* a .+ c1[idx] .* w
+# The diagonal of H Σ Hᵀ, estimated from probes at its first use: in a step, the error
+# estimate and the calibration both need the one of H Q(h) Hᵀ
+function estimated_diagonal!(S::MatrixFreeObservedCovariance)
+    if !S.has_diagonal[]
+        estimate_observed_diagonal!(S.diagonal, S.R, S.C.H, DIAGONAL_PROBES)
+        S.has_diagonal[] = true
     end
-    return out
+    return S.diagonal
 end
+
+diag!(v::AbstractVector, S::MatrixFreeObservedCovariance) =
+    copy!(v, estimated_diagonal!(S))
 
 # A Jacobi preconditioner needs positive entries
 function floor_diagonal!(P)
@@ -190,16 +252,16 @@ function floor_diagonal!(P)
 end
 
 # diag(H_D Σ H_Dᵀ) = Σ₁₁ - 2 J_D Σ₀₁ + J_D² Σ₀₀ for H_D = E₁ - J_D E₀ with J_D = diag(J)
-function diagonal_jacobian_diag!(P, S::ObservedCovariance)
-    J = S.H.cache.diagonal_jacobian
-    c0, c1 = S.Σcols
+function diagonal_jacobian_diag!(P, S::MatrixFreeObservedCovariance)
+    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
+    J = H.cache.diagonal_jacobian
     d = length(P)
-    @views P .= c1[(d+1):2d] .- 2 .* J .* c1[1:d] .+ J .^ 2 .* c0[1:d]
+    @views P .= ΣE₁ᵀ[(d+1):2d] .- 2 .* J .* ΣE₁ᵀ[1:d] .+ J .^ 2 .* ΣE₀ᵀ[1:d]
     return floor_diagonal!(P)
 end
 
 # Columns of `G` drawn from N(0, RᵀR) with the standard normal probes `Ξ`, and B = H G
-function draw_probes!(G, B, Ξ, R::BlocksOfDiagonals, H::JacobianProducts)
+function draw_probes!(G, B, Ξ, R::BlocksOfDiagonals, H::MatrixFreeObservationOperator)
     d = nblocks(R)
     Random.randn!(integrator_rng(H.integ), Ξ)
     @inbounds for j in axes(G, 2), (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
@@ -209,15 +271,14 @@ function draw_probes!(G, B, Ξ, R::BlocksOfDiagonals, H::JacobianProducts)
         end
         G[(k-1)*d+i, j] = s
     end
-    for j in axes(G, 2)
-        @views jvp!(B[:, j], H, G[1:d, j])
-        @views B[:, j] .= G[(d+1):2d, j] .- B[:, j]
-    end
+    mul!(B, H, G)
     return G, B
 end
 
 # diag(H RᵀR Hᵀ), estimated from `n` probes H g with g ~ N(0, RᵀR)
-function estimate_observed_diagonal!(out, R::BlocksOfDiagonals, H::JacobianProducts, n)
+function estimate_observed_diagonal!(
+    out, R::BlocksOfDiagonals, H::MatrixFreeObservationOperator, n,
+)
     (; ξ, e0, a, Jv) = H.cache
     d = length(out)
     fill!(out, 0)
@@ -241,7 +302,9 @@ end
 
 struct LinearSolveFailure <: Exception end
 
-function cg_solve!(H::JacobianProducts, part, A, b, P, rtol; itmax=MAX_CG_ITERATIONS)
+function cg_solve!(
+    H::MatrixFreeObservationOperator, part, A, b, P, rtol; itmax=MAX_CG_ITERATIONS,
+)
     workspace = H.cache.cg
     cg!(workspace, A, b; M=Diagonal(P), ldiv=true, atol=zero(rtol), rtol, itmax)
     count_solve!(H, part, Krylov.iteration_count(workspace))
@@ -250,7 +313,7 @@ function cg_solve!(H::JacobianProducts, part, A, b, P, rtol; itmax=MAX_CG_ITERAT
 end
 
 # Count a linear solve for `part`, `:mean`, `:covariance` or `:calibration`
-function count_solve!(H::JacobianProducts, part, niter)
+function count_solve!(H::MatrixFreeObservationOperator, part, niter)
     stats = H.integ.sol.pnstats
     H.integ.stats.nsolve += 1
     if part === :mean
@@ -268,7 +331,7 @@ end
 
 # S⁻¹ B for the probes B, with a Jacobi preconditioner applied on both sides, so that the
 # residual is weighted as in the preconditioned CG
-function solve_probes!(H::JacobianProducts, S)
+function solve_probes!(H::MatrixFreeObservationOperator, S)
     c = H.cache
     rtol = krylov_rtol(H)
     if isnothing(c.block_gmres)
@@ -290,19 +353,18 @@ function solve_probes!(H::JacobianProducts, S)
 end
 
 """
-    update_mean!(x_out, x_pred, obs::MatrixFreeObservation; cache)
+    update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
 
 The mean of the update on a matrix-free observation: ``S^{-1} z`` with ``S = H Σ H^T`` by
 CG with a Jacobi preconditioner, and ``μ^F = μ - Σ H^T S^{-1} z``. Without a diagonal
 Jacobian, ``\\operatorname{diag}(S)`` is estimated from probes. The log-likelihood is `NaN`.
 """
-function update_mean!(x_out, x_pred, obs::MatrixFreeObservation; cache)
+function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
     (; m, H) = obs
     c = H.cache
-    d = length(c.u)
-    S = ObservedCovariance(H, first_two_columns!(c.Σcols, x_pred.Σ.R))
+    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHᵀ)
     P = if isnothing(c.diagonal_jacobian)
-        estimate_observed_diagonal!(c.P, x_pred.Σ.R, H, DIAGONAL_PROBES)
+        copy!(c.P, estimated_diagonal!(S))
     else
         diagonal_jacobian_diag!(c.P, S)
     end
@@ -311,18 +373,18 @@ function update_mean!(x_out, x_pred, obs::MatrixFreeObservation; cache)
     else
         # r + H (μ - m), with m - μ in x_out.μ
         Δ = x_out.μ .= m .- x_pred.μ
-        jvp!(c.Jv, H, view(Δ, 1:d))
-        @views c.z .= obs.r .- Δ[(d+1):2d] .+ c.Jv
+        mul!(c.z, H, Δ)
+        @.. c.z = obs.r - c.z
     end
     w = cg_solve!(H, :mean, S, z, P, krylov_rtol(H))
     ztSinvz = dot(z, w)
-    gain_times!(x_out.μ, S, w)
+    mul!(x_out.μ, S.C, w)
     @.. x_out.μ = x_pred.μ - x_out.μ
     return (; loglikelihood=oftype(ztSinvz, NaN), ztSinvz, S, z, K=nothing, B=nothing)
 end
 
 """
-    update_cov!(x_out, x_pred, obs::MatrixFreeObservation, K, B; cache)
+    update_cov!(x_out, x_pred, obs::MatrixFreeLinearizedObservation, K, B; cache)
 
 The covariance of the update on a matrix-free observation, block-diagonal. Probes
 ``g_j \\sim \\mathcal{N}(0, Σ)`` give the samples ``(I - K H) g_j \\sim \\mathcal{N}(0, Σ^F)``,
@@ -330,15 +392,15 @@ with the systems ``S w_j = H g_j`` solved jointly by block-GMRES. Each block of 
 root of ``Σ^F`` is a triangular factor of the samples' entries in that block, scaled by
 ``1/\\sqrt{m}`` for ``m`` probes.
 """
-function update_cov!(x_out, x_pred, obs::MatrixFreeObservation, K, B; cache)
+function update_cov!(x_out, x_pred, obs::MatrixFreeLinearizedObservation, K, B; cache)
     H = obs.H
     c = H.cache
     (; G, Y, M, gtmp) = c
-    S = ObservedCovariance(H, c.Σcols)
+    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHᵀ)
     draw_probes!(G, c.B, c.Ξ, x_pred.Σ.R, H)
     W = solve_probes!(H, S)
     for j in axes(G, 2)
-        gain_times!(gtmp, S, view(W, :, j))
+        mul!(gtmp, S.C, view(W, :, j))
         view(G, :, j) .-= gtmp
     end
     d, m = length(c.u), size(G, 2)
@@ -354,43 +416,16 @@ function update_cov!(x_out, x_pred, obs::MatrixFreeObservation, K, B; cache)
     return x_out
 end
 
-"""
-    ObservedProcessNoise
+observed_process_noise!(
+    cache::AbstractODEFilterCache, obs::MatrixFreeLinearizedObservation,
+) = MatrixFreeObservedCovariance(obs.H, cache.Qh.R, obs.H.cache.HQHᵀ)
 
-``H Q(h) H^T`` for a matrix-free observation, from [`observed_process_noise!`](@ref), with
-the square root `Q_R` of ``Q(h)``. `invquad` solves with it by preconditioned CG, for the
-calibration, and `diag!` returns its diagonal estimated from probes, for the error estimate.
-"""
-struct ObservedProcessNoise{ST,RT}
-    S::ST
-    Q_R::RT
-end
-
-function observed_process_noise!(cache::AbstractODEFilterCache, obs::MatrixFreeObservation)
-    H = obs.H
-    S = ObservedCovariance(H, first_two_columns!(H.cache.Qcols, cache.Qh.R))
-    H.cache.has_HQH_diag[] = false
-    return ObservedProcessNoise(S, cache.Qh.R)
-end
-
-# The diagonal of H Q(h) Hᵀ, estimated from probes at its first use in a step: the error
-# estimate needs it with adaptive steps, and the calibration without a diagonal Jacobian
-function estimated_diagonal!(HQH::ObservedProcessNoise)
-    c = HQH.S.H.cache
-    if !c.has_HQH_diag[]
-        estimate_observed_diagonal!(c.HQH_diag, HQH.Q_R, HQH.S.H, DIAGONAL_PROBES)
-        c.has_HQH_diag[] = true
-    end
-    return c.HQH_diag
-end
-
-diag!(v::AbstractVector, HQH::ObservedProcessNoise) = copy!(v, estimated_diagonal!(HQH))
-
-function invquad(z, HQH::ObservedProcessNoise; kwargs...)
-    (; S) = HQH
-    c = S.H.cache
+# zᵀ (H Q(h) Hᵀ)⁻¹ z, for the calibration, by CG with a Jacobi preconditioner
+function invquad(z, S::MatrixFreeObservedCovariance; kwargs...)
+    H = S.C.H
+    c = H.cache
     P =
-        isnothing(c.diagonal_jacobian) ? estimated_diagonal!(HQH) :
+        isnothing(c.diagonal_jacobian) ? estimated_diagonal!(S) :
         diagonal_jacobian_diag!(c.PQ, S)
-    return dot(z, cg_solve!(S.H, :calibration, S, z, P, eltype(S)(CALIBRATION_RTOL)))
+    return dot(z, cg_solve!(H, :calibration, S, z, P, eltype(S)(CALIBRATION_RTOL)))
 end

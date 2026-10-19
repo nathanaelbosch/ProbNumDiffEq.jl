@@ -26,24 +26,27 @@ R = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ i
 S_dense = H_dense * Σ * H_dense'
 
 # The operator H at `u`, from linearizing an integrator there
-function jacobian_products(; reltol=1e-12, kwargs...)
+function observation_operator(; reltol=1e-12, kwargs...)
     integ = init(ODEProblem(f, u, (0.0, 1.0)), MatfreeEK1(; order=q, kwargs...); reltol)
     m = [u; zeros(D - d)]
     return PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m).H
 end
-observed_covariance(H, R) =
-    PNDE.ObservedCovariance(H, PNDE.first_two_columns!(H.cache.Σcols, R))
+observed_covariance(H, R) = PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHᵀ)
 
-@testset "Products with H Σ Hᵀ and Σ Hᵀ" begin
-    S = observed_covariance(jacobian_products(), R)
+@testset "Products with H, Σ Hᵀ and H Σ Hᵀ" begin
+    H = observation_operator()
+    S = observed_covariance(H, R)
+    x, X = randn(rng, D), randn(rng, D, 3)
     w, W = randn(rng, d), randn(rng, d, 3)
+    @test mul!(zeros(d), H, x) ≈ H_dense * x
+    @test mul!(zeros(d, 3), H, X) ≈ H_dense * X
+    @test mul!(zeros(D), S.C, w) ≈ Σ * H_dense' * w
     @test mul!(zeros(d), S, w) ≈ S_dense * w
     @test mul!(zeros(d, 3), S, W) ≈ S_dense * W
-    @test PNDE.gain_times!(zeros(D), S, w) ≈ Σ * H_dense' * w
 end
 
 @testset "Diagonals for the Jacobi preconditioners" begin
-    H = jacobian_products(; diagonal_jacobian=diagonal_jacobian!)
+    H = observation_operator(; diagonal_jacobian=diagonal_jacobian!)
     H_diagonal = E1 - Diagonal(J) * E0
     @test PNDE.diagonal_jacobian_diag!(zeros(d), observed_covariance(H, R)) ≈
           diag(H_diagonal * Σ * H_diagonal')
@@ -52,7 +55,7 @@ end
 end
 
 @testset "Mean update, linearized at $point" for point in ("the mean", "another point")
-    H = jacobian_products()
+    H = observation_operator()
     μ = randn(rng, D)
     x_pred = Gaussian(μ, PSDMatrix(R))
     z = randn(rng, d)
@@ -67,7 +70,7 @@ end
 
 @testset "Probe systems solved $how" for (how, nprobes) in
                                          (("jointly by block-GMRES", 5), ("by CG", 8))
-    H = jacobian_products(; nprobes)
+    H = observation_operator(; nprobes)
     c = H.cache
     @test isnothing(c.block_gmres) == (how == "by CG")
     c.P .= diag(S_dense)
@@ -76,13 +79,13 @@ end
 end
 
 @testset "A linear solve that does not converge throws" begin
-    H = jacobian_products()
+    H = observation_operator()
     @test_throws PNDE.LinearSolveFailure PNDE.cg_solve!(
         H, :mean, observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12; itmax=1)
 end
 
 @testset "Covariance update" begin
-    H = jacobian_products(; nprobes=4000)
+    H = observation_operator(; nprobes=4000)
     x_pred = Gaussian(randn(rng, D), PSDMatrix(R))
     obs = LinearizedObservation(x_pred.μ, randn(rng, d), H)
     x_out = copy(x_pred)
@@ -97,10 +100,9 @@ end
 end
 
 @testset "Calibration" begin
-    H = jacobian_products()
+    H = observation_operator()
     RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
-    HQH = PNDE.ObservedProcessNoise(
-        PNDE.ObservedCovariance(H, PNDE.first_two_columns!(H.cache.Qcols, RQ)), RQ)
+    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHᵀ)
     HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
     z = randn(rng, d)
     # CG approaches zᵀ S⁻¹ z from below; its tolerance for the calibration is 0.1
