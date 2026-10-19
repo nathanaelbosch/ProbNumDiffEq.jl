@@ -35,7 +35,7 @@ E0, E1 = PNDE.projection(d, q)(0), PNDE.projection(d, q)(1)
     @test PNDE.linearize_ode_observation!(integ.alg.linearization, integ, x).m === x.μ
 end
 
-@testset "MatfreeEK1 linearizes at a point other than the predicted mean" begin
+@testset "Residual and Jacobian products of the MatfreeEK1 at a point" begin
     jacobian(u, p, t) = ForwardDiff.jacobian(u -> f(u, p, t), u)
     jvp!(Jv, v, u, p, t) = mul!(Jv, jacobian(u, p, t), v)
     vjp!(Jᵀv, v, u, p, t) = mul!(Jᵀv, jacobian(u, p, t)', v)
