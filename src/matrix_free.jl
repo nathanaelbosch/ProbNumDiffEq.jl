@@ -57,7 +57,7 @@ function make_linearization_cache(
         v=vec(), Jv=vec(), a=vec(), e0=vec(), z=vec(),
         HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(),
         P=vec(), sqrtP=vec(), PQ=vec(),
-        ξ=zeros(T, D), Ξ=zeros(T, D, m), G=zeros(T, D, m), B=zeros(T, d, m),
+        ξ=zeros(T, D), Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
         Y=zeros(T, m, q + 1), M=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}),
         block_gmres=has_block_gmres ?
@@ -235,7 +235,7 @@ end
 # estimate and the calibration both need the one of H Q(h) Hᵀ
 function estimated_diagonal!(S::MatrixFreeObservedCovariance)
     if !S.has_diagonal[]
-        estimate_observed_diagonal!(S.diagonal, S.R, S.C.H, DIAGONAL_PROBES)
+        estimate_diagonal!(S.diagonal, S.C.H, S.R, DIAGONAL_PROBES)
         S.has_diagonal[] = true
     end
     return S.diagonal
@@ -260,10 +260,23 @@ function diagonal_jacobian_diag!(P, S::MatrixFreeObservedCovariance)
     return floor_diagonal!(P)
 end
 
-# Columns of `G` drawn from N(0, RᵀR) with the standard normal probes `Ξ`, and B = H G
-function draw_probes!(G, B, Ξ, R::BlocksOfDiagonals, H::MatrixFreeObservationOperator)
+"""
+    draw_standard_probes!(ξ, rng)
+
+Fill `ξ` with independent standard normal entries. The estimators from probes only need
+``E[ξ ξ^T] = I``, so other distributions, such as Rademacher, would do as well.
+"""
+draw_standard_probes!(ξ, rng) = Random.randn!(rng, ξ)
+
+"""
+    sample_probes!(G, Ξ, R::BlocksOfDiagonals, rng)
+
+The columns ``g = R^T ξ`` of `G`, which have the covariance ``R^T R``, from standard probes
+``ξ`` drawn into the columns of `Ξ`.
+"""
+function sample_probes!(G, Ξ, R::BlocksOfDiagonals, rng)
     d = nblocks(R)
-    Random.randn!(integrator_rng(H.integ), Ξ)
+    draw_standard_probes!(Ξ, rng)
     @inbounds for j in axes(G, 2), (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
         s = zero(eltype(G))
         for l in axes(Ri, 1)
@@ -271,20 +284,22 @@ function draw_probes!(G, B, Ξ, R::BlocksOfDiagonals, H::MatrixFreeObservationOp
         end
         G[(k-1)*d+i, j] = s
     end
-    mul!(B, H, G)
-    return G, B
+    return G
 end
 
-# diag(H RᵀR Hᵀ), estimated from `n` probes H g with g ~ N(0, RᵀR)
-function estimate_observed_diagonal!(
-    out, R::BlocksOfDiagonals, H::MatrixFreeObservationOperator, n,
-)
+"""
+    estimate_diagonal!(out, H, R::BlocksOfDiagonals, n)
+
+The diagonal of ``H R^T R H^T``, estimated as the mean of ``(H g)^2`` over `n` probes
+``g = R^T ξ``. Only ``E_0 g`` and ``E_1 g`` are formed, since ``H`` reads nothing else.
+"""
+function estimate_diagonal!(out, H::MatrixFreeObservationOperator, R::BlocksOfDiagonals, n)
     (; ξ, e0, a, Jv) = H.cache
+    rng = integrator_rng(H.integ)
     d = length(out)
     fill!(out, 0)
     for _ in 1:n
-        Random.randn!(integrator_rng(H.integ), ξ)
-        # E₀ g and E₁ g, for g = Rᵀ ξ
+        draw_standard_probes!(ξ, rng)
         @inbounds for (i, Ri) in enumerate(blocks(R))
             g0, g1 = zero(eltype(out)), zero(eltype(out))
             for l in axes(Ri, 1)
@@ -336,15 +351,15 @@ function solve_probes!(H::MatrixFreeObservationOperator, S)
     rtol = krylov_rtol(H)
     if isnothing(c.block_gmres)
         # Block-GMRES needs at least twice as many rows as right-hand sides
-        for j in axes(c.B, 2)
-            copy!(c.z, view(c.B, :, j))
+        for j in axes(c.HG, 2)
+            copy!(c.z, view(c.HG, :, j))
             copy!(view(c.W, :, j), cg_solve!(H, :covariance, S, c.z, c.P, rtol))
         end
         return c.W
     else
         @.. c.sqrtP = sqrt(c.P)
         M = Diagonal(c.sqrtP)
-        block_gmres!(c.block_gmres, S, c.B; M, N=M, ldiv=true, atol=zero(rtol), rtol,
+        block_gmres!(c.block_gmres, S, c.HG; M, N=M, ldiv=true, atol=zero(rtol), rtol,
             itmax=MAX_BLOCK_GMRES_ITERATIONS)
         count_solve!(H, :covariance, Krylov.iteration_count(c.block_gmres))
         Krylov.issolved(c.block_gmres) || throw(LinearSolveFailure())
@@ -397,7 +412,8 @@ function update_cov!(x_out, x_pred, obs::MatrixFreeLinearizedObservation, K, B; 
     c = H.cache
     (; G, Y, M, gtmp) = c
     S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHᵀ)
-    draw_probes!(G, c.B, c.Ξ, x_pred.Σ.R, H)
+    sample_probes!(G, c.Ξ, x_pred.Σ.R, integrator_rng(H.integ))
+    mul!(c.HG, H, G)
     W = solve_probes!(H, S)
     for j in axes(G, 2)
         mul!(gtmp, S.C, view(W, :, j))

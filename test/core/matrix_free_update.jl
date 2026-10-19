@@ -50,7 +50,7 @@ end
     H_diagonal = E1 - Diagonal(J) * E0
     @test PNDE.diagonal_jacobian_diag!(zeros(d), observed_covariance(H, R)) ≈
           diag(H_diagonal * Σ * H_diagonal')
-    @test PNDE.estimate_observed_diagonal!(zeros(d), R, H, 20_000) ≈ diag(S_dense) rtol =
+    @test PNDE.estimate_diagonal!(zeros(d), H, R, 20_000) ≈ diag(S_dense) rtol =
         0.05
 end
 
@@ -74,8 +74,8 @@ end
     c = H.cache
     @test isnothing(c.block_gmres) == (how == "by CG")
     c.P .= diag(S_dense)
-    randn!(rng, c.B)
-    @test PNDE.solve_probes!(H, observed_covariance(H, R)) ≈ S_dense \ c.B
+    randn!(rng, c.HG)
+    @test PNDE.solve_probes!(H, observed_covariance(H, R)) ≈ S_dense \ c.HG
 end
 
 @testset "A linear solve that does not converge throws" begin
