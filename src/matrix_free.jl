@@ -428,17 +428,17 @@ end
     update_cov!(x_out, x_pred, obs::MatrixFreeLinearizedObservation, K, B; cache)
 
 The covariance of the update on a matrix-free observation, block-diagonal. Probes
-``g_j \\sim \\mathcal{N}(0, Σ)`` give the samples ``(I - K H) g_j \\sim \\mathcal{N}(0, Σ^F)``,
-with ``K H g_j = Σ H^T S^{-1} H g_j`` and the systems for all ``j`` solved jointly. Each block of the square
-root of ``Σ^F`` is a triangular factor of the samples' entries in that block, scaled by
-``1/\\sqrt{m}`` for ``m`` probes.
+``g_j \\sim \\mathcal{N}(0, Σ)`` give the samples
+``(I - K H) g_j \\sim \\mathcal{N}(0, Σ^F)``, with ``K H g_j = Σ H^T S^{-1} H g_j`` and the
+systems for all ``j`` solved jointly. The square root of ``Σ^F`` is that of the
+block-diagonal part of their sample covariance.
 """
 function update_cov!(
     x_out, x_pred, obs::MatrixFreeLinearizedObservation, K::MatrixFreeGain, B; cache,
 )
     H = obs.H
     c = H.cache
-    (; G, HG, Y, M, gtmp) = c
+    (; G, HG, gtmp) = c
     sample_probes!(G, c.Ξ, x_pred.Σ.R, integrator_rng(H.integ))
     mul!(HG, H, G)
     W = krylov_solve!(K.S, HG, K.P, krylov_rtol(H), :covariance)
@@ -446,8 +446,21 @@ function update_cov!(
         mul!(gtmp, K.C, view(W, :, j))
         view(G, :, j) .-= gtmp
     end
-    d, m = length(c.u), size(G, 2)
-    for (i, Ri) in enumerate(blocks(x_out.Σ.R))
+    block_diagonal_sample_covariance!(x_out.Σ.R, G, (c.Y, c.M))
+    return x_out
+end
+
+"""
+    block_diagonal_sample_covariance!(R::BlocksOfDiagonals, G, (Y, M))
+
+The square root `R` of the block-diagonal part of the sample covariance
+``\\frac{1}{m} G G^T`` of the `m` columns of `G`, with the buffers `Y` and `M`. Each block of
+`R` is computed from the rows of `G` that belong to it, `i:d:D` in the derivative-major
+order of the state; the covariances between the blocks are dropped.
+"""
+function block_diagonal_sample_covariance!(R::BlocksOfDiagonals, G, (Y, M))
+    d, m = nblocks(R), size(G, 2)
+    for (i, Ri) in enumerate(blocks(R))
         rmul!(transpose!(Y, view(G, i:d:size(G, 1), :)), 1 / sqrt(m))
         chol = cholesky!(Symmetric(_matmul!(M, Y', Y)), check=false)
         if issuccess(chol) && is_well_conditioned(chol.U)
@@ -456,7 +469,7 @@ function update_cov!(
             copy!(Ri, triangularize!(Y; cachemat=nothing))
         end
     end
-    return x_out
+    return R
 end
 
 observed_process_noise!(
