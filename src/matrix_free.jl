@@ -239,6 +239,8 @@ function estimate_observed_diagonal!(out, R::BlocksOfDiagonals, H::JacobianProdu
     return floor_diagonal!(out)
 end
 
+struct LinearSolveFailure <: Exception end
+
 function cg_solve!(H::JacobianProducts, part, A, b, P, rtol; itmax=MAX_CG_ITERATIONS)
     workspace = H.cache.cg
     cg!(workspace, A, b; M=Diagonal(P), ldiv=true, atol=zero(rtol), rtol, itmax)

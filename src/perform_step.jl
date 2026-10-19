@@ -61,10 +61,6 @@ function write_into_solution!(u, μ, ::DynamicalODEFunction; cache::EKCache)
     view(u.x[1], :) .= view(μ, (d+1):2d)
 end
 
-# Thrown by a linear solve inside the step that does not converge; the step is then
-# rejected, as OrdinaryDiffEq does when the Newton iteration of an implicit solver fails
-struct LinearSolveFailure <: Exception end
-
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
