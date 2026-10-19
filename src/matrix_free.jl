@@ -146,12 +146,6 @@ function mul!(Y::AbstractMatrix, H::MatrixFreeObservationOperator, X::AbstractMa
     return Y
 end
 
-# The tolerance of the linear solves: the solver's `reltol`, capped at 1e-2
-function krylov_rtol(H::MatrixFreeObservationOperator)
-    T = eltype(H.u)
-    return min(T(1e-2), T(minimum(H.integ.opts.reltol)))
-end
-
 """
     MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, buffers)
 
@@ -231,42 +225,6 @@ function mul!(Y::AbstractMatrix, S::MatrixFreeObservedCovariance, W::AbstractMat
     return Y
 end
 
-# The diagonal of H Σ Hᵀ, estimated from probes at its first use: in a step, the error
-# estimate and the calibration both need the one of H Q(h) Hᵀ
-function estimated_diagonal!(S::MatrixFreeObservedCovariance)
-    if !S.has_diagonal[]
-        estimate_diagonal!(S.diagonal, S.C.H, S.R, DIAGONAL_PROBES)
-        S.has_diagonal[] = true
-    end
-    return S.diagonal
-end
-
-diag!(v::AbstractVector, S::MatrixFreeObservedCovariance) =
-    copy!(v, estimated_diagonal!(S))
-
-"""
-    jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
-
-The diagonal `P` of a Jacobi preconditioner for ``S = H Σ H^T``: ``\\operatorname{diag}(S)``
-estimated from probes, or, with a diagonal Jacobian ``J_D``, the diagonal of
-``H_D Σ H_D^T`` for ``H_D = E_1 - J_D E_0``. Its entries are raised to at least `eps` times
-the largest one, so that they are positive.
-"""
-function jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
-    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
-    J = H.cache.diagonal_jacobian
-    if isnothing(J)
-        copy!(P, estimated_diagonal!(S))
-    else
-        d = length(P)
-        # Var(uᵢ' - Jᵢᵢ uᵢ) = Σ₁₁ - 2 Jᵢᵢ Σ₀₁ + Jᵢᵢ² Σ₀₀
-        @views P .= ΣE₁ᵀ[(d+1):2d] .- 2 .* J .* ΣE₁ᵀ[1:d] .+ J .^ 2 .* ΣE₀ᵀ[1:d]
-    end
-    lower = max(floatmin(eltype(P)), eps(eltype(P)) * maximum(P))
-    @.. P = max(P, lower)
-    return P
-end
-
 """
     draw_standard_probes!(ξ, rng)
 
@@ -320,6 +278,45 @@ function estimate_diagonal!(out, H::MatrixFreeObservationOperator, R::BlocksOfDi
     end
     @.. out = out / n
     return out
+end
+
+# The diagonal of H Σ Hᵀ, estimated from probes at its first use: in a step, the error
+# estimate and the calibration both need the one of H Q(h) Hᵀ
+function estimated_diagonal!(S::MatrixFreeObservedCovariance)
+    if !S.has_diagonal[]
+        estimate_diagonal!(S.diagonal, S.C.H, S.R, DIAGONAL_PROBES)
+        S.has_diagonal[] = true
+    end
+    return S.diagonal
+end
+
+"""
+    jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
+
+The diagonal `P` of a Jacobi preconditioner for ``S = H Σ H^T``: ``\\operatorname{diag}(S)``
+estimated from probes, or, with a diagonal Jacobian ``J_D``, the diagonal of
+``H_D Σ H_D^T`` for ``H_D = E_1 - J_D E_0``. Its entries are raised to at least `eps` times
+the largest one, so that they are positive.
+"""
+function jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
+    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
+    J = H.cache.diagonal_jacobian
+    if isnothing(J)
+        copy!(P, estimated_diagonal!(S))
+    else
+        d = length(P)
+        # Var(uᵢ' - Jᵢᵢ uᵢ) = Σ₁₁ - 2 Jᵢᵢ Σ₀₁ + Jᵢᵢ² Σ₀₀
+        @views P .= ΣE₁ᵀ[(d+1):2d] .- 2 .* J .* ΣE₁ᵀ[1:d] .+ J .^ 2 .* ΣE₀ᵀ[1:d]
+    end
+    lower = max(floatmin(eltype(P)), eps(eltype(P)) * maximum(P))
+    @.. P = max(P, lower)
+    return P
+end
+
+# The tolerance of the linear solves: the solver's `reltol`, capped at 1e-2
+function krylov_rtol(H::MatrixFreeObservationOperator)
+    T = eltype(H.u)
+    return min(T(1e-2), T(minimum(H.integ.opts.reltol)))
 end
 
 struct LinearSolveFailure <: Exception end
@@ -481,3 +478,6 @@ function invquad(z, S::MatrixFreeObservedCovariance; kwargs...)
     P = jacobi_preconditioner!(S.C.H.cache.PQ, S)
     return dot(z, krylov_solve!(S, z, P, eltype(S)(CALIBRATION_RTOL), :calibration))
 end
+
+diag!(v::AbstractVector, S::MatrixFreeObservedCovariance) =
+    copy!(v, estimated_diagonal!(S))
