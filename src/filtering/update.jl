@@ -402,22 +402,20 @@ function _update_cov!(
 end
 
 """
-    iterated_update_mean!(x_out, x_pred, obs, relinearize, converged;
-                          maxiters, stop=Returns(false), m_cache, cache)
+    iterated_update_mean!(x_out, x_pred, obs, relinearize, converged; maxiters, m_cache, cache)
 
 Update the mean of `x_pred` with `obs`, linearize again at the result with `relinearize`,
-and repeat until `converged(μ, m)` holds, `maxiters` is reached, or `stop()` holds. Return the
-last `obs`, what [`update_mean!`](@ref) returned for it, the number of iterations, and whether
-it converged. [`update_cov!`](@ref) completes the update.
+and repeat until `converged(μ, m)` holds or `maxiters` is reached. Return the last `obs`, what
+[`update_mean!`](@ref) returned for it, the number of iterations, and whether it converged.
+[`update_cov!`](@ref) completes the update.
 """
 function iterated_update_mean!(
-    x_out, x_pred, obs, relinearize, converged;
-    maxiters, stop=Returns(false), m_cache, cache,
+    x_out, x_pred, obs, relinearize, converged; maxiters, m_cache, cache,
 )
     upd = update_mean!(x_out, x_pred, obs; cache)
     iterations = 1
     isconverged = converged(x_out.μ, obs.m)
-    while !isconverged && iterations < maxiters && !stop()
+    while !isconverged && iterations < maxiters
         obs = relinearize(copy!(m_cache, x_out.μ))
         upd = update_mean!(x_out, x_pred, obs; cache)
         iterations += 1

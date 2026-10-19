@@ -101,6 +101,17 @@ end
     @test Matrix(sols[1].pu[end].Σ) != Matrix(sols[3].pu[end].Σ)
 end
 
+@testset "A linear solve that does not converge rejects the step" begin
+    # The first product stands in for a linear solve that does not converge
+    failing_jvp!(Jv, v, u, p, t) = throw(ProbNumDiffEq.LinearSolveFailure())
+    integ = init(ODEProblem(ODEFunction(f!; jvp=failing_jvp!, vjp=vjp!), u0, (0.0, 1.0)),
+        MatfreeEK1())
+    x = copy(integ.cache.x)
+    ProbNumDiffEq.OrdinaryDiffEqCore.perform_step!(integ, integ.cache)
+    @test integ.force_stepfail
+    @test integ.cache.x == x
+end
+
 @testset "Unsupported settings and missing inputs throw" begin
     @test_throws "`pn_observation_noise`" solve(prob, MatfreeEK1(pn_observation_noise=1.0))
     @test_throws "`diffusionmodel" solve(

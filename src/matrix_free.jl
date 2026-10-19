@@ -70,8 +70,8 @@ end
 The Jacobian ``H = E_1 - J E_0`` of the observation of the ODE at the point `u`, as an
 operator: products with ``J`` and ``J^T`` call `f.jvp` and `f.vjp` of the integrator
 `integ`. Its random number generator draws the probes, its `reltol` sets the tolerance of
-the linear solves, and a linear solve that does not converge rejects its step. `cache`
-holds the buffers of the linearization.
+the linear solves, and its statistics count the products and the solves. `cache` holds the
+buffers of the linearization.
 """
 struct JacobianProducts{U,I,C}
     u::U
@@ -239,13 +239,11 @@ function estimate_observed_diagonal!(out, R::BlocksOfDiagonals, H::JacobianProdu
     return floor_diagonal!(out)
 end
 
-# A linear solve that does not converge rejects the step, as OrdinaryDiffEq does when the
-# Newton iteration of an implicit solver fails
 function cg_solve!(H::JacobianProducts, part, A, b, P, rtol; itmax=MAX_CG_ITERATIONS)
     workspace = H.cache.cg
     cg!(workspace, A, b; M=Diagonal(P), ldiv=true, atol=zero(rtol), rtol, itmax)
-    Krylov.issolved(workspace) || (H.integ.force_stepfail = true)
     count_solve!(H, part, Krylov.iteration_count(workspace))
+    Krylov.issolved(workspace) || throw(LinearSolveFailure())
     return Krylov.solution(workspace)
 end
 
@@ -283,8 +281,8 @@ function solve_probes!(H::JacobianProducts, S)
         M = Diagonal(c.sqrtP)
         block_gmres!(c.block_gmres, S, c.B; M, N=M, ldiv=true, atol=zero(rtol), rtol,
             itmax=MAX_BLOCK_GMRES_ITERATIONS)
-        Krylov.issolved(c.block_gmres) || (H.integ.force_stepfail = true)
         count_solve!(H, :covariance, Krylov.iteration_count(c.block_gmres))
+        Krylov.issolved(c.block_gmres) || throw(LinearSolveFailure())
         return Krylov.solution(c.block_gmres)
     end
 end

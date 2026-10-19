@@ -252,9 +252,8 @@ end
         Gaussian([0.5, 1.0, 0.0, 0.0], PSDMatrix(Matrix(UpperTriangular(rand(D, D) + I))))
     obs = linearize(x_pred.μ)
     cache = update_cache(PNDE.DenseCovariance{Float64}(o, D), D, o)
-    iterate!(x_out; converged, maxiters, stop=Returns(false)) = PNDE.iterated_update_mean!(
-        x_out, x_pred, obs, linearize, converged; maxiters, stop, m_cache=zeros(D),
-        cache)
+    iterate!(x_out; converged, maxiters) = PNDE.iterated_update_mean!(
+        x_out, x_pred, obs, linearize, converged; maxiters, m_cache=zeros(D), cache)
 
     @testset "One iteration is the update" begin
         x_out = copy(x_pred)
@@ -288,11 +287,6 @@ end
     @testset "Not converged" begin
         it = iterate!(copy(x_pred); converged=(μ, m) -> false, maxiters=3)
         @test (it.iterations, it.converged) == (3, false)
-    end
-
-    @testset "Stopped" begin
-        it = iterate!(copy(x_pred); converged=(μ, m) -> false, maxiters=3, stop=() -> true)
-        @test (it.iterations, it.converged) == (1, false)
     end
 end
 

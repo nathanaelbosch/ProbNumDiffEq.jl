@@ -73,15 +73,12 @@ end
     c.P .= diag(S_dense)
     randn!(rng, c.B)
     @test PNDE.solve_probes!(H, observed_covariance(H, R)) ≈ S_dense \ c.B
-    @test !H.integ.force_stepfail
 end
 
-@testset "A linear solve that does not converge rejects the step" begin
+@testset "A linear solve that does not converge throws" begin
     H = jacobian_products()
-    @test !H.integ.force_stepfail
-    PNDE.cg_solve!(H, :mean, observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12;
-        itmax=1)
-    @test H.integ.force_stepfail
+    @test_throws PNDE.LinearSolveFailure PNDE.cg_solve!(
+        H, :mean, observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12; itmax=1)
 end
 
 @testset "Covariance update" begin

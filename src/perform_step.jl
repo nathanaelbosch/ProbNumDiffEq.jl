@@ -61,6 +61,10 @@ function write_into_solution!(u, μ, ::DynamicalODEFunction; cache::EKCache)
     view(u.x[1], :) .= view(μ, (d+1):2d)
 end
 
+# Thrown by a linear solve inside the step that does not converge; the step is then
+# rejected, as OrdinaryDiffEq does when the Newton iteration of an implicit solver fails
+struct LinearSolveFailure <: Exception end
+
 """
     perform_step!(integ, cache::EKCache[, repeat_step=false])
 
@@ -81,6 +85,16 @@ As in OrdinaryDiffEqCore.jl, this step is not necessarily successful!
 For that functionality, use `OrdinaryDiffEqCore.step!(integ)`.
 """
 function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=false)
+    try
+        _perform_step!(integ, cache, repeat_step)
+    catch e
+        e isa LinearSolveFailure || rethrow()
+        integ.force_stepfail = true
+    end
+    return nothing
+end
+
+function _perform_step!(integ, cache, repeat_step)
     @unpack dt = integ
     @unpack d = integ.cache
     @unpack xprev, x_pred, x_filt, err_tmp = integ.cache
@@ -114,7 +128,6 @@ function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=fal
         HQH = observed_process_noise!(cache, obs)
         cache.local_diffusion =
             estimate_local_diffusion(cache.diffusionmodel, integ, obs, HQH)
-        integ.force_stepfail && return
         if integ.opts.adaptive
             _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, HQH))
             _EEst = _get_EEst(integ)
