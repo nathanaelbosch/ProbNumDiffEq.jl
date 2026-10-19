@@ -79,7 +79,7 @@ end
 @testset "A linear solve that does not converge rejects the step" begin
     H = jacobian_products()
     @test !H.integ.force_stepfail
-    PNDE.cg_solve!(H, observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12;
+    PNDE.cg_solve!(H, :mean, observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12;
         itmax=1)
     @test H.integ.force_stepfail
 end

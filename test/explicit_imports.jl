@@ -30,7 +30,7 @@ NONPUBLIC_ACCESSES = (
     # TaylorIntegration internal used for Taylor-mode initialization.
     :jetcoeffs!,
     # Krylov.jl workspace accessors; documented, but neither exported nor declared public.
-    :issolved, :solution,
+    :issolved, :iteration_count, :solution,
 )
 
 @test check_no_implicit_imports(ProbNumDiffEq) === nothing

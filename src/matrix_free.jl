@@ -112,11 +112,13 @@ end
 function jvp!(out, H::JacobianProducts, v)
     (; f, p, t, dt) = H.integ
     f.jvp(out, copy!(H.cache.v, v), H.u, p, t + dt)
+    H.integ.sol.pnstats.njvp += 1
     return out
 end
 function vjp!(out, H::JacobianProducts, v)
     (; f, p, t, dt) = H.integ
     f.vjp(out, copy!(H.cache.v, v), H.u, p, t + dt)
+    H.integ.sol.pnstats.nvjp += 1
     return out
 end
 
@@ -244,11 +246,29 @@ end
 
 # A linear solve that does not converge rejects the step, as OrdinaryDiffEq does when the
 # Newton iteration of an implicit solver fails
-function cg_solve!(H::JacobianProducts, A, b, P, rtol; itmax=MAX_CG_ITERATIONS)
+function cg_solve!(H::JacobianProducts, part, A, b, P, rtol; itmax=MAX_CG_ITERATIONS)
     workspace = H.cache.cg
     cg!(workspace, A, b; M=Diagonal(P), ldiv=true, atol=zero(rtol), rtol, itmax)
     Krylov.issolved(workspace) || (H.integ.force_stepfail = true)
+    count_solve!(H, part, Krylov.iteration_count(workspace))
     return Krylov.solution(workspace)
+end
+
+# Count a linear solve for `part`, `:mean`, `:covariance` or `:calibration`
+function count_solve!(H::JacobianProducts, part, niter)
+    stats = H.integ.sol.pnstats
+    H.integ.stats.nsolve += 1
+    if part === :mean
+        stats.nsolve_mean += 1
+        stats.niter_mean += niter
+    elseif part === :covariance
+        stats.nsolve_covariance += 1
+        stats.niter_covariance += niter
+    else
+        stats.nsolve_calibration += 1
+        stats.niter_calibration += niter
+    end
+    return nothing
 end
 
 # S⁻¹ B for the probes B, with a Jacobi preconditioner applied on both sides, so that the
@@ -260,7 +280,7 @@ function solve_probes!(H::JacobianProducts, S)
         # Block-GMRES needs at least twice as many rows as right-hand sides
         for j in axes(c.B, 2)
             copy!(c.z, view(c.B, :, j))
-            copy!(view(c.W, :, j), cg_solve!(H, S, c.z, c.P, rtol))
+            copy!(view(c.W, :, j), cg_solve!(H, :covariance, S, c.z, c.P, rtol))
         end
         return c.W
     else
@@ -269,6 +289,7 @@ function solve_probes!(H::JacobianProducts, S)
         block_gmres!(c.block_gmres, S, c.B; M, N=M, ldiv=true, atol=zero(rtol), rtol,
             itmax=MAX_BLOCK_GMRES_ITERATIONS)
         Krylov.issolved(c.block_gmres) || (H.integ.force_stepfail = true)
+        count_solve!(H, :covariance, Krylov.iteration_count(c.block_gmres))
         return Krylov.solution(c.block_gmres)
     end
 end
@@ -298,7 +319,7 @@ function update_mean!(x_out, x_pred, obs::MatrixFreeObservation; cache)
         jvp!(c.Jv, H, view(Δ, 1:d))
         @views c.z .= obs.r .- Δ[(d+1):2d] .+ c.Jv
     end
-    w = cg_solve!(H, S, z, P, krylov_rtol(H))
+    w = cg_solve!(H, :mean, S, z, P, krylov_rtol(H))
     ztSinvz = dot(z, w)
     gain_times!(x_out.μ, S, w)
     @.. x_out.μ = x_pred.μ - x_out.μ
@@ -376,5 +397,5 @@ function invquad(z, HQH::ObservedProcessNoise; kwargs...)
     P =
         isnothing(c.diagonal_jacobian) ? estimated_diagonal!(HQH) :
         diagonal_jacobian_diag!(c.PQ, S)
-    return dot(z, cg_solve!(S.H, S, z, P, eltype(S)(CALIBRATION_RTOL)))
+    return dot(z, cg_solve!(S.H, :calibration, S, z, P, eltype(S)(CALIBRATION_RTOL)))
 end

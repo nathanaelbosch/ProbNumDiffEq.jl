@@ -374,7 +374,8 @@ ODEs are not supported yet.
 
 The probes are drawn from the random number generator that `solve` takes as keyword `rng`
 (OrdinaryDiffEq 7 and later), by default `Random.default_rng()`, so the solution changes
-with its seed. The log-likelihood in `sol.pnstats` is `NaN`.
+with its seed. The log-likelihood in `sol.pnstats` is `NaN`; instead, `sol.pnstats` counts
+the products and the linear solves.
 
 # Examples
 ```julia-repl

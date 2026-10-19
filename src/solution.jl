@@ -7,14 +7,43 @@
 Statistics from the probabilistic numerical ODE solver, inspired by SciMLBase.DEStats.
 
 ## Fields
-- log_likelihood: Log-likelihood of the PN observations (the ODE).
+- `log_likelihood`: Log-likelihood of the PN observations (the ODE).
+
+Only the [`MatfreeEK1`](@ref) counts the following; it also counts its linear solves in
+`sol.stats.nsolve`.
+- `njvp`, `nvjp`: Jacobian-vector and vector-Jacobian products.
+- `nsolve_mean`, `niter_mean`: Linear solves for the mean update, and their Krylov iterations.
+- `nsolve_covariance`, `niter_covariance`: The same for the covariance update. Solving for
+  all probes at once with block-GMRES counts as one solve, with its block iterations.
+- `nsolve_calibration`, `niter_calibration`: The same for the calibration.
 """
 mutable struct PNStats{LL}
     log_likelihood::LL
+    njvp::Int
+    nvjp::Int
+    nsolve_mean::Int
+    niter_mean::Int
+    nsolve_covariance::Int
+    niter_covariance::Int
+    nsolve_calibration::Int
+    niter_calibration::Int
 end
+PNStats(log_likelihood) = PNStats(log_likelihood, 0, 0, 0, 0, 0, 0, 0, 0)
 function Base.show(io::IO, ::MIME"text/plain", s::PNStats)
     println(io, summary(s))
     @printf io "%-50s %-g\n" "Log-likelihood:" s.log_likelihood
+    if s.njvp + s.nvjp > 0
+        @printf io "%-50s %-d\n" "Number of Jacobian-vector products:" s.njvp
+        @printf io "%-50s %-d\n" "Number of vector-Jacobian products:" s.nvjp
+        for (part, nsolve, niter) in (
+            ("mean", s.nsolve_mean, s.niter_mean),
+            ("covariance", s.nsolve_covariance, s.niter_covariance),
+            ("calibration", s.nsolve_calibration, s.niter_calibration),
+        )
+            @printf io "%-50s %-d\n" "Number of linear solves for the $part:" nsolve
+            @printf io "%-50s %-d\n" "Number of their Krylov iterations:" niter
+        end
+    end
 end
 
 ########################################################################################

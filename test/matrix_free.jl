@@ -62,6 +62,20 @@ ek1 = solve(remake(prob, f=f!), EK1(), abstol=1e-7, reltol=1e-5)
 end
 
 # With fixed steps the block-diagonal covariance limits the accuracy, more than in the EK1
+@testset "Products and linear solves are counted" begin
+    Random.seed!(1)
+    sol = solve(prob, MatfreeEK1(), abstol=1e-7, reltol=1e-5)
+    s = sol.pnstats
+    @test s.njvp > 0 && s.nvjp > 0
+    # The calibration in every step, the update in every accepted one
+    @test s.nsolve_calibration == sol.stats.naccept + sol.stats.nreject
+    @test s.nsolve_mean == s.nsolve_covariance == sol.stats.naccept
+    @test sol.stats.nsolve == s.nsolve_mean + s.nsolve_covariance + s.nsolve_calibration
+    @test s.niter_mean > s.nsolve_mean
+    @test s.niter_covariance > 0 && s.niter_calibration > 0
+    @test ek1.pnstats.njvp == ek1.pnstats.nsolve_mean == 0
+end
+
 @testset "Fixed steps" begin
     Random.seed!(1)
     sol = solve(prob, MatfreeEK1(diffusionmodel=FixedDiffusion()), adaptive=false, dt=0.01)
