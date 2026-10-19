@@ -48,7 +48,7 @@ end
 @testset "Diagonals for the Jacobi preconditioners" begin
     H = observation_operator(; diagonal_jacobian=diagonal_jacobian!)
     H_diagonal = E1 - Diagonal(J) * E0
-    @test PNDE.diagonal_jacobian_diag!(zeros(d), observed_covariance(H, R)) ≈
+    @test PNDE.jacobi_preconditioner!(zeros(d), observed_covariance(H, R)) ≈
           diag(H_diagonal * Σ * H_diagonal')
     @test PNDE.estimate_diagonal!(zeros(d), H, R, 20_000) ≈ diag(S_dense) rtol =
         0.05
@@ -73,15 +73,16 @@ end
     H = observation_operator(; nprobes)
     c = H.cache
     @test isnothing(c.block_gmres) == (how == "by CG")
-    c.P .= diag(S_dense)
-    randn!(rng, c.HG)
-    @test PNDE.solve_probes!(H, observed_covariance(H, R)) ≈ S_dense \ c.HG
+    B = randn!(rng, c.HG)
+    S = observed_covariance(H, R)
+    @test PNDE.krylov_solve!(S, B, diag(S_dense), PNDE.krylov_rtol(H), :covariance) ≈
+          S_dense \ B
 end
 
 @testset "A linear solve that does not converge throws" begin
     H = observation_operator()
-    @test_throws PNDE.LinearSolveFailure PNDE.cg_solve!(
-        H, :mean, observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12; itmax=1)
+    @test_throws PNDE.LinearSolveFailure PNDE.krylov_solve!(
+        observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12, :mean; itmax=1)
 end
 
 @testset "Covariance update" begin
