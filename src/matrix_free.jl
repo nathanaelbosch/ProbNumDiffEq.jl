@@ -57,7 +57,6 @@ function make_linearization_cache(
     return (;
         r=vec(), u=vec(),
         diagonal_jacobian=isnothing(linearization.diagonal_jacobian) ? nothing : vec(),
-        failed=Ref(false),
         v=vec(), Jv=vec(), a=vec(), e0=vec(), z=vec(),
         Σcols=(zeros(T, D), zeros(T, D)), Qcols=(zeros(T, D), zeros(T, D)),
         P=vec(), sqrtP=vec(), PQ=vec(), HQH_diag=vec(), has_HQH_diag=Ref(false),
@@ -71,20 +70,17 @@ function make_linearization_cache(
 end
 
 """
-    JacobianProducts
+    JacobianProducts(u, integ, cache)
 
 The Jacobian ``H = E_1 - J E_0`` of the observation of the ODE at the point `u`, as an
-operator: products with ``J`` and ``J^T`` call `f.jvp` and `f.vjp`. It also carries what the
-update on it needs: the random number generator for the probes, the relative tolerance of
-the linear solves, and the buffers of the linearization cache.
+operator: products with ``J`` and ``J^T`` call `f.jvp` and `f.vjp` of the integrator
+`integ`. Its random number generator draws the probes, its `reltol` sets the tolerance of
+the linear solves, and a linear solve that does not converge rejects its step. `cache`
+holds the buffers of the linearization.
 """
-struct JacobianProducts{F,U,P,TT,RNG,T,C}
-    f::F
+struct JacobianProducts{U,I,C}
     u::U
-    p::P
-    t::TT
-    rng::RNG
-    rtol::T
+    integ::I
     cache::C
 end
 
@@ -109,18 +105,26 @@ function linearize_ode_observation!(
     copy!(c.u, view(m, 1:d))
     isnothing(c.diagonal_jacobian) ||
         linearization.diagonal_jacobian(c.diagonal_jacobian, c.u, p, t)
-    c.failed[] = false
-    T = eltype(c.u)
-    rtol = min(T(1e-2), T(minimum(integ.opts.reltol)))
-    H = JacobianProducts(integ.f, c.u, p, t, integrator_rng(integ), rtol, c)
-    return LinearizedObservation(m, c.r, H, R)
+    return LinearizedObservation(m, c.r, JacobianProducts(c.u, integ, c), R)
 end
 
-linear_solve_failed(obs::MatrixFreeObservation) = obs.H.cache.failed[]
-
 # `v` is copied into a buffer first, since `f.jvp` and `f.vjp` may require a `Vector`
-jvp!(out, H::JacobianProducts, v) = (H.f.jvp(out, copy!(H.cache.v, v), H.u, H.p, H.t); out)
-vjp!(out, H::JacobianProducts, v) = (H.f.vjp(out, copy!(H.cache.v, v), H.u, H.p, H.t); out)
+function jvp!(out, H::JacobianProducts, v)
+    (; f, p, t, dt) = H.integ
+    f.jvp(out, copy!(H.cache.v, v), H.u, p, t + dt)
+    return out
+end
+function vjp!(out, H::JacobianProducts, v)
+    (; f, p, t, dt) = H.integ
+    f.vjp(out, copy!(H.cache.v, v), H.u, p, t + dt)
+    return out
+end
+
+# The tolerance of the linear solves: the solver's `reltol`, capped at 1e-2
+function krylov_rtol(H::JacobianProducts)
+    T = eltype(H.u)
+    return min(T(1e-2), T(minimum(H.integ.opts.reltol)))
+end
 
 # The first two columns of the blocks of `Σ = RᵀR`, in the derivative-major order of the
 # state. `H` reads only derivatives 0 and 1, so `H Σ Hᵀ` and `Σ Hᵀ` need no other entries.
@@ -200,7 +204,7 @@ end
 # Columns of `G` drawn from N(0, RᵀR) with the standard normal probes `Ξ`, and B = H G
 function draw_probes!(G, B, Ξ, R::BlocksOfDiagonals, H::JacobianProducts)
     d = nblocks(R)
-    Random.randn!(H.rng, Ξ)
+    Random.randn!(integrator_rng(H.integ), Ξ)
     @inbounds for j in axes(G, 2), (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
         s = zero(eltype(G))
         for l in axes(Ri, 1)
@@ -221,7 +225,7 @@ function estimate_observed_diagonal!(out, R::BlocksOfDiagonals, H::JacobianProdu
     d = length(out)
     fill!(out, 0)
     for _ in 1:n
-        Random.randn!(H.rng, ξ)
+        Random.randn!(integrator_rng(H.integ), ξ)
         # E₀ g and E₁ g, for g = Rᵀ ξ
         @inbounds for (i, Ri) in enumerate(blocks(R))
             g0, g1 = zero(eltype(out)), zero(eltype(out))
@@ -238,21 +242,25 @@ function estimate_observed_diagonal!(out, R::BlocksOfDiagonals, H::JacobianProdu
     return floor_diagonal!(out)
 end
 
-function cg_solve!(c, A, b, P, rtol)
-    cg!(c.cg, A, b; M=Diagonal(P), ldiv=true, atol=zero(rtol), rtol,
-        itmax=MAX_CG_ITERATIONS)
-    Krylov.issolved(c.cg) || (c.failed[] = true)
-    return Krylov.solution(c.cg)
+# A linear solve that does not converge rejects the step, as OrdinaryDiffEq does when the
+# Newton iteration of an implicit solver fails
+function cg_solve!(H::JacobianProducts, A, b, P, rtol; itmax=MAX_CG_ITERATIONS)
+    workspace = H.cache.cg
+    cg!(workspace, A, b; M=Diagonal(P), ldiv=true, atol=zero(rtol), rtol, itmax)
+    Krylov.issolved(workspace) || (H.integ.force_stepfail = true)
+    return Krylov.solution(workspace)
 end
 
 # S⁻¹ B for the probes B, with a Jacobi preconditioner applied on both sides, so that the
 # residual is weighted as in the preconditioned CG
-function solve_probes!(c, S, rtol)
+function solve_probes!(H::JacobianProducts, S)
+    c = H.cache
+    rtol = krylov_rtol(H)
     if isnothing(c.block_gmres)
         # Block-GMRES needs at least twice as many rows as right-hand sides
         for j in axes(c.B, 2)
             copy!(c.z, view(c.B, :, j))
-            copy!(view(c.W, :, j), cg_solve!(c, S, c.z, c.P, rtol))
+            copy!(view(c.W, :, j), cg_solve!(H, S, c.z, c.P, rtol))
         end
         return c.W
     else
@@ -260,7 +268,7 @@ function solve_probes!(c, S, rtol)
         M = Diagonal(c.sqrtP)
         block_gmres!(c.block_gmres, S, c.B; M, N=M, ldiv=true, atol=zero(rtol), rtol,
             itmax=MAX_BLOCK_GMRES_ITERATIONS)
-        Krylov.issolved(c.block_gmres) || (c.failed[] = true)
+        Krylov.issolved(c.block_gmres) || (H.integ.force_stepfail = true)
         return Krylov.solution(c.block_gmres)
     end
 end
@@ -290,7 +298,7 @@ function update_mean!(x_out, x_pred, obs::MatrixFreeObservation; cache)
         jvp!(c.Jv, H, view(Δ, 1:d))
         @views c.z .= obs.r .- Δ[(d+1):2d] .+ c.Jv
     end
-    w = cg_solve!(c, S, z, P, H.rtol)
+    w = cg_solve!(H, S, z, P, krylov_rtol(H))
     ztSinvz = dot(z, w)
     gain_times!(x_out.μ, S, w)
     @.. x_out.μ = x_pred.μ - x_out.μ
@@ -312,7 +320,7 @@ function update_cov!(x_out, x_pred, obs::MatrixFreeObservation, K, B; cache)
     (; G, Y, M, gtmp) = c
     S = ObservedCovariance(H, c.Σcols)
     draw_probes!(G, c.B, c.Ξ, x_pred.Σ.R, H)
-    W = solve_probes!(c, S, H.rtol)
+    W = solve_probes!(H, S)
     for j in axes(G, 2)
         gain_times!(gtmp, S, view(W, :, j))
         view(G, :, j) .-= gtmp
@@ -368,5 +376,5 @@ function invquad(z, HQH::ObservedProcessNoise; kwargs...)
     P =
         isnothing(c.diagonal_jacobian) ? estimated_diagonal!(HQH) :
         diagonal_jacobian_diag!(c.PQ, S)
-    return dot(z, cg_solve!(c, S, z, P, oftype(S.H.rtol, CALIBRATION_RTOL)))
+    return dot(z, cg_solve!(S.H, S, z, P, eltype(S)(CALIBRATION_RTOL)))
 end

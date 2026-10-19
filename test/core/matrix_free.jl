@@ -16,6 +16,7 @@ diagonal_jacobian!(out, u, p, t) = (out .= diag(A) .+ 1 .- 2u)
 const f = ODEFunction(f!; jvp=jvp!, vjp=vjp!)
 
 rng = Xoshiro(2)
+Random.seed!(3)  # for the probes, which the solver draws from the default generator
 u = randn(rng, d)
 J = A + Diagonal(1 .- 2u)
 E0, E1 = PNDE.projection(d, q)(0), PNDE.projection(d, q)(1)
@@ -24,14 +25,11 @@ R = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ i
 Σ = Matrix(R)' * Matrix(R)
 S_dense = H_dense * Σ * H_dense'
 
-function jacobian_products(; rtol=1e-12, kwargs...)
-    linearization = MatrixFreeJacobian(; kwargs...)
-    C = PNDE.BlockDiagonalCovariance{Float64}(d, q)
-    cache = PNDE.make_linearization_cache(linearization, C, u, f)
-    copy!(cache.u, u)
-    isnothing(cache.diagonal_jacobian) ||
-        linearization.diagonal_jacobian(cache.diagonal_jacobian, u, nothing, 0.0)
-    return PNDE.JacobianProducts(f, cache.u, nothing, 0.0, Xoshiro(3), rtol, cache)
+# The operator H at `u`, from linearizing an integrator there
+function jacobian_products(; reltol=1e-12, kwargs...)
+    integ = init(ODEProblem(f, u, (0.0, 1.0)), MatfreeEK1(; order=q, kwargs...); reltol)
+    m = [u; zeros(D - d)]
+    return PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m).H
 end
 observed_covariance(H, R) =
     PNDE.ObservedCovariance(H, PNDE.first_two_columns!(H.cache.Σcols, R))
@@ -74,8 +72,16 @@ end
     @test isnothing(c.block_gmres) == (how == "by CG")
     c.P .= diag(S_dense)
     randn!(rng, c.B)
-    @test PNDE.solve_probes!(c, observed_covariance(H, R), 1e-12) ≈ S_dense \ c.B
-    @test !c.failed[]
+    @test PNDE.solve_probes!(H, observed_covariance(H, R)) ≈ S_dense \ c.B
+    @test !H.integ.force_stepfail
+end
+
+@testset "A linear solve that does not converge rejects the step" begin
+    H = jacobian_products()
+    @test !H.integ.force_stepfail
+    PNDE.cg_solve!(H, observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12;
+        itmax=1)
+    @test H.integ.force_stepfail
 end
 
 @testset "Covariance update" begin
@@ -139,5 +145,5 @@ end
     J_m = A + Diagonal(1 .- 2 .* (E0 * m))
     @test PNDE.jvp!(zeros(d), obs.H, v) ≈ J_m * v
     @test PNDE.vjp!(zeros(d), obs.H, v) ≈ J_m' * v
-    @test obs.H.rtol == 1e-3
+    @test PNDE.krylov_rtol(obs.H) == 1e-3
 end
