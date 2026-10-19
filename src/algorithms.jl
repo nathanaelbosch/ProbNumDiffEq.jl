@@ -344,34 +344,24 @@ RosenbrockExpEK(; order=3, kwargs...) =
 **Matrix-free Gaussian ODE filter with first-order vector field linearization.**
 
 Like the [`EK1`](@ref), it linearizes the ODE vector field with its Jacobian, which makes
-it suitable for stiff problems. But its cost per step scales linearly with the ODE
-dimension [Bosch (2026)](@cite bosch26stable):
-- it accesses the Jacobian only through Jacobian-vector and vector-Jacobian products;
-- it solves the linear systems of the update with Krylov methods, with the relative
-  tolerance `min(1e-2, reltol)`;
-- it approximates the posterior covariance by a block-diagonal one, estimated from
-  `nprobes` random probes.
-
-The ODE function needs both products:
-```julia
-ODEFunction(f; jvp=(Jv, v, u, p, t) -> ..., vjp=(Jᵀv, v, u, p, t) -> ...)
-```
-in place, or `jvp(v, u, p, t)` and `vjp(v, u, p, t)` for an out-of-place `f`, for example
-from DifferentiationInterface.jl.
+it suitable for stiff problems. But it accesses the Jacobian only through products, solves
+the linear systems with Krylov methods, and estimates a block-diagonal posterior covariance
+from random probes, so that its cost per step scales linearly with the ODE dimension
+[Bosch (2026)](@cite bosch26stable). The ODE function needs both products, as
+`ODEFunction(f; jvp, vjp)` with `jvp(Jv, v, u, p, t)` and `vjp(Jᵀv, v, u, p, t)`.
 
 # Arguments
 - `nprobes`: the number of probes for the posterior covariance.
 - `diagonal_jacobian`: optionally, a function `(out, u, p, t)` that writes the diagonal of
   the Jacobian into `out`. It speeds up the linear solves.
 
-All other keyword arguments of [`ODEFilter`](@ref) are supported, except observation noise
-and multivariate diffusions. Priors other than [`IWP`](@ref), mass matrices and second-order
+All other keyword arguments of [`ODEFilter`](@ref) are supported, except observation noise,
+multivariate diffusions and priors other than [`IWP`](@ref). Mass matrices and second-order
 ODEs are not supported yet.
 
-The probes are drawn from the random number generator that `solve` takes as keyword `rng`
-(OrdinaryDiffEq 7 and later), by default `Random.default_rng()`, so the solution changes
-with its seed. The log-likelihood in `sol.pnstats` is `NaN`; instead, `sol.pnstats` counts
-the products and the linear solves.
+The probes are drawn from the keyword `rng` of `solve` (OrdinaryDiffEq 7 and later), by
+default `Random.default_rng()`. `sol.pnstats` counts the products and the linear solves; its
+log-likelihood is `NaN`.
 
 # Examples
 ```julia-repl
