@@ -82,86 +82,82 @@ For that functionality, use `OrdinaryDiffEqCore.step!(integ)`.
 """
 function OrdinaryDiffEqCore.perform_step!(integ, cache::EKCache, repeat_step=false)
     try
-        _perform_step!(integ, cache, repeat_step)
+        @unpack dt = integ
+        @unpack d = integ.cache
+        @unpack xprev, x_pred, x_filt, err_tmp = integ.cache
+        @unpack A, Q, Ah, Qh, P, PI = integ.cache
+
+        if make_new_transitions(integ, cache, repeat_step)
+            # Rosenbrock-style update of the IOUP rate parameter
+            if cache.prior isa IOUP && cache.prior.update_rate_parameter
+                OrdinaryDiffEqDifferentiation.calc_J!(
+                    cache.prior.rate_parameter,
+                    integ,
+                    cache,
+                    false,
+                )
+            end
+
+            make_transition_matrices!(cache, cache.prior, dt)
+            cache.dt_last = dt
+        end
+
+        # Predict the mean
+        predict_mean!(x_pred.μ, xprev.μ, Ah)
+        write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
+
+        # The diffusion estimates need the residual at the predicted mean
+        obs = linearize_ode_observation!(integ.alg.linearization, integ, x_pred)
+        @assert obs.m === x_pred.μ
+
+        # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
+        if integ.opts.adaptive || isdynamic(cache.diffusionmodel)
+            HQH = observed_process_noise!(cache, obs)
+            cache.local_diffusion =
+                estimate_local_diffusion(cache.diffusionmodel, integ, obs, HQH)
+            if integ.opts.adaptive
+                _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, HQH))
+                _EEst = _get_EEst(integ)
+                if _EEst >= one(_EEst)
+                    return
+                end
+            end
+        end
+
+        # Predict the covariance, using either the local or global diffusion
+        extrapolation_diff =
+            isdynamic(cache.diffusionmodel) ? cache.local_diffusion :
+            cache.default_diffusion
+        predict_cov!(
+            x_pred.Σ, xprev.Σ, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
+
+        if integ.alg.smooth
+            @unpack C_DxD, C_2DxD, C_2Dx2D, backward_kernel = cache
+            K = AffineNormalKernel(Ah, Qh)
+            compute_backward_kernel!(
+                backward_kernel, x_pred, xprev, K;
+                C_DxD, C_2DxD, C_2Dx2D, diffusion=extrapolation_diff)
+        end
+
+        # Update state and save the ODE solution value
+        upd = update!(x_filt, x_pred, obs, integ)
+        integ.force_stepfail && return
+        write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
+
+        cache.log_likelihood = upd.loglikelihood
+        integ.sol.pnstats.log_likelihood += cache.log_likelihood
+
+        # Update the global diffusion MLE (if applicable)
+        if isstatic(cache.diffusionmodel) && cache.diffusionmodel.calibrate
+            estimate_global_diffusion(cache.diffusionmodel, integ, upd)
+        end
+
+        # Advance the state
+        copy!(integ.cache.x, integ.cache.x_filt)
     catch e
         e isa LinearSolveFailure || rethrow()
         integ.force_stepfail = true
     end
-    return nothing
-end
-
-function _perform_step!(integ, cache, repeat_step)
-    @unpack dt = integ
-    @unpack d = integ.cache
-    @unpack xprev, x_pred, x_filt, err_tmp = integ.cache
-    @unpack A, Q, Ah, Qh, P, PI = integ.cache
-
-    if make_new_transitions(integ, cache, repeat_step)
-        # Rosenbrock-style update of the IOUP rate parameter
-        if cache.prior isa IOUP && cache.prior.update_rate_parameter
-            OrdinaryDiffEqDifferentiation.calc_J!(
-                cache.prior.rate_parameter,
-                integ,
-                cache,
-                false,
-            )
-        end
-
-        make_transition_matrices!(cache, cache.prior, dt)
-        cache.dt_last = dt
-    end
-
-    # Predict the mean
-    predict_mean!(x_pred.μ, xprev.μ, Ah)
-    write_into_solution!(integ.u, x_pred.μ, integ.f; cache)
-
-    # The diffusion estimates need the residual at the predicted mean
-    obs = linearize_ode_observation!(integ.alg.linearization, integ, x_pred)
-    @assert obs.m === x_pred.μ
-
-    # Estimate diffusion, and (if adaptive) the local error estimate; Stop here if rejected
-    if integ.opts.adaptive || isdynamic(cache.diffusionmodel)
-        HQH = observed_process_noise!(cache, obs)
-        cache.local_diffusion =
-            estimate_local_diffusion(cache.diffusionmodel, integ, obs, HQH)
-        if integ.opts.adaptive
-            _set_EEst!(integ, compute_scaled_error_estimate!(integ, cache, HQH))
-            _EEst = _get_EEst(integ)
-            if _EEst >= one(_EEst)
-                return
-            end
-        end
-    end
-
-    # Predict the covariance, using either the local or global diffusion
-    extrapolation_diff =
-        isdynamic(cache.diffusionmodel) ? cache.local_diffusion : cache.default_diffusion
-    predict_cov!(x_pred.Σ, xprev.Σ, Ah, Qh, cache.C_DxD, cache.C_2DxD, extrapolation_diff)
-
-    if integ.alg.smooth
-        @unpack C_DxD, C_2DxD, C_2Dx2D, backward_kernel = cache
-        K = AffineNormalKernel(Ah, Qh)
-        compute_backward_kernel!(
-            backward_kernel, x_pred, xprev, K;
-            C_DxD, C_2DxD, C_2Dx2D, diffusion=extrapolation_diff)
-    end
-
-    # Update state and save the ODE solution value
-    upd = update!(x_filt, x_pred, obs, integ)
-    integ.force_stepfail && return
-    write_into_solution!(integ.u, x_filt.μ, integ.f; cache)
-
-    cache.log_likelihood = upd.loglikelihood
-    integ.sol.pnstats.log_likelihood += cache.log_likelihood
-
-    # Update the global diffusion MLE (if applicable)
-    if isstatic(cache.diffusionmodel) && cache.diffusionmodel.calibrate
-        estimate_global_diffusion(cache.diffusionmodel, integ, upd)
-    end
-
-    # Advance the state
-    copy!(integ.cache.x, integ.cache.x_filt)
-
     return nothing
 end
 
