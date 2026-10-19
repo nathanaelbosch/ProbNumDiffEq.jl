@@ -7,7 +7,9 @@ A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`;
-- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step.
+- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step;
+- optionally `check_inputs(::L, alg, f)`, which throws an `ArgumentError` for settings of
+  the `ODEFilter` `alg` or ODE functions `f` that it does not support.
 """
 abstract type AbstractLinearization end
 
@@ -64,6 +66,8 @@ Whether a component of an `ODEFilter` needs the Jacobian of the ODE vector field
 """
 needs_jacobian(::Union{ZeroJacobian,MatrixFreeJacobian}) = false
 needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
+
+check_inputs(::AbstractLinearization, alg, f) = nothing
 
 """
     make_linearization_cache(linearization, C::CovarianceStructure, u, f)
@@ -177,6 +181,7 @@ function Base.show(io::IO, it::Iterated)
 end
 
 needs_jacobian(it::Iterated) = needs_jacobian(it.linearization)
+check_inputs(it::Iterated, alg, f) = check_inputs(it.linearization, alg, f)
 
 function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f) where {T}
     return (; make_linearization_cache(it.linearization, C, u, f)...,

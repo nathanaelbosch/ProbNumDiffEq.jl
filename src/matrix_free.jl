@@ -8,8 +8,11 @@ const CALIBRATION_RTOL = 0.1
 const MAX_CG_ITERATIONS = 10_000
 const MAX_BLOCK_GMRES_ITERATIONS = 200
 
-function check_supported(::MatrixFreeJacobian; diffusionmodel, pn_observation_noise)
+function check_inputs(linearization::MatrixFreeJacobian, alg, f)
+    (; diffusionmodel, pn_observation_noise, prior) = alg
     unsupported = String[]
+    f isa DynamicalODEFunction && push!(unsupported, "second-order ODEs")
+    f.mass_matrix === I || push!(unsupported, "mass matrices")
     isnothing(pn_observation_noise) || push!(unsupported, "`pn_observation_noise`")
     diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
         push!(unsupported, "`diffusionmodel = $(repr(diffusionmodel))`")
@@ -17,15 +20,6 @@ function check_supported(::MatrixFreeJacobian; diffusionmodel, pn_observation_no
         ArgumentError(
             "The `MatfreeEK1` does not support $(join(unsupported, " or ")) yet."),
     )
-    return nothing
-end
-
-function check_matrix_free_inputs(f)
-    unsupported =
-        f isa DynamicalODEFunction ? "second-order ODEs" :
-        f.mass_matrix !== I ? "mass matrices" : nothing
-    isnothing(unsupported) ||
-        throw(ArgumentError("The `MatfreeEK1` does not support $unsupported yet."))
     missing_products = [string("`", name, "`") for name in (:jvp, :vjp)
                                 if isnothing(getproperty(f, name))]
     isempty(missing_products) || throw(
@@ -35,16 +29,7 @@ function check_matrix_free_inputs(f)
             "but $(join(missing_products, " and ")) is missing. Pass them as " *
             "`ODEFunction(f; jvp, vjp)`."),
     )
-    return nothing
-end
-
-function make_linearization_cache(
-    linearization::MatrixFreeJacobian, C::CovarianceStructure{T}, u, f,
-) where {T}
-    check_matrix_free_inputs(f)
-    @assert C isa BlockDiagonalCovariance
-    d, q = C.d, C.q
-    D = d * (q + 1)
+    q = num_derivatives(prior)
     m = something(linearization.nprobes, 2(q + 1))
     m >= q + 1 || throw(
         ArgumentError(
@@ -52,6 +37,16 @@ function make_linearization_cache(
             "state, $(q + 1), but it is $m.",
         ),
     )
+    return nothing
+end
+
+function make_linearization_cache(
+    linearization::MatrixFreeJacobian, C::CovarianceStructure{T}, u, f,
+) where {T}
+    @assert C isa BlockDiagonalCovariance
+    d, q = C.d, C.q
+    D = d * (q + 1)
+    m = something(linearization.nprobes, 2(q + 1))
     vec() = zeros(T, d)
     has_block_gmres = 2m <= d
     return (;

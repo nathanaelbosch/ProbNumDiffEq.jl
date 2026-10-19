@@ -113,14 +113,16 @@ end
 end
 
 @testset "Unsupported settings and missing inputs throw" begin
-    @test_throws ArgumentError MatfreeEK1(pn_observation_noise=1.0)
-    @test_throws ArgumentError MatfreeEK1(diffusionmodel=DynamicMVDiffusion())
-    @test_throws ArgumentError ODEFilter(
-        linearization=Iterated(MatrixFreeJacobian()), pn_observation_noise=1.0)
+    @test_throws "`pn_observation_noise`" solve(prob, MatfreeEK1(pn_observation_noise=1.0))
+    @test_throws "`diffusionmodel" solve(
+        prob, MatfreeEK1(diffusionmodel=DynamicMVDiffusion()))
+    @test_throws "`pn_observation_noise`" solve(
+        prob,
+        ODEFilter(linearization=Iterated(MatrixFreeJacobian()), pn_observation_noise=1.0))
     @test_throws ArgumentError solve(prob, MatfreeEK1(prior=IOUP(3, -1)))
     @test_throws ArgumentError solve(
         prob, MatfreeEK1(covariance_factorization=DenseCovariance))
-    @test_throws ArgumentError solve(prob, MatfreeEK1(nprobes=2))
+    @test_throws "`nprobes`" solve(prob, MatfreeEK1(nprobes=2))
     @test_throws "`vjp` is missing" solve(
         ODEProblem(ODEFunction(f!; jvp=jvp!), u0, (0.0, 1.0)), MatfreeEK1())
     @test_throws "mass matrices" solve(

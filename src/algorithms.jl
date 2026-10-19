@@ -125,7 +125,6 @@ struct ODEFilter{LT,PT,DT,IT,RT,CF,AD,CJ} <:
                 ),
             )
         end
-        check_supported(linearization; diffusionmodel, pn_observation_noise)
         autodiff, _, _ = _process_AD_choice(autodiff, chunk_size, diff_type)
         if !(needs_jacobian(linearization) || needs_jacobian(prior))
             autodiff = nothing
@@ -159,10 +158,6 @@ end
 
 _unwrap_val(::Val{B}) where {B} = B
 _unwrap_val(B) = B
-
-# Settings that only some linearizations support throw an `ArgumentError`
-check_supported(::AbstractLinearization; kwargs...) = nothing
-check_supported(it::Iterated; kwargs...) = check_supported(it.linearization; kwargs...)
 
 """
     EK0(; order=3,
