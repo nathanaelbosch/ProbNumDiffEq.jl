@@ -34,3 +34,21 @@ E0, E1 = PNDE.projection(d, q)(0), PNDE.projection(d, q)(1)
     x = integ.cache.x_pred
     @test PNDE.linearize_ode_observation!(integ.alg.linearization, integ, x).m === x.μ
 end
+
+@testset "MatfreeEK1 linearizes at a point other than the predicted mean" begin
+    jacobian(u, p, t) = ForwardDiff.jacobian(u -> f(u, p, t), u)
+    jvp!(Jv, v, u, p, t) = mul!(Jv, jacobian(u, p, t), v)
+    vjp!(Jᵀv, v, u, p, t) = mul!(Jᵀv, jacobian(u, p, t)', v)
+    prob = ODEProblem(ODEFunction(f!; jvp=jvp!, vjp=vjp!), [-1.0, 1.0], (0.0, 1.0), 3.0)
+    integ = init(prob, MatfreeEK1(order=q))
+    t = integ.t + integ.dt
+    m = collect(range(0.5, 1.5, length=d * (q + 1)))
+
+    obs = PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m)
+    @test obs.m === m
+    @test obs.r ≈ E1 * m - f(E0 * m, prob.p, t)
+    J = jacobian(E0 * m, prob.p, t)
+    v = [1.0, -2.0]
+    @test PNDE.jvp!(zeros(d), obs.H, v) ≈ J * v
+    @test PNDE.vjp!(zeros(d), obs.H, v) ≈ J' * v
+end

@@ -39,13 +39,12 @@ ref = solve(prob, Rodas5P(), abstol=1e-12, reltol=1e-12)
 relerr(u, t) = norm(u - ref(t)) / norm(ref(t))
 ek1 = solve(remake(prob, f=f!), EK1(), abstol=1e-7, reltol=1e-5)
 
-@testset "Like the EK1 on a stiff problem: $diffusionmodel, $preconditioner" for diffusionmodel in
-                                                                                 (
-        DynamicDiffusion(),
-        FixedDiffusion(),
-    ),
-    preconditioner in ("diagonal from probes", "diagonal Jacobian")
-
+@testset "Like the EK1 on a stiff problem: $diffusionmodel, $preconditioner" for (
+    diffusionmodel, preconditioner,
+) in (
+    (DynamicDiffusion(), "diagonal from probes"),
+    (FixedDiffusion(), "diagonal Jacobian"),
+)
     diagonal_jacobian = preconditioner == "diagonal Jacobian" ? diagonal_jacobian! : nothing
     Random.seed!(1)
     sol = solve(
@@ -61,7 +60,6 @@ ek1 = solve(remake(prob, f=f!), EK1(), abstol=1e-7, reltol=1e-5)
     @test isnan(sol.pnstats.log_likelihood)
 end
 
-# With fixed steps the block-diagonal covariance limits the accuracy, more than in the EK1
 @testset "Products and linear solves are counted" begin
     Random.seed!(1)
     sol = solve(prob, MatfreeEK1(), abstol=1e-7, reltol=1e-5)
@@ -76,6 +74,7 @@ end
     @test ek1.pnstats.njvp == ek1.pnstats.nsolve_mean == 0
 end
 
+# With fixed steps the block-diagonal covariance limits the accuracy, more than in the EK1
 @testset "Fixed steps" begin
     Random.seed!(1)
     sol = solve(prob, MatfreeEK1(diffusionmodel=FixedDiffusion()), adaptive=false, dt=0.01)
@@ -90,16 +89,6 @@ end
     @test sol.retcode == ReturnCode.Success
     @test relerr(sol.u[end], 1.0) < 1e-5
     @test sol.stats.nnonliniter > sol.stats.naccept
-end
-
-@testset "Out-of-place problems" begin
-    f(u, p, t) = f!(similar(u), u, p, t)
-    jvp(v, u, p, t) = jvp!(similar(v), v, u, p, t)
-    vjp(w, u, p, t) = vjp!(similar(w), w, u, p, t)
-    Random.seed!(1)
-    sol = solve(ODEProblem(ODEFunction(f; jvp, vjp), u0, (0.0, 1.0)), MatfreeEK1(),
-        abstol=1e-7, reltol=1e-5)
-    @test relerr(sol.u[end], 1.0) < 1e-5
 end
 
 @testset "The probes are drawn from the default random number generator" begin

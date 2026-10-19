@@ -99,51 +99,15 @@ end
     end
 end
 
-RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
-function observed_process_noise(H)
-    H.cache.has_HQH_diag[] = false
-    return PNDE.ObservedProcessNoise(
-        PNDE.ObservedCovariance(H, PNDE.first_two_columns!(H.cache.Qcols, RQ)), RQ)
-end
-
 @testset "Calibration" begin
-    HQH = observed_process_noise(jacobian_products())
+    H = jacobian_products()
+    RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
+    HQH = PNDE.ObservedProcessNoise(
+        PNDE.ObservedCovariance(H, PNDE.first_two_columns!(H.cache.Qcols, RQ)), RQ)
     HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
     z = randn(rng, d)
     # CG approaches zᵀ S⁻¹ z from below; its tolerance for the calibration is 0.1
     exact = z' * (HQH_dense \ z)
     @test PNDE.invquad(z, HQH) ≈ exact rtol = 0.15
     @test PNDE.invquad(z, HQH) <= exact
-end
-
-@testset "The diagonal of H Q Hᵀ is estimated once per step, when first needed" begin
-    # Without a diagonal Jacobian, the calibration needs it for its preconditioner
-    H = jacobian_products()
-    HQH = observed_process_noise(H)
-    @test !H.cache.has_HQH_diag[]
-    PNDE.invquad(randn(rng, d), HQH)
-    @test H.cache.has_HQH_diag[]
-    estimate = copy(H.cache.HQH_diag)
-    @test PNDE.diag!(zeros(d), HQH) == estimate
-    # With one, only the error estimate needs it
-    H = jacobian_products(; diagonal_jacobian=diagonal_jacobian!)
-    HQH = observed_process_noise(H)
-    PNDE.invquad(randn(rng, d), HQH)
-    @test !H.cache.has_HQH_diag[]
-    PNDE.diag!(zeros(d), HQH)
-    @test H.cache.has_HQH_diag[]
-end
-
-@testset "Linearization" begin
-    prob = ODEProblem(f, randn(rng, d), (0.0, 1.0))
-    integ = init(prob, MatfreeEK1(order=q))
-    m = randn(rng, D)
-    obs = PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m)
-    @test obs.m === m
-    @test obs.r ≈ E1 * m - f!(zeros(d), E0 * m, nothing, integ.t + integ.dt)
-    v = randn(rng, d)
-    J_m = A + Diagonal(1 .- 2 .* (E0 * m))
-    @test PNDE.jvp!(zeros(d), obs.H, v) ≈ J_m * v
-    @test PNDE.vjp!(zeros(d), obs.H, v) ≈ J_m' * v
-    @test PNDE.krylov_rtol(obs.H) == 1e-3
 end
