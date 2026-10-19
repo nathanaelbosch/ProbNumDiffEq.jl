@@ -196,11 +196,11 @@ covariance ``Σ`` seen through ``H``, as ``S`` in the update, or ``H Q(h) H^T`` 
 [`observed_process_noise!`](@ref). Its field `C` is the cross-covariance ``Σ H^T``, and
 `diag!` returns its diagonal, estimated from probes at its first use.
 """
-struct MatrixFreeObservedCovariance{CT,RT,V}
+struct MatrixFreeObservedCovariance{CT,RT,V,B}
     C::CT
     R::RT
     diagonal::V
-    has_diagonal::Base.RefValue{Bool}
+    has_diagonal::B
 end
 function MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers)
     buffers.has_diagonal[] = false
