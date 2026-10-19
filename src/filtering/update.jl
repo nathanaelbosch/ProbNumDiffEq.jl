@@ -225,9 +225,14 @@ function _update_mean!(
 end
 function pn_logpdf!(v, z, S_chol)
     μ = reshape(z, :)
-    w = ldiv!(S_chol, copy!(reshape(v, :), μ))
     n = length(μ)
-    ztSinvz = μ'w
+    ztSinvz = if n == 1 && S_chol isa Number
+        # One observed entry, as in each block of a block-diagonal update; on views of
+        # length one, `copy!`, `ldiv!` and `dot` cost more than this arithmetic
+        μ[1] * (μ[1] / S_chol)
+    else
+        μ' * ldiv!(S_chol, copy!(reshape(v, :), μ))
+    end
     # logdet(S ⊗ I_k) = k logdet(S), with k = n ÷ size(S, 1)
     loglikelihood =
         -0.5 * ztSinvz - 0.5 * n * log(2π) -
