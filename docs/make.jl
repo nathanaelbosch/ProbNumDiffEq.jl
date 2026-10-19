@@ -4,6 +4,9 @@ using ProbNumDiffEq
 using DocumenterCitations, Bibliography
 using DocumenterCodeBlocks
 
+DocumenterCitations.format_bibliography_reference(style::Val{:numeric}, entry) =
+    DocumenterCitations.format_labeled_bibliography_reference(style, entry; namesfmt=:full)
+
 # DocumenterCitations.bib_sorting(::Val{:numeric}) = :nyt
 # function DocumenterCitations.format_bibliography_label(
 #     ::Val{:numeric},
