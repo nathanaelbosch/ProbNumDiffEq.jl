@@ -8,7 +8,7 @@ const CALIBRATION_RTOL = 0.1
 const MAX_CG_ITERATIONS = 10_000
 const MAX_BLOCK_GMRES_ITERATIONS = 200
 
-function check_inputs(linearization::MatrixFreeJacobian, alg, f)
+function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f)
     (; diffusionmodel, pn_observation_noise, prior) = alg
     unsupported = String[]
     f isa DynamicalODEFunction && push!(unsupported, "second-order ODEs")

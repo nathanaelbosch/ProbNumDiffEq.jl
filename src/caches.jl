@@ -93,7 +93,7 @@ function OrdinaryDiffEqCore.alg_cache(
         error("We currently don't support scalar-valued problems")
     end
     check_nonnegative_dt(dt)
-    check_inputs(alg.linearization, alg, f)
+    throw_if_unsupported(alg.linearization, alg, f)
 
     is_secondorder_ode = f isa DynamicalODEFunction
 
