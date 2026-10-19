@@ -47,7 +47,7 @@ const GROUP = get(ENV, "GROUP", "All")
                 include("core/linearization.jl")
             end
             @timedsafetestset "Matrix-free update" begin
-                include("core/matrix_free.jl")
+                include("core/matrix_free_update.jl")
             end
             @timedsafetestset "Covariance structure" begin
                 include("core/covariance_structure.jl")
@@ -95,7 +95,7 @@ const GROUP = get(ENV, "GROUP", "All")
                 include("exponential_integrators.jl")
             end
             @timedsafetestset "MatfreeEK1" begin
-                include("matrix_free.jl")
+                include("matfree_ek1.jl")
             end
         end
     end
