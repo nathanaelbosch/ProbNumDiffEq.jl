@@ -208,19 +208,20 @@ end
 covariance ``Σ`` seen through ``H``, as ``S`` in the update, or ``H Q(h) H^T`` from
 [`observed_process_noise!`](@ref). Its field `C` is the cross-covariance ``Σ H^T``. With
 `estimate_diagonal`, its diagonal is estimated from probes when it is built, into the field
-`diagonal`, which `diag!` and the Jacobi preconditioner read; without, `diagonal` holds no
+`diagonal`, which `diag!` and `approximate_diagonal!` read; without, `diagonal` holds no
 valid values.
 """
-struct MatrixFreeObservedCovariance{CT,V} <: AbstractMatrixFreeOperator
+struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
     C::CT
+    R::RT
     diagonal::V
-end
-function MatrixFreeObservedCovariance(
-    H, R::BlocksOfDiagonals, buffers; estimate_diagonal::Bool,
-)
-    C = MatrixFreeCrossCovariance(H, R, buffers.ΣEᵀ)
-    estimate_diagonal && estimate_diagonal!(buffers.diagonal, H, R, DIAGONAL_PROBES)
-    return MatrixFreeObservedCovariance(C, buffers.diagonal)
+    function MatrixFreeObservedCovariance(
+        H, R::BlocksOfDiagonals, buffers; estimate_diagonal::Bool,
+    )
+        C = MatrixFreeCrossCovariance(H, R, buffers.ΣEᵀ)
+        estimate_diagonal && estimate_diagonal!(buffers.diagonal, H, R, DIAGONAL_PROBES)
+        return new{typeof(C),typeof(R),typeof(buffers.diagonal)}(C, R, buffers.diagonal)
+    end
 end
 size(S::MatrixFreeObservedCovariance) = (length(S.C.H.u), length(S.C.H.u))
 size(S::MatrixFreeObservedCovariance, i::Integer) = length(S.C.H.u)
@@ -296,22 +297,23 @@ function estimate_diagonal!(out, H::MatrixFreeObservationOperator, R::BlocksOfDi
 end
 
 """
-    jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
+    approximate_diagonal!(P, S::MatrixFreeObservedCovariance)
 
-The diagonal `P` of a Jacobi preconditioner for ``S = H Σ H^T``: ``\\operatorname{diag}(S)``
-as estimated when `S` was built, or, with a diagonal Jacobian ``J_D``, the diagonal of
-``H_D Σ H_D^T`` for ``H_D = E_1 - J_D E_0``. Its entries are raised to at least `eps` times
-the largest one, so that they are positive.
+An approximation `P` of the diagonal of ``S = H Σ H^T``, for its Jacobi preconditioner: the
+probe estimate from when `S` was built, or, with the diagonal ``J_D`` of the Jacobian, the
+diagonal of ``H_D Σ H_D^T`` with ``H_D = E_1 - J_D E_0``. Entries below `eps` times the
+largest one are raised to it, so that all are positive.
 """
-function jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
-    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
-    J = H.cache.diagonal_jacobian
-    if isnothing(J)
+function approximate_diagonal!(P, S::MatrixFreeObservedCovariance)
+    J_D = S.C.H.cache.diagonal_jacobian
+    if isnothing(J_D)
         copy!(P, S.diagonal)
     else
-        d = length(P)
-        # Var(uᵢ' - Jᵢᵢ uᵢ) = Σ₁₁ - 2 Jᵢᵢ Σ₀₁ + Jᵢᵢ² Σ₀₀
-        @views P .= ΣE₁ᵀ[(d+1):2d] .- 2 .* J .* ΣE₁ᵀ[1:d] .+ J .^ 2 .* ΣE₀ᵀ[1:d]
+        # (H_D Σ H_Dᵀ)ᵢᵢ = ‖√Σ H_Dᵀ eᵢ‖² = ‖r₁ - J_Dᵢ r₀‖², with the columns r₀ and r₁ of
+        # the i-th block of √Σ for uᵢ and uᵢ'
+        for (i, Ri) in enumerate(blocks(S.R))
+            P[i] = sum(l -> (Ri[l, 2] - J_D[i] * Ri[l, 1])^2, axes(Ri, 1))
+        end
     end
     lower = max(floatmin(eltype(P)), eps(eltype(P)) * maximum(P))
     @.. P = max(P, lower)
@@ -410,7 +412,7 @@ function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache
     c = H.cache
     S = MatrixFreeObservedCovariance(
         H, x_pred.Σ.R, c.HΣHᵀ; estimate_diagonal=isnothing(c.diagonal_jacobian))
-    P = jacobi_preconditioner!(c.P, S)
+    P = approximate_diagonal!(c.P, S)
     z = if m === x_pred.μ
         obs.r
     else
@@ -504,7 +506,7 @@ end
 
 # zᵀ (H Q(h) Hᵀ)⁻¹ z, for the calibration, by CG with a Jacobi preconditioner
 function invquad(z, S::MatrixFreeObservedCovariance; kwargs...)
-    P = jacobi_preconditioner!(S.C.H.cache.PQ, S)
+    P = approximate_diagonal!(S.C.H.cache.PQ, S)
     return dot(z, krylov_solve!(S, z, P, eltype(S)(CALIBRATION_RTOL), :calibration))
 end
 

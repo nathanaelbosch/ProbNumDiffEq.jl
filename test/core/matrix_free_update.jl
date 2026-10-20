@@ -49,7 +49,7 @@ end
 @testset "Diagonals for the Jacobi preconditioners" begin
     H = observation_operator(; diagonal_jacobian=diagonal_jacobian!)
     H_diagonal = E1 - Diagonal(J) * E0
-    @test PNDE.jacobi_preconditioner!(zeros(d), observed_covariance(H, R)) ≈
+    @test PNDE.approximate_diagonal!(zeros(d), observed_covariance(H, R)) ≈
           diag(H_diagonal * Σ * H_diagonal')
     @test PNDE.estimate_diagonal!(zeros(d), H, R, 20_000) ≈ diag(S_dense) rtol =
         0.05
