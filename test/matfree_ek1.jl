@@ -1,6 +1,7 @@
 using ProbNumDiffEq
 using LinearAlgebra
 using OrdinaryDiffEq: Rodas5P
+using ForwardDiff: Dual
 using Random
 using Test
 
@@ -130,6 +131,7 @@ end
     @test_throws ArgumentError solve(
         prob, MatfreeEK1(covariance_factorization=DenseCovariance))
     @test_throws "`nprobes`" solve(prob, MatfreeEK1(nprobes=2))
+    @test_throws "floating-point" solve(remake(prob, u0=Dual.(u0, 1.0)), MatfreeEK1())
     @test_throws "needs the Jacobian-vector product" solve(
         ODEProblem(ODEFunction(f!; jvp=jvp!), u0, (0.0, 1.0)), MatfreeEK1())
     @test_throws "mass matrices" solve(

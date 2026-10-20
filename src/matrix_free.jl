@@ -9,14 +9,15 @@ const MAX_CG_ITERATIONS = 10_000
 const MAX_BLOCK_GMRES_ITERATIONS = 200
 
 """
-    throw_if_unsupported(::MatrixFreeJacobian, alg, f)
+    throw_if_unsupported(::MatrixFreeJacobian, alg, f, u)
 
-Throw an `ArgumentError` if the `MatfreeEK1` does not support the settings of `alg` or the
-ODE function `f`. It does not support second-order ODEs, mass matrices, observation noise or
-multivariate diffusion models. It needs `jvp` and `vjp` in the ODE function, and at least as
-many probes as there are derivatives in the state.
+Throw an `ArgumentError` if the `MatfreeEK1` does not support the settings of `alg`, the ODE
+function `f`, or the state `u`. It does not support second-order ODEs, mass matrices,
+observation noise, multivariate diffusion models, or states that are not floating-point
+numbers. It needs `jvp` and `vjp` in the ODE function, and at least as many probes as there
+are derivatives in the state.
 """
-function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f)
+function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     unsupported(what) = ArgumentError("The `MatfreeEK1` does not support $what.")
     if f isa DynamicalODEFunction
         throw(unsupported("second-order ODEs"))
@@ -26,6 +27,9 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f)
         throw(unsupported("observation noise"))
     elseif !(alg.diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion})
         throw(unsupported("multivariate diffusion models"))
+    elseif !(eltype(u) <: AbstractFloat)
+        # Krylov.jl needs floating-point numbers, so this rules out ForwardDiff's dual numbers
+        throw(unsupported("states that are not floating-point numbers"))
     elseif isnothing(f.jvp) || isnothing(f.vjp)
         throw(
             ArgumentError(

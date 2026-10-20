@@ -8,7 +8,7 @@ A linearization `L <: AbstractLinearization` has methods for
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`;
 - optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step;
-- optionally `throw_if_unsupported(::L, alg, f)`.
+- optionally `throw_if_unsupported(::L, alg, f, u)`.
 """
 abstract type AbstractLinearization end
 
@@ -67,12 +67,12 @@ needs_jacobian(::Union{ZeroJacobian,MatrixFreeJacobian}) = false
 needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
 
 """
-    throw_if_unsupported(linearization, alg, f)
+    throw_if_unsupported(linearization, alg, f, u)
 
-Throw an `ArgumentError` if `linearization` does not support the settings of `alg` or the
-ODE function `f`.
+Throw an `ArgumentError` if `linearization` does not support the settings of `alg`, the ODE
+function `f`, or the state `u`.
 """
-throw_if_unsupported(::AbstractLinearization, alg, f) = nothing
+throw_if_unsupported(::AbstractLinearization, alg, f, u) = nothing
 
 """
     make_linearization_cache(linearization, C::CovarianceStructure, u, f)
@@ -186,7 +186,8 @@ function Base.show(io::IO, it::Iterated)
 end
 
 needs_jacobian(it::Iterated) = needs_jacobian(it.linearization)
-throw_if_unsupported(it::Iterated, alg, f) = throw_if_unsupported(it.linearization, alg, f)
+throw_if_unsupported(it::Iterated, alg, f, u) =
+    throw_if_unsupported(it.linearization, alg, f, u)
 
 function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f) where {T}
     return (; make_linearization_cache(it.linearization, C, u, f)...,
