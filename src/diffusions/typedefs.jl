@@ -103,14 +103,14 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
         )
     end
 end
+# A block-diagonal `H Q Hᵀ` comes from an `H` that does not couple the dimensions. It is then
+# diagonal, and the estimate of one diffusion per dimension is exact.
+estimate_local_diffusion(::FixedMVDiffusion, integ, obs, HQH::BlocksOfDiagonalsPSD) =
+    local_diagonal_diffusion(integ.cache, obs.r, HQH)
+# Otherwise, the scalar estimate is written into every entry, since the local diffusion of a
+# multivariate model is stored as a `Diagonal`
 function estimate_local_diffusion(::FixedMVDiffusion, integ, obs, HQH)
-    if integ.cache.covariance_factorization isa BlockDiagonalCovariance
-        return local_diagonal_diffusion(integ.cache, obs.r, HQH)
-    else
-        # The local diffusion is stored as a `Diagonal` for multivariate models, so the
-        # scalar estimate is written into every entry.
-        σ² = local_scalar_diffusion(integ.cache, obs.r, HQH)
-        fill!(integ.cache.local_diffusion.diag, σ²)
-        return integ.cache.local_diffusion
-    end
+    σ² = local_scalar_diffusion(integ.cache, obs.r, HQH)
+    fill!(integ.cache.local_diffusion.diag, σ²)
+    return integ.cache.local_diffusion
 end
