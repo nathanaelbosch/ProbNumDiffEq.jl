@@ -353,15 +353,19 @@ from random probes, so that its cost per step scales linearly with the ODE dimen
 # Arguments
 - `nprobes`: the number of probes for the posterior covariance.
 - `diagonal_jacobian`: optionally, a function `(out, u, p, t)` that writes the diagonal of
-  the Jacobian into `out`. It speeds up the linear solves.
+  the Jacobian into `out`. The linear solves then use a cheaper preconditioner built from
+  it, instead of one estimated from probes. This preconditioner is more approximate. It
+  works well when the Jacobian is dominated by its diagonal, as for many discretized PDEs.
+  When the off-diagonal entries dominate, it is a worse preconditioner, and the solution
+  can become less accurate.
 
 All other keyword arguments of [`ODEFilter`](@ref) are supported, except observation noise,
 multivariate diffusions and priors other than [`IWP`](@ref). Mass matrices and second-order
 ODEs are not supported yet.
 
 The probes are drawn from the keyword `rng` of `solve` (OrdinaryDiffEq 7 and later), by
-default `Random.default_rng()`. `sol.pnstats` counts the products and the linear solves; its
-log-likelihood is `NaN`.
+default `Random.default_rng()`. `sol.pnstats` counts the products and the linear solves.
+Its log-likelihood is `NaN`.
 
 # Examples
 ```julia-repl
