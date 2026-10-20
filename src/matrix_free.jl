@@ -333,11 +333,13 @@ function diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, 
 end
 
 # The relative tolerance of the linear solves. The calibration needs less accuracy than the
-# update, whose tolerance is the solver's `reltol`, but at most 1e-2.
+# update, whose tolerance is the solver's `reltol`, but at most 1e-2. It is at least
+# `sqrt(eps)`, because the Krylov methods cannot reach a residual of zero, as a `reltol` of
+# zero would ask for.
 function krylov_rtol(H::MatrixFreeObservationOperator, part)
     T = eltype(H.cache.u)
     part === :calibration && return T(CALIBRATION_RTOL)
-    return min(T(1e-2), T(minimum(H.integ.opts.reltol)))
+    return clamp(T(minimum(H.integ.opts.reltol)), sqrt(eps(T)), T(1e-2))
 end
 
 struct LinearSolveFailure <: Exception end

@@ -82,6 +82,13 @@ end
     @test relerr(sol.u[end], 1.0) < 1e-4
 end
 
+@testset "A pure absolute tolerance" begin
+    Random.seed!(1)
+    sol = solve(prob, MatfreeEK1(), abstol=1e-8, reltol=0)
+    @test sol.retcode == ReturnCode.Success
+    @test relerr(sol.u[end], 1.0) < 1e-5
+end
+
 @testset "With iterated linearization" begin
     Random.seed!(1)
     sol = solve(prob, ODEFilter(linearization=Iterated(MatrixFreeJacobian())),
