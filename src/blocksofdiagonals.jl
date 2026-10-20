@@ -248,30 +248,17 @@ end
 # Block-wise, instead of LinearAlgebra's entry-by-entry fallback
 function _blockwise_mul!(C::AbstractMatrix, A_blocks, B::AbstractMatrix)
     d = length(A_blocks)
-    @assert size(C, 1) == d * size(A_blocks[1], 1) && size(B, 1) == d * size(A_blocks[1], 2)
+    A₁ = first(A_blocks)
+    @assert size(C, 1) == d * size(A₁, 1) && size(B, 1) == d * size(A₁, 2)
     for (i, Ai) in enumerate(A_blocks)
-        mul!(view(C, i:d:size(C, 1), :), Ai, view(B, i:d:size(B, 1), :))
+        _matmul!(view(C, i:d:size(C, 1), :), Ai, view(B, i:d:size(B, 1), :))
     end
     return C
 end
 mul!(C::AbstractMatrix, A::BlocksOfDiagonals, B::AbstractMatrix) =
     _blockwise_mul!(C, blocks(A), B)
-# Entry by entry within the blocks, since `mul!` on the strided views of the blocks allocates
-function mul!(
-    C::AbstractMatrix,
-    A::Adjoint{<:Number,<:BlocksOfDiagonals},
-    B::AbstractMatrix,
-)
-    d = nblocks(parent(A))
-    @inbounds for j in axes(C, 2), (i, Ai) in enumerate(blocks(parent(A))), k in axes(Ai, 2)
-        s = zero(eltype(C))
-        for l in axes(Ai, 1)
-            s += Ai[l, k]' * B[(l-1)*d+i, j]
-        end
-        C[(k-1)*d+i, j] = s
-    end
-    return C
-end
+mul!(C::AbstractMatrix, A::Adjoint{<:Number,<:BlocksOfDiagonals}, B::AbstractMatrix) =
+    _blockwise_mul!(C, Iterators.map(adjoint, blocks(parent(A))), B)
 
 diag!(v::AbstractVector, M::BlocksOfDiagonals) = begin
     @assert length(v) == nblocks(M)
