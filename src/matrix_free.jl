@@ -11,41 +11,46 @@ const MAX_BLOCK_GMRES_ITERATIONS = 200
 """
     throw_if_unsupported(::MatrixFreeJacobian, alg, f)
 
-Throw an `ArgumentError` for what the `MatfreeEK1` does not support: second-order ODEs,
-mass matrices, observation noise, multivariate diffusion models, an ODE function without
-`jvp` or `vjp`, and fewer probes than derivatives in the state.
+Throw an `ArgumentError` if the `MatfreeEK1` does not support the settings of `alg` or the
+ODE function `f`. It does not support second-order ODEs, mass matrices, observation noise or
+multivariate diffusion models. It needs `jvp` and `vjp` in the ODE function, and at least as
+many probes as there are derivatives in the state.
 """
 function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f)
-    (; diffusionmodel, pn_observation_noise, prior) = alg
-    unsupported = String[]
-    f isa DynamicalODEFunction && push!(unsupported, "second-order ODEs")
-    f.mass_matrix === I || push!(unsupported, "mass matrices")
-    isnothing(pn_observation_noise) || push!(unsupported, "`pn_observation_noise`")
-    diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
-        push!(unsupported, "`diffusionmodel = $(repr(diffusionmodel))`")
-    isempty(unsupported) || throw(
-        ArgumentError(
-            "The `MatfreeEK1` does not support $(join(unsupported, " or ")) yet."),
-    )
-    missing_products = [string("`", name, "`") for name in (:jvp, :vjp)
-                                if isnothing(getproperty(f, name))]
-    isempty(missing_products) || throw(
-        ArgumentError(
-            "The `MatfreeEK1` needs the Jacobian-vector product `jvp(Jv, v, u, p, t)` " *
-            "and the vector-Jacobian product `vjp(Jᵀv, v, u, p, t)` of the ODE function, " *
-            "but $(join(missing_products, " and ")) is missing. Pass them as " *
-            "`ODEFunction(f; jvp, vjp)`."),
-    )
-    q = num_derivatives(prior)
-    m = something(linearization.nprobes, 2(q + 1))
-    m >= q + 1 || throw(
-        ArgumentError(
-            "`nprobes` must be at least the number of derivatives in the " *
-            "state, $(q + 1), but it is $m.",
-        ),
-    )
+    unsupported(what) = ArgumentError("The `MatfreeEK1` does not support $what.")
+    if f isa DynamicalODEFunction
+        throw(unsupported("second-order ODEs"))
+    elseif f.mass_matrix !== I
+        throw(unsupported("mass matrices"))
+    elseif !isnothing(alg.pn_observation_noise)
+        throw(unsupported("observation noise"))
+    elseif !(alg.diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion})
+        throw(unsupported("multivariate diffusion models"))
+    elseif isnothing(f.jvp) || isnothing(f.vjp)
+        throw(
+            ArgumentError(
+                "The `MatfreeEK1` needs the Jacobian-vector product " *
+                "`jvp(Jv, v, u, p, t)` and the vector-Jacobian product " *
+                "`vjp(Jᵀv, v, u, p, t)` of the ODE function. Pass them as " *
+                "`ODEFunction(f; jvp, vjp)`."),
+        )
+    end
+    q = num_derivatives(alg.prior)
+    m = number_of_probes(linearization, q)
+    if m < q + 1
+        throw(
+            ArgumentError(
+                "`nprobes` must be at least the number of derivatives in the state, " *
+                "$(q + 1), but it is $m."),
+        )
+    end
     return nothing
 end
+
+# The number of probes for the posterior covariance. By default, it is twice the number of
+# derivatives in the state.
+number_of_probes(linearization::MatrixFreeJacobian, q) =
+    isnothing(linearization.nprobes) ? 2(q + 1) : linearization.nprobes
 
 function make_linearization_cache(
     linearization::MatrixFreeJacobian, C::CovarianceStructure{T}, u, f,
@@ -53,7 +58,7 @@ function make_linearization_cache(
     @assert C isa BlockDiagonalCovariance
     d, q = C.d, C.q
     D = d * (q + 1)
-    m = something(linearization.nprobes, 2(q + 1))
+    m = number_of_probes(linearization, q)
     vec() = zeros(T, d)
     observed_covariance() =
         (; ΣEᵀ=(zeros(T, D), zeros(T, D)), diagonal=vec())
