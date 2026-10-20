@@ -2,7 +2,7 @@
 
 This file provides guidance to coding agents working with code in this repository.
 
-ProbNumDiffEq.jl provides probabilistic numerical ODE solvers ("ODE filters": `EK0`, `EK1`, `DiagonalEK1`; `ExpEK`/`RosenbrockExpEK` are constructors for `EK0`/`EK1` with an `IOUP` prior) for the SciML/DifferentialEquations.jl ecosystem.
+ProbNumDiffEq.jl provides probabilistic numerical ODE solvers ("ODE filters": `EK0`, `EK1`, `DiagonalEK1`, `MatfreeEK1`; `ExpEK`/`RosenbrockExpEK` are constructors for `EK0`/`EK1` with an `IOUP` prior) for the SciML/DifferentialEquations.jl ecosystem.
 They solve ODEs by Gaussian filtering and smoothing, so they return a posterior distribution instead of only a point estimate.
 
 ## Commands
@@ -38,11 +38,14 @@ CI also runs doctests: `julia --project=docs -e 'using Documenter: doctest; usin
 
 ## Architecture
 
-All solvers are one type, `ODEFilter <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm` (`src/algorithms.jl`); `EK0`, `EK1` and `DiagonalEK1` are functions that return it and differ only in its `linearization` (`ZeroJacobian`, `FullJacobian`, `DiagonalJacobian`).
+All solvers are one type, `ODEFilter <: OrdinaryDiffEqCore.OrdinaryDiffEqAdaptiveAlgorithm` (`src/algorithms.jl`); `EK0`, `EK1`, `DiagonalEK1` and `MatfreeEK1` are functions that return it and differ only in its `linearization` (`ZeroJacobian`, `FullJacobian`, `DiagonalJacobian`, `MatrixFreeJacobian`).
 Code that depends on the solver dispatches on the field, not on the solver name.
 The linearization builds the ODE's observation in each step with `linearize_ode_observation!` (`src/linearization.jl`), into buffers it allocates once per solve with `make_linearization_cache` and that are stored in `cache.linearization_cache`.
 A new linearization is a subtype of `AbstractLinearization` with these two methods and `needs_jacobian`; `perform_step!` needs no change.
-`linearize_ode_observation!` takes the predicted `Gaussian`; Taylor linearizations, the subtypes of `AbstractTaylorLinearization` such as the three existing ones, linearize at its mean and implement the method for a point instead.
+It can also replace the update of the step with `update!(linearization, x_filt, x_pred, obs, integ)`, and reject unsupported settings at `init` with `throw_if_unsupported`.
+`linearize_ode_observation!` takes the predicted `Gaussian`; Taylor linearizations, the subtypes of `AbstractTaylorLinearization` such as the four existing ones, linearize at its mean and implement the method for a point instead.
+`MatrixFreeJacobian` (`src/matrix_free.jl`) accesses the Jacobian only through `f.jvp` and `f.vjp`: its `H` is an operator, its updates solve with Krylov methods, and its posterior covariance is the block-diagonal part, estimated from samples.
+Its linear solves throw `LinearSolveFailure` when they fail, and `perform_step!` catches it to reject the step.
 `Iterated(L)` wraps a Taylor linearization to linearize at the posterior instead: its `update!(linearization, x_filt, x_pred, obs, integ)` repeats the linearization and the mean update until the mean converges (`iterated_update_mean!`), then updates the covariance.
 The solvers reuse OrdinaryDiffEq's integrator loop, step-size control and Jacobian machinery by overloading its hooks; `docs/src/implementation.md` maps each hook to its file.
 
@@ -75,12 +78,12 @@ Keep both branches working when editing them.
 
 The same filter code runs on three matrix representations.
 `choose_covariance_structure` in `src/algorithms.jl` picks one in `alg_cache`: it lists, for each structure, what it requires of the inputs (linearization, prior, diffusion model, `pn_observation_noise`, mass matrix), and uses the first structure whose requirements are all met, or the user's `covariance_factorization` if its requirements are met.
-Dense covariances are chosen automatically only for the `EK1`: the `EK0` and the `DiagonalEK1` throw instead, unless asked with `covariance_factorization=DenseCovariance`.
+Dense covariances are chosen automatically only for the `EK1`: the `EK0` and the `DiagonalEK1` throw instead, unless asked with `covariance_factorization=DenseCovariance`, and the `MatfreeEK1` never uses them.
 
 | `CovarianceStructure` | Matrix type | Used for, by default |
 |---|---|---|
 | `IsometricKroneckerCovariance` | `IsometricKroneckerProduct` (`B ⊗ I_d`, `src/kronecker.jl`) | `EK0` with `IWP` prior and scalar diffusion |
-| `BlockDiagonalCovariance` | `BlocksOfDiagonals` (`src/blocksofdiagonals.jl`) | `DiagonalEK1`, or `EK0` with multivariate diffusion |
+| `BlockDiagonalCovariance` | `BlocksOfDiagonals` (`src/blocksofdiagonals.jl`) | `DiagonalEK1`, `MatfreeEK1`, or `EK0` with multivariate diffusion |
 | `DenseCovariance` | `Matrix` | `EK1`; `EK0` and `DiagonalEK1` only on request, as in `ExpEK` |
 
 All cache matrices are created through `factorized_similar` / `factorized_zeros` / `to_factorized_matrix` (`src/covariance_structure.jl`), so their types follow the chosen structure.

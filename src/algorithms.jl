@@ -337,7 +337,7 @@ RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
 
 """
-    MatfreeEK1(; order=3, nprobes=2(order+1), diagonal_jacobian=nothing,
+    MatfreeEK1(; order=3, nprobes=2(num_derivatives(prior)+1), diagonal_jacobian=nothing,
                  prior=IWP(order), diffusionmodel=DynamicDiffusion(), smooth=true,
                  initialization=TaylorModeInit(num_derivatives(prior)), kwargs...)
 
@@ -364,9 +364,9 @@ and priors other than [`IWP`](@ref). Of the multivariate diffusions, only the
 [`FixedMVDiffusion`](@ref) with `calibrate=false` is supported. Mass matrices and
 second-order ODEs are not supported yet.
 
-The probes are drawn from the keyword `rng` of `solve` (OrdinaryDiffEq 7 and later), by
-default `Random.default_rng()`. `sol.pnstats` counts the products and the linear solves.
-Its log-likelihood is `NaN`.
+The probes are drawn from the keyword `rng` of `solve` if the installed OrdinaryDiffEq
+supports it, and otherwise from `Random.default_rng()`. `sol.pnstats` counts the products
+and the linear solves. Its log-likelihood is `NaN`.
 
 # Examples
 ```julia-repl

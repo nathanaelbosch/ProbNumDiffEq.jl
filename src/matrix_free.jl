@@ -129,7 +129,7 @@ end
 const MatrixFreeLinearizedObservation =
     LinearizedObservation{<:Any,<:Any,<:MatrixFreeObservationOperator}
 
-# The `rng` that `solve` takes on OrdinaryDiffEq 7. Older versions have none.
+# The `rng` that `solve` takes in recent versions of OrdinaryDiffEq. Older ones have none.
 @static if isdefined(SciMLBase, :has_rng)
     integrator_rng(integ) =
         SciMLBase.has_rng(integ) ? SciMLBase.get_rng(integ) : Random.default_rng()
