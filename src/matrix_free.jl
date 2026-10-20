@@ -95,16 +95,20 @@ function mul!(Y::AbstractMatrix, A::AbstractMatrixFreeOperator, X::AbstractMatri
 end
 
 """
-    MatrixFreeObservationOperator(u, integ, cache)
+    MatrixFreeObservationOperator(integ, cache)
 
-The observation matrix ``H = E_1 - J E_0`` as an operator, with the Jacobian ``J`` of the
-ODE at `u`: products with ``J`` and ``J^T`` call `f.jvp` and `f.vjp` of the integrator
-`integ`. Its random number generator draws the probes, its `reltol` sets the tolerance of
-the linear solves, and its statistics count the products and the solves. `cache` holds the
-buffers of the linearization.
+The observation matrix ``H = E_1 - J E_0`` of the ODE, as an operator. ``E_0`` and ``E_1``
+select the solution and its first derivative from the state. ``J`` is the Jacobian of the
+ODE at the solution `cache.u`, and it is never formed. So ``H x = E_1 x - J E_0 x`` costs
+one Jacobian-vector product, from `jvp!`. The cross-covariance ``Σ H^T`` needs products
+with ``J^T`` instead, from `vjp!`.
+
+The integrator `integ` provides the ODE function, its parameters and the time. It also
+provides the random number generator for the probes, the tolerance of the linear solves,
+and the statistics that count the products and the solves. `cache` holds the buffers of
+the linearization.
 """
-struct MatrixFreeObservationOperator{U,I,C} <: AbstractMatrixFreeOperator
-    u::U
+struct MatrixFreeObservationOperator{I,C} <: AbstractMatrixFreeOperator
     integ::I
     cache::C
 end
@@ -112,7 +116,7 @@ end
 const MatrixFreeLinearizedObservation =
     LinearizedObservation{<:Any,<:Any,<:MatrixFreeObservationOperator}
 
-# The `rng` that `solve` takes on OrdinaryDiffEq 7; older versions have none
+# The `rng` that `solve` takes on OrdinaryDiffEq 7. Older versions have none.
 @static if isdefined(SciMLBase, :has_rng)
     integrator_rng(integ) =
         SciMLBase.has_rng(integ) ? SciMLBase.get_rng(integ) : Random.default_rng()
@@ -129,44 +133,50 @@ function linearize_ode_observation!(
     measurement_model(c.r, m, p, t)
     integ.stats.nf += 1
     copy!(c.u, view(m, 1:d))
-    isnothing(c.diagonal_jacobian) ||
+    if !isnothing(c.diagonal_jacobian)
         linearization.diagonal_jacobian(c.diagonal_jacobian, c.u, p, t)
-    return LinearizedObservation(m, c.r, MatrixFreeObservationOperator(c.u, integ, c), R)
+    end
+    return LinearizedObservation(m, c.r, MatrixFreeObservationOperator(integ, c), R)
 end
 
 """
     jvp!(Jv, H::MatrixFreeObservationOperator, v)
 
-``J v`` for the Jacobian ``J`` of the ODE in ``H = E_1 - J E_0``, from `f.jvp`. The products
-with ``H`` and with ``H Σ H^T`` use it, and so does the probe estimate of the diagonal of
-``H Σ H^T``. `v` is copied into a buffer first, since `f.jvp` may require a `Vector`.
+Multiply `v` with the Jacobian ``J`` of the ODE at the point of `H`, and write the result
+into `Jv`. This calls the `jvp` of the ODE function. The products with ``H`` and with
+``H Σ H^T`` use it, and so does the estimate of the diagonal of ``H Σ H^T`` from probes.
+If `v` is not a `Vector`, it is first copied into one, because `f.jvp` may require it.
 """
-function jvp!(out, H::MatrixFreeObservationOperator, v)
+function jvp!(Jv, H::MatrixFreeObservationOperator, v)
     (; f, p, t, dt) = H.integ
-    f.jvp(out, copy!(H.cache.v, v), H.u, p, t + dt)
+    v = v isa Vector ? v : copy!(H.cache.v, v)
+    f.jvp(Jv, v, H.cache.u, p, t + dt)
     H.integ.sol.pnstats.njvp += 1
-    return out
+    return Jv
 end
 
 """
     vjp!(Jᵀw, H::MatrixFreeObservationOperator, w)
 
-``J^T w`` for the Jacobian ``J`` of the ODE in ``H = E_1 - J E_0``, from `f.vjp`. The
-products with ``Σ H^T`` and with ``H Σ H^T`` use it. `w` is copied into a buffer first,
-since `f.vjp` may require a `Vector`.
+Multiply `w` with the transpose ``J^T`` of the Jacobian of the ODE at the point of `H`, and
+write the result into `Jᵀw`. This calls the `vjp` of the ODE function. The products with
+``Σ H^T`` and with ``H Σ H^T`` use it. If `w` is not a `Vector`, it is first copied into
+one, because `f.vjp` may require it.
 """
-function vjp!(out, H::MatrixFreeObservationOperator, w)
+function vjp!(Jᵀw, H::MatrixFreeObservationOperator, w)
     (; f, p, t, dt) = H.integ
-    f.vjp(out, copy!(H.cache.v, w), H.u, p, t + dt)
+    w = w isa Vector ? w : copy!(H.cache.v, w)
+    f.vjp(Jᵀw, w, H.cache.u, p, t + dt)
     H.integ.sol.pnstats.nvjp += 1
-    return out
+    return Jᵀw
 end
 
 # H x = E₁ x - J E₀ x
 function mul!(y::AbstractVector, H::MatrixFreeObservationOperator, x::AbstractVector)
     d = length(y)
-    @views jvp!(y, H, x[1:d])
-    @views y .= x[(d+1):2d] .- y
+    E₀x, E₁x = view(x, 1:d), view(x, (d+1):2d)
+    JE₀x = jvp!(H.cache.Jv, H, E₀x)
+    @.. y = E₁x - JE₀x
     return y
 end
 
@@ -228,9 +238,9 @@ struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
         return new{typeof(C),typeof(R),typeof(buffers.diagonal)}(C, R, buffers.diagonal)
     end
 end
-size(S::MatrixFreeObservedCovariance) = (length(S.C.H.u), length(S.C.H.u))
-size(S::MatrixFreeObservedCovariance, i::Integer) = length(S.C.H.u)
-eltype(S::MatrixFreeObservedCovariance) = eltype(S.C.H.u)
+size(S::MatrixFreeObservedCovariance) = (length(S.diagonal), length(S.diagonal))
+size(S::MatrixFreeObservedCovariance, i::Integer) = length(S.diagonal)
+eltype(S::MatrixFreeObservedCovariance) = eltype(S.diagonal)
 
 # H Σ Hᵀ w = E₁ Σ Hᵀ w - J E₀ Σ Hᵀ w, forming only the derivatives 0 and 1 of Σ Hᵀ w
 function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVector)
@@ -327,7 +337,7 @@ end
 
 # The tolerance of the linear solves: the solver's `reltol`, capped at 1e-2
 function krylov_rtol(H::MatrixFreeObservationOperator)
-    T = eltype(H.u)
+    T = eltype(H.cache.u)
     return min(T(1e-2), T(minimum(H.integ.opts.reltol)))
 end
 
