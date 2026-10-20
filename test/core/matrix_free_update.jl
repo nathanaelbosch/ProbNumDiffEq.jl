@@ -78,6 +78,14 @@ end
     @test PNDE.krylov_solve!(S, B, :covariance) ≈ S_dense \ B
 end
 
+@testset "A linear solve with values that are not finite throws" begin
+    H = observation_operator()
+    S = observed_covariance(H, R)
+    @test_throws PNDE.LinearSolveFailure PNDE.krylov_solve!(S, fill(NaN, d), :mean)
+    S.preconditioner[1] = Inf
+    @test_throws PNDE.LinearSolveFailure PNDE.krylov_solve!(S, randn(rng, d), :mean)
+end
+
 @testset "A linear solve that does not converge throws" begin
     H = observation_operator()
     @test_throws PNDE.LinearSolveFailure PNDE.krylov_solve!(

@@ -351,12 +351,13 @@ Solve ``S x = b`` with a Krylov method, and return ``x``. `part` is `:mean`, `:c
 or `:calibration`. It sets the tolerance, and the solve counts in its statistics. The
 Jacobi preconditioner is the one of `S`. For a vector `b`, this uses CG. For a matrix `b`,
 it uses block-GMRES on all columns at once, or CG on each column if there are more than
-half as many columns as rows. If the solve does not converge, it throws a
-`LinearSolveFailure`.
+half as many columns as rows. If `b` or the preconditioner is not finite, or if the solve
+does not converge, it throws a `LinearSolveFailure`.
 """
 function krylov_solve!(
     S::MatrixFreeObservedCovariance, b::AbstractVector, part; itmax=MAX_CG_ITERATIONS,
 )
+    throw_if_not_finite(S, b)
     H = S.C.H
     workspace = H.cache.cg
     rtol = krylov_rtol(H, part)
@@ -375,6 +376,7 @@ function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, part)
         end
         return c.W
     end
+    throw_if_not_finite(S, B)
     rtol = krylov_rtol(H, part)
     # Preconditioned on both sides, so that the residual is weighted as in the
     # preconditioned CG
@@ -385,6 +387,15 @@ function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, part)
     count_solve!(H, part, Krylov.iteration_count(c.block_gmres))
     Krylov.issolved(c.block_gmres) || throw(LinearSolveFailure())
     return Krylov.solution(c.block_gmres)
+end
+
+# Krylov.jl throws its own errors for NaN, which would end the solve instead of rejecting the
+# step, and an infinite preconditioner makes it skip the solve
+function throw_if_not_finite(S::MatrixFreeObservedCovariance, b)
+    if !(all(isfinite, b) && all(isfinite, S.preconditioner))
+        throw(LinearSolveFailure())
+    end
+    return nothing
 end
 
 # Count a linear solve in the statistics of `part`
