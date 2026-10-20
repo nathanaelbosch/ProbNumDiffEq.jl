@@ -430,38 +430,55 @@ end
 """
     update_cov!(x_out, x_pred, obs::MatrixFreeLinearizedObservation, K, B; cache)
 
-The covariance of the update on a matrix-free observation, block-diagonal. Probes
-``g_j \\sim \\mathcal{N}(0, Σ)`` give the samples
-``(I - K H) g_j \\sim \\mathcal{N}(0, Σ^F)``, with ``K H g_j = Σ H^T S^{-1} H g_j`` and the
-systems for all ``j`` solved jointly. The square root of ``Σ^F`` is that of the
-block-diagonal part of their sample covariance.
+The block-diagonal part of the posterior covariance, estimated from samples. This is an
+approximation: the exact posterior covariance is not block-diagonal, since ``J`` couples
+the blocks. The samples are probes ``g \\sim \\mathcal{N}(0, Σ)``, conditioned on the
+observation as ``(I - K H) g \\sim \\mathcal{N}(0, Σ^F)``.
 """
 function update_cov!(
-    x_out, x_pred, obs::MatrixFreeLinearizedObservation, K::MatrixFreeGain, B; cache,
+    x_out::Gaussian{<:Any,<:BlocksOfDiagonalsPSD},
+    x_pred::Gaussian{<:Any,<:BlocksOfDiagonalsPSD},
+    obs::MatrixFreeLinearizedObservation,
+    K::MatrixFreeGain,
+    B;
+    cache,
 )
     H = obs.H
     c = H.cache
-    (; G, HG, gtmp) = c
-    sample_probes!(G, c.Ξ, x_pred.Σ.R, integrator_rng(H.integ))
+    G = sample_probes!(c.G, c.Ξ, x_pred.Σ.R, integrator_rng(H.integ))
+    condition_probes!(G, H, K)
+    estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Y, c.M))
+    return x_out
+end
+
+"""
+    condition_probes!(G, H, K::MatrixFreeGain)
+
+Condition the probes ``g \\sim \\mathcal{N}(0, Σ)``, the columns of `G`, on the observation:
+``g - K H g`` with ``K H g = Σ H^T S^{-1} H g`` are samples of ``\\mathcal{N}(0, Σ^F)``. The
+systems for all probes are solved jointly.
+"""
+function condition_probes!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
+    (; HG, gtmp) = H.cache
     mul!(HG, H, G)
     W = krylov_solve!(K.S, HG, K.P, krylov_rtol(H), :covariance)
     for j in axes(G, 2)
         mul!(gtmp, K.C, view(W, :, j))
         view(G, :, j) .-= gtmp
     end
-    block_diagonal_sample_covariance!(x_out.Σ.R, G, (c.Y, c.M))
-    return x_out
+    return G
 end
 
 """
-    block_diagonal_sample_covariance!(R::BlocksOfDiagonals, G, (Y, M))
+    estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
 
-The square root `R` of the block-diagonal part of the sample covariance
-``\\frac{1}{m} G G^T`` of the `m` columns of `G`, with the buffers `Y` and `M`. Each block of
-`R` is computed from the rows of `G` that belong to it, `i:d:D` in the derivative-major
-order of the state; the covariances between the blocks are dropped.
+Estimate the block-diagonal part of a covariance from samples, the `m` columns of `G`: its
+square root `R` is that of the sample covariance ``\\frac{1}{m} G G^T`` without the
+covariances between the blocks. Each block of `R` is computed from the rows of `G` that
+belong to it, `i:d:D` in the derivative-major order of the state, with the buffers `Y` and
+`M`.
 """
-function block_diagonal_sample_covariance!(R::BlocksOfDiagonals, G, (Y, M))
+function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
     d, m = nblocks(R), size(G, 2)
     for (i, Ri) in enumerate(blocks(R))
         rmul!(transpose!(Y, view(G, i:d:size(G, 1), :)), 1 / sqrt(m))
