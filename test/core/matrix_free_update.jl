@@ -31,8 +31,8 @@ function observation_operator(; reltol=1e-12, kwargs...)
     m = [u; zeros(D - d)]
     return PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m).H
 end
-observed_covariance(H, R; estimate_diagonal=false) =
-    PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHᵀ; estimate_diagonal)
+observed_covariance(H, R; needs_diagonal=false) =
+    PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHᵀ; needs_diagonal)
 
 @testset "Products with H, Σ Hᵀ and H Σ Hᵀ" begin
     H = observation_operator()
@@ -49,10 +49,9 @@ end
 @testset "Diagonals for the Jacobi preconditioners" begin
     H = observation_operator(; diagonal_jacobian=diagonal_jacobian!)
     H_diagonal = E1 - Diagonal(J) * E0
-    @test PNDE.approximate_diagonal!(zeros(d), observed_covariance(H, R)) ≈
-          diag(H_diagonal * Σ * H_diagonal')
-    @test PNDE.estimate_diagonal!(zeros(d), H, R, 20_000) ≈ diag(S_dense) rtol =
-        0.05
+    S = observed_covariance(H, R)
+    @test S.preconditioner ≈ diag(H_diagonal * Σ * H_diagonal')
+    @test PNDE.estimate_diagonal!(zeros(d), S, 20_000) ≈ diag(S_dense) rtol = 0.05
 end
 
 @testset "Mean update, linearized at $point" for point in ("the mean", "another point")
@@ -76,14 +75,13 @@ end
     @test isnothing(c.block_gmres) == (how == "by CG")
     B = randn!(rng, c.HG)
     S = observed_covariance(H, R)
-    @test PNDE.krylov_solve!(S, B, diag(S_dense), PNDE.krylov_rtol(H), :covariance) ≈
-          S_dense \ B
+    @test PNDE.krylov_solve!(S, B, :covariance) ≈ S_dense \ B
 end
 
 @testset "A linear solve that does not converge throws" begin
     H = observation_operator()
     @test_throws PNDE.LinearSolveFailure PNDE.krylov_solve!(
-        observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12, :mean; itmax=1)
+        observed_covariance(H, R), randn(rng, d), :mean; itmax=1)
 end
 
 @testset "The residual survives the covariance update" begin
@@ -116,7 +114,7 @@ end
 @testset "Calibration" begin
     H = observation_operator()
     RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
-    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHᵀ; estimate_diagonal=true)
+    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHᵀ; needs_diagonal=true)
     HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
     z = randn(rng, d)
     # CG approaches zᵀ S⁻¹ z from below; its tolerance for the calibration is 0.1

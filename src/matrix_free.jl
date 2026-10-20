@@ -53,22 +53,21 @@ number_of_probes(linearization::MatrixFreeJacobian, q) =
     isnothing(linearization.nprobes) ? 2(q + 1) : linearization.nprobes
 
 function make_linearization_cache(
-    linearization::MatrixFreeJacobian, C::CovarianceStructure{T}, u, f,
+    linearization::MatrixFreeJacobian, C::BlockDiagonalCovariance{T}, u, f,
 ) where {T}
-    @assert C isa BlockDiagonalCovariance
     d, q = C.d, C.q
     D = d * (q + 1)
     m = number_of_probes(linearization, q)
-    vec() = zeros(T, d)
+    dvec() = zeros(T, d)
     observed_covariance() =
-        (; ΣEᵀ=(zeros(T, D), zeros(T, D)), diagonal=vec())
+        (; ΣEᵀ=(zeros(T, D), zeros(T, D)), preconditioner=dvec(), diagonal=dvec())
+    # Block-GMRES needs at least twice as many rows as right-hand sides
     has_block_gmres = 2m <= d
     return (;
-        r=vec(), u=vec(),
-        diagonal_jacobian=isnothing(linearization.diagonal_jacobian) ? nothing : vec(),
-        v=vec(), Jv=vec(), a=vec(), e0=vec(), z=vec(),
-        HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(),
-        P=vec(), sqrtP=vec(), PQ=vec(),
+        r=dvec(), u=dvec(),
+        diagonal_jacobian=isnothing(linearization.diagonal_jacobian) ? nothing : dvec(),
+        v=dvec(), Jv=dvec(), a=dvec(), e0=dvec(), z=dvec(),
+        HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(), sqrtP=dvec(),
         ξ=zeros(T, D), Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
         Y=zeros(T, m, q + 1), M=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}),
@@ -217,27 +216,48 @@ function mul!(out::AbstractVector, C::MatrixFreeCrossCovariance, w::AbstractVect
 end
 
 """
-    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers; estimate_diagonal)
+    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers; needs_diagonal)
 
-``H Σ H^T`` as an operator for Krylov.jl, for the block-diagonal ``Σ = R^T R``: the
-covariance ``Σ`` seen through ``H``, as ``S`` in the update, or ``H Q(h) H^T`` from
-[`observed_process_noise!`](@ref). Its field `C` is the cross-covariance ``Σ H^T``. With
-`estimate_diagonal`, its diagonal is estimated from probes when it is built, into the field
-`diagonal`, which `diag!` and `approximate_diagonal!` read; without, `diagonal` holds no
-valid values.
+The covariance ``H Σ H^T`` of the observation, as an operator for Krylov.jl, for the
+block-diagonal covariance ``Σ = R^T R``. The update solves with it for the predicted
+covariance ``Σ``, and the calibration for ``Σ = Q(h)``.
+
+The linear solves need a Jacobi preconditioner, so the constructor computes one, in
+`preconditioner`. It is an approximation of the diagonal. With a diagonal Jacobian, it is
+the diagonal for ``J`` replaced by its diagonal, which costs no product. Without, it is
+estimated from probes. The error estimate needs the diagonal from probes in any case. With
+`needs_diagonal`, the constructor estimates it also then, into `diagonal`, which `diag!`
+returns.
 """
 struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
     C::CT
     R::RT
+    preconditioner::V
     diagonal::V
     function MatrixFreeObservedCovariance(
-        H, R::BlocksOfDiagonals, buffers; estimate_diagonal::Bool,
+        H, R::BlocksOfDiagonals, buffers; needs_diagonal::Bool,
     )
         C = MatrixFreeCrossCovariance(H, R, buffers.ΣEᵀ)
-        estimate_diagonal && estimate_diagonal!(buffers.diagonal, H, R, DIAGONAL_PROBES)
-        return new{typeof(C),typeof(R),typeof(buffers.diagonal)}(C, R, buffers.diagonal)
+        (; preconditioner, diagonal) = buffers
+        S = new{typeof(C),typeof(R),typeof(diagonal)}(C, R, preconditioner, diagonal)
+        J_D = H.cache.diagonal_jacobian
+        if needs_diagonal || isnothing(J_D)
+            estimate_diagonal!(diagonal, S, DIAGONAL_PROBES)
+        end
+        if isnothing(J_D)
+            copy!(preconditioner, diagonal)
+        else
+            diagonal_with_diagonal_jacobian!(preconditioner, S, J_D)
+        end
+        # A Jacobi preconditioner needs positive entries
+        T = eltype(preconditioner)
+        lower = max(floatmin(T), eps(T) * maximum(preconditioner))
+        @.. preconditioner = max(preconditioner, lower)
+        return S
     end
 end
+
+# Krylov.jl reads the size and the element type of the operators it solves with
 size(S::MatrixFreeObservedCovariance) = (length(S.diagonal), length(S.diagonal))
 size(S::MatrixFreeObservedCovariance, i::Integer) = length(S.diagonal)
 eltype(S::MatrixFreeObservedCovariance) = eltype(S.diagonal)
@@ -284,98 +304,99 @@ function sample_probes!(G, Ξ, R::BlocksOfDiagonals, rng)
 end
 
 """
-    estimate_diagonal!(out, H, R::BlocksOfDiagonals, n)
+    estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
 
-The diagonal of ``H R^T R H^T``, estimated as the mean of ``(H g)^2`` over `n` probes
-``g = R^T ξ``. Only ``E_0 g`` and ``E_1 g`` are formed, since ``H`` reads nothing else.
+Estimate the diagonal of ``S = H Σ H^T`` from `n` probes, with an estimator of the
+Hutchinson type. With ``B = H R^T``, it is ``S = B B^T``, so the diagonal of ``S`` is the
+expectation of ``(B ξ)^2`` for probes ``ξ``. Each probe costs one Jacobian-vector product.
+Of the sample ``g = R^T ξ``, only ``E_0 g`` and ``E_1 g`` are formed, because ``H`` reads
+nothing else.
 """
-function estimate_diagonal!(out, H::MatrixFreeObservationOperator, R::BlocksOfDiagonals, n)
-    (; ξ, e0, a, Jv) = H.cache
+function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
+    H, R = S.C.H, S.R
+    (; ξ, Jv) = H.cache
+    E₀g, E₁g = H.cache.e0, H.cache.a
     rng = integrator_rng(H.integ)
     d = length(out)
     fill!(out, 0)
     for _ in 1:n
         draw_standard_probes!(ξ, rng)
         @inbounds for (i, Ri) in enumerate(blocks(R))
-            g0, g1 = zero(eltype(out)), zero(eltype(out))
+            g₀, g₁ = zero(eltype(out)), zero(eltype(out))
             for l in axes(Ri, 1)
-                g0 += Ri[l, 1] * ξ[(l-1)*d+i]
-                g1 += Ri[l, 2] * ξ[(l-1)*d+i]
+                g₀ += Ri[l, 1] * ξ[(l-1)*d+i]
+                g₁ += Ri[l, 2] * ξ[(l-1)*d+i]
             end
-            e0[i], a[i] = g0, g1
+            E₀g[i], E₁g[i] = g₀, g₁
         end
-        jvp!(Jv, H, e0)
-        @.. out = out + (a - Jv)^2
+        # (H g)² = (E₁ g - J E₀ g)²
+        JE₀g = jvp!(Jv, H, E₀g)
+        @.. out = out + (E₁g - JE₀g)^2
     end
     @.. out = out / n
     return out
 end
 
 """
-    approximate_diagonal!(P, S::MatrixFreeObservedCovariance)
+    diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, J_D)
 
-An approximation `P` of the diagonal of ``S = H Σ H^T``, for its Jacobi preconditioner: the
-probe estimate from when `S` was built, or, with the diagonal ``J_D`` of the Jacobian, the
-diagonal of ``H_D Σ H_D^T`` with ``H_D = E_1 - J_D E_0``. Entries below `eps` times the
-largest one are raised to it, so that all are positive.
+The diagonal of ``H_D Σ H_D^T``, with ``H_D = E_1 - J_D E_0`` for the diagonal ``J_D`` of
+the Jacobian. Row ``i`` of ``H_D`` only reads ``u_i`` and ``u_i'``, so its entry only needs
+the ``i``-th block of the square root ``R`` of ``Σ``.
 """
-function approximate_diagonal!(P, S::MatrixFreeObservedCovariance)
-    J_D = S.C.H.cache.diagonal_jacobian
-    if isnothing(J_D)
-        copy!(P, S.diagonal)
-    else
-        # (H_D Σ H_Dᵀ)ᵢᵢ = ‖√Σ H_Dᵀ eᵢ‖² = ‖r₁ - J_Dᵢ r₀‖², with the columns r₀ and r₁ of
-        # the i-th block of √Σ for uᵢ and uᵢ'
-        for (i, Ri) in enumerate(blocks(S.R))
-            P[i] = sum(l -> (Ri[l, 2] - J_D[i] * Ri[l, 1])^2, axes(Ri, 1))
-        end
+function diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, J_D)
+    for (i, Ri) in enumerate(blocks(S.R))
+        # (H_D Σ H_Dᵀ)ᵢᵢ = ‖R H_Dᵀ eᵢ‖² = ‖r₁ - J_Dᵢ r₀‖², with the columns r₀ and r₁ of Rᵢ
+        out[i] = sum(l -> (Ri[l, 2] - J_D[i] * Ri[l, 1])^2, axes(Ri, 1))
     end
-    lower = max(floatmin(eltype(P)), eps(eltype(P)) * maximum(P))
-    @.. P = max(P, lower)
-    return P
+    return out
 end
 
-# The tolerance of the linear solves: the solver's `reltol`, capped at 1e-2
-function krylov_rtol(H::MatrixFreeObservationOperator)
+# The relative tolerance of the linear solves. The calibration needs less accuracy than the
+# update, whose tolerance is the solver's `reltol`, but at most 1e-2.
+function krylov_rtol(H::MatrixFreeObservationOperator, part)
     T = eltype(H.cache.u)
+    part === :calibration && return T(CALIBRATION_RTOL)
     return min(T(1e-2), T(minimum(H.integ.opts.reltol)))
 end
 
 struct LinearSolveFailure <: Exception end
 
 """
-    krylov_solve!(S, b, P, rtol, part)
+    krylov_solve!(S::MatrixFreeObservedCovariance, b, part)
 
-``S^{-1} b`` to the relative tolerance `rtol`, with the Jacobi preconditioner
-`Diagonal(P)`: by CG for a vector `b`, and for the columns of a matrix `b` jointly by
-block-GMRES, or by CG one by one if there are more than half as many columns as rows. It
-counts in the statistics of `part`, `:mean`, `:covariance` or `:calibration`, and throws a
-`LinearSolveFailure` if it does not converge.
+Solve ``S x = b`` with a Krylov method, and return ``x``. `part` is `:mean`, `:covariance`
+or `:calibration`. It sets the tolerance, and the solve counts in its statistics. The
+Jacobi preconditioner is the one of `S`. For a vector `b`, this uses CG. For a matrix `b`,
+it uses block-GMRES on all columns at once, or CG on each column if there are more than
+half as many columns as rows. If the solve does not converge, it throws a
+`LinearSolveFailure`.
 """
 function krylov_solve!(
-    S::MatrixFreeObservedCovariance, b::AbstractVector, P, rtol, part;
-    itmax=MAX_CG_ITERATIONS,
+    S::MatrixFreeObservedCovariance, b::AbstractVector, part; itmax=MAX_CG_ITERATIONS,
 )
     H = S.C.H
     workspace = H.cache.cg
-    cg!(workspace, S, b; M=Diagonal(P), ldiv=true, atol=zero(rtol), rtol, itmax)
+    rtol = krylov_rtol(H, part)
+    M = Diagonal(S.preconditioner)
+    cg!(workspace, S, b; M, ldiv=true, atol=zero(rtol), rtol, itmax)
     count_solve!(H, part, Krylov.iteration_count(workspace))
     Krylov.issolved(workspace) || throw(LinearSolveFailure())
     return Krylov.solution(workspace)
 end
-function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, P, rtol, part)
+function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, part)
     H = S.C.H
     c = H.cache
     if isnothing(c.block_gmres)
-        # Block-GMRES needs at least twice as many rows as right-hand sides
         for j in axes(B, 2)
-            copy!(view(c.W, :, j), krylov_solve!(S, view(B, :, j), P, rtol, part))
+            copy!(view(c.W, :, j), krylov_solve!(S, view(B, :, j), part))
         end
         return c.W
     end
+    rtol = krylov_rtol(H, part)
     # Preconditioned on both sides, so that the residual is weighted as in the
     # preconditioned CG
-    @.. c.sqrtP = sqrt(P)
+    @.. c.sqrtP = sqrt(S.preconditioner)
     M = Diagonal(c.sqrtP)
     block_gmres!(c.block_gmres, S, B; M, N=M, ldiv=true, atol=zero(rtol), rtol,
         itmax=MAX_BLOCK_GMRES_ITERATIONS)
@@ -384,7 +405,7 @@ function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, P, rt
     return Krylov.solution(c.block_gmres)
 end
 
-# Count a linear solve for `part`, `:mean`, `:covariance` or `:calibration`
+# Count a linear solve in the statistics of `part`
 function count_solve!(H::MatrixFreeObservationOperator, part, niter)
     stats = H.integ.sol.pnstats
     H.integ.stats.nsolve += 1
@@ -395,6 +416,7 @@ function count_solve!(H::MatrixFreeObservationOperator, part, niter)
         stats.nsolve_covariance += 1
         stats.niter_covariance += niter
     else
+        @assert part === :calibration
         stats.nsolve_calibration += 1
         stats.niter_calibration += niter
     end
@@ -402,44 +424,40 @@ function count_solve!(H::MatrixFreeObservationOperator, part, niter)
 end
 
 """
-    MatrixFreeGain(C, S, P)
+    MatrixFreeGain(S)
 
-The Kalman gain ``K = Σ H^T S^{-1}``, as the cross-covariance `C` ``= Σ H^T`` and
-`S` ``= H Σ H^T``, with the diagonal `P` of the Jacobi preconditioner for `S`.
-`update_mean!` returns it for `update_cov!`.
+The Kalman gain ``K = Σ H^T S^{-1}``. `S` holds the cross-covariance ``Σ H^T`` and the
+Jacobi preconditioner for the solves with ``S``. `update_mean!` returns the gain for
+`update_cov!`.
 """
-struct MatrixFreeGain{CT,ST,PT}
-    C::CT
+struct MatrixFreeGain{ST}
     S::ST
-    P::PT
 end
 
 """
     update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
 
-The mean of the update on a matrix-free observation: ``S^{-1} z`` with ``S = H Σ H^T`` by
-CG with a Jacobi preconditioner, and ``μ^F = μ - Σ H^T S^{-1} z``. It returns the gain
-``K = Σ H^T S^{-1}`` as a `MatrixFreeGain`, and the log-likelihood `NaN`.
+The mean of the update on a matrix-free observation. It solves ``S w = z`` for
+``S = H Σ H^T`` by CG, and sets ``μ^F = μ - Σ H^T w``. It returns the gain
+``K = Σ H^T S^{-1}`` for `update_cov!`, and the log-likelihood as `NaN`.
 """
 function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
     (; m, H) = obs
     c = H.cache
-    S = MatrixFreeObservedCovariance(
-        H, x_pred.Σ.R, c.HΣHᵀ; estimate_diagonal=isnothing(c.diagonal_jacobian))
-    P = approximate_diagonal!(c.P, S)
+    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHᵀ; needs_diagonal=false)
     z = if m === x_pred.μ
         obs.r
     else
-        # r + H (μ - m), with m - μ in x_out.μ
+        # z = r + H (μ - m), with m - μ in x_out.μ
         Δ = x_out.μ .= m .- x_pred.μ
-        mul!(c.z, H, Δ)
-        @.. c.z = obs.r - c.z
+        HΔ = mul!(c.z, H, Δ)
+        @.. c.z = obs.r - HΔ
     end
-    w = krylov_solve!(S, z, P, krylov_rtol(H), :mean)
+    w = krylov_solve!(S, z, :mean)
     ztSinvz = dot(z, w)
     mul!(x_out.μ, S.C, w)
     @.. x_out.μ = x_pred.μ - x_out.μ
-    K = MatrixFreeGain(S.C, S, P)
+    K = MatrixFreeGain(S)
     return (; loglikelihood=oftype(ztSinvz, NaN), ztSinvz, S, z, K, B=nothing)
 end
 
@@ -477,10 +495,9 @@ systems for all probes are solved jointly.
 function condition_probes!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
     (; HG, gtmp) = H.cache
     mul!(HG, H, G)
-    W = krylov_solve!(K.S, HG, K.P, krylov_rtol(H), :covariance)
+    W = krylov_solve!(K.S, HG, :covariance)
     for j in axes(G, 2)
-        mul!(gtmp, K.C, view(W, :, j))
-        view(G, :, j) .-= gtmp
+        view(G, :, j) .-= mul!(gtmp, K.S.C, view(W, :, j))
     end
     return G
 end
@@ -508,20 +525,21 @@ function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
     return R
 end
 
-# The error estimate needs the diagonal of H Q(h) Hᵀ with adaptive steps, and so does the
-# preconditioner of the calibration without a diagonal Jacobian
+# The error estimate needs the diagonal of H Q(h) Hᵀ with adaptive steps
 function observed_process_noise!(
     cache::AbstractODEFilterCache, obs::MatrixFreeLinearizedObservation,
 )
-    H = obs.H
-    estimate_diagonal = H.integ.opts.adaptive || isnothing(H.cache.diagonal_jacobian)
-    return MatrixFreeObservedCovariance(H, cache.Qh.R, H.cache.HQHᵀ; estimate_diagonal)
+    H, adaptive = obs.H, obs.H.integ.opts.adaptive
+    return MatrixFreeObservedCovariance(
+        H,
+        cache.Qh.R,
+        H.cache.HQHᵀ;
+        needs_diagonal=adaptive,
+    )
 end
 
-# zᵀ (H Q(h) Hᵀ)⁻¹ z, for the calibration, by CG with a Jacobi preconditioner
-function invquad(z, S::MatrixFreeObservedCovariance; kwargs...)
-    P = approximate_diagonal!(S.C.H.cache.PQ, S)
-    return dot(z, krylov_solve!(S, z, P, eltype(S)(CALIBRATION_RTOL), :calibration))
-end
+# zᵀ (H Q(h) Hᵀ)⁻¹ z, for the calibration
+invquad(z, S::MatrixFreeObservedCovariance; kwargs...) =
+    dot(z, krylov_solve!(S, z, :calibration))
 
 diag!(v::AbstractVector, S::MatrixFreeObservedCovariance) = copy!(v, S.diagonal)
