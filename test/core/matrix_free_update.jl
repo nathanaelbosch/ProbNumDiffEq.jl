@@ -125,8 +125,9 @@ end
     HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHᵀ; needs_diagonal=true)
     HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
     z = randn(rng, d)
-    # CG approaches zᵀ S⁻¹ z from below; its tolerance for the calibration is 0.1
+    # CG approaches zᵀ S⁻¹ z from below, up to rounding. Its tolerance for the calibration
+    # is 0.1.
     exact = z' * (HQH_dense \ z)
     @test PNDE.invquad(z, HQH) ≈ exact rtol = 0.15
-    @test PNDE.invquad(z, HQH) <= exact
+    @test PNDE.invquad(z, HQH) <= exact * (1 + sqrt(eps()))
 end

@@ -68,7 +68,8 @@ function make_linearization_cache(
         diagonal_jacobian=isnothing(linearization.diagonal_jacobian) ? nothing : dvec(),
         v=dvec(), Jv=dvec(), a=dvec(), e0=dvec(), z=dvec(),
         HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(), sqrtP=dvec(),
-        ξ=zeros(T, D), Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
+        ξ=zeros(T, 2d), L=(dvec(), dvec(), dvec()),
+        Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
         Y=zeros(T, m, q + 1), M=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}),
         block_gmres=has_block_gmres ?
@@ -287,30 +288,32 @@ draw_probes!(ξ, rng) = Random.randn!(rng, ξ)
     estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
 
 Estimate the diagonal of ``S = H Σ H^T`` from `n` probes, with an estimator of the
-Hutchinson type. With ``B = H R^T``, it is ``S = B B^T``, so the diagonal of ``S`` is the
-expectation of ``(B ξ)^2`` for probes ``ξ``. Each probe costs one Jacobian-vector product.
-Of the sample ``g = R^T ξ``, only ``E_0 g`` and ``E_1 g`` are formed, because ``H`` reads
-nothing else.
+Hutchinson type. The diagonal of ``S`` is the expectation of ``(H g)^2`` for samples ``g``
+with the covariance ``Σ``, and each sample costs one Jacobian-vector product. ``H`` only
+reads ``E_0 g`` and ``E_1 g``, so only these are sampled. Since ``Σ`` is block-diagonal,
+the pairs ``(u_i, u_i')`` of different dimensions are independent. So each pair is drawn
+from its own ``2 × 2`` covariance in ``Σ``, from two entries of a probe.
 """
 function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
-    H, R = S.C.H, S.R
-    (; ξ, Jv) = H.cache
-    E₀g, E₁g = H.cache.e0, H.cache.a
-    rng = integrator_rng(H.integ)
+    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
+    c = H.cache
     d = length(out)
+    # The Cholesky factor [l₀₀ 0; l₁₀ l₁₁] of the covariance of (uᵢ, uᵢ')
+    Σ₀₀, Σ₀₁, Σ₁₁ = view(ΣE₀ᵀ, 1:d), view(ΣE₁ᵀ, 1:d), view(ΣE₁ᵀ, (d+1):2d)
+    l₀₀, l₁₀, l₁₁ = c.L
+    @.. l₀₀ = sqrt(Σ₀₀)
+    @.. l₁₀ = ifelse(l₀₀ > 0, Σ₀₁ / l₀₀, zero(l₀₀))
+    @.. l₁₁ = sqrt(max(Σ₁₁ - l₁₀^2, zero(l₁₀)))
+    ξ₀, ξ₁ = view(c.ξ, 1:d), view(c.ξ, (d+1):2d)
+    E₀g, E₁g = c.e0, c.a
+    rng = integrator_rng(H.integ)
     fill!(out, 0)
     for _ in 1:n
-        draw_probes!(ξ, rng)
-        @inbounds for (i, Ri) in enumerate(blocks(R))
-            g₀, g₁ = zero(eltype(out)), zero(eltype(out))
-            for l in axes(Ri, 1)
-                g₀ += Ri[l, 1] * ξ[(l-1)*d+i]
-                g₁ += Ri[l, 2] * ξ[(l-1)*d+i]
-            end
-            E₀g[i], E₁g[i] = g₀, g₁
-        end
+        draw_probes!(c.ξ, rng)
+        @.. E₀g = l₀₀ * ξ₀
+        @.. E₁g = l₁₀ * ξ₀ + l₁₁ * ξ₁
         # (H g)² = (E₁ g - J E₀ g)²
-        JE₀g = jvp!(Jv, H, E₀g)
+        JE₀g = jvp!(c.Jv, H, E₀g)
         @.. out = out + (E₁g - JE₀g)^2
     end
     @.. out = out / n
