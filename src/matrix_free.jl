@@ -74,6 +74,22 @@ function make_linearization_cache(
 end
 
 """
+    AbstractMatrixFreeOperator
+
+An operator of the `MatfreeEK1` that is only applied, through `mul!`: the observation
+matrix ``H``, the cross-covariance ``Σ H^T``, or ``H Σ H^T``. A product with a matrix
+applies it column by column.
+"""
+abstract type AbstractMatrixFreeOperator end
+
+function mul!(Y::AbstractMatrix, A::AbstractMatrixFreeOperator, X::AbstractMatrix)
+    for j in axes(X, 2)
+        mul!(view(Y, :, j), A, view(X, :, j))
+    end
+    return Y
+end
+
+"""
     MatrixFreeObservationOperator(u, integ, cache)
 
 The observation matrix ``H = E_1 - J E_0`` as an operator, with the Jacobian ``J`` of the
@@ -82,7 +98,7 @@ ODE at `u`: products with ``J`` and ``J^T`` call `f.jvp` and `f.vjp` of the inte
 the linear solves, and its statistics count the products and the solves. `cache` holds the
 buffers of the linearization.
 """
-struct MatrixFreeObservationOperator{U,I,C}
+struct MatrixFreeObservationOperator{U,I,C} <: AbstractMatrixFreeOperator
     u::U
     integ::I
     cache::C
@@ -148,12 +164,6 @@ function mul!(y::AbstractVector, H::MatrixFreeObservationOperator, x::AbstractVe
     @views y .= x[(d+1):2d] .- y
     return y
 end
-function mul!(Y::AbstractMatrix, H::MatrixFreeObservationOperator, X::AbstractMatrix)
-    for j in axes(X, 2)
-        mul!(view(Y, :, j), H, view(X, :, j))
-    end
-    return Y
-end
 
 """
     MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, buffers)
@@ -163,7 +173,7 @@ end
 block of ``Σ`` for the derivatives 0 and 1; they have one nonzero per row, so they are
 stored as vectors, in `buffers`.
 """
-struct MatrixFreeCrossCovariance{HT,V}
+struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     H::HT
     ΣE₀ᵀ::V
     ΣE₁ᵀ::V
@@ -199,7 +209,7 @@ covariance ``Σ`` seen through ``H``, as ``S`` in the update, or ``H Q(h) H^T`` 
 [`observed_process_noise!`](@ref). Its field `C` is the cross-covariance ``Σ H^T``, and
 `diag!` returns its diagonal, estimated from probes at its first use.
 """
-struct MatrixFreeObservedCovariance{CT,RT,V,B}
+struct MatrixFreeObservedCovariance{CT,RT,V,B} <: AbstractMatrixFreeOperator
     C::CT
     R::RT
     diagonal::V
@@ -226,12 +236,6 @@ function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVec
     jvp!(Jv, H, e0)
     y .-= Jv
     return y
-end
-function mul!(Y::AbstractMatrix, S::MatrixFreeObservedCovariance, W::AbstractMatrix)
-    for j in axes(W, 2)
-        mul!(view(Y, :, j), S, view(W, :, j))
-    end
-    return Y
 end
 
 """
