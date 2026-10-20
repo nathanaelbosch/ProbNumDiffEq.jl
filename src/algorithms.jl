@@ -359,9 +359,10 @@ from random probes, so that its cost per step scales linearly with the ODE dimen
   When the off-diagonal entries dominate, it is a worse preconditioner, and the solution
   can become less accurate.
 
-All other keyword arguments of [`ODEFilter`](@ref) are supported, except observation noise,
-multivariate diffusions and priors other than [`IWP`](@ref). Mass matrices and second-order
-ODEs are not supported yet.
+All other keyword arguments of [`ODEFilter`](@ref) are supported, except observation noise
+and priors other than [`IWP`](@ref). Of the multivariate diffusions, only the
+[`FixedMVDiffusion`](@ref) with `calibrate=false` is supported. Mass matrices and
+second-order ODEs are not supported yet.
 
 The probes are drawn from the keyword `rng` of `solve` (OrdinaryDiffEq 7 and later), by
 default `Random.default_rng()`. `sol.pnstats` counts the products and the linear solves.

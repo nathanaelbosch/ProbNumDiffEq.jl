@@ -13,9 +13,11 @@ const MAX_BLOCK_GMRES_ITERATIONS = 200
 
 Throw an `ArgumentError` if the `MatfreeEK1` does not support the settings of `alg`, the ODE
 function `f`, or the state `u`. It does not support second-order ODEs, mass matrices,
-observation noise, multivariate diffusion models, or states that are not floating-point
-numbers. It needs `jvp` and `vjp` in the ODE function, and at least as many probes as there
-are derivatives in the state.
+observation noise, or states that are not floating-point numbers. Of the multivariate
+diffusion models, it only supports the `FixedMVDiffusion` with `calibrate=false`, since the
+others estimate one diffusion per dimension, which assumes that `H` does not couple the
+dimensions. It needs `jvp` and `vjp` in the ODE function, and at least as many probes as
+there are derivatives in the state.
 """
 function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     unsupported(what) = ArgumentError("The `MatfreeEK1` does not support $what.")
@@ -25,8 +27,12 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
         throw(unsupported("mass matrices"))
     elseif !isnothing(alg.pn_observation_noise)
         throw(unsupported("observation noise"))
-    elseif !(alg.diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion})
-        throw(unsupported("multivariate diffusion models"))
+    elseif !supports_diffusion(alg.diffusionmodel)
+        throw(
+            unsupported(
+                "multivariate diffusion models, except the `FixedMVDiffusion` with " *
+                "`calibrate=false`"),
+        )
     elseif !(eltype(u) <: AbstractFloat)
         # Krylov.jl needs floating-point numbers, so this rules out ForwardDiff's dual numbers
         throw(unsupported("states that are not floating-point numbers"))
@@ -50,6 +56,10 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     end
     return nothing
 end
+
+supports_diffusion(diffusionmodel) =
+    diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
+    (diffusionmodel isa FixedMVDiffusion && !diffusionmodel.calibrate)
 
 # The number of probes for the posterior covariance. By default, it is twice the number of
 # derivatives in the state.

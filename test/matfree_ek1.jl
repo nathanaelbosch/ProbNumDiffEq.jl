@@ -90,6 +90,19 @@ end
     @test relerr(sol.u[end], 1.0) < 1e-5
 end
 
+@testset "A fixed multivariate diffusion that is not calibrated" begin
+    sols = map((FixedDiffusion, FixedMVDiffusion)) do Diffusion
+        Random.seed!(1)
+        diffusionmodel = Diffusion(calibrate=false)
+        solve(prob, MatfreeEK1(; diffusionmodel), abstol=1e-7, reltol=1e-5)
+    end
+    # With the same diffusion in every dimension, both give the same steps, because the
+    # multivariate one also takes the scalar local diffusion for the error estimate
+    @test sols[2].retcode == ReturnCode.Success
+    @test sols[2].t == sols[1].t
+    @test sols[2].u[end] ≈ sols[1].u[end]
+end
+
 @testset "With iterated linearization" begin
     Random.seed!(1)
     sol = solve(prob, ODEFilter(linearization=Iterated(MatrixFreeJacobian())),
@@ -124,6 +137,8 @@ end
     @test_throws "observation noise" solve(prob, MatfreeEK1(pn_observation_noise=1.0))
     @test_throws "multivariate diffusion" solve(
         prob, MatfreeEK1(diffusionmodel=DynamicMVDiffusion()))
+    @test_throws "multivariate diffusion" solve(
+        prob, MatfreeEK1(diffusionmodel=FixedMVDiffusion()))
     @test_throws "observation noise" solve(
         prob,
         ODEFilter(linearization=Iterated(MatrixFreeJacobian()), pn_observation_noise=1.0))
