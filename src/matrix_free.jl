@@ -1,8 +1,8 @@
-# The linearization of the `MatfreeEK1` and the update on its observation: the Jacobian of
-# the ODE is only accessed through `f.jvp` and `f.vjp`, the linear systems are solved with
-# Krylov methods, and the posterior covariance is block-diagonal, estimated from probes.
+# The `MatfreeEK1`. It accesses the Jacobian of the ODE only through `f.jvp` and `f.vjp`,
+# solves its linear systems with Krylov methods, and estimates a block-diagonal posterior
+# covariance from samples.
 
-# Probes for the diagonals of `H Σ Hᵀ` and `H Q(h) Hᵀ`; they cost one JVP each, no solve
+# Probes for the diagonals of `H Σ Hᵀ` and `H Q(h) Hᵀ`. Each costs one JVP.
 const DIAGONAL_PROBES = 32
 const CALIBRATION_RTOL = 0.1
 const MAX_CG_ITERATIONS = 10_000
@@ -80,9 +80,8 @@ end
 """
     AbstractMatrixFreeOperator
 
-An operator of the `MatfreeEK1` that is only applied, through `mul!`: the observation
-matrix ``H``, the cross-covariance ``Σ H^T``, or ``H Σ H^T``. A product with a matrix
-applies it column by column.
+A linear operator that is applied with `mul!`, without storing it as a matrix. Applied to a
+matrix, it acts on each column.
 """
 abstract type AbstractMatrixFreeOperator end
 
@@ -182,35 +181,36 @@ end
 """
     MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, buffers)
 
-``Σ H^T`` as an operator, for the block-diagonal ``Σ = R^T R``:
-``Σ H^T w = Σ E_1^T w - Σ E_0^T J^T w``. ``Σ E_0^T`` and ``Σ E_1^T`` are the columns of each
-block of ``Σ`` for the derivatives 0 and 1; they have one nonzero per row, so they are
-stored as vectors, in `buffers`.
+The cross-covariance ``Σ H^T`` between the state and the observation, as an operator, for
+the block-diagonal covariance ``Σ = R^T R``. Since ``H = E_1 - J E_0``, it is
+``Σ H^T w = Σ E_1^T w - Σ E_0^T J^T w``. The constructor computes ``Σ E_0^T`` and
+``Σ E_1^T`` into `buffers`. These are the columns of each block of ``Σ`` for the solution
+and its first derivative. Each has one nonzero entry per row, so it is stored as a vector
+of the length of the state.
 """
 struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     H::HT
     ΣE₀ᵀ::V
     ΣE₁ᵀ::V
-end
-function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, (ΣE₀ᵀ, ΣE₁ᵀ))
-    d = nblocks(R)
-    for (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
-        ΣE₀ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
-        ΣE₁ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 2))
+    function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, (ΣE₀ᵀ, ΣE₁ᵀ))
+        d = nblocks(R)
+        for (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
+            # The entries (k, 1) and (k, 2) of the i-th block Rᵢᵀ Rᵢ of Σ
+            ΣE₀ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
+            ΣE₁ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 2))
+        end
+        return new{typeof(H),typeof(ΣE₀ᵀ)}(H, ΣE₀ᵀ, ΣE₁ᵀ)
     end
-    return MatrixFreeCrossCovariance(H, ΣE₀ᵀ, ΣE₁ᵀ)
 end
 
-# Σ Hᵀ w = Σ E₁ᵀ w - Σ E₀ᵀ (Jᵀ w)
+# Σ Hᵀ w = Σ E₁ᵀ w - Σ E₀ᵀ Jᵀ w, for one derivative of the state after the other
 function mul!(out::AbstractVector, C::MatrixFreeCrossCovariance, w::AbstractVector)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = C
-    a = H.cache.a
-    d = length(a)
-    vjp!(a, H, w)
-    @.. a = -a
+    d = length(w)
+    Jᵀw = vjp!(H.cache.a, H, w)
     for k in 0:(length(out)÷d-1)
         idx = (k*d+1):((k+1)*d)
-        @views out[idx] .= ΣE₀ᵀ[idx] .* a .+ ΣE₁ᵀ[idx] .* w
+        @views out[idx] .= ΣE₁ᵀ[idx] .* w .- ΣE₀ᵀ[idx] .* Jᵀw
     end
     return out
 end
@@ -262,17 +262,16 @@ size(S::MatrixFreeObservedCovariance) = (length(S.diagonal), length(S.diagonal))
 size(S::MatrixFreeObservedCovariance, i::Integer) = length(S.diagonal)
 eltype(S::MatrixFreeObservedCovariance) = eltype(S.diagonal)
 
-# H Σ Hᵀ w = E₁ Σ Hᵀ w - J E₀ Σ Hᵀ w, forming only the derivatives 0 and 1 of Σ Hᵀ w
+# H Σ Hᵀ w = E₁ Σ Hᵀ w - J E₀ Σ Hᵀ w. Of Σ Hᵀ w, only the two derivatives that H reads are
+# formed.
 function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVector)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
-    (; a, e0, Jv) = H.cache
-    d = length(a)
-    vjp!(a, H, w)
-    @.. a = -a
-    @views e0 .= ΣE₀ᵀ[1:d] .* a .+ ΣE₁ᵀ[1:d] .* w
-    @views y .= ΣE₀ᵀ[(d+1):2d] .* a .+ ΣE₁ᵀ[(d+1):2d] .* w
-    jvp!(Jv, H, e0)
-    y .-= Jv
+    d = length(w)
+    Jᵀw = vjp!(H.cache.a, H, w)
+    E₀ΣHᵀw = H.cache.e0
+    @views E₀ΣHᵀw .= ΣE₁ᵀ[1:d] .* w .- ΣE₀ᵀ[1:d] .* Jᵀw
+    @views y .= ΣE₁ᵀ[(d+1):2d] .* w .- ΣE₀ᵀ[(d+1):2d] .* Jᵀw
+    y .-= jvp!(H.cache.Jv, H, E₀ΣHᵀw)
     return y
 end
 
@@ -489,11 +488,10 @@ end
 """
     estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
 
-Estimate the block-diagonal part of a covariance from samples, the `m` columns of `G`: its
-square root `R` is that of the sample covariance ``\\frac{1}{m} G G^T`` without the
-covariances between the blocks. Each block of `R` is computed from the rows of `G` that
-belong to it, `i:d:D` in the derivative-major order of the state, with the buffers `Y` and
-`M`.
+Estimate the block-diagonal part of a covariance from the samples in the `m` columns of `G`,
+and write its square root into `R`. The estimate is the sample covariance
+``\\frac{1}{m} G G^T`` without the covariances between the blocks. Block ``i`` uses the rows
+`i:d:D` of `G`, which hold dimension ``i`` of every derivative. `Y` and `M` are buffers.
 """
 function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
     d, m = nblocks(R), size(G, 2)
