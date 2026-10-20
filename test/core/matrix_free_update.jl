@@ -86,6 +86,18 @@ end
         observed_covariance(H, R), randn(rng, d), diag(S_dense), 1e-12, :mean; itmax=1)
 end
 
+@testset "The residual survives the covariance update" begin
+    # With d = 10 and 8 probes, the probe systems are solved by CG one by one
+    H = observation_operator()
+    x_pred = Gaussian(randn(rng, D), PSDMatrix(R))
+    obs = LinearizedObservation(x_pred.μ + randn(rng, D), randn(rng, d), H)
+    x_out = copy(x_pred)
+    upd = PNDE.update_mean!(x_out, x_pred, obs; cache=nothing)
+    z = copy(upd.z)
+    PNDE.update_cov!(x_out, x_pred, obs, upd.K, upd.B; cache=nothing)
+    @test upd.z == z
+end
+
 @testset "Covariance update" begin
     H = observation_operator(; nprobes=4000)
     x_pred = Gaussian(randn(rng, D), PSDMatrix(R))

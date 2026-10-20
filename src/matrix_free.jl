@@ -359,8 +359,7 @@ function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, P, rt
     if isnothing(c.block_gmres)
         # Block-GMRES needs at least twice as many rows as right-hand sides
         for j in axes(B, 2)
-            copy!(c.z, view(B, :, j))
-            copy!(view(c.W, :, j), krylov_solve!(S, c.z, P, rtol, part))
+            copy!(view(c.W, :, j), krylov_solve!(S, view(B, :, j), P, rtol, part))
         end
         return c.W
     end
