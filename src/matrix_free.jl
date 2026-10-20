@@ -56,7 +56,7 @@ function make_linearization_cache(
     m = something(linearization.nprobes, 2(q + 1))
     vec() = zeros(T, d)
     observed_covariance() =
-        (; ΣEᵀ=(zeros(T, D), zeros(T, D)), diagonal=vec(), has_diagonal=Ref(false))
+        (; ΣEᵀ=(zeros(T, D), zeros(T, D)), diagonal=vec())
     has_block_gmres = 2m <= d
     return (;
         r=vec(), u=vec(),
@@ -202,23 +202,25 @@ function mul!(out::AbstractVector, C::MatrixFreeCrossCovariance, w::AbstractVect
 end
 
 """
-    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers)
+    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers; estimate_diagonal)
 
 ``H Σ H^T`` as an operator for Krylov.jl, for the block-diagonal ``Σ = R^T R``: the
 covariance ``Σ`` seen through ``H``, as ``S`` in the update, or ``H Q(h) H^T`` from
-[`observed_process_noise!`](@ref). Its field `C` is the cross-covariance ``Σ H^T``, and
-`diag!` returns its diagonal, estimated from probes at its first use.
+[`observed_process_noise!`](@ref). Its field `C` is the cross-covariance ``Σ H^T``. With
+`estimate_diagonal`, its diagonal is estimated from probes when it is built, into the field
+`diagonal`, which `diag!` and the Jacobi preconditioner read; without, `diagonal` holds no
+valid values.
 """
-struct MatrixFreeObservedCovariance{CT,RT,V,B} <: AbstractMatrixFreeOperator
+struct MatrixFreeObservedCovariance{CT,V} <: AbstractMatrixFreeOperator
     C::CT
-    R::RT
     diagonal::V
-    has_diagonal::B
 end
-function MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers)
-    buffers.has_diagonal[] = false
+function MatrixFreeObservedCovariance(
+    H, R::BlocksOfDiagonals, buffers; estimate_diagonal::Bool,
+)
     C = MatrixFreeCrossCovariance(H, R, buffers.ΣEᵀ)
-    return MatrixFreeObservedCovariance(C, R, buffers.diagonal, buffers.has_diagonal)
+    estimate_diagonal && estimate_diagonal!(buffers.diagonal, H, R, DIAGONAL_PROBES)
+    return MatrixFreeObservedCovariance(C, buffers.diagonal)
 end
 size(S::MatrixFreeObservedCovariance) = (length(S.C.H.u), length(S.C.H.u))
 size(S::MatrixFreeObservedCovariance, i::Integer) = length(S.C.H.u)
@@ -293,21 +295,11 @@ function estimate_diagonal!(out, H::MatrixFreeObservationOperator, R::BlocksOfDi
     return out
 end
 
-# The diagonal of H Σ Hᵀ, estimated from probes at its first use: in a step, the error
-# estimate and the calibration both need the one of H Q(h) Hᵀ
-function estimated_diagonal!(S::MatrixFreeObservedCovariance)
-    if !S.has_diagonal[]
-        estimate_diagonal!(S.diagonal, S.C.H, S.R, DIAGONAL_PROBES)
-        S.has_diagonal[] = true
-    end
-    return S.diagonal
-end
-
 """
     jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
 
 The diagonal `P` of a Jacobi preconditioner for ``S = H Σ H^T``: ``\\operatorname{diag}(S)``
-estimated from probes, or, with a diagonal Jacobian ``J_D``, the diagonal of
+as estimated when `S` was built, or, with a diagonal Jacobian ``J_D``, the diagonal of
 ``H_D Σ H_D^T`` for ``H_D = E_1 - J_D E_0``. Its entries are raised to at least `eps` times
 the largest one, so that they are positive.
 """
@@ -315,7 +307,7 @@ function jacobi_preconditioner!(P, S::MatrixFreeObservedCovariance)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
     J = H.cache.diagonal_jacobian
     if isnothing(J)
-        copy!(P, estimated_diagonal!(S))
+        copy!(P, S.diagonal)
     else
         d = length(P)
         # Var(uᵢ' - Jᵢᵢ uᵢ) = Σ₁₁ - 2 Jᵢᵢ Σ₀₁ + Jᵢᵢ² Σ₀₀
@@ -416,7 +408,8 @@ CG with a Jacobi preconditioner, and ``μ^F = μ - Σ H^T S^{-1} z``. It returns
 function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
     (; m, H) = obs
     c = H.cache
-    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHᵀ)
+    S = MatrixFreeObservedCovariance(
+        H, x_pred.Σ.R, c.HΣHᵀ; estimate_diagonal=isnothing(c.diagonal_jacobian))
     P = jacobi_preconditioner!(c.P, S)
     z = if m === x_pred.μ
         obs.r
@@ -482,9 +475,15 @@ function block_diagonal_sample_covariance!(R::BlocksOfDiagonals, G, (Y, M))
     return R
 end
 
-observed_process_noise!(
+# The error estimate needs the diagonal of H Q(h) Hᵀ with adaptive steps, and so does the
+# preconditioner of the calibration without a diagonal Jacobian
+function observed_process_noise!(
     cache::AbstractODEFilterCache, obs::MatrixFreeLinearizedObservation,
-) = MatrixFreeObservedCovariance(obs.H, cache.Qh.R, obs.H.cache.HQHᵀ)
+)
+    H = obs.H
+    estimate_diagonal = H.integ.opts.adaptive || isnothing(H.cache.diagonal_jacobian)
+    return MatrixFreeObservedCovariance(H, cache.Qh.R, H.cache.HQHᵀ; estimate_diagonal)
+end
 
 # zᵀ (H Q(h) Hᵀ)⁻¹ z, for the calibration, by CG with a Jacobi preconditioner
 function invquad(z, S::MatrixFreeObservedCovariance; kwargs...)
@@ -492,5 +491,4 @@ function invquad(z, S::MatrixFreeObservedCovariance; kwargs...)
     return dot(z, krylov_solve!(S, z, P, eltype(S)(CALIBRATION_RTOL), :calibration))
 end
 
-diag!(v::AbstractVector, S::MatrixFreeObservedCovariance) =
-    copy!(v, estimated_diagonal!(S))
+diag!(v::AbstractVector, S::MatrixFreeObservedCovariance) = copy!(v, S.diagonal)

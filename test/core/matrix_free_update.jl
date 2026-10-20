@@ -31,7 +31,8 @@ function observation_operator(; reltol=1e-12, kwargs...)
     m = [u; zeros(D - d)]
     return PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m).H
 end
-observed_covariance(H, R) = PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHᵀ)
+observed_covariance(H, R; estimate_diagonal=false) =
+    PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHᵀ; estimate_diagonal)
 
 @testset "Products with H, Σ Hᵀ and H Σ Hᵀ" begin
     H = observation_operator()
@@ -103,7 +104,7 @@ end
 @testset "Calibration" begin
     H = observation_operator()
     RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
-    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHᵀ)
+    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHᵀ; estimate_diagonal=true)
     HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
     z = randn(rng, d)
     # CG approaches zᵀ S⁻¹ z from below; its tolerance for the calibration is 0.1
