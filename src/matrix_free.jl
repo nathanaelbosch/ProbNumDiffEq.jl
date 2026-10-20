@@ -277,31 +277,12 @@ function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVec
 end
 
 """
-    draw_standard_probes!(ξ, rng)
+    draw_probes!(ξ, rng)
 
-Fill `ξ` with independent standard normal entries. The estimators from probes only need
-``E[ξ ξ^T] = I``, so other distributions, such as Rademacher, would do as well.
+Fill `ξ` with probes, which are independent standard normal entries. The estimators from
+probes only need ``E[ξ ξ^T] = I``, so Rademacher entries would work as well.
 """
-draw_standard_probes!(ξ, rng) = Random.randn!(rng, ξ)
-
-"""
-    sample_probes!(G, Ξ, R::BlocksOfDiagonals, rng)
-
-The columns ``g = R^T ξ`` of `G`, which have the covariance ``R^T R``, from standard probes
-``ξ`` drawn into the columns of `Ξ`.
-"""
-function sample_probes!(G, Ξ, R::BlocksOfDiagonals, rng)
-    d = nblocks(R)
-    draw_standard_probes!(Ξ, rng)
-    @inbounds for j in axes(G, 2), (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
-        s = zero(eltype(G))
-        for l in axes(Ri, 1)
-            s += Ri[l, k] * Ξ[(l-1)*d+i, j]
-        end
-        G[(k-1)*d+i, j] = s
-    end
-    return G
-end
+draw_probes!(ξ, rng) = Random.randn!(rng, ξ)
 
 """
     estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
@@ -320,7 +301,7 @@ function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
     d = length(out)
     fill!(out, 0)
     for _ in 1:n
-        draw_standard_probes!(ξ, rng)
+        draw_probes!(ξ, rng)
         @inbounds for (i, Ri) in enumerate(blocks(R))
             g₀, g₁ = zero(eltype(out)), zero(eltype(out))
             for l in axes(Ri, 1)
@@ -464,10 +445,11 @@ end
 """
     update_cov!(x_out, x_pred, obs::MatrixFreeLinearizedObservation, K, B; cache)
 
-The block-diagonal part of the posterior covariance, estimated from samples. This is an
-approximation: the exact posterior covariance is not block-diagonal, since ``J`` couples
-the blocks. The samples are probes ``g \\sim \\mathcal{N}(0, Σ)``, conditioned on the
-observation as ``(I - K H) g \\sim \\mathcal{N}(0, Σ^F)``.
+The covariance of the update on a matrix-free observation. It approximates the posterior
+covariance by its block-diagonal part, which it estimates from samples. The exact posterior
+covariance is not block-diagonal, because ``J`` couples the blocks. The samples are
+``g - K H g`` for samples ``g`` with the covariance ``Σ``, so they have the covariance
+``Σ^F``.
 """
 function update_cov!(
     x_out::Gaussian{<:Any,<:BlocksOfDiagonalsPSD},
@@ -479,20 +461,22 @@ function update_cov!(
 )
     H = obs.H
     c = H.cache
-    G = sample_probes!(c.G, c.Ξ, x_pred.Σ.R, integrator_rng(H.integ))
-    condition_probes!(G, H, K)
+    Ξ = draw_probes!(c.Ξ, integrator_rng(H.integ))
+    G = mul!(c.G, x_pred.Σ.R', Ξ)
+    condition_samples!(G, H, K)
     estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Y, c.M))
     return x_out
 end
 
 """
-    condition_probes!(G, H, K::MatrixFreeGain)
+    condition_samples!(G, H, K::MatrixFreeGain)
 
-Condition the probes ``g \\sim \\mathcal{N}(0, Σ)``, the columns of `G`, on the observation:
-``g - K H g`` with ``K H g = Σ H^T S^{-1} H g`` are samples of ``\\mathcal{N}(0, Σ^F)``. The
-systems for all probes are solved jointly.
+Condition the samples in the columns of `G` on the observation, by replacing each sample
+``g`` with ``g - K H g``. If the samples have the covariance ``Σ``, they then have the
+posterior covariance ``Σ^F = Σ - K H Σ``. The linear systems of all samples are solved at
+once.
 """
-function condition_probes!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
+function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
     (; HG, gtmp) = H.cache
     mul!(HG, H, G)
     W = krylov_solve!(K.S, HG, :covariance)
