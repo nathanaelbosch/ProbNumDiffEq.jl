@@ -8,6 +8,13 @@ const CALIBRATION_RTOL = 0.1
 const MAX_CG_ITERATIONS = 10_000
 const MAX_BLOCK_GMRES_ITERATIONS = 200
 
+"""
+    throw_if_unsupported(::MatrixFreeJacobian, alg, f)
+
+Throw an `ArgumentError` for what the `MatfreeEK1` does not support: second-order ODEs,
+mass matrices, observation noise, multivariate diffusion models, an ODE function without
+`jvp` or `vjp`, and fewer probes than derivatives in the state.
+"""
 function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f)
     (; diffusionmodel, pn_observation_noise, prior) = alg
     unsupported = String[]
@@ -109,8 +116,9 @@ end
 """
     jvp!(Jv, H::MatrixFreeObservationOperator, v)
 
-``J v`` for the Jacobian ``J`` of the ODE in `H`, from `f.jvp`. `v` is copied into a buffer
-first, since `f.jvp` may require a `Vector`.
+``J v`` for the Jacobian ``J`` of the ODE in ``H = E_1 - J E_0``, from `f.jvp`. The products
+with ``H`` and with ``H Σ H^T`` use it, and so does the probe estimate of the diagonal of
+``H Σ H^T``. `v` is copied into a buffer first, since `f.jvp` may require a `Vector`.
 """
 function jvp!(out, H::MatrixFreeObservationOperator, v)
     (; f, p, t, dt) = H.integ
@@ -122,8 +130,9 @@ end
 """
     vjp!(Jᵀw, H::MatrixFreeObservationOperator, w)
 
-``J^T w`` for the Jacobian ``J`` of the ODE in `H`, from `f.vjp`. `w` is copied into a
-buffer first, since `f.vjp` may require a `Vector`.
+``J^T w`` for the Jacobian ``J`` of the ODE in ``H = E_1 - J E_0``, from `f.vjp`. The
+products with ``Σ H^T`` and with ``H Σ H^T`` use it. `w` is copied into a buffer first,
+since `f.vjp` may require a `Vector`.
 """
 function vjp!(out, H::MatrixFreeObservationOperator, w)
     (; f, p, t, dt) = H.integ
