@@ -20,13 +20,17 @@ there are derivatives in the state.
 """
 function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     unsupported(what) = ArgumentError("The `MatfreeEK1` does not support $what.")
+    (; diffusionmodel) = alg
     if f isa DynamicalODEFunction
         throw(unsupported("second-order ODEs"))
     elseif f.mass_matrix !== I
         throw(unsupported("mass matrices"))
     elseif !isnothing(alg.pn_observation_noise)
         throw(unsupported("observation noise"))
-    elseif !supports_diffusion(alg.diffusionmodel)
+    elseif !(
+        diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
+        (diffusionmodel isa FixedMVDiffusion && !diffusionmodel.calibrate)
+    )
         throw(
             unsupported(
                 "multivariate diffusion models, except the `FixedMVDiffusion` with " *
@@ -45,7 +49,7 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
         )
     end
     q = num_derivatives(alg.prior)
-    m = number_of_probes(linearization, q)
+    m = nprobes(linearization, q)
     if m < q + 1
         throw(
             ArgumentError(
@@ -56,13 +60,7 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     return nothing
 end
 
-supports_diffusion(diffusionmodel) =
-    diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
-    (diffusionmodel isa FixedMVDiffusion && !diffusionmodel.calibrate)
-
-# The number of probes for the posterior covariance. By default, it is twice the number of
-# derivatives in the state.
-number_of_probes(linearization::MatrixFreeJacobian, q) =
+nprobes(linearization::MatrixFreeJacobian, q) =
     isnothing(linearization.nprobes) ? 2(q + 1) : linearization.nprobes
 
 function make_linearization_cache(
@@ -70,7 +68,7 @@ function make_linearization_cache(
 ) where {T}
     d, q = C.d, C.q
     D = d * (q + 1)
-    m = number_of_probes(linearization, q)
+    m = nprobes(linearization, q)
     dvec() = zeros(T, d)
     observed_covariance() =
         (; ΣEᵀ=(zeros(T, D), zeros(T, D)), preconditioner=dvec(), diagonal=dvec())
@@ -89,8 +87,13 @@ end
 """
     AbstractMatrixFreeOperator
 
-A linear operator that is applied with `mul!`, without storing it as a matrix. Applied to a
-matrix, it acts on each column.
+A minimal interface for matrix-free linear operators.
+
+Operators are expected to implement a matrix-vector `mul!`, ie
+```
+mul!(y::AbstractVector, H::MatrixFreeOperator, x::AbstractVector)
+```
+For matrix-matrix multiplication this is then by default applied column by column.
 """
 abstract type AbstractMatrixFreeOperator end
 
