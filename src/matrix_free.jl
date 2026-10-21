@@ -147,9 +147,10 @@ end
 """
     apply_jvp!(H::MatrixFreeObservationOperator, v)
 
-Multiply `v` with the Jacobian ``J`` of the ODE at the point of `H`, and return the result
-in `H.cache.Jv`. This calls the `jvp` of the ODE function. The products with ``H`` and with
-``H Σ H^T`` use it, and so does the estimate of the diagonal of ``H Σ H^T`` from probes.
+For a given ``H = E_1 - J E_0`` with `H::MatrixFreeObservationOperator`,
+compute ``J v`` as a jacobian-vector product (JVP) by calling the `jvp` of
+the ODE function.
+
 If `v` is not a `Vector`, it is first copied into one, because `f.jvp` may require it.
 """
 function apply_jvp!(H::MatrixFreeObservationOperator, v)
@@ -164,10 +165,11 @@ end
 """
     apply_vjp!(H::MatrixFreeObservationOperator, w)
 
-Multiply `w` with the transpose ``J^T`` of the Jacobian of the ODE at the point of `H`, and
-return the result in `H.cache.a`. This calls the `vjp` of the ODE function. The products
-with ``Σ H^T`` and with ``H Σ H^T`` use it. If `w` is not a `Vector`, it is first copied
-into one, because `f.vjp` may require it.
+For a given ``H = E_1 - J E_0`` with `H::MatrixFreeObservationOperator`,
+compute ``J^T v`` as a vector-jacobian product (VJP) by calling the `vjp` of
+the ODE function.
+
+If `v` is not a `Vector`, it is first copied into one, because `f.vjp` may require it.
 """
 function apply_vjp!(H::MatrixFreeObservationOperator, w)
     (; f, p, t, dt) = H.integ
