@@ -191,12 +191,12 @@ end
 """
     MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, buffers)
 
-The cross-covariance ``Σ H^T`` between the state and the observation, as an operator, for
-the block-diagonal covariance ``Σ = R^T R``. Since ``H = E_1 - J E_0``, it is
-``Σ H^T w = Σ E_1^T w - Σ E_0^T J^T w``. The constructor computes ``Σ E_0^T`` and
-``Σ E_1^T`` into `buffers`. These are the columns of each block of ``Σ`` for the solution
-and its first derivative. Each has one nonzero entry per row, so it is stored as a vector
-of the length of the state.
+The cross-covariance ``Σ H^T`` between the state and the observation, as an operator.
+
+Since ``H = E_1 - J E_0``, we have ``Σ H^T w = Σ E_1^T w - Σ E_0^T J^T w``.
+The constructor pre-computes ``Σ E_0^T`` and ``Σ E_1^T`` into the passed `buffers`.
+Since ``Σ`` is block-diagonal, ``Σ E_0^T`` and ``Σ E_1^T`` each have exactly one
+nonzero entry per row and we can store them as vectors.
 """
 struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     H::HT
@@ -226,16 +226,21 @@ end
 """
     MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers; needs_diagonal)
 
-The covariance ``H Σ H^T`` of the observation, as an operator for Krylov.jl, for the
-block-diagonal covariance ``Σ = R^T R``. The update solves with it for the predicted
-covariance ``Σ``, and the calibration for ``Σ = Q(h)``.
+The covariance ``H Σ H^T`` of the observation, as an operator.
 
-The linear solves need a Jacobi preconditioner, so the constructor computes one, in
-`preconditioner`. It is an approximation of the diagonal. With a diagonal Jacobian, it is
-the diagonal for ``J`` replaced by its diagonal, which costs no product. Without, it is
-estimated from probes. The error estimate needs the diagonal from probes in any case. With
-`needs_diagonal`, the constructor estimates it also then, into `diagonal`, which `diag!`
-returns.
+The main use of this operator is for matrix-free solutions of linear systems with
+Krylov.jl. In the update ``Σ`` is the predicted covariance, but for error-estimation
+and calibration we can also use this operator with ``Σ = Q(h)``.
+
+To be efficient, the linear solves need a preconditioner.
+The constructor therefore automatically computes a Jacobi preconditioner as an
+approximation of the diagonal, in one of two ways:
+if a user explicitly passed a function for the diagonal of the ODE jacobian,
+we use that to compute an approximated diagonal;
+otherwise we estimate it stochastically.
+
+As the local error estimate needs the stochastic diagonal, one can also compute both
+by setting `needs_diagonal=true`.
 """
 struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
     ΣHᵀ::CT
