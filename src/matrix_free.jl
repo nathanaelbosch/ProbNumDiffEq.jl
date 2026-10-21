@@ -255,7 +255,7 @@ struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
         if isnothing(J_D)
             copy!(preconditioner, diagonal)
         else
-            diagonal_with_diagonal_jacobian!(preconditioner, S, J_D)
+            estimate_diagonal_with_diagonal_jacobian!(preconditioner, S, J_D)
         end
         # A Jacobi preconditioner needs positive entries
         T = eltype(preconditioner)
@@ -319,13 +319,16 @@ function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
 end
 
 """
-    diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, J_D)
+    estimate_diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, J_D)
 
-The diagonal of ``H_D Σ H_D^T``, with ``H_D = E_1 - J_D E_0`` for the diagonal ``J_D`` of
-the Jacobian. Row ``i`` of ``H_D`` only reads ``u_i`` and ``u_i'``, so its entry only needs
-the ``i``-th block of the square root ``R`` of ``Σ``.
+Estimate the diagonal of ``S = H Σ H^T`` by the diagonal of ``H_D Σ H_D^T``, with
+``H_D = E_1 - J_D E_0`` for the diagonal ``J_D`` of the Jacobian. Row ``i`` of ``H_D`` only
+reads ``u_i`` and ``u_i'``, so its entry only needs the ``i``-th block of the square root
+``R`` of ``Σ``.
 """
-function diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, J_D)
+function estimate_diagonal_with_diagonal_jacobian!(
+    out, S::MatrixFreeObservedCovariance, J_D,
+)
     for (i, Ri) in enumerate(blocks(S.R))
         # (H_D Σ H_Dᵀ)ᵢᵢ = ‖R H_Dᵀ eᵢ‖² = ‖r₁ - J_Dᵢ r₀‖², with the columns r₀ and r₁ of Rᵢ
         out[i] = sum(l -> (Ri[l, 2] - J_D[i] * Ri[l, 1])^2, axes(Ri, 1))
