@@ -170,7 +170,7 @@ _unwrap_val(B) = B
 **Gaussian ODE filter with zeroth-order vector field linearization.**
 
 This is an _explicit_ ODE solver. It is fast and scales well to high-dimensional problems
-[Krämer et al. (2022)](@cite krämer21highdim), but it is not L-stable [Tronarp et al. (2019)](@cite tronarp18probsol). So for stiff
+[Krämer et al. (2022)](@cite krämer21highdim), but it is not A-stable [Tronarp et al. (2019)](@cite tronarp18probsol). So for stiff
 problems, use the [`EK1`](@ref).
 
 Whenever possible this solver will use a Kronecker-factored implementation to achieve its
@@ -205,7 +205,7 @@ EK0(; kwargs...) = ODEFilter(; linearization=ZeroJacobian(), kwargs...)
 
 **Gaussian ODE filter with first-order vector field linearization.**
 
-This is a _semi-implicit_, L-stable ODE solver so it can handle stiffness quite well [Tronarp et al. (2019)](@cite tronarp18probsol),
+This is a _semi-implicit_, A-stable ODE solver so it can handle stiffness quite well [Tronarp et al. (2019)](@cite tronarp18probsol),
 and it generally produces more expressive posterior covariances than the [`EK0`](@ref).
 However, as typical implicit ODE solvers it scales cubically with the ODE dimension [Krämer et al. (2022)](@cite krämer21highdim),
 so if you're solving a high-dimensional non-stiff problem you might want to give the [`EK0`](@ref) a try.
