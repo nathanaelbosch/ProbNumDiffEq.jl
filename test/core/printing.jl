@@ -10,6 +10,10 @@ import ProbNumDiffEq as PNDE
           "ODEFilter(linearization=Iterated(DiagonalJacobian()))"
     @test repr(Iterated(FullJacobian(), maxiters=5)) ==
           "Iterated(FullJacobian(), maxiters=5)"
+    @test repr(MatfreeEK1()) == "MatfreeEK1()"
+    @test repr(MatfreeEK1(nprobes=16, order=2)) == "MatfreeEK1(nprobes=16, order=2)"
+    @test repr(ODEFilter(linearization=MatrixFreeJacobian(nprobes=16))) ==
+          "MatfreeEK1(nprobes=16)"
 end
 
 @testset "Priors are printed as the call that constructs them" begin

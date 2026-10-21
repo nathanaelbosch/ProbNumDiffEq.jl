@@ -11,7 +11,8 @@ import Base:
 
 using LinearAlgebra: LinearAlgebra, Adjoint, Cholesky, Diagonal, I, QR, Symmetric,
     UniformScaling, UpperTriangular, cholesky, cholesky!, diag, diagm, dot, ishermitian,
-    isdiag, isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, triu!,
+    isdiag, isposdef, issuccess, ldiv!, logdet, norm, qr, qr!, rdiv!, rmul!, transpose!,
+    triu!,
     PosDefException
 import LinearAlgebra: mul!
 import Statistics: mean, var, std, cov
@@ -53,6 +54,7 @@ using FillArrays: FillArrays, Eye, Fill, Zeros
 using MatrixEquations: plyapc
 using DiffEqCallbacks: PresetTimeCallback
 using ADTypes: ADTypes, AutoForwardDiff, AutoSparse
+using Krylov: Krylov, CgWorkspace, cg!
 
 # @reexport using GaussianDistributions
 
@@ -116,8 +118,8 @@ export TaylorModeInit, ClassicSolverInit, SimpleInit, ForwardDiffInit
 
 include("linearization.jl")
 include("algorithms.jl")
-export ODEFilter, EK0, EK1, DiagonalEK1
-export ZeroJacobian, DiagonalJacobian, FullJacobian, Iterated
+export ODEFilter, EK0, EK1, DiagonalEK1, MatfreeEK1
+export ZeroJacobian, DiagonalJacobian, FullJacobian, MatrixFreeJacobian, Iterated
 export ExpEK, RosenbrockExpEK
 
 include("alg_utils.jl")
@@ -142,6 +144,7 @@ include("filtering/update.jl")
 include("filtering/smooth.jl")
 include("measurement_models.jl")
 include("perform_step.jl")
+include("matrix_free.jl")
 include("projection.jl")
 include("solve.jl")
 

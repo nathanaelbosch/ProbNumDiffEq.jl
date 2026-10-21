@@ -250,7 +250,7 @@ function _blockwise_mul!(C::AbstractMatrix, A_blocks, B::AbstractMatrix)
     d = length(A_blocks)
     @assert size(C, 1) == d * size(A_blocks[1], 1) && size(B, 1) == d * size(A_blocks[1], 2)
     for (i, Ai) in enumerate(A_blocks)
-        mul!(view(C, i:d:size(C, 1), :), Ai, view(B, i:d:size(B, 1), :))
+        _matmul!(view(C, i:d:size(C, 1), :), Ai, view(B, i:d:size(B, 1), :))
     end
     return C
 end

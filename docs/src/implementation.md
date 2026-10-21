@@ -21,15 +21,13 @@ In particular:
 ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
 
 - **Algorithm:** `ODEFilter <: OrdinaryDiffEq.OrdinaryDiffEqAdaptiveAlgorithm`
-  - `./src/algorithms.jl` provides the algorithm; `EK0`, `EK1` and `DiagonalEK1` are functions that return different kinds of `ODEFilter`s.
+  - `./src/algorithms.jl` provides the algorithm; solvers such as `EK0` and `EK1` are functions that return an `ODEFilter`.
   - `./src/alg_utils.jl` implements many traits (relating to automatic differentiation, step-size control, etc), from the fields of the `ODEFilter`
 - **Cache:** `EKCache <: AbstractODEFilterCache <: OrdinaryDiffEq.OrdinaryDiffEqCache`
   - `./src/caches.jl` implements the cache and its main constructor: `OrdinaryDiffEq.alg_cache`
 - **Initialization and `perform_step!`:** via `OrdinaryDiffEq.initialize!` and `OrdinaryDiffEq.perform_step!`.
   Implemented in `./src/perform_step.jl`.
-- **Linearization:** `perform_step!` gets the observation of the ODE from `linearize_ode_observation!(alg.linearization, integ, x_pred)`, which evaluates the ODE and, for the `EK1` and `DiagonalEK1`, its Jacobian with `OrdinaryDiffEq.calc_J!`.
-  Implemented in `./src/linearization.jl`; the docstring of `AbstractLinearization` lists what a new linearization implements.
-  After the covariance prediction, `update!(x_filt, x_pred, obs, integ)` conditions on it, by the `update!` method of `alg.linearization`; `Iterated` repeats the linearization at the updated mean until it converges. The calibration and the error estimate use the linearization at the predicted mean.
+- **Linearization:** `perform_step!` gets the observation of the ODE from the solver's linearization, in `./src/linearization.jl`, which evaluates the Jacobian with `OrdinaryDiffEq.calc_J!` if it needs one.
 - **Custom postamble** by overloading `SciMLBase.postamble!` (which should always call `OrdinaryDiffEqCore._postamble!`).
   This is where we do the "smoothing" of the solution.
   Implemented in `./src/integrator_utils.jl`.

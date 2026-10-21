@@ -34,6 +34,10 @@ function SciMLBase.__init(
                 jac=isnothing(prob.f.jac) ? nothing :
                     (ddu, u, p, t) -> ddu .= prob.f.jac(u, p, t),
                 mass_matrix=prob.f.mass_matrix,
+                jvp=isnothing(prob.f.jvp) ? nothing :
+                    (Jv, v, u, p, t) -> Jv .= prob.f.jvp(v, u, p, t),
+                vjp=isnothing(prob.f.vjp) ? nothing :
+                    (Jtv, v, u, p, t) -> Jtv .= prob.f.vjp(v, u, p, t),
                 analytic=prob.f.analytic,
             ),
             prob.u0,

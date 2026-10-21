@@ -7,7 +7,8 @@ A linearization `L <: AbstractLinearization` has methods for
 - `linearize_ode_observation!(::L, integ, x::Gaussian)`, at the distribution `x`;
 - `make_linearization_cache(::L, C, u, f)`, the buffers it writes into;
 - `needs_jacobian(::L)`;
-- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step.
+- optionally `update!(::L, x_filt, x_pred, obs, integ)`, the update of the step;
+- optionally `throw_if_unsupported(::L, alg, f, u)`.
 """
 abstract type AbstractLinearization end
 
@@ -44,12 +45,34 @@ Linearize the ODE vector field with its Jacobian, as the [`EK1`](@ref) does.
 struct FullJacobian <: AbstractTaylorLinearization end
 
 """
+    MatrixFreeJacobian(; nprobes=nothing, diagonal_jacobian=nothing)
+
+Linearize the ODE vector field with its Jacobian, accessed only through the products
+`f.jvp` and `f.vjp`, as the [`MatfreeEK1`](@ref) does. The settings are those of the
+[`MatfreeEK1`](@ref).
+"""
+struct MatrixFreeJacobian{DJ} <: AbstractTaylorLinearization
+    nprobes::Union{Nothing,Int}
+    diagonal_jacobian::DJ
+end
+MatrixFreeJacobian(; nprobes=nothing, diagonal_jacobian=nothing) =
+    MatrixFreeJacobian(nprobes, diagonal_jacobian)
+
+"""
     needs_jacobian(component)
 
 Whether a component of an `ODEFilter` needs the Jacobian of the ODE vector field.
 """
-needs_jacobian(::ZeroJacobian) = false
+needs_jacobian(::Union{ZeroJacobian,MatrixFreeJacobian}) = false
 needs_jacobian(::Union{DiagonalJacobian,FullJacobian}) = true
+
+"""
+    throw_if_unsupported(linearization, alg, f, u)
+
+Throw an `ArgumentError` if `linearization` does not support the settings of `alg`, the ODE
+function `f`, or the state `u`.
+"""
+throw_if_unsupported(::AbstractLinearization, alg, f, u) = nothing
 
 """
     make_linearization_cache(linearization, C::CovarianceStructure, u, f)
@@ -163,6 +186,8 @@ function Base.show(io::IO, it::Iterated)
 end
 
 needs_jacobian(it::Iterated) = needs_jacobian(it.linearization)
+throw_if_unsupported(it::Iterated, alg, f, u) =
+    throw_if_unsupported(it.linearization, alg, f, u)
 
 function make_linearization_cache(it::Iterated, C::CovarianceStructure{T}, u, f) where {T}
     return (; make_linearization_cache(it.linearization, C, u, f)...,

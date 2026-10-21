@@ -60,9 +60,11 @@ most flexibility.
 
 # Arguments
 - `linearization::AbstractLinearization`: How the ODE vector field is linearized:
-  `ZeroJacobian()` as in the [`EK0`](@ref), `DiagonalJacobian()` as in the
-  [`DiagonalEK1`](@ref), or `FullJacobian()` as in the [`EK1`](@ref). [`Iterated`](@ref)
-  wraps one of them to linearize at the posterior.
+  `ZeroJacobian()` as in the [`EK0`](@ref), 
+  `DiagonalJacobian()` as in the [`DiagonalEK1`](@ref), 
+  `FullJacobian()` as in the [`EK1`](@ref), or
+  `MatrixFreeJacobian()` as in the [`MatfreeEK1`](@ref). 
+  [`Iterated`](@ref) wraps one of them to linearize at the posterior.
 - `order::Integer`: Order of the default integrated Wiener process (IWP) prior.
 - `prior::AbstractGaussMarkovProcess`: Prior to be used by the ODE filter.
    By default, an `order`-times integrated Wiener process prior `IWP(order)`.
@@ -334,16 +336,75 @@ julia> solve(prob, RosenbrockExpEK())
 RosenbrockExpEK(; order=3, kwargs...) =
     EK1(; prior=IOUP(order, update_rate_parameter=true), kwargs...)
 
+"""
+    MatfreeEK1(; order=3, nprobes=2(num_derivatives(prior)+1), diagonal_jacobian=nothing,
+                 prior=IWP(order), diffusionmodel=DynamicDiffusion(), smooth=true,
+                 initialization=TaylorModeInit(num_derivatives(prior)), kwargs...)
+
+**Matrix-free Gaussian ODE filter with first-order vector field linearization.**
+
+Like the [`EK1`](@ref), it linearizes the ODE vector field with its Jacobian, which makes
+it suitable for stiff problems. But it accesses the Jacobian only through products, solves
+the linear systems with Krylov methods, and estimates a block-diagonal posterior covariance
+from random probes, so that its cost per step scales linearly with the ODE dimension
+[Bosch (2026)](@cite bosch26stable). The ODE function needs both products, as
+`ODEFunction(f; jvp, vjp)` with `jvp(Jv, v, u, p, t)` and `vjp(Jᵀv, v, u, p, t)`.
+
+# Arguments
+- `nprobes`: the number of probes for the posterior covariance.
+- `diagonal_jacobian`: optionally, a function `(out, u, p, t)` that writes the diagonal of
+  the Jacobian into `out`. The linear solves then use a cheaper preconditioner built from
+  it, instead of one estimated from probes. This preconditioner is more approximate. It
+  works well when the Jacobian is dominated by its diagonal, as for many discretized PDEs.
+  When the off-diagonal entries dominate, it is a worse preconditioner, and the solution
+  can become less accurate.
+
+All other keyword arguments of [`ODEFilter`](@ref) are supported, except observation noise
+and priors other than [`IWP`](@ref). Of the multivariate diffusions, only the
+[`FixedMVDiffusion`](@ref) with `calibrate=false` is supported. Mass matrices and
+second-order ODEs are not supported yet.
+
+The probes are drawn from the keyword `rng` of `solve` if the installed OrdinaryDiffEq
+supports it, and otherwise from `Random.default_rng()`. `sol.pnstats` counts the products
+and the linear solves. Its log-likelihood is `NaN`.
+
+# Examples
+```julia-repl
+julia> solve(prob, MatfreeEK1())
+```
+
+# [References](@ref references)
+"""
+MatfreeEK1(; nprobes=nothing, diagonal_jacobian=nothing, kwargs...) =
+    ODEFilter(; linearization=MatrixFreeJacobian(; nprobes, diagonal_jacobian), kwargs...)
+
 _solver_name(::ZeroJacobian) = "EK0"
 _solver_name(::FullJacobian) = "EK1"
 _solver_name(::DiagonalJacobian) = "DiagonalEK1"
+_solver_name(::MatrixFreeJacobian) = "MatfreeEK1"
 _solver_name(::AbstractLinearization) = nothing
+
+linearization_settings(::AbstractLinearization) = Pair{Symbol,Any}[]
+linearization_settings(lin::MatrixFreeJacobian) = Pair{Symbol,Any}[
+    k => getfield(lin, k) for k in fieldnames(MatrixFreeJacobian)
+    if !isnothing(getfield(lin, k))]
+function Base.show(io::IO, lin::MatrixFreeJacobian)
+    print(io, "MatrixFreeJacobian(")
+    join(io,
+        (string(k, "=", repr(v; context=io)) for (k, v) in linearization_settings(lin)),
+        ", ")
+    print(io, ")")
+end
 
 # Shown as the call that constructs it, with the settings that differ from the defaults
 function Base.show(io::IO, alg::ODEFilter)
     name = _solver_name(alg.linearization)
     settings = Pair{Symbol,Any}[]
-    isnothing(name) && push!(settings, :linearization => alg.linearization)
+    if isnothing(name)
+        push!(settings, :linearization => alg.linearization)
+    else
+        append!(settings, linearization_settings(alg.linearization))
+    end
     q = num_derivatives(alg.prior)
     if alg.prior != IWP(q)
         push!(settings, :prior => alg.prior)
@@ -376,7 +437,8 @@ The covariance structure for solving a problem with this `mass_matrix` with algo
 its `covariance_factorization` if set, and otherwise the first of
 `IsometricKroneckerCovariance`, `BlockDiagonalCovariance` and `DenseCovariance` whose
 requirements all settings meet. Dense covariances are chosen automatically only for the
-`EK1`; the `EK0` and the `DiagonalEK1` use them only on request.
+`EK1`; the `EK0` and the `DiagonalEK1` use them only on request, and the `MatfreeEK1`
+never.
 """
 function choose_covariance_structure(alg::ODEFilter, mass_matrix)
     (; prior, diffusionmodel, pn_observation_noise) = alg
@@ -397,7 +459,10 @@ function choose_covariance_structure(alg::ODEFilter, mass_matrix)
                              Union{Nothing,Number,UniformScaling,Diagonal},
         mass_matrix=mass_matrix isa Union{UniformScaling,Diagonal},
     )
-    dense = (diffusionmodel=(!estimates_per_dimension(diffusionmodel)),)
+    dense = (
+        linearization=(!(linearization isa MatrixFreeJacobian)),
+        diffusionmodel=(!estimates_per_dimension(diffusionmodel)),
+    )
 
     # `all` of the values, unlike of the named tuple, is evaluated at compile time
     met(requirements) = all(values(requirements))

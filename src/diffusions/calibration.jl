@@ -106,7 +106,7 @@ function estimate_global_diffusion(::FixedMVDiffusion, integ, upd)
 end
 
 @doc raw"""
-    local_scalar_diffusion(cache, z, HQH)
+    local_scalar_diffusion(cache, z, HQHt)
 
 Compute and return the local scalar quasi-MLE diffusion estimate as a `Number`.
 
@@ -114,20 +114,20 @@ Corresponds to
 ```math
 σ² = zᵀ (H Q H^T)⁻¹ z / d,
 ```
-where ``z`` is the residual at the predicted mean and `HQH` is ``H Q H^T``, from
+where ``z`` is the residual at the predicted mean and `HQHt` is ``H Q H^T``, from
 [`linearize_ode_observation!`](@ref) and [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function local_scalar_diffusion(cache, z, HQH)
+function local_scalar_diffusion(cache, z, HQHt)
     @unpack d, C_d, C_dxd = cache
-    σ² = invquad(z, HQH; v_cache=C_d, M_cache=C_dxd) / d
+    σ² = invquad(z, HQHt; v_cache=C_d, M_cache=C_dxd) / d
     return σ²
 end
 
 @doc raw"""
-    local_diagonal_diffusion(cache, z, HQH)
+    local_diagonal_diffusion(cache, z, HQHt)
 
 Compute the local diagonal quasi-MLE diffusion estimate.
 
@@ -137,15 +137,15 @@ Corresponds to
 ```math
 Σ_{ii} = z_i^2 / (H Q H^T)_{ii},
 ```
-where ``z`` is the residual at the predicted mean and `HQH` is ``H Q H^T``, from
+where ``z`` is the residual at the predicted mean and `HQHt` is ``H Q H^T``, from
 [`linearize_ode_observation!`](@ref) and [`observed_process_noise!`](@ref).
 
 For more background information
 * [Bosch et al. (2021)](@cite bosch20capos) "Calibrated Adaptive Probabilistic ODE Solvers", AISTATS
 """
-function local_diagonal_diffusion(cache, z, HQH)
+function local_diagonal_diffusion(cache, z, HQHt)
     @unpack local_diffusion = cache
-    HQH_diag = diag!(local_diffusion.diag, HQH)
-    @.. local_diffusion.diag = z^2 / HQH_diag
+    HQHt_diag = diag!(local_diffusion.diag, HQHt)
+    @.. local_diffusion.diag = z^2 / HQHt_diag
     return local_diffusion
 end
