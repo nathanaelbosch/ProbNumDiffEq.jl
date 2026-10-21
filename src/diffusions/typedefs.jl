@@ -104,8 +104,6 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
     end
 end
 function estimate_local_diffusion(::FixedMVDiffusion, integ, obs, HQH)
-    # A block-diagonal H Q Hᵀ comes from an H that does not couple the dimensions. It is
-    # then diagonal, and the estimate of one diffusion per dimension is exact.
     if HQH isa BlocksOfDiagonalsPSD
         return local_diagonal_diffusion(integ.cache, obs.r, HQH)
     else
