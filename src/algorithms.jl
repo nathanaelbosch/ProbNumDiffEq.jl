@@ -384,7 +384,6 @@ _solver_name(::DiagonalJacobian) = "DiagonalEK1"
 _solver_name(::MatrixFreeJacobian) = "MatfreeEK1"
 _solver_name(::AbstractLinearization) = nothing
 
-# The settings of a linearization, shown as keywords of the solver
 linearization_settings(::AbstractLinearization) = Pair{Symbol,Any}[]
 linearization_settings(lin::MatrixFreeJacobian) = Pair{Symbol,Any}[
     k => getfield(lin, k) for k in fieldnames(MatrixFreeJacobian)

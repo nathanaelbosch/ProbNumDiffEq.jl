@@ -1,8 +1,3 @@
-# The `MatfreeEK1`. It accesses the Jacobian of the ODE only through `f.jvp` and `f.vjp`,
-# solves its linear systems with Krylov methods, and estimates a block-diagonal posterior
-# covariance from samples.
-
-# Probes for the diagonals of `H Σ Hᵀ` and `H Q(h) Hᵀ`. Each costs one JVP.
 const DIAGONAL_PROBES = 32
 const CALIBRATION_RTOL = 0.1
 const MAX_CG_ITERATIONS = 10_000
@@ -37,7 +32,7 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
                 "`calibrate=false`"),
         )
     elseif !(eltype(u) <: AbstractFloat)
-        # Krylov.jl needs floating-point numbers, so this rules out ForwardDiff's dual numbers
+        # Krylov.jl needs floating-point numbers
         throw(unsupported("states that are not floating-point numbers"))
     elseif isnothing(f.jvp) || isnothing(f.vjp)
         throw(
@@ -181,7 +176,6 @@ function vjp!(Jᵀw, H::MatrixFreeObservationOperator, w)
     return Jᵀw
 end
 
-# H x = E₁ x - J E₀ x
 function mul!(y::AbstractVector, H::MatrixFreeObservationOperator, x::AbstractVector)
     d = length(y)
     E₀x, E₁x = view(x, 1:d), view(x, (d+1):2d)
@@ -207,7 +201,6 @@ struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, (ΣE₀ᵀ, ΣE₁ᵀ))
         d = nblocks(R)
         for (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
-            # The entries (k, 1) and (k, 2) of the i-th block Rᵢᵀ Rᵢ of Σ
             ΣE₀ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
             ΣE₁ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 2))
         end
@@ -215,7 +208,6 @@ struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     end
 end
 
-# Σ Hᵀ w = Σ E₁ᵀ w - Σ E₀ᵀ Jᵀ w, for one derivative of the state after the other
 function mul!(out::AbstractVector, C::MatrixFreeCrossCovariance, w::AbstractVector)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = C
     d = length(w)
@@ -323,7 +315,6 @@ function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
         draw_probes!(c.ξ, rng)
         @.. E₀g = l₀₀ * ξ₀
         @.. E₁g = l₁₀ * ξ₀ + l₁₁ * ξ₁
-        # (H g)² = (E₁ g - J E₀ g)²
         JE₀g = jvp!(c.Jv, H, E₀g)
         @.. out = out + (E₁g - JE₀g)^2
     end
@@ -346,13 +337,10 @@ function diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, 
     return out
 end
 
-# The relative tolerance of the linear solves. The calibration needs less accuracy than the
-# update, whose tolerance is the solver's `reltol`, but at most 1e-2. It is at least
-# `sqrt(eps)`, because the Krylov methods cannot reach a residual of zero, as a `reltol` of
-# zero would ask for.
 function krylov_rtol(H::MatrixFreeObservationOperator, part)
     T = eltype(H.cache.u)
     part === :calibration && return T(CALIBRATION_RTOL)
+    # CG cannot reach the residual of zero that a `reltol` of zero asks for
     return clamp(T(minimum(H.integ.opts.reltol)), sqrt(eps(T)), T(1e-2))
 end
 
@@ -396,7 +384,6 @@ function throw_if_not_finite(S::MatrixFreeObservedCovariance, b)
     return nothing
 end
 
-# Count a linear solve in the statistics of `part`
 function count_solve!(H::MatrixFreeObservationOperator, part, niter)
     stats = H.integ.sol.pnstats
     H.integ.stats.nsolve += 1
@@ -530,7 +517,6 @@ function observed_process_noise!(
     )
 end
 
-# zᵀ (H Q(h) Hᵀ)⁻¹ z, for the calibration
 invquad(z, S::MatrixFreeObservedCovariance; kwargs...) =
     dot(z, krylov_solve!(S, z, :calibration))
 

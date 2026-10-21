@@ -25,7 +25,6 @@ R = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ i
 Σ = Matrix(R)' * Matrix(R)
 S_dense = H_dense * Σ * H_dense'
 
-# The operator H at `u`, from linearizing an integrator there
 function observation_operator(; reltol=1e-12, kwargs...)
     integ = init(ODEProblem(f, u, (0.0, 1.0)), MatfreeEK1(; order=q, kwargs...); reltol)
     m = [u; zeros(D - d)]
