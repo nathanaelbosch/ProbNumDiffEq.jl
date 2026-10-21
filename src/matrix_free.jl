@@ -105,8 +105,8 @@ The observation matrix ``H = E_1 - J E_0`` of the ODE, as an operator.
 
 ``E_0`` and ``E_1`` select the solution and its first derivative from the state.
 ``J`` is the Jacobian of the ODE at the solution `cache.u`, and it is never formed.
-The main cost of ``H x = E_1 x - J E_0 x`` is thus one Jacobian-vector product (`jvp!`).
-The cross-covariance ``Σ H^T`` instead needs products with ``J^T`` (`vjp!`).
+The main cost of ``H x = E_1 x - J E_0 x`` is thus one Jacobian-vector product (`apply_jvp!`).
+The cross-covariance ``Σ H^T`` instead needs products with ``J^T`` (`apply_vjp!`).
 
 The integrator `integ` provides the ODE function, its parameters and the time. It also
 provides the random number generator for the probes, the tolerance of the linear solves,
@@ -145,15 +145,16 @@ function linearize_ode_observation!(
 end
 
 """
-    jvp!(Jv, H::MatrixFreeObservationOperator, v)
+    apply_jvp!(H::MatrixFreeObservationOperator, v)
 
-Multiply `v` with the Jacobian ``J`` of the ODE at the point of `H`, and write the result
-into `Jv`. This calls the `jvp` of the ODE function. The products with ``H`` and with
+Multiply `v` with the Jacobian ``J`` of the ODE at the point of `H`, and return the result
+in `H.cache.Jv`. This calls the `jvp` of the ODE function. The products with ``H`` and with
 ``H Σ H^T`` use it, and so does the estimate of the diagonal of ``H Σ H^T`` from probes.
 If `v` is not a `Vector`, it is first copied into one, because `f.jvp` may require it.
 """
-function jvp!(Jv, H::MatrixFreeObservationOperator, v)
+function apply_jvp!(H::MatrixFreeObservationOperator, v)
     (; f, p, t, dt) = H.integ
+    Jv = H.cache.Jv
     v = v isa Vector ? v : copy!(H.cache.v, v)
     f.jvp(Jv, v, H.cache.u, p, t + dt)
     H.integ.sol.pnstats.njvp += 1
@@ -161,15 +162,16 @@ function jvp!(Jv, H::MatrixFreeObservationOperator, v)
 end
 
 """
-    vjp!(Jᵀw, H::MatrixFreeObservationOperator, w)
+    apply_vjp!(H::MatrixFreeObservationOperator, w)
 
 Multiply `w` with the transpose ``J^T`` of the Jacobian of the ODE at the point of `H`, and
-write the result into `Jᵀw`. This calls the `vjp` of the ODE function. The products with
-``Σ H^T`` and with ``H Σ H^T`` use it. If `w` is not a `Vector`, it is first copied into
-one, because `f.vjp` may require it.
+return the result in `H.cache.a`. This calls the `vjp` of the ODE function. The products
+with ``Σ H^T`` and with ``H Σ H^T`` use it. If `w` is not a `Vector`, it is first copied
+into one, because `f.vjp` may require it.
 """
-function vjp!(Jᵀw, H::MatrixFreeObservationOperator, w)
+function apply_vjp!(H::MatrixFreeObservationOperator, w)
     (; f, p, t, dt) = H.integ
+    Jᵀw = H.cache.a
     w = w isa Vector ? w : copy!(H.cache.v, w)
     f.vjp(Jᵀw, w, H.cache.u, p, t + dt)
     H.integ.sol.pnstats.nvjp += 1
@@ -179,7 +181,7 @@ end
 function mul!(y::AbstractVector, H::MatrixFreeObservationOperator, x::AbstractVector)
     d = length(y)
     E₀x, E₁x = view(x, 1:d), view(x, (d+1):2d)
-    JE₀x = jvp!(H.cache.Jv, H, E₀x)
+    JE₀x = apply_jvp!(H, E₀x)
     @.. y = E₁x - JE₀x
     return y
 end
@@ -211,7 +213,7 @@ end
 function mul!(out::AbstractVector, C::MatrixFreeCrossCovariance, w::AbstractVector)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = C
     d = length(w)
-    Jᵀw = vjp!(H.cache.a, H, w)
+    Jᵀw = apply_vjp!(H, w)
     for k in 0:(length(out)÷d-1)
         idx = (k*d+1):((k+1)*d)
         @views out[idx] .= ΣE₁ᵀ[idx] .* w .- ΣE₀ᵀ[idx] .* Jᵀw
@@ -271,11 +273,11 @@ eltype(S::MatrixFreeObservedCovariance) = eltype(S.diagonal)
 function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVector)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.C
     d = length(w)
-    Jᵀw = vjp!(H.cache.a, H, w)
+    Jᵀw = apply_vjp!(H, w)
     E₀ΣHᵀw = H.cache.e0
     @views E₀ΣHᵀw .= ΣE₁ᵀ[1:d] .* w .- ΣE₀ᵀ[1:d] .* Jᵀw
     @views y .= ΣE₁ᵀ[(d+1):2d] .* w .- ΣE₀ᵀ[(d+1):2d] .* Jᵀw
-    y .-= jvp!(H.cache.Jv, H, E₀ΣHᵀw)
+    y .-= apply_jvp!(H, E₀ΣHᵀw)
     return y
 end
 
@@ -315,7 +317,7 @@ function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
         draw_probes!(c.ξ, rng)
         @.. E₀g = l₀₀ * ξ₀
         @.. E₁g = l₁₀ * ξ₀ + l₁₁ * ξ₁
-        JE₀g = jvp!(c.Jv, H, E₀g)
+        JE₀g = apply_jvp!(H, E₀g)
         @.. out = out + (E₁g - JE₀g)^2
     end
     @.. out = out / n
