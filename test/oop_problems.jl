@@ -33,6 +33,12 @@ end
         @test solve(prob_mtk, EK1(order=4, initialization=ClassicSolverInit(Tsit5()))) isa
               ProbNumDiffEq.ProbODESolution
     end
+    @testset "with Jacobian-vector products" begin
+        jvp(v, u, p, t) = p .* (1 .- 2u) .* v
+        prob_jvp = ODEProblem(ODEFunction(f; jvp, vjp=jvp), prob.u0, prob.tspan, prob.p)
+        sol = solve(prob_jvp, MatfreeEK1(order=4))
+        @test sol.u[end] ≈ solve(prob, EK1(order=4)).u[end] rtol = 1e-3
+    end
     @testset "with mass matrix" begin
         function rober(u, p, t)
             y₁, y₂, y₃ = u
@@ -49,11 +55,5 @@ end
         @test sol.retcode == ReturnCode.Success
         @test all(u -> abs(sum(u) - 1) < 1e-8, sol.u)
         @test_throws "DAE" solve(prob, EK0())
-    end
-    @testset "with Jacobian-vector products" begin
-        jvp(v, u, p, t) = p .* (1 .- 2u) .* v
-        prob_jvp = ODEProblem(ODEFunction(f; jvp, vjp=jvp), prob.u0, prob.tspan, prob.p)
-        sol = solve(prob_jvp, MatfreeEK1(order=4))
-        @test sol.u[end] ≈ solve(prob, EK1(order=4)).u[end] rtol = 1e-3
     end
 end
