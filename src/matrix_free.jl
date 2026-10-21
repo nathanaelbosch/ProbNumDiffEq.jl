@@ -15,7 +15,6 @@ there are derivatives in the state.
 """
 function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     unsupported(what) = ArgumentError("The `MatfreeEK1` does not support $what.")
-    (; diffusionmodel) = alg
     if f isa DynamicalODEFunction
         throw(unsupported("second-order ODEs"))
     elseif f.mass_matrix !== I
@@ -23,8 +22,8 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     elseif !isnothing(alg.pn_observation_noise)
         throw(unsupported("observation noise"))
     elseif !(
-        diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
-        (diffusionmodel isa FixedMVDiffusion && !diffusionmodel.calibrate)
+        alg.diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
+        (alg.diffusionmodel isa FixedMVDiffusion && !alg.diffusionmodel.calibrate)
     )
         throw(
             unsupported(
@@ -102,16 +101,17 @@ end
 """
     MatrixFreeObservationOperator(integ, cache)
 
-The observation matrix ``H = E_1 - J E_0`` of the ODE, as an operator. ``E_0`` and ``E_1``
-select the solution and its first derivative from the state. ``J`` is the Jacobian of the
-ODE at the solution `cache.u`, and it is never formed. So ``H x = E_1 x - J E_0 x`` costs
-one Jacobian-vector product, from `jvp!`. The cross-covariance ``Σ H^T`` needs products
-with ``J^T`` instead, from `vjp!`.
+The observation matrix ``H = E_1 - J E_0`` of the ODE, as an operator.
+
+``E_0`` and ``E_1`` select the solution and its first derivative from the state.
+``J`` is the Jacobian of the ODE at the solution `cache.u`, and it is never formed.
+The main cost of ``H x = E_1 x - J E_0 x`` is thus one Jacobian-vector product (`jvp!`).
+The cross-covariance ``Σ H^T`` instead needs products with ``J^T`` (`vjp!`).
 
 The integrator `integ` provides the ODE function, its parameters and the time. It also
 provides the random number generator for the probes, the tolerance of the linear solves,
-and the statistics that count the products and the solves. `cache` holds the buffers of
-the linearization.
+and the statistics that count the products and the solves.
+`cache` holds the buffers of the linearization.
 """
 struct MatrixFreeObservationOperator{I,C} <: AbstractMatrixFreeOperator
     integ::I
