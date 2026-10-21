@@ -117,12 +117,12 @@ end
 @testset "Calibration" begin
     H = observation_operator()
     RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
-    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHt; needs_diagonal=true)
-    HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
+    HQHt = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHt; needs_diagonal=true)
+    HQHt_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
     z = randn(rng, d)
     # CG approaches zᵀ S⁻¹ z from below, up to rounding. Its tolerance for the calibration
     # is 0.1.
-    exact = z' * (HQH_dense \ z)
-    @test PNDE.invquad(z, HQH) ≈ exact rtol = 0.15
-    @test PNDE.invquad(z, HQH) <= exact * (1 + sqrt(eps()))
+    exact = z' * (HQHt_dense \ z)
+    @test PNDE.invquad(z, HQHt) ≈ exact rtol = 0.15
+    @test PNDE.invquad(z, HQHt) <= exact * (1 + sqrt(eps()))
 end

@@ -16,8 +16,8 @@ particular also when solving stiff systems.
 """
 struct DynamicDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicDiffusion, d, Eltype) = one(Eltype)
-estimate_local_diffusion(::DynamicDiffusion, integ, obs, HQH) =
-    local_scalar_diffusion(integ.cache, obs.r, HQH)
+estimate_local_diffusion(::DynamicDiffusion, integ, obs, HQHt) =
+    local_scalar_diffusion(integ.cache, obs.r, HQHt)
 
 """
     DynamicMVDiffusion()
@@ -37,8 +37,8 @@ separately.
 """
 struct DynamicMVDiffusion <: AbstractDynamicDiffusion end
 initial_diffusion(::DynamicMVDiffusion, d, Eltype) = Diagonal(ones(Eltype, d))
-estimate_local_diffusion(::DynamicMVDiffusion, integ, obs, HQH) =
-    local_diagonal_diffusion(integ.cache, obs.r, HQH)
+estimate_local_diffusion(::DynamicMVDiffusion, integ, obs, HQHt) =
+    local_diagonal_diffusion(integ.cache, obs.r, HQHt)
 
 """
     FixedDiffusion(; initial_diffusion=1.0, calibrate=true)
@@ -58,8 +58,8 @@ Base.@kwdef struct FixedDiffusion{T<:Number} <: AbstractStaticDiffusion
 end
 initial_diffusion(diffusionmodel::FixedDiffusion, d, Eltype) =
     diffusionmodel.initial_diffusion * one(Eltype)
-estimate_local_diffusion(::FixedDiffusion, integ, obs, HQH) =
-    local_scalar_diffusion(integ.cache, obs.r, HQH)
+estimate_local_diffusion(::FixedDiffusion, integ, obs, HQHt) =
+    local_scalar_diffusion(integ.cache, obs.r, HQHt)
 
 """
     FixedMVDiffusion(; initial_diffusion=1.0, calibrate=true)
@@ -103,13 +103,13 @@ function initial_diffusion(diffusionmodel::FixedMVDiffusion, d, Eltype)
         )
     end
 end
-function estimate_local_diffusion(::FixedMVDiffusion, integ, obs, HQH)
-    if HQH isa BlocksOfDiagonalsPSD
-        return local_diagonal_diffusion(integ.cache, obs.r, HQH)
+function estimate_local_diffusion(::FixedMVDiffusion, integ, obs, HQHt)
+    if HQHt isa BlocksOfDiagonalsPSD
+        return local_diagonal_diffusion(integ.cache, obs.r, HQHt)
     else
         # The local diffusion is stored as a `Diagonal` for multivariate models, so the
         # scalar estimate is written into every entry.
-        σ² = local_scalar_diffusion(integ.cache, obs.r, HQH)
+        σ² = local_scalar_diffusion(integ.cache, obs.r, HQHt)
         fill!(integ.cache.local_diffusion.diag, σ²)
         return integ.cache.local_diffusion
     end
