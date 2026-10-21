@@ -284,14 +284,6 @@ function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVec
 end
 
 """
-    draw_probes!(ξ, rng)
-
-Fill `ξ` with probes, which are independent standard normal entries. The estimators from
-probes only need ``E[ξ ξ^T] = I``, so Rademacher entries would work as well.
-"""
-draw_probes!(ξ, rng) = Random.randn!(rng, ξ)
-
-"""
     estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
 
 Estimate the diagonal of ``S = H Σ H^T`` from `n` probes, with an estimator of the
@@ -316,7 +308,7 @@ function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
     rng = integrator_rng(H.integ)
     fill!(out, 0)
     for _ in 1:n
-        draw_probes!(c.ξ, rng)
+        Random.randn!(rng, c.ξ)
         @.. E₀g = l₀₀ * ξ₀
         @.. E₁g = l₁₀ * ξ₀ + l₁₁ * ξ₁
         JE₀g = apply_jvp!(H, E₀g)
@@ -462,7 +454,7 @@ function update_cov!(
 )
     H = obs.H
     c = H.cache
-    Ξ = draw_probes!(c.Ξ, integrator_rng(H.integ))
+    Ξ = Random.randn!(integrator_rng(H.integ), c.Ξ)
     G = mul!(c.G, x_pred.Σ.R', Ξ)
     condition_samples!(G, H, K)
     estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Y, c.M))
