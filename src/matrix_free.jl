@@ -401,15 +401,16 @@ function count_solve!(H::MatrixFreeObservationOperator, part, niter)
 end
 
 """
-    MatrixFreeGain(S)
+    MatrixFreeGain(S::MatrixFreeObservedCovariance)
 
-The Kalman gain ``K = Σ H^T S^{-1}``. `S` holds the cross-covariance ``Σ H^T`` and the
-Jacobi preconditioner for the solves with ``S``. `update_mean!` returns the gain for
-`update_cov!`.
+The Kalman gain ``K = Σ H^T S^{-1}``, from the cross-covariance ``Σ H^T`` and the observed
+covariance ``S``. `update_mean!` returns the gain for `update_cov!`.
 """
-struct MatrixFreeGain{ST}
+struct MatrixFreeGain{CT,ST}
+    ΣHᵀ::CT
     S::ST
 end
+MatrixFreeGain(S::MatrixFreeObservedCovariance) = MatrixFreeGain(S.ΣHᵀ, S)
 
 """
     update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
@@ -476,7 +477,7 @@ function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGa
     mul!(HG, H, G)
     W = krylov_solve!(K.S, HG, :covariance)
     for j in axes(G, 2)
-        view(G, :, j) .-= mul!(gtmp, K.S.ΣHᵀ, view(W, :, j))
+        view(G, :, j) .-= mul!(gtmp, K.ΣHᵀ, view(W, :, j))
     end
     return G
 end
