@@ -1,6 +1,7 @@
 using ProbNumDiffEq
 using ModelingToolkit
 using OrdinaryDiffEq
+using LinearAlgebra
 using Test
 
 # Helper function to convert a regular ODE problem to MTK form with symbolic maps
@@ -31,5 +32,22 @@ end
         @test solve(prob_mtk, EK1(order=4)) isa ProbNumDiffEq.ProbODESolution
         @test solve(prob_mtk, EK1(order=4, initialization=ClassicSolverInit(Tsit5()))) isa
               ProbNumDiffEq.ProbODESolution
+    end
+    @testset "with mass matrix" begin
+        function rober(u, p, t)
+            y₁, y₂, y₃ = u
+            k₁, k₂, k₃ = p
+            return [
+                -k₁ * y₁ + k₃ * y₂ * y₃,
+                k₁ * y₁ - k₃ * y₂ * y₃ - k₂ * y₂^2,
+                y₁ + y₂ + y₃ - 1,
+            ]
+        end
+        f = ODEFunction(rober, mass_matrix=Diagonal([1, 1, 0]))
+        prob = ODEProblem(f, [1.0, 0.0, 0.0], (0.0, 1e-2), (0.04, 3e7, 1e4))
+        sol = solve(prob, EK1(order=3))
+        @test sol.retcode == ReturnCode.Success
+        @test all(u -> abs(sum(u) - 1) < 1e-8, sol.u)
+        @test_throws "DAE" solve(prob, EK0())
     end
 end
