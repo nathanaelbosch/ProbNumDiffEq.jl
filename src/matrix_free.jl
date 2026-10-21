@@ -73,7 +73,7 @@ function make_linearization_cache(
         HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(),
         ξ=zeros(T, 2d), L=(dvec(), dvec(), dvec()),
         Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
-        Y=zeros(T, m, q + 1), M=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
+        Gᵢᵀ=zeros(T, m, q + 1), Σᵢ=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}), W=zeros(T, d, m),
     )
 end
@@ -475,7 +475,7 @@ function update_cov!(
     Ξ = Random.randn!(integrator_rng(H.integ), c.Ξ)  # ~ N(0, I)
     G = mul!(c.G, x_pred.Σ.R', Ξ)                    # ~ N(0, Σ)
     condition_samples!(G, H, K)                      # ~ N(0, Σ - K H Σ)
-    estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Y, c.M))
+    estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Gᵢᵀ, c.Σᵢ))
     return x_out
 end
 
@@ -498,7 +498,7 @@ function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGa
 end
 
 """
-    estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
+    estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Gᵢᵀ, Σᵢ))
 
 Estimate the block-diagonal part of a covariance from the samples in the columns of `G`, and write its square root into `R`.
 
@@ -506,17 +506,17 @@ The samples have mean zero, so their sample covariance is ``\\frac{1}{m} G G^T``
 We keep only its blocks.
 Block ``i`` is the covariance of dimension ``i`` across all derivatives, so it uses the rows `i:d:D` of `G`.
 We compute its square root by a Cholesky factorization, or by a QR decomposition if the Cholesky factorization fails or is ill-conditioned.
-`Y` and `M` are buffers.
+`Gᵢᵀ` and `Σᵢ` are buffers.
 """
-function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
+function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Gᵢᵀ, Σᵢ))
     d, m = nblocks(R), size(G, 2)
     for (i, Ri) in enumerate(blocks(R))
-        rmul!(transpose!(Y, view(G, i:d:size(G, 1), :)), 1 / sqrt(m))
-        chol = cholesky!(Symmetric(_matmul!(M, Y', Y)), check=false)
+        rmul!(transpose!(Gᵢᵀ, view(G, i:d:size(G, 1), :)), 1 / sqrt(m))
+        chol = cholesky!(Symmetric(_matmul!(Σᵢ, Gᵢᵀ', Gᵢᵀ)), check=false)
         if issuccess(chol) && is_well_conditioned(chol.U)
             copy!(Ri, chol.U)
         else
-            copy!(Ri, triangularize!(Y; cachemat=nothing))
+            copy!(Ri, triangularize!(Gᵢᵀ; cachemat=nothing))
         end
     end
     return R
