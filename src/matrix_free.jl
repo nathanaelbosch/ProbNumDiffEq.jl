@@ -65,15 +65,15 @@ function make_linearization_cache(
     m = nprobes(linearization, q)
     dvec() = zeros(T, d)
     observed_covariance() =
-        (; ΣEᵀ=(zeros(T, D), zeros(T, D)), preconditioner=dvec(), diagonal=dvec())
+        (; ΣEt=(zeros(T, D), zeros(T, D)), preconditioner=dvec(), diagonal=dvec())
     return (;
         r=dvec(), u=dvec(),
         J_D=isnothing(linearization.diagonal_jacobian) ? nothing : dvec(),
-        v=dvec(), Jv=dvec(), Jᵀw=dvec(), E₀ΣHᵀw=dvec(), E₀g=dvec(), E₁g=dvec(), z=dvec(),
-        HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(),
+        v=dvec(), Jv=dvec(), Jtw=dvec(), E0ΣHtw=dvec(), E0g=dvec(), E1g=dvec(), z=dvec(),
+        HΣHt=observed_covariance(), HQHt=observed_covariance(),
         ξ=zeros(T, 2d), L=(dvec(), dvec(), dvec()),
         Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
-        Gᵢᵀ=zeros(T, m, q + 1), Σᵢ=zeros(T, q + 1, q + 1), KHg=zeros(T, D),
+        Gt_i=zeros(T, m, q + 1), Σ_i=zeros(T, q + 1, q + 1), KHg=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}), W=zeros(T, d, m),
     )
 end
@@ -173,18 +173,18 @@ If `w` is not a `Vector`, it is first copied into one, because `f.vjp` may requi
 """
 function apply_vjp!(H::MatrixFreeObservationOperator, w)
     (; f, p, t, dt) = H.integ
-    Jᵀw = H.cache.Jᵀw
+    Jtw = H.cache.Jtw
     w = w isa Vector ? w : copy!(H.cache.v, w)
-    f.vjp(Jᵀw, w, H.cache.u, p, t + dt)
+    f.vjp(Jtw, w, H.cache.u, p, t + dt)
     H.integ.sol.pnstats.nvjp += 1
-    return Jᵀw
+    return Jtw
 end
 
 function mul!(y::AbstractVector, H::MatrixFreeObservationOperator, x::AbstractVector)
     d = length(y)
-    E₀x, E₁x = view(x, 1:d), view(x, (d+1):2d)
-    JE₀x = apply_jvp!(H, E₀x)
-    @.. y = E₁x - JE₀x
+    E0x, E1x = view(x, 1:d), view(x, (d+1):2d)
+    JE0x = apply_jvp!(H, E0x)
+    @.. y = E1x - JE0x
     return y
 end
 
@@ -200,25 +200,25 @@ nonzero entry per row and we can store them as vectors.
 """
 struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     H::HT
-    ΣE₀ᵀ::V
-    ΣE₁ᵀ::V
-    function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, (ΣE₀ᵀ, ΣE₁ᵀ))
+    ΣE0t::V
+    ΣE1t::V
+    function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, (ΣE0t, ΣE1t))
         d = nblocks(R)
         for (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
-            ΣE₀ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
-            ΣE₁ᵀ[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 2))
+            ΣE0t[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
+            ΣE1t[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 2))
         end
-        return new{typeof(H),typeof(ΣE₀ᵀ)}(H, ΣE₀ᵀ, ΣE₁ᵀ)
+        return new{typeof(H),typeof(ΣE0t)}(H, ΣE0t, ΣE1t)
     end
 end
 
-function mul!(x::AbstractVector, ΣHᵀ::MatrixFreeCrossCovariance, w::AbstractVector)
-    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = ΣHᵀ
+function mul!(x::AbstractVector, ΣHt::MatrixFreeCrossCovariance, w::AbstractVector)
+    (; H, ΣE0t, ΣE1t) = ΣHt
     d = length(w)
-    Jᵀw = apply_vjp!(H, w)
+    Jtw = apply_vjp!(H, w)
     for k in 1:(length(x)÷d)
         idx = ((k-1)*d+1):(k*d)
-        @views x[idx] .= ΣE₁ᵀ[idx] .* w .- ΣE₀ᵀ[idx] .* Jᵀw
+        @views x[idx] .= ΣE1t[idx] .* w .- ΣE0t[idx] .* Jtw
     end
     return x
 end
@@ -243,16 +243,16 @@ As the local error estimate needs the stochastic diagonal, one can also compute 
 by setting `needs_diagonal=true`.
 """
 struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
-    ΣHᵀ::CT
+    ΣHt::CT
     R::RT
     preconditioner::V
     diagonal::V
     function MatrixFreeObservedCovariance(
         H, R::BlocksOfDiagonals, buffers; needs_diagonal::Bool,
     )
-        ΣHᵀ = MatrixFreeCrossCovariance(H, R, buffers.ΣEᵀ)
+        ΣHt = MatrixFreeCrossCovariance(H, R, buffers.ΣEt)
         (; preconditioner, diagonal) = buffers
-        S = new{typeof(ΣHᵀ),typeof(R),typeof(diagonal)}(ΣHᵀ, R, preconditioner, diagonal)
+        S = new{typeof(ΣHt),typeof(R),typeof(diagonal)}(ΣHt, R, preconditioner, diagonal)
         J_D = H.cache.J_D
         if needs_diagonal || isnothing(J_D)
             estimate_diagonal!(diagonal, S, DIAGONAL_PROBES)
@@ -278,13 +278,13 @@ eltype(S::MatrixFreeObservedCovariance) = eltype(S.diagonal)
 # H Σ Hᵀ w = E₁ Σ Hᵀ w - J E₀ Σ Hᵀ w. Of Σ Hᵀ w, only the two derivatives that H reads are
 # formed.
 function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVector)
-    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.ΣHᵀ
+    (; H, ΣE0t, ΣE1t) = S.ΣHt
     d = length(w)
-    Jᵀw = apply_vjp!(H, w)
-    E₀ΣHᵀw = H.cache.E₀ΣHᵀw
-    @views E₀ΣHᵀw .= ΣE₁ᵀ[1:d] .* w .- ΣE₀ᵀ[1:d] .* Jᵀw
-    @views y .= ΣE₁ᵀ[(d+1):2d] .* w .- ΣE₀ᵀ[(d+1):2d] .* Jᵀw
-    y .-= apply_jvp!(H, E₀ΣHᵀw)
+    Jtw = apply_vjp!(H, w)
+    E0ΣHtw = H.cache.E0ΣHtw
+    @views E0ΣHtw .= ΣE1t[1:d] .* w .- ΣE0t[1:d] .* Jtw
+    @views y .= ΣE1t[(d+1):2d] .* w .- ΣE0t[(d+1):2d] .* Jtw
+    y .-= apply_jvp!(H, E0ΣHtw)
     return y
 end
 
@@ -301,25 +301,25 @@ Since ``H`` only reads ``E_0 g`` and ``E_1 g``, we only sample these.
 And since ``Σ`` is block-diagonal, the pairs ``(u_i, u_i')`` of different dimensions are independent, so we draw each pair from its own ``2 × 2`` covariance in ``Σ``.
 """
 function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
-    (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.ΣHᵀ
+    (; H, ΣE0t, ΣE1t) = S.ΣHt
     c = H.cache
     d = length(out)
-    # The Cholesky factor [l₀₀ 0; l₁₀ l₁₁] of the covariance of (uᵢ, uᵢ')
-    Σ₀₀, Σ₀₁, Σ₁₁ = view(ΣE₀ᵀ, 1:d), view(ΣE₁ᵀ, 1:d), view(ΣE₁ᵀ, (d+1):2d)
-    l₀₀, l₁₀, l₁₁ = c.L
-    @.. l₀₀ = sqrt(Σ₀₀)
-    @.. l₁₀ = ifelse(l₀₀ > 0, Σ₀₁ / l₀₀, zero(l₀₀))
-    @.. l₁₁ = sqrt(max(Σ₁₁ - l₁₀^2, zero(l₁₀)))
-    ξ₀, ξ₁ = view(c.ξ, 1:d), view(c.ξ, (d+1):2d)
-    (; E₀g, E₁g) = c
+    # The Cholesky factor [l00 0; l10 l11] of the covariance of (uᵢ, uᵢ')
+    Σ00, Σ01, Σ11 = view(ΣE0t, 1:d), view(ΣE1t, 1:d), view(ΣE1t, (d+1):2d)
+    l00, l10, l11 = c.L
+    @.. l00 = sqrt(Σ00)
+    @.. l10 = ifelse(l00 > 0, Σ01 / l00, zero(l00))
+    @.. l11 = sqrt(max(Σ11 - l10^2, zero(l10)))
+    ξ0, ξ1 = view(c.ξ, 1:d), view(c.ξ, (d+1):2d)
+    (; E0g, E1g) = c
     rng = integrator_rng(H.integ)
     fill!(out, 0)
     for _ in 1:n
         Random.randn!(rng, c.ξ)
-        @.. E₀g = l₀₀ * ξ₀
-        @.. E₁g = l₁₀ * ξ₀ + l₁₁ * ξ₁
-        JE₀g = apply_jvp!(H, E₀g)
-        @.. out = out + (E₁g - JE₀g)^2
+        @.. E0g = l00 * ξ0
+        @.. E1g = l10 * ξ0 + l11 * ξ1
+        JE0g = apply_jvp!(H, E0g)
+        @.. out = out + (E1g - JE0g)^2
     end
     @.. out = out / n
     return out
@@ -367,7 +367,7 @@ function krylov_solve!(
     S::MatrixFreeObservedCovariance, b::AbstractVector, part; itmax=MAX_CG_ITERATIONS,
 )
     throw_if_not_finite(S, b)
-    H = S.ΣHᵀ.H
+    H = S.ΣHt.H
     workspace = H.cache.cg
     rtol = krylov_rtol(H, part)
     M = Diagonal(S.preconditioner)
@@ -377,7 +377,7 @@ function krylov_solve!(
     return Krylov.solution(workspace)
 end
 function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, part)
-    W = S.ΣHᵀ.H.cache.W
+    W = S.ΣHt.H.cache.W
     for j in axes(B, 2)
         copy!(view(W, :, j), krylov_solve!(S, view(B, :, j), part))
     end
@@ -418,10 +418,10 @@ The Kalman gain ``K = Σ H^T S^{-1}``, stored as its two factors ``Σ H^T`` and 
 `update_mean!` returns it, so that `update_cov!` can reuse ``S`` and its preconditioner instead of building them again.
 """
 struct MatrixFreeGain{CT,ST}
-    ΣHᵀ::CT
+    ΣHt::CT
     S::ST
 end
-MatrixFreeGain(S::MatrixFreeObservedCovariance) = MatrixFreeGain(S.ΣHᵀ, S)
+MatrixFreeGain(S::MatrixFreeObservedCovariance) = MatrixFreeGain(S.ΣHt, S)
 
 """
     update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
@@ -435,7 +435,7 @@ We also return the gain ``K`` for `update_cov!`.
 function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
     (; m, H) = obs
     c = H.cache
-    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHᵀ; needs_diagonal=false)
+    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHt; needs_diagonal=false)
     z = if m === x_pred.μ
         obs.r
     else
@@ -446,7 +446,7 @@ function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache
     end
     w = krylov_solve!(S, z, :mean)
     ztSinvz = dot(z, w)
-    mul!(x_out.μ, S.ΣHᵀ, w)
+    mul!(x_out.μ, S.ΣHt, w)
     @.. x_out.μ = x_pred.μ - x_out.μ
     K = MatrixFreeGain(S)
     return (; loglikelihood=oftype(ztSinvz, NaN), ztSinvz, S, z, K, B=nothing)
@@ -475,7 +475,7 @@ function update_cov!(
     Ξ = Random.randn!(integrator_rng(H.integ), c.Ξ)  # ~ N(0, I)
     G = mul!(c.G, x_pred.Σ.R', Ξ)                    # ~ N(0, Σ)
     condition_samples!(G, H, K)                      # ~ N(0, Σ - K H Σ)
-    estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Gᵢᵀ, c.Σᵢ))
+    estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Gt_i, c.Σ_i))
     return x_out
 end
 
@@ -492,13 +492,13 @@ function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGa
     mul!(HG, H, G)
     W = krylov_solve!(K.S, HG, :covariance)
     for j in axes(G, 2)
-        view(G, :, j) .-= mul!(KHg, K.ΣHᵀ, view(W, :, j))
+        view(G, :, j) .-= mul!(KHg, K.ΣHt, view(W, :, j))
     end
     return G
 end
 
 """
-    estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Gᵢᵀ, Σᵢ))
+    estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Gt_i, Σ_i))
 
 Estimate the block-diagonal part of a covariance from the samples in the columns of `G`, and write its square root into `R`.
 
@@ -506,17 +506,17 @@ The samples have mean zero, so their sample covariance is ``\\frac{1}{m} G G^T``
 We keep only its blocks.
 Block ``i`` is the covariance of dimension ``i`` across all derivatives, so it uses the rows `i:d:D` of `G`.
 We compute its square root by a Cholesky factorization, or by a QR decomposition if the Cholesky factorization fails or is ill-conditioned.
-`Gᵢᵀ` and `Σᵢ` are buffers.
+`Gt_i` and `Σ_i` are buffers.
 """
-function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Gᵢᵀ, Σᵢ))
+function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Gt_i, Σ_i))
     d, m = nblocks(R), size(G, 2)
     for (i, Ri) in enumerate(blocks(R))
-        rmul!(transpose!(Gᵢᵀ, view(G, i:d:size(G, 1), :)), 1 / sqrt(m))
-        chol = cholesky!(Symmetric(_matmul!(Σᵢ, Gᵢᵀ', Gᵢᵀ)), check=false)
+        rmul!(transpose!(Gt_i, view(G, i:d:size(G, 1), :)), 1 / sqrt(m))
+        chol = cholesky!(Symmetric(_matmul!(Σ_i, Gt_i', Gt_i)), check=false)
         if issuccess(chol) && is_well_conditioned(chol.U)
             copy!(Ri, chol.U)
         else
-            copy!(Ri, triangularize!(Gᵢᵀ; cachemat=nothing))
+            copy!(Ri, triangularize!(Gt_i; cachemat=nothing))
         end
     end
     return R
@@ -530,7 +530,7 @@ function observed_process_noise!(
     return MatrixFreeObservedCovariance(
         H,
         cache.Qh.R,
-        H.cache.HQHᵀ;
+        H.cache.HQHt;
         needs_diagonal=adaptive,
     )
 end

@@ -111,5 +111,8 @@ Dense output and sampling must also keep the structure.
 
 - Keep code comments rare.
   Add one only when the code cannot say it: a non-obvious invariant, or the formula behind terse in-place linear algebra.
+- Names in code may use Greek letters for established symbols (`μ`, `Σ`, `σ²`), but no other sub- or superscripts.
+  Write a transpose as a `t` right after the factor it transposes, a subscript digit as a digit, and an index as `_i` at the end of the name, as in `ΣE0t`, `Jtw` and `Gt_i`.
+  Comments and docstrings may use sub- and superscripts in formulas.
 - PRs are squash-merged and their description is taken from the commit message, so write commit messages in Markdown with code in backticks.
 - Write Markdown with one sentence per line, so that diffs show only the changed sentences.

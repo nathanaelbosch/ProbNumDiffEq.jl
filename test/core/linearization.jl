@@ -38,7 +38,7 @@ end
 @testset "Residual and observation operator of the MatfreeEK1 at a point" begin
     jacobian(u, p, t) = ForwardDiff.jacobian(u -> f(u, p, t), u)
     jvp!(Jv, v, u, p, t) = mul!(Jv, jacobian(u, p, t), v)
-    vjp!(Jᵀv, v, u, p, t) = mul!(Jᵀv, jacobian(u, p, t)', v)
+    vjp!(Jtv, v, u, p, t) = mul!(Jtv, jacobian(u, p, t)', v)
     prob = ODEProblem(ODEFunction(f!; jvp=jvp!, vjp=vjp!), [-1.0, 1.0], (0.0, 1.0), 3.0)
     integ = init(prob, MatfreeEK1(order=q))
     t = integ.t + integ.dt

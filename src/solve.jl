@@ -37,7 +37,7 @@ function SciMLBase.__init(
                 jvp=isnothing(prob.f.jvp) ? nothing :
                     (Jv, v, u, p, t) -> Jv .= prob.f.jvp(v, u, p, t),
                 vjp=isnothing(prob.f.vjp) ? nothing :
-                    (Jᵀv, v, u, p, t) -> Jᵀv .= prob.f.vjp(v, u, p, t),
+                    (Jtv, v, u, p, t) -> Jtv .= prob.f.vjp(v, u, p, t),
                 analytic=prob.f.analytic,
             ),
             prob.u0,

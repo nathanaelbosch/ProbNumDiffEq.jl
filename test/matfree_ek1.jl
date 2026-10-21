@@ -24,12 +24,12 @@ function jvp!(Jv, v, u, p, t)
     end
     return Jv
 end
-function vjp!(Jᵀw, w, u, p, t)
+function vjp!(Jtw, w, u, p, t)
     for i in 1:N
         l, r = neighbors(w, i)
-        Jᵀw[i] = ν / dx^2 * (l - 2w[i] + r) - a / dx * (w[i] - r) + (1 - 2u[i]) * w[i]
+        Jtw[i] = ν / dx^2 * (l - 2w[i] + r) - a / dx * (w[i] - r) + (1 - 2u[i]) * w[i]
     end
-    return Jᵀw
+    return Jtw
 end
 diagonal_jacobian!(out, u, p, t) = (out .= -2ν / dx^2 - a / dx .+ 1 .- 2u)
 

@@ -11,7 +11,7 @@ const D = d * (q + 1)
 const A = randn(Xoshiro(1), d, d)
 f!(du, u, p, t) = (mul!(du, A, u); du .+= u .* (1 .- u); du)
 jvp!(Jv, v, u, p, t) = (mul!(Jv, A, v); Jv .+= (1 .- 2u) .* v; Jv)
-vjp!(Jᵀv, v, u, p, t) = (mul!(Jᵀv, A', v); Jᵀv .+= (1 .- 2u) .* v; Jᵀv)
+vjp!(Jtv, v, u, p, t) = (mul!(Jtv, A', v); Jtv .+= (1 .- 2u) .* v; Jtv)
 diagonal_jacobian!(out, u, p, t) = (out .= diag(A) .+ 1 .- 2u)
 const f = ODEFunction(f!; jvp=jvp!, vjp=vjp!)
 
@@ -31,7 +31,7 @@ function observation_operator(; reltol=1e-12, kwargs...)
     return PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m).H
 end
 observed_covariance(H, R; needs_diagonal=false) =
-    PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHᵀ; needs_diagonal)
+    PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHt; needs_diagonal)
 
 @testset "Products with H, Σ Hᵀ and H Σ Hᵀ" begin
     H = observation_operator()
@@ -40,7 +40,7 @@ observed_covariance(H, R; needs_diagonal=false) =
     w, W = randn(rng, d), randn(rng, d, 3)
     @test mul!(zeros(d), H, x) ≈ H_dense * x
     @test mul!(zeros(d, 3), H, X) ≈ H_dense * X
-    @test mul!(zeros(D), S.ΣHᵀ, w) ≈ Σ * H_dense' * w
+    @test mul!(zeros(D), S.ΣHt, w) ≈ Σ * H_dense' * w
     @test mul!(zeros(d), S, w) ≈ S_dense * w
     @test mul!(zeros(d, 3), S, W) ≈ S_dense * W
 end
@@ -117,7 +117,7 @@ end
 @testset "Calibration" begin
     H = observation_operator()
     RQ = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ in 1:d])
-    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHᵀ; needs_diagonal=true)
+    HQH = PNDE.MatrixFreeObservedCovariance(H, RQ, H.cache.HQHt; needs_diagonal=true)
     HQH_dense = H_dense * Matrix(RQ)' * Matrix(RQ) * H_dense'
     z = randn(rng, d)
     # CG approaches zᵀ S⁻¹ z from below, up to rounding. Its tolerance for the calibration
