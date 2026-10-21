@@ -291,12 +291,14 @@ end
 """
     estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
 
-Estimate the diagonal of ``S = H Σ H^T`` from `n` probes, with an estimator of the
-Hutchinson type. The diagonal of ``S`` is the expectation of ``(H g)^2`` for samples ``g``
-with the covariance ``Σ``, and each sample costs one Jacobian-vector product. ``H`` only
-reads ``E_0 g`` and ``E_1 g``, so only these are sampled. Since ``Σ`` is block-diagonal,
-the pairs ``(u_i, u_i')`` of different dimensions are independent. So each pair is drawn
-from its own ``2 × 2`` covariance in ``Σ``, from two entries of a probe.
+Estimate the diagonal of ``S = H Σ H^T`` stochastically, from `n` probes.
+
+For samples ``g`` with the covariance ``Σ``, the expectation of the elementwise square ``(H g)^2`` is the diagonal of ``S``.
+We therefore average ``(H g)^2`` over `n` samples, which is an estimator of the Hutchinson type.
+Each sample costs one Jacobian-vector product.
+
+Since ``H`` only reads ``E_0 g`` and ``E_1 g``, we only sample these.
+And since ``Σ`` is block-diagonal, the pairs ``(u_i, u_i')`` of different dimensions are independent, so we draw each pair from its own ``2 × 2`` covariance in ``Σ``.
 """
 function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.ΣHᵀ
@@ -326,10 +328,10 @@ end
 """
     estimate_diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, J_D)
 
-Estimate the diagonal of ``S = H Σ H^T`` by the diagonal of ``H_D Σ H_D^T``, with
-``H_D = E_1 - J_D E_0`` for the diagonal ``J_D`` of the Jacobian. Row ``i`` of ``H_D`` only
-reads ``u_i`` and ``u_i'``, so its entry only needs the ``i``-th block of the square root
-``R`` of ``Σ``.
+Estimate the diagonal of ``S = H Σ H^T`` deterministically, by the diagonal of ``H_D Σ H_D^T`` with ``H_D = E_1 - J_D E_0``, where ``J_D`` is the diagonal of the Jacobian.
+
+This needs no Jacobian-vector products, but it ignores the off-diagonal entries of ``J``.
+Since row ``i`` of ``H_D`` only reads ``u_i`` and ``u_i'``, its entry only needs the ``i``-th block of the square root ``R`` of ``Σ``.
 """
 function estimate_diagonal_with_diagonal_jacobian!(
     out, S::MatrixFreeObservedCovariance, J_D,
@@ -353,10 +355,13 @@ struct LinearSolveFailure <: Exception end
 """
     krylov_solve!(S::MatrixFreeObservedCovariance, b, part)
 
-Solve ``S x = b`` by CG with the Jacobi preconditioner of `S`, and return ``x``. A matrix
-`b` is solved column by column. `part` is `:mean`, `:covariance` or `:calibration`. It sets
-the tolerance, and the solves count in its statistics. If `b` or the preconditioner is not
-finite, or if a solve does not converge, it throws a `LinearSolveFailure`.
+Solve ``S x = b`` by CG with the Jacobi preconditioner of `S`, and return ``x``.
+
+If `b` is a matrix, we solve for each column separately.
+`part` is one of `:mean`, `:covariance` and `:calibration`.
+It sets the tolerance, and the solve counts in its statistics.
+
+If `b` or the preconditioner is not finite, or if CG does not converge, we throw a `LinearSolveFailure`, which rejects the step.
 """
 function krylov_solve!(
     S::MatrixFreeObservedCovariance, b::AbstractVector, part; itmax=MAX_CG_ITERATIONS,
@@ -408,8 +413,9 @@ end
 """
     MatrixFreeGain(S::MatrixFreeObservedCovariance)
 
-The Kalman gain ``K = Σ H^T S^{-1}``, from the cross-covariance ``Σ H^T`` and the observed
-covariance ``S``. `update_mean!` returns the gain for `update_cov!`.
+The Kalman gain ``K = Σ H^T S^{-1}``, stored as its two factors ``Σ H^T`` and ``S``.
+
+`update_mean!` returns it, so that `update_cov!` can reuse ``S`` and its preconditioner instead of building them again.
 """
 struct MatrixFreeGain{CT,ST}
     ΣHᵀ::CT
@@ -420,9 +426,11 @@ MatrixFreeGain(S::MatrixFreeObservedCovariance) = MatrixFreeGain(S.ΣHᵀ, S)
 """
     update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
 
-The mean of the update on a matrix-free observation. It solves ``S w = z`` for
-``S = H Σ H^T`` by CG, and sets ``μ^F = μ - Σ H^T w``. It returns the gain
-``K = Σ H^T S^{-1}`` for `update_cov!`, and the log-likelihood as `NaN`.
+Update the mean on a matrix-free observation.
+
+We solve ``S w = z`` for ``S = H Σ H^T`` by CG, where ``z`` is the residual at the predicted mean ``μ``, and set ``μ^F = μ - Σ H^T w``.
+The log-likelihood would need the determinant of ``S``, which we do not compute, so we return it as `NaN`.
+We also return the gain ``K`` for `update_cov!`.
 """
 function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
     (; m, H) = obs
@@ -447,11 +455,12 @@ end
 """
     update_cov!(x_out, x_pred, obs::MatrixFreeLinearizedObservation, K, B; cache)
 
-The covariance of the update on a matrix-free observation. It approximates the posterior
-covariance by its block-diagonal part, which it estimates from samples. The exact posterior
-covariance is not block-diagonal, because ``J`` couples the blocks. The samples are
-``g - K H g`` for samples ``g`` with the covariance ``Σ``, so they have the covariance
-``Σ^F``.
+Update the covariance on a matrix-free observation, approximately, from samples.
+
+The exact posterior covariance ``Σ^F = Σ - K H Σ`` is not block-diagonal, because ``J`` couples the dimensions.
+We approximate it by its block-diagonal part, which we estimate from `nprobes` samples.
+We draw samples ``g`` with the covariance ``Σ`` and condition them on the observation with `condition_samples!`, so that they have the covariance ``Σ^F``.
+Then `estimate_block_diagonal_covariance!` computes the block-diagonal part of their sample covariance.
 """
 function update_cov!(
     x_out::Gaussian{<:Any,<:BlocksOfDiagonalsPSD},
@@ -473,9 +482,10 @@ end
 """
     condition_samples!(G, H, K::MatrixFreeGain)
 
-Condition the samples in the columns of `G` on the observation, by replacing each sample
-``g`` with ``g - K H g``. If the samples have the covariance ``Σ``, they then have the
-posterior covariance ``Σ^F = Σ - K H Σ``.
+Condition the samples in the columns of `G` on the observation, by replacing each sample ``g`` with ``g - K H g``.
+
+If the samples have the covariance ``Σ``, the results have the posterior covariance ``Σ^F = Σ - K H Σ``.
+Each sample costs one linear solve with ``S``.
 """
 function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
     (; HG, gtmp) = H.cache
@@ -490,10 +500,13 @@ end
 """
     estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
 
-Estimate the block-diagonal part of a covariance from the samples in the `m` columns of `G`,
-and write its square root into `R`. The estimate is the sample covariance
-``\\frac{1}{m} G G^T`` without the covariances between the blocks. Block ``i`` uses the rows
-`i:d:D` of `G`, which hold dimension ``i`` of every derivative. `Y` and `M` are buffers.
+Estimate the block-diagonal part of a covariance from the samples in the columns of `G`, and write its square root into `R`.
+
+The samples have mean zero, so their sample covariance is ``\\frac{1}{m} G G^T`` for `m` samples.
+We keep only its blocks.
+Block ``i`` is the covariance of dimension ``i`` across all derivatives, so it uses the rows `i:d:D` of `G`.
+We compute its square root by a Cholesky factorization, or by a QR decomposition if the Cholesky factorization fails or is ill-conditioned.
+`Y` and `M` are buffers.
 """
 function estimate_block_diagonal_covariance!(R::BlocksOfDiagonals, G, (Y, M))
     d, m = nblocks(R), size(G, 2)
