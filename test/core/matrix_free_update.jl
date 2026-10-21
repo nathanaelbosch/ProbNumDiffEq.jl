@@ -40,7 +40,7 @@ observed_covariance(H, R; needs_diagonal=false) =
     w, W = randn(rng, d), randn(rng, d, 3)
     @test mul!(zeros(d), H, x) ≈ H_dense * x
     @test mul!(zeros(d, 3), H, X) ≈ H_dense * X
-    @test mul!(zeros(D), S.C, w) ≈ Σ * H_dense' * w
+    @test mul!(zeros(D), S.ΣHᵀ, w) ≈ Σ * H_dense' * w
     @test mul!(zeros(d), S, w) ≈ S_dense * w
     @test mul!(zeros(d, 3), S, W) ≈ S_dense * W
 end
