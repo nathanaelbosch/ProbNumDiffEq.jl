@@ -68,12 +68,12 @@ function make_linearization_cache(
         (; ΣEᵀ=(zeros(T, D), zeros(T, D)), preconditioner=dvec(), diagonal=dvec())
     return (;
         r=dvec(), u=dvec(),
-        diagonal_jacobian=isnothing(linearization.diagonal_jacobian) ? nothing : dvec(),
-        v=dvec(), Jv=dvec(), a=dvec(), e0=dvec(), z=dvec(),
+        J_D=isnothing(linearization.diagonal_jacobian) ? nothing : dvec(),
+        v=dvec(), Jv=dvec(), Jᵀw=dvec(), E₀ΣHᵀw=dvec(), E₀g=dvec(), E₁g=dvec(), z=dvec(),
         HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(),
         ξ=zeros(T, 2d), L=(dvec(), dvec(), dvec()),
         Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
-        Gᵢᵀ=zeros(T, m, q + 1), Σᵢ=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
+        Gᵢᵀ=zeros(T, m, q + 1), Σᵢ=zeros(T, q + 1, q + 1), KHg=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}), W=zeros(T, d, m),
     )
 end
@@ -138,8 +138,8 @@ function linearize_ode_observation!(
     measurement_model(c.r, m, p, t)
     integ.stats.nf += 1
     copy!(c.u, view(m, 1:d))
-    if !isnothing(c.diagonal_jacobian)
-        linearization.diagonal_jacobian(c.diagonal_jacobian, c.u, p, t)
+    if !isnothing(c.J_D)
+        linearization.diagonal_jacobian(c.J_D, c.u, p, t)
     end
     return LinearizedObservation(m, c.r, MatrixFreeObservationOperator(integ, c), R)
 end
@@ -166,14 +166,14 @@ end
     apply_vjp!(H::MatrixFreeObservationOperator, w)
 
 For a given ``H = E_1 - J E_0`` with `H::MatrixFreeObservationOperator`,
-compute ``J^T v`` as a vector-jacobian product (VJP) by calling the `vjp` of
+compute ``J^T w`` as a vector-jacobian product (VJP) by calling the `vjp` of
 the ODE function.
 
-If `v` is not a `Vector`, it is first copied into one, because `f.vjp` may require it.
+If `w` is not a `Vector`, it is first copied into one, because `f.vjp` may require it.
 """
 function apply_vjp!(H::MatrixFreeObservationOperator, w)
     (; f, p, t, dt) = H.integ
-    Jᵀw = H.cache.a
+    Jᵀw = H.cache.Jᵀw
     w = w isa Vector ? w : copy!(H.cache.v, w)
     f.vjp(Jᵀw, w, H.cache.u, p, t + dt)
     H.integ.sol.pnstats.nvjp += 1
@@ -212,15 +212,15 @@ struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     end
 end
 
-function mul!(out::AbstractVector, ΣHᵀ::MatrixFreeCrossCovariance, w::AbstractVector)
+function mul!(x::AbstractVector, ΣHᵀ::MatrixFreeCrossCovariance, w::AbstractVector)
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = ΣHᵀ
     d = length(w)
     Jᵀw = apply_vjp!(H, w)
-    for k in 0:(length(out)÷d-1)
-        idx = (k*d+1):((k+1)*d)
-        @views out[idx] .= ΣE₁ᵀ[idx] .* w .- ΣE₀ᵀ[idx] .* Jᵀw
+    for k in 1:(length(x)÷d)
+        idx = ((k-1)*d+1):(k*d)
+        @views x[idx] .= ΣE₁ᵀ[idx] .* w .- ΣE₀ᵀ[idx] .* Jᵀw
     end
-    return out
+    return x
 end
 
 """
@@ -253,7 +253,7 @@ struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
         ΣHᵀ = MatrixFreeCrossCovariance(H, R, buffers.ΣEᵀ)
         (; preconditioner, diagonal) = buffers
         S = new{typeof(ΣHᵀ),typeof(R),typeof(diagonal)}(ΣHᵀ, R, preconditioner, diagonal)
-        J_D = H.cache.diagonal_jacobian
+        J_D = H.cache.J_D
         if needs_diagonal || isnothing(J_D)
             estimate_diagonal!(diagonal, S, DIAGONAL_PROBES)
         end
@@ -281,7 +281,7 @@ function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVec
     (; H, ΣE₀ᵀ, ΣE₁ᵀ) = S.ΣHᵀ
     d = length(w)
     Jᵀw = apply_vjp!(H, w)
-    E₀ΣHᵀw = H.cache.e0
+    E₀ΣHᵀw = H.cache.E₀ΣHᵀw
     @views E₀ΣHᵀw .= ΣE₁ᵀ[1:d] .* w .- ΣE₀ᵀ[1:d] .* Jᵀw
     @views y .= ΣE₁ᵀ[(d+1):2d] .* w .- ΣE₀ᵀ[(d+1):2d] .* Jᵀw
     y .-= apply_jvp!(H, E₀ΣHᵀw)
@@ -311,7 +311,7 @@ function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
     @.. l₁₀ = ifelse(l₀₀ > 0, Σ₀₁ / l₀₀, zero(l₀₀))
     @.. l₁₁ = sqrt(max(Σ₁₁ - l₁₀^2, zero(l₁₀)))
     ξ₀, ξ₁ = view(c.ξ, 1:d), view(c.ξ, (d+1):2d)
-    E₀g, E₁g = c.e0, c.a
+    (; E₀g, E₁g) = c
     rng = integrator_rng(H.integ)
     fill!(out, 0)
     for _ in 1:n
@@ -338,7 +338,7 @@ function estimate_diagonal_with_diagonal_jacobian!(
 )
     for (i, Ri) in enumerate(blocks(S.R))
         # (H_D Σ H_Dᵀ)ᵢᵢ = ‖R H_Dᵀ eᵢ‖² = ‖r₁ - J_Dᵢ r₀‖², with the columns r₀ and r₁ of Rᵢ
-        out[i] = sum(l -> (Ri[l, 2] - J_D[i] * Ri[l, 1])^2, axes(Ri, 1))
+        out[i] = sum(k -> (Ri[k, 2] - J_D[i] * Ri[k, 1])^2, axes(Ri, 1))
     end
     return out
 end
@@ -488,11 +488,11 @@ If the samples have the covariance ``Σ``, the results have the posterior covari
 Each sample costs one linear solve with ``S``.
 """
 function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
-    (; HG, gtmp) = H.cache
+    (; HG, KHg) = H.cache
     mul!(HG, H, G)
     W = krylov_solve!(K.S, HG, :covariance)
     for j in axes(G, 2)
-        view(G, :, j) .-= mul!(gtmp, K.ΣHᵀ, view(W, :, j))
+        view(G, :, j) .-= mul!(KHg, K.ΣHᵀ, view(W, :, j))
     end
     return G
 end
