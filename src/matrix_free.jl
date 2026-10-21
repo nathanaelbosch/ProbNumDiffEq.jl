@@ -247,14 +247,18 @@ struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
     R::RT
     preconditioner::V
     diagonal::V
+    has_diagonal::Bool
     function MatrixFreeObservedCovariance(
         H, R::BlocksOfDiagonals, buffers; needs_diagonal::Bool,
     )
         ΣHt = MatrixFreeCrossCovariance(H, R, buffers.ΣEt)
         (; preconditioner, diagonal) = buffers
-        S = new{typeof(ΣHt),typeof(R),typeof(diagonal)}(ΣHt, R, preconditioner, diagonal)
         J_D = H.cache.J_D
-        if needs_diagonal || isnothing(J_D)
+        has_diagonal = needs_diagonal || isnothing(J_D)
+        S = new{typeof(ΣHt),typeof(R),typeof(diagonal)}(
+            ΣHt, R, preconditioner, diagonal, has_diagonal,
+        )
+        if has_diagonal
             estimate_diagonal!(diagonal, S, DIAGONAL_PROBES)
         end
         if isnothing(J_D)
@@ -538,4 +542,7 @@ end
 invquad(z, S::MatrixFreeObservedCovariance; kwargs...) =
     dot(z, krylov_solve!(S, z, :calibration))
 
-diag!(v::AbstractVector, S::MatrixFreeObservedCovariance) = copy!(v, S.diagonal)
+function diag!(v::AbstractVector, S::MatrixFreeObservedCovariance)
+    @assert S.has_diagonal "Build `S` with `needs_diagonal=true` to estimate its diagonal."
+    return copy!(v, S.diagonal)
+end
