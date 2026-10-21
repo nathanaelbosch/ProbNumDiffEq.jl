@@ -83,7 +83,7 @@ end
 
 A minimal interface for matrix-free linear operators.
 
-Operators are expected to implement a matrix-vector `mul!`, ie
+Operators are expected to implement a matrix-vector `mul!`:
 ```
 mul!(y::AbstractVector, H::MatrixFreeOperator, x::AbstractVector)
 ```
@@ -148,7 +148,7 @@ end
     apply_jvp!(H::MatrixFreeObservationOperator, v)
 
 For a given ``H = E_1 - J E_0`` with `H::MatrixFreeObservationOperator`,
-compute ``J v`` as a jacobian-vector product (JVP) by calling the `jvp` of
+compute ``J v`` as a Jacobian-vector product (JVP) by calling the `jvp` of
 the ODE function.
 
 If `v` is not a `Vector`, it is first copied into one, because `f.jvp` may require it.
@@ -166,7 +166,7 @@ end
     apply_vjp!(H::MatrixFreeObservationOperator, w)
 
 For a given ``H = E_1 - J E_0`` with `H::MatrixFreeObservationOperator`,
-compute ``J^T w`` as a vector-jacobian product (VJP) by calling the `vjp` of
+compute ``J^T w`` as a vector-Jacobian product (VJP) by calling the `vjp` of
 the ODE function.
 
 If `w` is not a `Vector`, it is first copied into one, because `f.vjp` may require it.
@@ -235,7 +235,7 @@ and calibration we can also use this operator with ``Σ = Q(h)``.
 To be efficient, the linear solves need a preconditioner.
 The constructor therefore automatically computes a Jacobi preconditioner as an
 approximation of the diagonal, in one of two ways:
-if a user explicitly passed a function for the diagonal of the ODE jacobian,
+if a user explicitly passed a function for the diagonal of the ODE Jacobian,
 we use that to compute an approximated diagonal;
 otherwise we estimate it stochastically.
 
