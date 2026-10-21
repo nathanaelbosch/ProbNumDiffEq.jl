@@ -6,7 +6,6 @@
 const DIAGONAL_PROBES = 32
 const CALIBRATION_RTOL = 0.1
 const MAX_CG_ITERATIONS = 10_000
-const MAX_BLOCK_GMRES_ITERATIONS = 200
 
 """
     throw_if_unsupported(::MatrixFreeJacobian, alg, f, u)
@@ -75,20 +74,15 @@ function make_linearization_cache(
     dvec() = zeros(T, d)
     observed_covariance() =
         (; ΣEᵀ=(zeros(T, D), zeros(T, D)), preconditioner=dvec(), diagonal=dvec())
-    # Block-GMRES needs at least twice as many rows as right-hand sides
-    has_block_gmres = 2m <= d
     return (;
         r=dvec(), u=dvec(),
         diagonal_jacobian=isnothing(linearization.diagonal_jacobian) ? nothing : dvec(),
         v=dvec(), Jv=dvec(), a=dvec(), e0=dvec(), z=dvec(),
-        HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(), sqrtP=dvec(),
+        HΣHᵀ=observed_covariance(), HQHᵀ=observed_covariance(),
         ξ=zeros(T, 2d), L=(dvec(), dvec(), dvec()),
         Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
         Y=zeros(T, m, q + 1), M=zeros(T, q + 1, q + 1), gtmp=zeros(T, D),
-        cg=CgWorkspace(d, d, Vector{T}),
-        block_gmres=has_block_gmres ?
-                    BlockGmresWorkspace(d, d, m, Vector{T}, Matrix{T}; memory=20) : nothing,
-        W=has_block_gmres ? nothing : zeros(T, d, m),
+        cg=CgWorkspace(d, d, Vector{T}), W=zeros(T, d, m),
     )
 end
 
@@ -364,12 +358,10 @@ struct LinearSolveFailure <: Exception end
 """
     krylov_solve!(S::MatrixFreeObservedCovariance, b, part)
 
-Solve ``S x = b`` with a Krylov method, and return ``x``. `part` is `:mean`, `:covariance`
-or `:calibration`. It sets the tolerance, and the solve counts in its statistics. The
-Jacobi preconditioner is the one of `S`. For a vector `b`, this uses CG. For a matrix `b`,
-it uses block-GMRES on all columns at once, or CG on each column if there are more than
-half as many columns as rows. If `b` or the preconditioner is not finite, or if the solve
-does not converge, it throws a `LinearSolveFailure`.
+Solve ``S x = b`` by CG with the Jacobi preconditioner of `S`, and return ``x``. A matrix
+`b` is solved column by column. `part` is `:mean`, `:covariance` or `:calibration`. It sets
+the tolerance, and the solves count in its statistics. If `b` or the preconditioner is not
+finite, or if a solve does not converge, it throws a `LinearSolveFailure`.
 """
 function krylov_solve!(
     S::MatrixFreeObservedCovariance, b::AbstractVector, part; itmax=MAX_CG_ITERATIONS,
@@ -385,25 +377,11 @@ function krylov_solve!(
     return Krylov.solution(workspace)
 end
 function krylov_solve!(S::MatrixFreeObservedCovariance, B::AbstractMatrix, part)
-    H = S.C.H
-    c = H.cache
-    if isnothing(c.block_gmres)
-        for j in axes(B, 2)
-            copy!(view(c.W, :, j), krylov_solve!(S, view(B, :, j), part))
-        end
-        return c.W
+    W = S.C.H.cache.W
+    for j in axes(B, 2)
+        copy!(view(W, :, j), krylov_solve!(S, view(B, :, j), part))
     end
-    throw_if_not_finite(S, B)
-    rtol = krylov_rtol(H, part)
-    # Preconditioned on both sides, so that the residual is weighted as in the
-    # preconditioned CG
-    @.. c.sqrtP = sqrt(S.preconditioner)
-    M = Diagonal(c.sqrtP)
-    block_gmres!(c.block_gmres, S, B; M, N=M, ldiv=true, atol=zero(rtol), rtol,
-        itmax=MAX_BLOCK_GMRES_ITERATIONS)
-    count_solve!(H, part, Krylov.iteration_count(c.block_gmres))
-    Krylov.issolved(c.block_gmres) || throw(LinearSolveFailure())
-    return Krylov.solution(c.block_gmres)
+    return W
 end
 
 # Krylov.jl throws its own errors for NaN, which would end the solve instead of rejecting the
@@ -502,8 +480,7 @@ end
 
 Condition the samples in the columns of `G` on the observation, by replacing each sample
 ``g`` with ``g - K H g``. If the samples have the covariance ``Σ``, they then have the
-posterior covariance ``Σ^F = Σ - K H Σ``. The linear systems of all samples are solved at
-once.
+posterior covariance ``Σ^F = Σ - K H Σ``.
 """
 function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
     (; HG, gtmp) = H.cache

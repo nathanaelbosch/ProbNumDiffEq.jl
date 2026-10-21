@@ -13,8 +13,8 @@ Only the [`MatfreeEK1`](@ref) counts the following; it also counts its linear so
 `sol.stats.nsolve`.
 - `njvp`, `nvjp`: Jacobian-vector and vector-Jacobian products.
 - `nsolve_mean`, `niter_mean`: Linear solves for the mean update, and their Krylov iterations.
-- `nsolve_covariance`, `niter_covariance`: The same for the covariance update. Solving for
-  all probes at once with block-GMRES counts as one solve, with its block iterations.
+- `nsolve_covariance`, `niter_covariance`: The same for the covariance update, one solve
+  per probe.
 - `nsolve_calibration`, `niter_calibration`: The same for the calibration.
 """
 mutable struct PNStats{LL}

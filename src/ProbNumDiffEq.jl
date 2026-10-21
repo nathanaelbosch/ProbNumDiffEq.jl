@@ -54,7 +54,7 @@ using FillArrays: FillArrays, Eye, Fill, Zeros
 using MatrixEquations: plyapc
 using DiffEqCallbacks: PresetTimeCallback
 using ADTypes: ADTypes, AutoForwardDiff, AutoSparse
-using Krylov: Krylov, BlockGmresWorkspace, CgWorkspace, block_gmres!, cg!
+using Krylov: Krylov, CgWorkspace, cg!
 
 # @reexport using GaussianDistributions
 

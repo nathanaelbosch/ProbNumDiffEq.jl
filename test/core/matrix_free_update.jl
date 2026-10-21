@@ -68,12 +68,9 @@ end
     @test isnan(upd.loglikelihood)
 end
 
-@testset "Probe systems solved $how" for (how, nprobes) in
-                                         (("jointly by block-GMRES", 5), ("by CG", 8))
-    H = observation_operator(; nprobes)
-    c = H.cache
-    @test isnothing(c.block_gmres) == (how == "by CG")
-    B = randn!(rng, c.HG)
+@testset "Probe systems" begin
+    H = observation_operator()
+    B = randn!(rng, H.cache.HG)
     S = observed_covariance(H, R)
     @test PNDE.krylov_solve!(S, B, :covariance) ≈ S_dense \ B
 end
@@ -93,7 +90,6 @@ end
 end
 
 @testset "The residual survives the covariance update" begin
-    # With d = 10 and 8 probes, the probe systems are solved by CG one by one
     H = observation_operator()
     x_pred = Gaussian(randn(rng, D), PSDMatrix(R))
     obs = LinearizedObservation(x_pred.μ + randn(rng, D), randn(rng, d), H)
