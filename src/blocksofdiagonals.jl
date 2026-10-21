@@ -248,8 +248,7 @@ end
 # Block-wise, instead of LinearAlgebra's entry-by-entry fallback
 function _blockwise_mul!(C::AbstractMatrix, A_blocks, B::AbstractMatrix)
     d = length(A_blocks)
-    A1 = first(A_blocks)
-    @assert size(C, 1) == d * size(A1, 1) && size(B, 1) == d * size(A1, 2)
+    @assert size(C, 1) == d * size(A_blocks[1], 1) && size(B, 1) == d * size(A_blocks[1], 2)
     for (i, Ai) in enumerate(A_blocks)
         _matmul!(view(C, i:d:size(C, 1), :), Ai, view(B, i:d:size(B, 1), :))
     end
@@ -258,7 +257,7 @@ end
 mul!(C::AbstractMatrix, A::BlocksOfDiagonals, B::AbstractMatrix) =
     _blockwise_mul!(C, blocks(A), B)
 mul!(C::AbstractMatrix, A::Adjoint{<:Number,<:BlocksOfDiagonals}, B::AbstractMatrix) =
-    _blockwise_mul!(C, Iterators.map(adjoint, blocks(parent(A))), B)
+    _blockwise_mul!(C, adjoint.(blocks(parent(A))), B)
 
 diag!(v::AbstractVector, M::BlocksOfDiagonals) = begin
     @assert length(v) == nblocks(M)
