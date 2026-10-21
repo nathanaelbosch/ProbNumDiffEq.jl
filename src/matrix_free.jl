@@ -472,9 +472,9 @@ function update_cov!(
 )
     H = obs.H
     c = H.cache
-    Ξ = Random.randn!(integrator_rng(H.integ), c.Ξ)
-    G = mul!(c.G, x_pred.Σ.R', Ξ)
-    condition_samples!(G, H, K)
+    Ξ = Random.randn!(integrator_rng(H.integ), c.Ξ)  # ~ N(0, I)
+    G = mul!(c.G, x_pred.Σ.R', Ξ)                    # ~ N(0, Σ)
+    condition_samples!(G, H, K)                      # ~ N(0, Σ - K H Σ)
     estimate_block_diagonal_covariance!(x_out.Σ.R, G, (c.Y, c.M))
     return x_out
 end
