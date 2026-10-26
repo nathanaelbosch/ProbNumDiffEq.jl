@@ -82,14 +82,20 @@ function triangularize!(A; cachemat=nothing)
     QR = qr!(A)
     return getupperright!(getfield(QR, :factors))
 end
-# A coordinate without variance, e.g. `u'` with the `EK0`, which observes it exactly, has
-# a column that is zero in value. Its partials should be zero too, but roundoff leaves tiny
-# nonzero values, and `qr!` turns these into NaN. So set them to exactly zero first.
+# `qr!` returns NaN if a column is zero in value below the diagonal but, from roundoff, not
+# in its partials. So this is its Householder loop, which sets such columns to zero.
 function triangularize!(A::AbstractMatrix{<:ForwardDiff.Dual}; cachemat=nothing)
-    for a in eachcol(A)
-        all(iszero ∘ ForwardDiff.value, a) && fill!(a, zero(eltype(A)))
+    m, n = size(A)
+    for k in 1:min(m-1, n)
+        x = view(A, k:m, k)
+        if all(iszero ∘ ForwardDiff.value, x)
+            fill!(x, zero(eltype(A)))
+        else
+            τ = LinearAlgebra.reflector!(x)
+            LinearAlgebra.reflectorApply!(x, τ, view(A, k:m, (k+1):n))
+        end
     end
-    return getupperright!(getfield(qr!(A), :factors))
+    return getupperright!(A)
 end
 function triangularize!(A::StridedMatrix{<:LinearAlgebra.BlasFloat}; cachemat)
     D = size(A, 2)

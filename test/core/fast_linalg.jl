@@ -1,6 +1,7 @@
 using ProbNumDiffEq
 import ProbNumDiffEq: _matmul!
 using LinearAlgebra
+using ForwardDiff
 using Test
 
 @testset "T=$T" for T in (Float64, BigFloat)
@@ -73,4 +74,13 @@ end
         @test abs.(R) ≈ abs.(R_ref)
         @test R' * R ≈ A' * A
     end
+
+    # On `Dual`s, a column that is zero in value below the diagonal, but not in its
+    # partials, must not turn into NaN
+    D = ForwardDiff.Dual
+    A = [D(1.0, 1.0) D(2.0, 0.0); D(0.0, 0.0) D(0.0, 1.0); D(0.0, 0.0) D(0.0, 2.0)]
+    R = ProbNumDiffEq.triangularize!(copy(A))
+    @test !any(isnan ∘ ForwardDiff.value, R)
+    @test ForwardDiff.value.(R' * R) ≈ ForwardDiff.value.(A' * A)
+    @test ForwardDiff.partials.(R' * R, 1) ≈ ForwardDiff.partials.(A' * A, 1)
 end
