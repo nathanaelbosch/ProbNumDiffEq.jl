@@ -344,7 +344,7 @@ function _update_cov!(
         KR = _matmul!(KR_cache, K, R.R')
         _matmul!(M, KR, KR', 1, 1)
         chol = cholesky!(Symmetric(M), check=false)
-        if issuccess(chol)
+        if issuccess(chol) && is_well_conditioned(chol.U)
             copy!(Σ_out.R, chol.U)
         else
             Σ_out.R .= triangularize!([Σ_out.R; KR']; cachemat=M)

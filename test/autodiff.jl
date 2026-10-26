@@ -119,3 +119,22 @@ end
         @test ForwardDiff.gradient(ll, v) ≈ grad(central_fdm(5, 1), ll, v)[1] rtol = 1e-6
     end
 end
+
+@testset "Data likelihoods with ill-conditioned updates" begin
+    # With a large diffusion, the covariance after a data update is so ill-conditioned that
+    # its square root must not be computed with a Cholesky: its partials would be wrong
+    function lotkavolterra!(du, u, p, t)
+        du[1] = p[1] * u[1] - u[1] * u[2]
+        du[2] = u[1] * u[2] - 3u[2]
+    end
+    prob = ODEProblem(lotkavolterra!, [1.0, 1.0], (0.0, 1.0), [1.6])
+    ts = collect(0:0.01:1)
+    data = (t=ts, u=[[1.0] for _ in ts])
+    alg = EK1(diffusionmodel=FixedDiffusion(1e20, false), smooth=false)
+    @testset "$loglik" for loglik in (filtering_data_loglik, dalton_data_loglik)
+        ll(p) = loglik(remake(prob; p), alg; data, observation_matrix=[1 0],
+            observation_noise_cov=0.1, adaptive=false, dt=0.01)
+        dldp = grad(central_fdm(5, 1), ll, prob.p)[1]
+        @test ForwardDiff.gradient(ll, prob.p) ≈ dldp rtol = 1e-6
+    end
+end
