@@ -56,30 +56,44 @@ function DataUpdateCallback(
     kwargs...,
 )
     check_observation_noise_cov(observation_noise_cov)
+    if !allequal(length.(data.u))
+        throw(DimensionMismatch("All data points must have the same length."))
+    end
+    order = sortperm(data.t)
+    sorted_times, sorted_values = data.t[order], data.u[order]
+
+    # Build the observation model once per solve instead of at every data point; it depends
+    # on the solver cache, so it can't be built here
+    solver_cache = H = R = obs_cache = nothing
     function affect!(integ)
-        times, values = data.t, data.u
-        idx = findfirst(isequal(integ.t), times)
-        val = values[idx]
-        o = length(val)
-
-        H, R = make_observation_model(
-            integ.cache, observation_matrix, observation_noise_cov; o)
-
-        # The initial value is known exactly, so no update is needed, only the likelihood
-        if integ.iter == 0
-            ll = initial_data_loglik(integ.u, val, observation_matrix, R)
-            isnothing(loglikelihood) || (loglikelihood.ll += ll)
-            return nothing
+        val = sorted_values[searchsortedfirst(sorted_times, integ.t)]
+        if integ.cache !== solver_cache # first data point of this solve
+            solver_cache = integ.cache
+            o = length(val)
+            H, R = make_observation_model(
+                solver_cache, observation_matrix, observation_noise_cov; o)
+            obs_cache = make_obssized_cache(solver_cache; o)
         end
-
-        obs = linear_observation(H, val, R)
-        ll = update!(integ.cache.x, obs; cache=integ.cache).loglikelihood
-
+        ll = _update_on_data_point!(integ, val, H, R, obs_cache, observation_matrix)
         if !isnothing(loglikelihood)
             loglikelihood.ll += ll
         end
+        return nothing
     end
     return PresetTimeCallback(data.t, affect!; save_positions, kwargs...)
+end
+
+function _update_on_data_point!(integ, val, H, R, obs_cache, M)
+    # The initial value is known exactly, so no update is needed, only the likelihood
+    if integ.iter == 0
+        return initial_data_loglik(integ.u, val, M, R)
+    end
+    x = integ.cache.x
+    if isempty(val)
+        return zero(eltype(x.μ))
+    end
+    x_pred = copy!(integ.cache.x_tmp, x)
+    return update!(x, x_pred, linear_observation(H, val, R); cache=obs_cache).loglikelihood
 end
 
 function initial_data_loglik(u0, val, M, R::PSDMatrix)
