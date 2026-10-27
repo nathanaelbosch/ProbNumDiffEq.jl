@@ -56,33 +56,30 @@ function DataUpdateCallback(
     kwargs...,
 )
     check_observation_noise_cov(observation_noise_cov)
-    perm = sortperm(data.t)
-    sorted_times = data.t[perm]
-    # `H` and `R` depend on the solver cache, so they are built once per solve
-    model = Ref{Any}(nothing)
+    allequal(length.(data.u)) ||
+        throw(DimensionMismatch("All data points must have the same length."))
+    order = sortperm(data.t)
+    sorted_times, sorted_values = data.t[order], data.u[order]
+
+    # The observation model depends on the solver cache, so it is built once per solve
+    solver_cache = H = R = obs_cache = nothing
     function affect!(integ)
-        val = data.u[perm[searchsortedfirst(sorted_times, integ.t)]]
-        if !_model_fits(model[], integ.cache, val)
-            model[] = make_data_update_model(
-                integ.cache, observation_matrix, observation_noise_cov; o=length(val))
+        val = sorted_values[searchsortedfirst(sorted_times, integ.t)]
+        if integ.cache !== solver_cache
+            solver_cache = integ.cache
+            o = length(val)
+            H, R = make_observation_model(
+                solver_cache, observation_matrix, observation_noise_cov; o)
+            obs_cache = make_obssized_cache(solver_cache; o)
         end
-        ll = data_update!(integ, val, model[], observation_matrix)
+        ll = _update_on_data_point!(integ, val, H, R, obs_cache, observation_matrix)
         isnothing(loglikelihood) || (loglikelihood.ll += ll)
         return nothing
     end
     return PresetTimeCallback(data.t, affect!; save_positions, kwargs...)
 end
 
-_model_fits(::Nothing, cache, val) = false
-_model_fits(model, cache, val) = model.cache === cache && model.o == length(val)
-
-function make_data_update_model(cache, M, noise_cov; o)
-    H, R = make_observation_model(cache, M, noise_cov; o)
-    return (; cache, o, H, R, obs_cache=make_obssized_cache(cache; o))
-end
-
-function data_update!(integ, val, model, M)
-    (; H, R, obs_cache) = model
+function _update_on_data_point!(integ, val, H, R, obs_cache, M)
     # The initial value is known exactly, so no update is needed, only the likelihood
     integ.iter == 0 && return initial_data_loglik(integ.u, val, M, R)
     x = integ.cache.x
