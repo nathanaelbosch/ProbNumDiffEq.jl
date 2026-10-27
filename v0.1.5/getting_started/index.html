@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Getting Started · ProbNumDiffEq.jl</title><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.039/juliamono-regular.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">ProbNumDiffEq.jl</a></span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><span class="tocitem">Tutorials</span><ul><li class="is-active"><a class="tocitem" href>Getting Started</a><ul class="internal"><li><a class="tocitem" href="#Step-1:-Defining-a-problem"><span>Step 1: Defining a problem</span></a></li><li><a class="tocitem" href="#Step-2:-Solving-a-problem"><span>Step 2: Solving a problem</span></a></li><li><a class="tocitem" href="#Step-3:-Analyzing-the-solution"><span>Step 3: Analyzing the solution</span></a></li></ul></li></ul></li><li><a class="tocitem" href="../solvers/">Solvers and Options</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Tutorials</a></li><li class="is-active"><a href>Getting Started</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Getting Started</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/master/docs/src/getting_started.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Getting-Started"><a class="docs-heading-anchor" href="#Getting-Started">Getting Started</a><a id="Getting-Started-1"></a><a class="docs-heading-anchor-permalink" href="#Getting-Started" title="Permalink"></a></h1><p>If you are unfamiliar with DifferentialEquations.jl, check out the <a href="https://docs.sciml.ai/stable/tutorials/ode_example/">official tutorial</a> on how to solve ordinary differential equations.</p><h2 id="Step-1:-Defining-a-problem"><a class="docs-heading-anchor" href="#Step-1:-Defining-a-problem">Step 1: Defining a problem</a><a id="Step-1:-Defining-a-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Step-1:-Defining-a-problem" title="Permalink"></a></h2><p>First, we set up an <code>ODEProblem</code> to solve the <a href="https://en.wikipedia.org/wiki/FitzHugh%E2%80%93Nagumo_model">Fitzhugh-Nagumo model</a>.</p><pre><code class="language-julia">using ProbNumDiffEq
+
+function fitz(u, p, t)
+    a, b, c = p
+    return [c*(u[1] - u[1]^3/3 + u[2])
+            -(1/c)*(u[1] -  a - b*u[2])]
+end
+
+u0 = [-1.0; 1.0]
+tspan = (0., 20.)
+p = (0.2,0.2,3.0)
+prob = ODEProblem(fitz, u0, tspan, p)</code></pre><h2 id="Step-2:-Solving-a-problem"><a class="docs-heading-anchor" href="#Step-2:-Solving-a-problem">Step 2: Solving a problem</a><a id="Step-2:-Solving-a-problem-1"></a><a class="docs-heading-anchor-permalink" href="#Step-2:-Solving-a-problem" title="Permalink"></a></h2><p>Currently, ProbNumDiffEq.jl implements two probabilistic numerical methods: <code>EK0</code> and <code>EK1</code>. In this example we solve the ODE with the default <code>EK0</code>, for high tolerance levels.</p><pre><code class="language-julia">sol = solve(prob, EK0(), abstol=1e-1, reltol=1e-2)</code></pre><h2 id="Step-3:-Analyzing-the-solution"><a class="docs-heading-anchor" href="#Step-3:-Analyzing-the-solution">Step 3: Analyzing the solution</a><a id="Step-3:-Analyzing-the-solution-1"></a><a class="docs-heading-anchor-permalink" href="#Step-3:-Analyzing-the-solution" title="Permalink"></a></h2><p>Just as in DifferentialEquations.jl, the result of <code>solve</code> is a solution object, and we can access the (mean) values and timesteps as usual</p><pre><code class="language-julia-repl">julia&gt; sol[end]
+2-element Array{Float64,1}:
+ 2.014161932037638
+ 0.6470035289822642
+
+julia&gt; sol.u[5]
+2-element Array{Float64,1}:
+ 0.21939865115492327
+ 1.1918319025337822
+
+julia&gt; sol.t[8]
+0.9316395737934081</code></pre><p>However, the solver returns a <em>probabilistic</em> solution, here a <a href="https://github.com/mschauer/GaussianDistributions.jl">Gaussian</a> distribution over solution values:</p><pre><code class="language-julia-repl">julia&gt; sol.pu[end]
+Gaussian{Array{Float64,1},ProbNumDiffEq.SquarerootMatrix{Float64,Array{Float64,2},Array{Float64,2}}}([2.014161932037638, 0.6470035289822642], [0.00042612161123902484 0.0; 0.0 0.00042612161123902484])</code></pre><p>It is often convenient to look at means, covariances, and standard deviations via Statistics.jl:</p><pre><code class="language-julia-repl">julia&gt; using Statistics
+
+julia&gt; mean(sol.pu[5])
+2-element Array{Float64,1}:
+ 0.21939865115492327
+ 1.1918319025337822
+
+julia&gt; cov(sol.pu[5])
+2×2 ProbNumDiffEq.SquarerootMatrix{Float64,Array{Float64,2},Array{Float64,2}}:
+ 1.83412e-6  0.0
+ 0.0         1.83412e-6
+
+julia&gt; std(sol.pu[5])
+2-element Array{Float64,1}:
+ 0.0013542971825724203
+ 0.0013542971825724203</code></pre><p>By default, the posterior distribution can be evaluated for arbitrary points in time <code>t</code> by treating <code>sol</code> as a function:</p><pre><code class="language-julia-repl">julia&gt; mean(sol(0.45))
+2-element Array{Float64,1}:
+ -0.2779443252075745
+  1.1677425412790965</code></pre><h3 id="Plotting-Solutions"><a class="docs-heading-anchor" href="#Plotting-Solutions">Plotting Solutions</a><a id="Plotting-Solutions-1"></a><a class="docs-heading-anchor-permalink" href="#Plotting-Solutions" title="Permalink"></a></h3><p>Finally, we can conveniently visualize the result through <a href="https://github.com/JuliaPlots/Plots.jl">Plots.jl</a>:</p><pre><code class="language-julia">using Plots
+plot(sol)</code></pre><pre class="documenter-example-output">qt.qpa.xcb: could not connect to display
+qt.qpa.plugin: Could not load the Qt platform plugin &quot;xcb&quot; in &quot;&quot; even though it was found.
+This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.
+
+Available platform plugins are: linuxfb, minimal, offscreen, vnc, xcb.
+
+Aborted (core dumped)
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</pre><p><img src="../figures/fitzhugh_nagumo.svg" alt="Fitzhugh-Nagumo Solution"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../">« Home</a><a class="docs-footer-nextpage" href="../solvers/">Solvers and Options »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.3 on <span class="colophon-date" title="Friday 2 July 2021 12:01">Friday 2 July 2021</span>. Using Julia version 1.5.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
