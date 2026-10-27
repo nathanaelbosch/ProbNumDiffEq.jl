@@ -22,7 +22,8 @@ NONPUBLIC_ACCESSES = (
     # ForwardDiff/DiffResults internals; flagged non-public but stable de-facto API.
     :Dual, :value, :derivative!, :jacobian, :jacobian!, :JacobianResult,
     # Base/LinearAlgebra internals used in the fast linear algebra routines.
-    :ReshapedArray, :BlasFloat, :geqrt!, :qrfactUnblocked!,
+    :ReshapedArray, :BlasFloat, :geqrt!, :qrfactUnblocked!, :reflector!,
+    :reflectorApply!,
     # Kronecker.jl internals used by IsometricKroneckerProduct.
     :getallfactors, :ldiv_vec_trick!,
     # FiniteHorizonGramians workspace allocation.
