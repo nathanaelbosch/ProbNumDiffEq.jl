@@ -56,16 +56,18 @@ function DataUpdateCallback(
     kwargs...,
 )
     check_observation_noise_cov(observation_noise_cov)
-    allequal(length.(data.u)) ||
+    if !allequal(length.(data.u))
         throw(DimensionMismatch("All data points must have the same length."))
+    end
     order = sortperm(data.t)
     sorted_times, sorted_values = data.t[order], data.u[order]
 
-    # The observation model depends on the solver cache, so it is built once per solve
+    # Build the observation model once per solve instead of at every data point; it depends
+    # on the solver cache, so it can't be built here
     solver_cache = H = R = obs_cache = nothing
     function affect!(integ)
         val = sorted_values[searchsortedfirst(sorted_times, integ.t)]
-        if integ.cache !== solver_cache
+        if integ.cache !== solver_cache # first data point of this solve
             solver_cache = integ.cache
             o = length(val)
             H, R = make_observation_model(
@@ -73,7 +75,9 @@ function DataUpdateCallback(
             obs_cache = make_obssized_cache(solver_cache; o)
         end
         ll = _update_on_data_point!(integ, val, H, R, obs_cache, observation_matrix)
-        isnothing(loglikelihood) || (loglikelihood.ll += ll)
+        if !isnothing(loglikelihood)
+            loglikelihood.ll += ll
+        end
         return nothing
     end
     return PresetTimeCallback(data.t, affect!; save_positions, kwargs...)
@@ -81,9 +85,13 @@ end
 
 function _update_on_data_point!(integ, val, H, R, obs_cache, M)
     # The initial value is known exactly, so no update is needed, only the likelihood
-    integ.iter == 0 && return initial_data_loglik(integ.u, val, M, R)
+    if integ.iter == 0
+        return initial_data_loglik(integ.u, val, M, R)
+    end
     x = integ.cache.x
-    isempty(val) && return zero(eltype(x.μ))
+    if isempty(val)
+        return zero(eltype(x.μ))
+    end
     x_pred = copy!(integ.cache.x_tmp, x)
     return update!(x, x_pred, linear_observation(H, val, R); cache=obs_cache).loglikelihood
 end
