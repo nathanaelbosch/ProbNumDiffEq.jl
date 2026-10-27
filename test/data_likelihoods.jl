@@ -1,6 +1,7 @@
 using ProbNumDiffEq, Plots, Statistics, LinearAlgebra
 import ProbNumDiffEq as PNDE
 import ODEProblemLibrary: prob_ode_lotkavolterra
+import LinearRegression: linregress, slope
 using FillArrays
 using Test
 
@@ -75,6 +76,36 @@ end
     ll(; kw...) = compare_data_likelihoods(EK1(); kwargs..., kw...)
     @test ll(tstops=[0.25]) ≈ ll(tstops=[0.25; data.t])
     @test ll(callback=noop) ≈ ll()
+end
+
+@testset "Unsorted data" begin
+    # The `DataUpdateCallback` finds each data point by its time, so the data need not be
+    # sorted; the Fenrir likelihood requires sorted data
+    times4 = [0.5, 1.5, 0.25, 1.0]
+    data4 = (t=times4, u=[randn(2) for _ in times4])
+    sorted4 = (t=sort(times4), u=data4.u[sortperm(times4)])
+    for alg in (EK0(smooth=false), EK1(smooth=false), DiagonalEK1(smooth=false)),
+        loglik in (PNDE.filtering_data_loglik, PNDE.dalton_data_loglik)
+
+        @test loglik(prob, alg; kwargs..., data=data4) ≈
+              loglik(prob, alg; kwargs..., data=sorted4)
+    end
+end
+
+@testset "Linear scaling with the number of data points" begin
+    _timer(N) = begin
+        dt = 1e-2
+        _prob = remake(prob_lin, tspan=(0.0, N * dt))
+        data = (t=dt .* (1:N), u=[ones(3) for _ in 1:N])
+        kw = (data=data, observation_noise_cov=1.0, adaptive=false, dt=dt, dense=false)
+        ll() = PNDE.filtering_data_loglik(_prob, EK0(smooth=false); kw...)
+        ll()
+        return minimum(@elapsed(ll()) for _ in 1:5)
+    end
+    Ns = 2 .^ (10:15)
+    lr = linregress(log.(Ns), log.(_timer.(Ns)))
+    # Finding each data point by a linear scan gave a slope of about 1.6
+    @test slope(lr)[1] < 1.3
 end
 
 @testset "Partial observations" begin
