@@ -359,8 +359,8 @@ from random probes, so that its cost per step scales linearly with the ODE dimen
   When the off-diagonal entries dominate, it is a worse preconditioner, and the solution
   can become less accurate.
 
-All other keyword arguments of [`ODEFilter`](@ref) are supported, except observation noise
-and priors other than [`IWP`](@ref). Of the multivariate diffusions, only the
+All other keyword arguments of [`ODEFilter`](@ref) are supported, except priors other than
+[`IWP`](@ref). Of the multivariate diffusions, only the
 [`FixedMVDiffusion`](@ref) with `calibrate=false` is supported. Mass matrices and
 second-order ODEs are not supported yet.
 
