@@ -23,7 +23,8 @@ For a quick introduction check out the "[Solving ODEs with Probabilistic Numeric
 
 ## Features
 
-- Two extended Kalman filtering-based probabilistic solvers: the explicit [`EK0`](@ref) and semi-implicit [`EK1`](@ref).
+- Extended Kalman filtering-based probabilistic solvers: the explicit [`EK0`](@ref), the semi-implicit [`EK1`](@ref), and for high-dimensional problems the [`DiagonalEK1`](@ref) and the matrix-free [`MatfreeEK1`](@ref) (see "[Stiff, high-dimensional ODEs with the `MatfreeEK1`](@ref matfreetutorial)")
+- Iterated extended Kalman filtering with [`Iterated`](@ref)
 - Adaptive step-size selection with PI control;
   fully compatible with [DifferentialEquations.jl's timestepping options](https://docs.sciml.ai/DiffEqDocs/stable/extras/timestepping/)
 - Online uncertainty calibration for multiple different diffusion models (see "[Diffusion models and calibration](@ref)")
