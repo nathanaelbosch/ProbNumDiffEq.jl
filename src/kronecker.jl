@@ -185,45 +185,41 @@ _matmul!(A::IKP, B::IKP, c::Number) = begin
     return A
 end
 
-function _prepare_inputs_for_vectrick(A, x, v)
-    M = A.B
-    a, b = size(M)
-    V = reshape(transpose(v), (length(v) ÷ b, b)) |> transpose
-    X = reshape(transpose(x), (length(x) ÷ a, a)) |> transpose
-    return A.B, X, V
-end
+# Reshaping a view does not allocate, reshaping a `Vector` does
+_reshaped_view(v::AbstractVector, d) = reshape(view(v, :), d, :)
 
-function mul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    mul!(X, N, V)
-    return x
-end
-function mul_vectrick!(
-    x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    mul!(X, N, V, alpha, beta)
-    return x
-end
-
-function _matmul_vectrick!(x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    _matmul!(X, N, V)
+# (B ⊗ I_d) vec(V) = vec(V Bᵀ), with V = reshape(v, d, :)
+function _matmul_vectrick!(x::AbstractVector, A::IKP, v::AbstractVector)
+    _matmul!(_reshaped_view(x, A.rdim), _reshaped_view(v, A.rdim), A.B')
     return x
 end
 function _matmul_vectrick!(
-    x::AbstractVecOrMat, A::IKP, v::AbstractVecOrMat, alpha::Number, beta::Number)
-    N, X, V = _prepare_inputs_for_vectrick(A, x, v)
-    _matmul!(X, N, V, alpha, beta)
+    x::AbstractVector, A::IKP, v::AbstractVector, alpha::Number, beta::Number)
+    _matmul!(_reshaped_view(x, A.rdim), _reshaped_view(v, A.rdim), A.B', alpha, beta)
+    return x
+end
+function _matmul_vectrick!(x::AbstractMatrix, A::IKP, v::AbstractMatrix)
+    for i in axes(v, 2)
+        _matmul_vectrick!(view(x, :, i), A, view(v, :, i))
+    end
+    return x
+end
+function _matmul_vectrick!(
+    x::AbstractMatrix, A::IKP, v::AbstractMatrix, alpha::Number, beta::Number)
+    for i in axes(v, 2)
+        _matmul_vectrick!(view(x, :, i), A, view(v, :, i), alpha, beta)
+    end
     return x
 end
 
-# mul! as mul_vectrick!
+# `mul!` shares the path of `_matmul!`, which falls back to `mul!` on the dense factors
 for TC in [:AbstractVector, :AbstractMatrix]
-    @eval mul!(C::$TC, A::IKP, B::$TC) = mul_vectrick!(C, A, B)
-    @eval mul!(C::$TC, A::IKP, B::Adjoint{T,<:$TC{T}}) where {T} = mul_vectrick!(C, A, B)
+    @eval mul!(C::$TC, A::IKP, B::$TC) = _matmul_vectrick!(C, A, B)
     @eval mul!(C::$TC, A::IKP, B::$TC, alpha::Number, beta::Number) =
-        mul_vectrick!(C, A, B, alpha, beta)
+        _matmul_vectrick!(C, A, B, alpha, beta)
 end
+mul!(C::AbstractMatrix, A::IKP, B::Adjoint{T,<:AbstractMatrix{T}}) where {T} =
+    _matmul_vectrick!(C, A, B)
 
 # fast_linalg.jl
 for TC in [:AbstractVector, :AbstractMatrix]
