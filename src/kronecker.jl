@@ -185,9 +185,10 @@ _matmul!(A::IKP, B::IKP, c::Number) = begin
     return A
 end
 
-# `(B ⊗ I_d) vec(V) = vec(V Bᵀ)` with the contiguous `V = reshape(v, d, :)`.
-# The reshapes are of views: reshaping a `Vector` allocates.
+# Reshaping a view does not allocate, reshaping a `Vector` does
 _reshaped_view(v::AbstractVector, d) = reshape(view(v, :), d, :)
+
+# (B ⊗ I_d) vec(V) = vec(V Bᵀ), with V = reshape(v, d, :)
 function _matmul_vectrick!(x::AbstractVector, A::IKP, v::AbstractVector)
     _matmul!(_reshaped_view(x, A.rdim), _reshaped_view(v, A.rdim), A.B')
     return x
