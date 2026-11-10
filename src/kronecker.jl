@@ -212,7 +212,7 @@ function _matmul_vectrick!(
     return x
 end
 
-# mul! as _matmul_vectrick!
+# `mul!` shares the path of `_matmul!`, which falls back to `mul!` on the dense factors
 for TC in [:AbstractVector, :AbstractMatrix]
     @eval mul!(C::$TC, A::IKP, B::$TC) = _matmul_vectrick!(C, A, B)
     @eval mul!(C::$TC, A::IKP, B::Adjoint{T,<:$TC{T}}) where {T} =
