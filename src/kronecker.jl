@@ -215,11 +215,11 @@ end
 # `mul!` shares the path of `_matmul!`, which falls back to `mul!` on the dense factors
 for TC in [:AbstractVector, :AbstractMatrix]
     @eval mul!(C::$TC, A::IKP, B::$TC) = _matmul_vectrick!(C, A, B)
-    @eval mul!(C::$TC, A::IKP, B::Adjoint{T,<:$TC{T}}) where {T} =
-        _matmul_vectrick!(C, A, B)
     @eval mul!(C::$TC, A::IKP, B::$TC, alpha::Number, beta::Number) =
         _matmul_vectrick!(C, A, B, alpha, beta)
 end
+mul!(C::AbstractMatrix, A::IKP, B::Adjoint{T,<:AbstractMatrix{T}}) where {T} =
+    _matmul_vectrick!(C, A, B)
 
 # fast_linalg.jl
 for TC in [:AbstractVector, :AbstractMatrix]
