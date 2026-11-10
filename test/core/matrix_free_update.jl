@@ -25,13 +25,14 @@ R = BlocksOfDiagonals([Matrix(UpperTriangular(randn(rng, q + 1, q + 1))) for _ i
 Σ = Matrix(R)' * Matrix(R)
 S_dense = H_dense * Σ * H_dense'
 
-function observation_operator(; reltol=1e-12, kwargs...)
+function linearized_observation(; reltol=1e-12, kwargs...)
     integ = init(ODEProblem(f, u, (0.0, 1.0)), MatfreeEK1(; order=q, kwargs...); reltol)
     m = [u; zeros(D - d)]
-    return PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m).H
+    return PNDE.linearize_ode_observation!(integ.alg.linearization, integ, m)
 end
-observed_covariance(H, R; needs_diagonal=false) =
-    PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHt; needs_diagonal)
+observation_operator(; kwargs...) = linearized_observation(; kwargs...).H
+observed_covariance(H, R; needs_diagonal=false, noise=nothing) =
+    PNDE.MatrixFreeObservedCovariance(H, R, H.cache.HΣHt; needs_diagonal, noise)
 
 @testset "Products with H, Σ Hᵀ and H Σ Hᵀ" begin
     H = observation_operator()
@@ -125,4 +126,58 @@ end
     exact = z' * (HQHt_dense \ z)
     @test PNDE.invquad(z, HQHt) ≈ exact rtol = 0.15
     @test PNDE.invquad(z, HQHt) <= exact * (1 + sqrt(eps()))
+end
+
+@testset "With observation noise" begin
+    # As large as the diagonal of H Σ Hᵀ, so that it changes the posterior covariance
+    noise = diag(S_dense) .* (0.5 .+ rand(rng, d))
+    S_noisy = S_dense + Diagonal(noise)
+    noisy_observation(; kwargs...) =
+        linearized_observation(; pn_observation_noise=Diagonal(noise), kwargs...)
+    @test Matrix(noisy_observation().R) ≈ Diagonal(noise)
+
+    @testset "Products with H Σ Hᵀ + R and linear solves" begin
+        H = observation_operator()
+        S = observed_covariance(H, R; noise)
+        w, W = randn(rng, d), randn(rng, d, 3)
+        @test mul!(zeros(d), S, w) ≈ S_noisy * w
+        @test mul!(zeros(d, 3), S, W) ≈ S_noisy * W
+        B = randn!(rng, H.cache.HG)
+        @test PNDE.krylov_solve!(S, B, :covariance) ≈ S_noisy \ B
+    end
+
+    @testset "Diagonals" begin
+        H = observation_operator(; diagonal_jacobian=diagonal_jacobian!)
+        H_diagonal = E1 - Diagonal(J) * E0
+        S = observed_covariance(H, R; noise)
+        @test S.preconditioner ≈ diag(H_diagonal * Σ * H_diagonal') + noise
+        @test PNDE.estimate_diagonal!(zeros(d), S, 20_000) ≈ diag(S_noisy) rtol = 0.05
+    end
+
+    @testset "Mean update" begin
+        obs = noisy_observation()
+        μ = randn(rng, D)
+        x_pred = Gaussian(μ, PSDMatrix(R))
+        z = randn(rng, d)
+        x_out = copy(x_pred)
+        upd = PNDE.update_mean!(x_out, x_pred, LinearizedObservation(μ, z, obs.H, obs.R);
+            cache=nothing)
+        @test x_out.μ ≈ μ - Σ * H_dense' * (S_noisy \ z)
+        @test upd.ztSinvz ≈ z' * (S_noisy \ z)
+    end
+
+    # Without the perturbed observations, the samples would miss the term K R Kᵀ
+    @testset "Covariance update" begin
+        obs_noisy = noisy_observation(; nprobes=4000)
+        x_pred = Gaussian(randn(rng, D), PSDMatrix(R))
+        obs = LinearizedObservation(x_pred.μ, randn(rng, d), obs_noisy.H, obs_noisy.R)
+        x_out = copy(x_pred)
+        upd = PNDE.update_mean!(x_out, x_pred, obs; cache=nothing)
+        PNDE.update_cov!(x_out, x_pred, obs, upd.K, upd.B; cache=nothing)
+        Σ_posterior = Σ - Σ * H_dense' * (S_noisy \ (H_dense * Σ))
+        for i in 1:d
+            block = i:d:D
+            @test Matrix(x_out.Σ)[block, block] ≈ Σ_posterior[block, block] rtol = 0.15
+        end
+    end
 end

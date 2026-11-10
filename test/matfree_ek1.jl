@@ -114,6 +114,39 @@ end
     @test sol.stats.nnonliniter > sol.stats.naccept
 end
 
+@testset "Like the EK1 with observation noise: $(nameof(typeof(noise)))" for noise in (
+    1e-6, Diagonal(range(1e-7, 2e-6, length=N)),
+)
+    ek1_noisy = solve(remake(prob, f=f!), EK1(pn_observation_noise=noise),
+        abstol=1e-7, reltol=1e-5)
+    Random.seed!(1)
+    sol = solve(prob, MatfreeEK1(pn_observation_noise=noise), abstol=1e-7, reltol=1e-5)
+    @test sol.retcode == ReturnCode.Success
+    @test norm(sol.u[end] - ek1_noisy.u[end]) / norm(ek1_noisy.u[end]) < 2e-5
+    @test relerr(sol(0.5).μ, 0.5) < 2e-5
+    @test sol.stats.naccept < 1.5 * ek1_noisy.stats.naccept
+end
+
+@testset "Observation noise with iterated linearization" begin
+    Random.seed!(1)
+    sol = solve(
+        prob,
+        ODEFilter(linearization=Iterated(MatrixFreeJacobian()), pn_observation_noise=1e-6),
+        abstol=1e-7, reltol=1e-5)
+    @test sol.retcode == ReturnCode.Success
+    @test relerr(sol.u[end], 1.0) < 2e-5
+end
+
+@testset "Isotropic observation noise in all its representations" begin
+    sols = map((0.1, Diagonal(fill(0.1, N)))) do noise
+        Random.seed!(1)
+        solve(remake(prob, tspan=(0.0, 0.1)), MatfreeEK1(pn_observation_noise=noise),
+            adaptive=false, dt=0.01)
+    end
+    @test all(sol -> sol.retcode == ReturnCode.Success, sols)
+    @test all(sol -> sol.u == sols[1].u, sols)
+end
+
 @testset "The probes are drawn from the default random number generator" begin
     sols = map((1, 1, 2)) do seed
         Random.seed!(seed)
@@ -136,14 +169,12 @@ end
 end
 
 @testset "Unsupported settings and missing inputs throw" begin
-    @test_throws "observation noise" solve(prob, MatfreeEK1(pn_observation_noise=1.0))
+    @test_throws ArgumentError solve(
+        prob, MatfreeEK1(pn_observation_noise=0.1 * ones(N, N) + I))
     @test_throws "multivariate diffusion" solve(
         prob, MatfreeEK1(diffusionmodel=DynamicMVDiffusion()))
     @test_throws "multivariate diffusion" solve(
         prob, MatfreeEK1(diffusionmodel=FixedMVDiffusion()))
-    @test_throws "observation noise" solve(
-        prob,
-        ODEFilter(linearization=Iterated(MatrixFreeJacobian()), pn_observation_noise=1.0))
     @test_throws ArgumentError solve(prob, MatfreeEK1(prior=IOUP(3, -1)))
     @test_throws ArgumentError solve(
         prob, MatfreeEK1(covariance_factorization=DenseCovariance))

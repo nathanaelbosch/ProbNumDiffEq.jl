@@ -6,12 +6,12 @@ const MAX_CG_ITERATIONS = 10_000
     throw_if_unsupported(::MatrixFreeJacobian, alg, f, u)
 
 Throw an `ArgumentError` if the `MatfreeEK1` does not support the settings of `alg`, the ODE
-function `f`, or the state `u`. It does not support second-order ODEs, mass matrices,
-observation noise, or states that are not floating-point numbers. Of the multivariate
-diffusion models, it only supports the `FixedMVDiffusion` with `calibrate=false`, since the
-others estimate one diffusion per dimension, which assumes that `H` does not couple the
-dimensions. It needs `jvp` and `vjp` in the ODE function, and at least as many probes as
-there are derivatives in the state.
+function `f`, or the state `u`. It does not support second-order ODEs, mass matrices, or
+states that are not floating-point numbers. Of the multivariate diffusion models, it only
+supports the `FixedMVDiffusion` with `calibrate=false`, since the others estimate one
+diffusion per dimension, which assumes that `H` does not couple the dimensions. It needs
+`jvp` and `vjp` in the ODE function, and at least as many probes as there are derivatives
+in the state.
 """
 function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
     unsupported(what) = ArgumentError("The `MatfreeEK1` does not support $what.")
@@ -19,8 +19,6 @@ function throw_if_unsupported(linearization::MatrixFreeJacobian, alg, f, u)
         throw(unsupported("second-order ODEs"))
     elseif f.mass_matrix !== I
         throw(unsupported("mass matrices"))
-    elseif !isnothing(alg.pn_observation_noise)
-        throw(unsupported("observation noise"))
     elseif !(
         alg.diffusionmodel isa Union{DynamicDiffusion,FixedDiffusion} ||
         (alg.diffusionmodel isa FixedMVDiffusion && !alg.diffusionmodel.calibrate)
@@ -67,13 +65,14 @@ function make_linearization_cache(
     observed_covariance() =
         (; ΣEt=(zeros(T, D), zeros(T, D)), preconditioner=dvec(), diagonal=dvec())
     return (;
-        r=dvec(), u=dvec(),
+        r=dvec(), u=dvec(), noise=dvec(),
         J_D=isnothing(linearization.diagonal_jacobian) ? nothing : dvec(),
         v=dvec(), Jv=dvec(), Jtw=dvec(), E0ΣHtw=dvec(), E0g=dvec(), E1g=dvec(), z=dvec(),
         HΣHt=observed_covariance(), HQHt=observed_covariance(),
         ξ=zeros(T, 2d), L=(dvec(), dvec(), dvec()),
         Ξ=zeros(T, D, m), G=zeros(T, D, m), HG=zeros(T, d, m),
-        Gt_i=zeros(T, m, q + 1), Σ_i=zeros(T, q + 1, q + 1), KHg=zeros(T, D),
+        V=zeros(T, d, m), Gt_i=zeros(T, m, q + 1), Σ_i=zeros(T, q + 1, q + 1),
+        KHg=zeros(T, D),
         cg=CgWorkspace(d, d, Vector{T}), W=zeros(T, d, m),
     )
 end
@@ -224,13 +223,15 @@ function mul!(x::AbstractVector, ΣHt::MatrixFreeCrossCovariance, w::AbstractVec
 end
 
 """
-    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers; needs_diagonal)
+    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers; needs_diagonal, noise=nothing)
 
-The covariance ``H Σ H^T`` of the observation, as an operator.
+The covariance ``H Σ H^T + R_v`` of the observation, as an operator.
 
+`R` is the square root of ``Σ``, and `noise` is `nothing` or the diagonal of the covariance
+``R_v`` of the observation noise, which the operator then adds.
 The main use of this operator is for matrix-free solutions of linear systems with
 Krylov.jl. In the update ``Σ`` is the predicted covariance, but for error-estimation
-and calibration we can also use this operator with ``Σ = Q(h)``.
+and calibration we can also use this operator with ``Σ = Q(h)`` and without noise.
 
 To be efficient, the linear solves need a preconditioner.
 The constructor therefore automatically computes a Jacobi preconditioner as an
@@ -242,21 +243,22 @@ otherwise we estimate it stochastically.
 As the local error estimate needs the stochastic diagonal, one can also compute both
 by setting `needs_diagonal=true`.
 """
-struct MatrixFreeObservedCovariance{CT,RT,V} <: AbstractMatrixFreeOperator
+struct MatrixFreeObservedCovariance{CT,RT,V,NT} <: AbstractMatrixFreeOperator
     ΣHt::CT
     R::RT
     preconditioner::V
     diagonal::V
+    noise::NT
     has_diagonal::Bool
     function MatrixFreeObservedCovariance(
-        H, R::BlocksOfDiagonals, buffers; needs_diagonal::Bool,
+        H, R::BlocksOfDiagonals, buffers; needs_diagonal::Bool, noise=nothing,
     )
         ΣHt = MatrixFreeCrossCovariance(H, R, buffers.ΣEt)
         (; preconditioner, diagonal) = buffers
         J_D = H.cache.J_D
         has_diagonal = needs_diagonal || isnothing(J_D)
-        S = new{typeof(ΣHt),typeof(R),typeof(diagonal)}(
-            ΣHt, R, preconditioner, diagonal, has_diagonal,
+        S = new{typeof(ΣHt),typeof(R),typeof(diagonal),typeof(noise)}(
+            ΣHt, R, preconditioner, diagonal, noise, has_diagonal,
         )
         if has_diagonal
             estimate_diagonal!(diagonal, S, DIAGONAL_PROBES)
@@ -289,16 +291,17 @@ function mul!(y::AbstractVector, S::MatrixFreeObservedCovariance, w::AbstractVec
     @views E0ΣHtw .= ΣE1t[1:d] .* w .- ΣE0t[1:d] .* Jtw
     @views y .= ΣE1t[(d+1):2d] .* w .- ΣE0t[(d+1):2d] .* Jtw
     y .-= apply_jvp!(H, E0ΣHtw)
+    isnothing(S.noise) || (@.. y = y + S.noise * w)
     return y
 end
 
 """
     estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
 
-Estimate the diagonal of ``S = H Σ H^T`` stochastically, from `n` probes.
+Estimate the diagonal of ``S = H Σ H^T + R_v`` stochastically, from `n` probes.
 
-For samples ``g`` with the covariance ``Σ``, the expectation of the elementwise square ``(H g)^2`` is the diagonal of ``S``.
-We therefore average ``(H g)^2`` over `n` samples, which is an estimator of the Hutchinson type.
+For samples ``g`` with the covariance ``Σ``, the expectation of the elementwise square ``(H g)^2`` is the diagonal of ``H Σ H^T``.
+We therefore average ``(H g)^2`` over `n` samples, which is an estimator of the Hutchinson type, and add the diagonal of the noise covariance ``R_v`` exactly.
 Each sample costs one Jacobian-vector product.
 
 Since ``H`` only reads ``E_0 g`` and ``E_1 g``, we only sample these.
@@ -326,13 +329,14 @@ function estimate_diagonal!(out, S::MatrixFreeObservedCovariance, n)
         @.. out = out + (E1g - JE0g)^2
     end
     @.. out = out / n
+    isnothing(S.noise) || (@.. out = out + S.noise)
     return out
 end
 
 """
     estimate_diagonal_with_diagonal_jacobian!(out, S::MatrixFreeObservedCovariance, J_D)
 
-Estimate the diagonal of ``S = H Σ H^T`` deterministically, by the diagonal of ``H_D Σ H_D^T`` with ``H_D = E_1 - J_D E_0``, where ``J_D`` is the diagonal of the Jacobian.
+Estimate the diagonal of ``S = H Σ H^T + R_v`` deterministically, by the diagonal of ``H_D Σ H_D^T + R_v`` with ``H_D = E_1 - J_D E_0``, where ``J_D`` is the diagonal of the Jacobian.
 
 This needs no Jacobian-vector products, but it ignores the off-diagonal entries of ``J``.
 Since row ``i`` of ``H_D`` only reads ``u_i`` and ``u_i'``, its entry only needs the ``i``-th block of the square root ``R`` of ``Σ``.
@@ -344,6 +348,7 @@ function estimate_diagonal_with_diagonal_jacobian!(
         # (H_D Σ H_Dᵀ)ᵢᵢ = ‖R H_Dᵀ eᵢ‖² = ‖r₁ - J_Dᵢ r₀‖², with the columns r₀ and r₁ of Rᵢ
         out[i] = sum(k -> (Ri[k, 2] - J_D[i] * Ri[k, 1])^2, axes(Ri, 1))
     end
+    isnothing(S.noise) || (@.. out = out + S.noise)
     return out
 end
 
@@ -432,14 +437,15 @@ MatrixFreeGain(S::MatrixFreeObservedCovariance) = MatrixFreeGain(S.ΣHt, S)
 
 Update the mean on a matrix-free observation.
 
-We solve ``S w = z`` for ``S = H Σ H^T`` by CG, where ``z`` is the residual at the predicted mean ``μ``, and set ``μ^F = μ - Σ H^T w``.
+We solve ``S w = z`` for ``S = H Σ H^T + R_v`` by CG, where ``z`` is the residual at the predicted mean ``μ`` and ``R_v`` is the covariance `obs.R` of the observation noise, if any, and set ``μ^F = μ - Σ H^T w``.
 The log-likelihood would need the determinant of ``S``, which we do not compute, so we return it as `NaN`.
 We also return the gain ``K`` for `update_cov!`.
 """
 function update_mean!(x_out, x_pred, obs::MatrixFreeLinearizedObservation; cache)
-    (; m, H) = obs
+    (; m, H, R) = obs
     c = H.cache
-    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHt; needs_diagonal=false)
+    noise = isnothing(R) ? nothing : diag!(c.noise, R)
+    S = MatrixFreeObservedCovariance(H, x_pred.Σ.R, c.HΣHt; needs_diagonal=false, noise)
     z = if m === x_pred.μ
         obs.r
     else
@@ -486,14 +492,21 @@ end
 """
     condition_samples!(G, H, K::MatrixFreeGain)
 
-Condition the samples in the columns of `G` on the observation, by replacing each sample ``g`` with ``g - K H g``.
+Condition the samples in the columns of `G` on the observation, by replacing each sample ``g`` with ``g - K (H g + v)``.
 
-If the samples have the covariance ``Σ``, the results have the posterior covariance ``Σ^F = Σ - K H Σ``.
+``v`` is a sample of the observation noise, ``v \\sim \\mathcal{N}(0, R_v)``, or zero without noise.
+If the samples have the covariance ``Σ``, the results have the covariance ``(I - K H) Σ (I - K H)^T + K R_v K^T``, which for ``K = Σ H^T (H Σ H^T + R_v)^{-1}`` is the posterior covariance ``Σ^F = Σ - K H Σ``.
+Without ``v``, they would miss the term ``K R_v K^T``.
 Each sample costs one linear solve with ``S``.
 """
 function condition_samples!(G, H::MatrixFreeObservationOperator, K::MatrixFreeGain)
-    (; HG, KHg) = H.cache
+    (; HG, V, KHg) = H.cache
     mul!(HG, H, G)
+    noise = K.S.noise
+    if !isnothing(noise)
+        Random.randn!(integrator_rng(H.integ), V)
+        HG .+= sqrt.(noise) .* V
+    end
     W = krylov_solve!(K.S, HG, :covariance)
     for j in axes(G, 2)
         view(G, :, j) .-= mul!(KHg, K.ΣHt, view(W, :, j))
