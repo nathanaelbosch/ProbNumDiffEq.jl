@@ -13,7 +13,7 @@ apply_diffusion(
     diffusion::Number,
 ) = PSDMatrix(Q.R * sqrt(diffusion))
 apply_diffusion(
-    Q::PSDMatrix{T,<:PerDimensionBlocks},
+    Q::PSDMatrix{T,<:BlocksOfDiagonalsLike},
     diffusion::Diagonal{T,<:Vector},
 ) where {T} = PSDMatrix(
     BlocksOfDiagonals([
@@ -75,7 +75,7 @@ apply_diffusion!(
 end
 apply_diffusion!(
     out::PSDMatrix{T,<:BlocksOfDiagonals},
-    Q::PSDMatrix{T,<:PerDimensionBlocks},
+    Q::PSDMatrix{T,<:BlocksOfDiagonalsLike},
     diffusion::Diagonal{<:T,<:Vector},
 ) where {T} = begin
     Qb = blocks(Q.R)

@@ -29,12 +29,19 @@ blocks(B::BlocksOfDiagonals) = B.blocks
 nblocks(B::BlocksOfDiagonals) = length(B.blocks)
 size(B::BlocksOfDiagonals) = mapreduce(size, ((a, b), (c, d)) -> (a + c, b + d), blocks(B))
 
-# `B ⊗ I_d` is a `BlocksOfDiagonals` whose `d` blocks all equal `B`. The prior's matrices
-# have this form, so block-wise products also take them as inputs; outputs stay
-# `BlocksOfDiagonals`, which keeps writes into the shared block out of these loops.
 blocks(K::IsometricKroneckerProduct) = Fill(K.B, K.rdim)
 nblocks(K::IsometricKroneckerProduct) = K.rdim
-const PerDimensionBlocks = Union{BlocksOfDiagonals,IsometricKroneckerProduct}
+"""
+    BlocksOfDiagonalsLike
+
+A `BlocksOfDiagonals`, or an `IsometricKroneckerProduct` `B ⊗ I_d`, which is one with `d`
+blocks equal to `B`.
+
+Both have one block per dimension, read with `blocks` and `nblocks`, so block-wise methods
+take either as input. Their outputs are `BlocksOfDiagonals`, so nothing writes into the
+shared block of a Kronecker product.
+"""
+const BlocksOfDiagonalsLike = Union{BlocksOfDiagonals,IsometricKroneckerProduct}
 
 Base.@propagate_inbounds function Base.getindex(
     B::BlocksOfDiagonals{T},
@@ -217,7 +224,7 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(C::BlocksOfDiagonals, A::PerDimensionBlocks, B::Number) = begin
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonalsLike, B::Number) = begin
         @assert nblocks(C) == nblocks(A)
         Ab = blocks(A)
         @simd ivdep for i in eachindex(blocks(C))
@@ -258,7 +265,7 @@ end
 
 # Products with a Kronecker prior matrix. The `BlasFloat` methods are more specific than
 # the vec trick in kronecker.jl, which matches these arguments too.
-_block(M::PerDimensionBlocks, i) = blocks(M)[i]
+_block(M::BlocksOfDiagonalsLike, i) = blocks(M)[i]
 _block(M::Adjoint{<:Number,<:BlocksOfDiagonals}, i) = adjoint(blocks(parent(M))[i])
 function _blockwise_matmul!(C::BlocksOfDiagonals, A, B)
     @simd ivdep for i in eachindex(blocks(C))

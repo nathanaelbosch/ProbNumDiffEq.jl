@@ -281,7 +281,11 @@ function compute_backward_kernel!(
     },
     xpred::SRGaussian{T,<:BlocksOfDiagonals},
     x::SRGaussian{T,<:BlocksOfDiagonals},
-    K::AffineNormalKernel{<:PerDimensionBlocks,<:Any,<:PSDMatrix{T,<:PerDimensionBlocks}};
+    K::AffineNormalKernel{
+        <:BlocksOfDiagonalsLike,
+        <:Any,
+        <:PSDMatrix{T,<:BlocksOfDiagonalsLike},
+    };
     C_DxD::AbstractMatrix,
     C_2DxD::AbstractMatrix,
     C_2Dx2D::AbstractMatrix,
