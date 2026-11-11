@@ -126,6 +126,6 @@ function predict_cov!(
     diffusion::Union{Number,Diagonal},
 ) where {T,S}
     foreach_diagonal_block(
-        predict_cov!, nblocks(Σ_out.R), Σ_out, Σ_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
+        predict_cov!, nblocks(Ah), Σ_out, Σ_curr, Ah, Qh, C_DxD, C_2DxD, diffusion)
     return Σ_out
 end

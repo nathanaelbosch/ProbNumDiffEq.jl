@@ -112,7 +112,6 @@ _blockwise_product(A, B) = begin
 end
 Base.:*(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = _blockwise_product(A, B)
 Base.:*(A::BlocksOfDiagonals, B::IsometricKroneckerProduct) = _blockwise_product(A, B)
-Base.:*(A::IsometricKroneckerProduct, B::BlocksOfDiagonals) = _blockwise_product(A, B)
 Base.:*(A::Adjoint{T,<:BlocksOfDiagonals}, B::BlocksOfDiagonals) where {T} = begin
     @assert length(A.parent.blocks) == length(B.blocks)
     return BlocksOfDiagonals([Ai' * Bi for (Ai, Bi) in zip(blocks(A.parent), blocks(B))])
@@ -224,11 +223,10 @@ for _mul! in (:mul!, :_matmul!)
         end
         return C
     end
-    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonalsLike, B::Number) = begin
-        @assert nblocks(C) == nblocks(A)
-        Ab = blocks(A)
+    @eval $_mul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::Number) = begin
+        @assert length(C.blocks) == length(A.blocks)
         @simd ivdep for i in eachindex(blocks(C))
-            @inbounds $_mul!(C.blocks[i], Ab[i], B)
+            @inbounds $_mul!(C.blocks[i], A.blocks[i], B)
         end
         return C
     end

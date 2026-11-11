@@ -75,12 +75,11 @@ apply_diffusion!(
 end
 apply_diffusion!(
     out::PSDMatrix{T,<:BlocksOfDiagonals},
-    Q::PSDMatrix{T,<:BlocksOfDiagonalsLike},
+    Q::PSDMatrix{T,<:BlocksOfDiagonals},
     diffusion::Diagonal{<:T,<:Vector},
 ) where {T} = begin
-    Qb = blocks(Q.R)
-    @simd ivdep for i in eachindex(blocks(out.R))
-        _matmul!(blocks(out.R)[i], Qb[i], sqrt(diffusion.diag[i]))
+    @simd ivdep for i in eachindex(blocks(Q.R))
+        _matmul!(blocks(out.R)[i], blocks(Q.R)[i], sqrt(diffusion.diag[i]))
     end
     return out
 end

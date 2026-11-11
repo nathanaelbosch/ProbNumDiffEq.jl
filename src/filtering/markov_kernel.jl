@@ -292,7 +292,7 @@ function compute_backward_kernel!(
     diffusion::Union{Number,Diagonal}=1,
 ) where {T}
     foreach_diagonal_block(
-        compute_backward_kernel!, nblocks(Kout.A), Kout, xpred, x, K;
+        compute_backward_kernel!, nblocks(K.A), Kout, xpred, x, K;
         C_DxD, C_2DxD, C_2Dx2D, diffusion)
     return Kout
 end

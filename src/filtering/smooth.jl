@@ -87,10 +87,10 @@ function smooth(
     Ah::BlocksOfDiagonalsLike,
     Qh::PSDMatrix{S,<:BlocksOfDiagonalsLike},
 ) where {T,S}
-    d = nblocks(x_curr.Σ.R)
+    d = nblocks(Ah)
     μ = similar(x_curr.μ)
-    R_blocks, G_blocks = similar(blocks(x_curr.Σ.R)), similar(blocks(x_curr.Σ.R))
-    @views for i in 1:d
+    R_blocks, G_blocks = similar(blocks(Ah)), similar(blocks(Ah))
+    @views for i in eachindex(blocks(Ah))
         _x, _G = smooth(
             Gaussian(x_curr.μ[i:d:end], PSDMatrix(x_curr.Σ.R.blocks[i])),
             Gaussian(x_next_smoothed.μ[i:d:end], PSDMatrix(x_next_smoothed.Σ.R.blocks[i])),
