@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Comparison to ProbInts · ProbNumDiffEq.jl</title><link href="https://fonts.googleapis.com/css?family=Lato|Roboto+Mono" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.0/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.11.1/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit">ProbNumDiffEq.jl</span></div><form class="docs-search" action="../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../solvers/">Solvers and Options</a></li><li><span class="tocitem">Examples</span><ul><li class="is-active"><a class="tocitem" href>Comparison to ProbInts</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Examples</a></li><li class="is-active"><a href>Comparison to ProbInts</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Comparison to ProbInts</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/nathanaelbosch/ProbNumDiffEq.jl/blob/master/docs/src/probints_comparison.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Comparison-to-ProbInts"><a class="docs-heading-anchor" href="#Comparison-to-ProbInts">Comparison to ProbInts</a><a id="Comparison-to-ProbInts-1"></a><a class="docs-heading-anchor-permalink" href="#Comparison-to-ProbInts" title="Permalink"></a></h1><p>The DifferentialEquations.jl documentation contains a section about <a href="https://diffeq.sciml.ai/stable/analysis/uncertainty_quantification/">Uncertainty Quantification</a>. It describes the <a href="https://arxiv.org/abs/1506.04592">ProbInts</a> method for quantification of numerical uncertainty, and provides an extension of ProbInts to adaptive step sizes.</p><p>In this example, we want to compare the uncertainty estimates of <code>Tsit5</code>+<code>AdaptiveProbInts</code> to the posterior computed with the <code>EK1</code>.</p><h3 id=".-Problem-definition:-FitzHugh-Nagumo"><a class="docs-heading-anchor" href="#.-Problem-definition:-FitzHugh-Nagumo">1. Problem definition: FitzHugh-Nagumo</a><a id=".-Problem-definition:-FitzHugh-Nagumo-1"></a><a class="docs-heading-anchor-permalink" href="#.-Problem-definition:-FitzHugh-Nagumo" title="Permalink"></a></h3><pre><code class="language-julia">using ProbNumDiffEq
+using ProbNumDiffEq: remake_prob_with_jac, stack
+using DifferentialEquations
+using DiffEqUncertainty
+using Statistics
+using Plots
+
+
+function fitz!(du,u,p,t)
+    V,R = u
+    a,b,c = p
+    du[1] = c*(V - V^3/3 + R)
+    du[2] = -(1/c)*(V -  a - b*R)
+end
+u0 = [-1.0;1.0]
+tspan = (0.0,20.0)
+p = (0.2,0.2,3.0)
+prob = ODEProblem(fitz!,u0,tspan,p)
+prob = remake_prob_with_jac(prob)</code></pre><h4 id="High-accuracy-reference-solution:"><a class="docs-heading-anchor" href="#High-accuracy-reference-solution:">High accuracy reference solution:</a><a id="High-accuracy-reference-solution:-1"></a><a class="docs-heading-anchor-permalink" href="#High-accuracy-reference-solution:" title="Permalink"></a></h4><pre><code class="language-julia">appxsol = solve(remake(prob, u0=big.(prob.u0)), abstol=1e-20, reltol=1e-20)
+plot(appxsol)</code></pre><pre class="documenter-example-output">/home/runner/.julia/packages/GR/G9I5v/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</pre><p><img src="../figures/ex_pi_fitzhugh.svg" alt="Prob-Ints Errors"/></p><h3 id=".-ProbInts"><a class="docs-heading-anchor" href="#.-ProbInts">2. ProbInts</a><a id=".-ProbInts-1"></a><a class="docs-heading-anchor-permalink" href="#.-ProbInts" title="Permalink"></a></h3><p>Uncertainty quantification of <code>Tsit5</code> with <code>AdaptiveProbInts</code>:</p><pre><code class="language-julia">cb = AdaptiveProbIntsUncertainty(5)
+ensemble_prob = EnsembleProblem(prob)
+sol = solve(prob, Tsit5())
+sim = solve(ensemble_prob, Tsit5(), trajectories=100, callback=cb)
+
+p = plot(sol.t, stack(appxsol.(sol.t) - sol.u), color=[3 4], ylims=(-0.003, 0.003), ylabel=&quot;Error&quot;)
+errors = [(a.t, stack(appxsol.(a.t) .- a.u)) for a in sim.u]
+for e in errors
+    plot!(p, e[1], e[2], color=[3 4], label=&quot;&quot;, linewidth=0.2, linealpha=0.5)
+end</code></pre><pre class="documenter-example-output">/home/runner/.julia/packages/GR/G9I5v/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</pre><p><img src="../figures/ex_pi_probints.svg" alt="Prob-Ints Errors"/></p><h3 id=".-EK1"><a class="docs-heading-anchor" href="#.-EK1">3. EK1</a><a id=".-EK1-1"></a><a class="docs-heading-anchor-permalink" href="#.-EK1" title="Permalink"></a></h3><p>Uncertainties provided by the <code>EK1</code>:</p><pre><code class="language-julia">sol = solve(prob, EK1())
+plot(sol.t, stack(appxsol.(sol.t) - sol.u), ylabel=&quot;Error&quot;)
+plot!(sol.t, zero(stack(sol.u)), ribbon=3stack(std(sol.pu)), color=[1 2], label=&quot;&quot;)</code></pre><pre class="documenter-example-output">/home/runner/.julia/packages/GR/G9I5v/src/../deps/gr/bin/gksqt: error while loading shared libraries: libQt5Widgets.so.5: cannot open shared object file: No such file or directory
+connect: Connection refused
+GKS: can&#39;t connect to GKS socket application
+
+GKS: Open failed in routine OPEN_WS
+GKS: GKS not in proper state. GKS must be either in the state WSOP or WSAC in routine ACTIVATE_WS</pre><p><img src="../figures/ex_pi_ours.svg" alt="Our Errors"/></p><p>Verdict: The provided credible bands are more calibrated!</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../solvers/">« Solvers and Options</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> on <span class="colophon-date" title="Sunday 21 February 2021 00:50">Sunday 21 February 2021</span>. Using Julia version 1.5.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
