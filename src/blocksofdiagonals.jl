@@ -261,8 +261,6 @@ for _mul! in (:mul!, :_matmul!)
     end
 end
 
-# Products with a Kronecker prior matrix. The `BlasFloat` methods are more specific than
-# the vec trick in kronecker.jl, which matches these arguments too.
 _block(M::BlocksOfDiagonalsLike, i) = blocks(M)[i]
 _block(M::Adjoint{<:Number,<:BlocksOfDiagonals}, i) = adjoint(blocks(parent(M))[i])
 function _blockwise_matmul!(C::BlocksOfDiagonals, A, B)
@@ -276,18 +274,8 @@ _matmul!(
     A::IsometricKroneckerProduct,
     B::Adjoint{<:Number,<:BlocksOfDiagonals},
 ) = _blockwise_matmul!(C, A, B)
-_matmul!(
-    C::BlocksOfDiagonals{T},
-    A::IsometricKroneckerProduct{T},
-    B::Adjoint{T,<:BlocksOfDiagonals{T}},
-) where {T<:LinearAlgebra.BlasFloat} = _blockwise_matmul!(C, A, B)
 _matmul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::IsometricKroneckerProduct) =
     _blockwise_matmul!(C, A, B)
-_matmul!(
-    C::BlocksOfDiagonals{T},
-    A::BlocksOfDiagonals{T},
-    B::IsometricKroneckerProduct{T},
-) where {T<:LinearAlgebra.BlasFloat} = _blockwise_matmul!(C, A, B)
 
 # Block-wise, instead of LinearAlgebra's entry-by-entry fallback
 function _blockwise_mul!(C::AbstractMatrix, A_blocks, B::AbstractMatrix)
