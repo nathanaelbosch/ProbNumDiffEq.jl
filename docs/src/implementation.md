@@ -28,6 +28,8 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
 - **Initialization and `perform_step!`:** via `OrdinaryDiffEq.initialize!` and `OrdinaryDiffEq.perform_step!`.
   Implemented in `./src/perform_step.jl`.
 - **Linearization:** `perform_step!` gets the observation of the ODE from the solver's linearization, in `./src/linearization.jl`, which evaluates the Jacobian with `OrdinaryDiffEq.calc_J!` if it needs one.
+  The linearization also does the update of the step, so that [`Iterated`](@ref) can linearize again at the updated mean.
+  The linearization of the [`MatfreeEK1`](@ref), in `./src/matrix_free.jl`, uses only the products `f.jvp` and `f.vjp` and solves its linear systems with Krylov methods; a solve that fails rejects the step.
 - **Custom postamble** by overloading `SciMLBase.postamble!` (which should always call `OrdinaryDiffEqCore._postamble!`).
   This is where we do the "smoothing" of the solution.
   Implemented in `./src/integrator_utils.jl`.
@@ -37,7 +39,7 @@ ProbNumDiffEq.jl builds around this structure and overloads some of the parts:
 
 ## Building on DiffEqBase.jl
 
-- **`DiffEqBase.__init`** is currently overloaded to transform OOP problems into IIP problems (in `./src/solve.jl`).
+- **`SciMLBase.__init`** is currently overloaded to transform OOP problems into IIP problems (in `./src/solve.jl`).
 - **The solution object:** `ProbODESolution <: AbstractProbODESolution <: SciMLBase.AbstractODESolution`
   - `./src/solution.jl` implements the main parts.
     Note that the main constructor `SciMLBase.build_solution` is called by `OrdinaryDiffEq.__init`, so OrdinaryDiffEq.jl has control over its inputs.
