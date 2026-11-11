@@ -224,36 +224,12 @@ mul!(C::AbstractMatrix, A::IKP, B::Adjoint{T,<:AbstractMatrix{T}}) where {T} =
 # fast_linalg.jl
 for TC in [:AbstractVector, :AbstractMatrix]
     @eval _matmul!(C::$TC, A::IKP, B::$TC) = _matmul_vectrick!(C, A, B)
-    @eval _matmul!(
-        C::$TC{T},
-        A::IKP{T},
-        B::$TC{T},
-    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C, A, B)
     @eval _matmul!(C::$TC, A::$TC, B::IKP) = _matmul!(C', B', A')'
-    @eval _matmul!(
-        C::$TC{T},
-        A::$TC{T},
-        B::IKP{T},
-    ) where {T<:LinearAlgebra.BlasFloat} = _matmul!(C', B', A')'
 
     @eval _matmul!(C::$TC, A::IKP, B::$TC, alpha::Number, beta::Number) =
         _matmul_vectrick!(C, A, B, alpha, beta)
-    @eval _matmul!(
-        C::$TC{T},
-        A::IKP{T},
-        B::$TC{T},
-        alpha::Number,
-        beta::Number,
-    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C, A, B, alpha, beta)
     @eval _matmul!(C::$TC, A::$TC, B::IKP, alpha::Number, beta::Number) =
         _matmul_vectrick!(C', B', A', alpha, beta)'
-    @eval _matmul!(
-        C::$TC{T},
-        A::$TC{T},
-        B::IKP{T},
-        alpha::Number,
-        beta::Number,
-    ) where {T<:LinearAlgebra.BlasFloat} = _matmul_vectrick!(C', B', A', alpha, beta)'
 end
 
 function Kronecker.ldiv_vec_trick!(x::AbstractVector, A::IKP, v::AbstractVector)

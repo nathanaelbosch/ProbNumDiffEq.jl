@@ -93,6 +93,10 @@ Filtering steps, which need QR, Cholesky or views into caches, are written once 
 Structured results are tested against dense ones in `test/core/`.
 Dense output and sampling must also keep the structure.
 
+The prior's matrices (`A`, `Q`, `Ah`, `Qh`, `P`, `PI`) can be more structured than the covariances: the `IWP` is the same in every dimension, so they are `IsometricKroneckerProduct`s also with `BlockDiagonalCovariance`, and are computed once per step size instead of once per dimension.
+Block-diagonal methods take them as inputs: `blocks(K)` is the factor repeated `d` times, which `foreach_diagonal_block` passes to each block.
+Outputs stay `BlocksOfDiagonals`, so nothing writes into the shared factor block by block.
+
 ### Performance conventions
 
 - Avoid allocations in `perform_step!`: temporaries are preallocated in `EKCache` and named by shape (`C_d`, `C_dxd`, `C_Dxd`, `C_DxD`, `C_2DxD`, `C_3DxD`).

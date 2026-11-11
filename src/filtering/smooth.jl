@@ -84,8 +84,8 @@ end
 function smooth(
     x_curr::SRGaussian{T,<:BlocksOfDiagonals},
     x_next_smoothed::SRGaussian{T,<:BlocksOfDiagonals},
-    Ah::BlocksOfDiagonals,
-    Qh::PSDMatrix{S,<:BlocksOfDiagonals},
+    Ah::BlocksOfDiagonalsLike,
+    Qh::PSDMatrix{S,<:BlocksOfDiagonalsLike},
 ) where {T,S}
     d = nblocks(Ah)
     μ = similar(x_curr.μ)
@@ -94,8 +94,8 @@ function smooth(
         _x, _G = smooth(
             Gaussian(x_curr.μ[i:d:end], PSDMatrix(x_curr.Σ.R.blocks[i])),
             Gaussian(x_next_smoothed.μ[i:d:end], PSDMatrix(x_next_smoothed.Σ.R.blocks[i])),
-            Ah.blocks[i],
-            PSDMatrix(Qh.R.blocks[i]),
+            blocks(Ah)[i],
+            PSDMatrix(blocks(Qh.R)[i]),
         )
         μ[i:d:end] .= _x.μ
         R_blocks[i] = _x.Σ.R

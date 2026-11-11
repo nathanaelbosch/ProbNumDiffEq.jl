@@ -29,6 +29,20 @@ blocks(B::BlocksOfDiagonals) = B.blocks
 nblocks(B::BlocksOfDiagonals) = length(B.blocks)
 size(B::BlocksOfDiagonals) = mapreduce(size, ((a, b), (c, d)) -> (a + c, b + d), blocks(B))
 
+blocks(K::IsometricKroneckerProduct) = Fill(K.B, K.rdim)
+nblocks(K::IsometricKroneckerProduct) = K.rdim
+"""
+    BlocksOfDiagonalsLike
+
+A `BlocksOfDiagonals`, or an `IsometricKroneckerProduct` `B ⊗ I_d`, which is one with `d`
+blocks equal to `B`.
+
+Both have one block per dimension, read with `blocks` and `nblocks`, so block-wise methods
+take either as input. Their outputs are `BlocksOfDiagonals`, so nothing writes into the
+shared block of a Kronecker product.
+"""
+const BlocksOfDiagonalsLike = Union{BlocksOfDiagonals,IsometricKroneckerProduct}
+
 Base.@propagate_inbounds function Base.getindex(
     B::BlocksOfDiagonals{T},
     i::Integer,
@@ -92,10 +106,12 @@ Base.:*(M::BlocksOfDiagonals, U::UniformScaling) =
     BlocksOfDiagonals([B * U for B in blocks(M)])
 
 # Mul between BockDiag's
-Base.:*(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = begin
-    @assert length(A.blocks) == length(B.blocks)
+_blockwise_product(A, B) = begin
+    @assert nblocks(A) == nblocks(B)
     return BlocksOfDiagonals([Ai * Bi for (Ai, Bi) in zip(blocks(A), blocks(B))])
 end
+Base.:*(A::BlocksOfDiagonals, B::BlocksOfDiagonals) = _blockwise_product(A, B)
+Base.:*(A::BlocksOfDiagonals, B::IsometricKroneckerProduct) = _blockwise_product(A, B)
 Base.:*(A::Adjoint{T,<:BlocksOfDiagonals}, B::BlocksOfDiagonals) where {T} = begin
     @assert length(A.parent.blocks) == length(B.blocks)
     return BlocksOfDiagonals([Ai' * Bi for (Ai, Bi) in zip(blocks(A.parent), blocks(B))])
@@ -244,6 +260,22 @@ for _mul! in (:mul!, :_matmul!)
         return C
     end
 end
+
+_block(M::BlocksOfDiagonalsLike, i) = blocks(M)[i]
+_block(M::Adjoint{<:Number,<:BlocksOfDiagonals}, i) = adjoint(blocks(parent(M))[i])
+function _blockwise_matmul!(C::BlocksOfDiagonals, A, B)
+    @simd ivdep for i in eachindex(blocks(C))
+        @inbounds _matmul!(blocks(C)[i], _block(A, i), _block(B, i))
+    end
+    return C
+end
+_matmul!(
+    C::BlocksOfDiagonals,
+    A::IsometricKroneckerProduct,
+    B::Adjoint{<:Number,<:BlocksOfDiagonals},
+) = _blockwise_matmul!(C, A, B)
+_matmul!(C::BlocksOfDiagonals, A::BlocksOfDiagonals, B::IsometricKroneckerProduct) =
+    _blockwise_matmul!(C, A, B)
 
 # Block-wise, instead of LinearAlgebra's entry-by-entry fallback
 function _blockwise_mul!(C::AbstractMatrix, A_blocks, B::AbstractMatrix)

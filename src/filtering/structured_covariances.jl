@@ -54,7 +54,7 @@ _on_diagonal_block(f, i, d, args, kwargs) = f(
     map(x -> _diagonal_block(x, i, d), kwargs)...,
 )
 
-_diagonal_block(M::BlocksOfDiagonals, i, d) = blocks(M)[i]
+_diagonal_block(M::BlocksOfDiagonalsLike, i, d) = blocks(M)[i]
 _diagonal_block(H::BlocksOfScaledSelections, i, d) = H.blocks[i]
 _diagonal_block(v::AbstractVector, i, d) = view(v, i:d:length(v))
 _diagonal_block(D::Diagonal, i, d) = D.diag[i]

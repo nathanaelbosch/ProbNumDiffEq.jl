@@ -24,8 +24,8 @@ predict_cov(
 end
 predict_cov(
     Σ::PSDMatrix{T,<:BlocksOfDiagonals},
-    A::BlocksOfDiagonals,
-    Q::PSDMatrix{S,<:BlocksOfDiagonals},
+    A::BlocksOfDiagonalsLike,
+    Q::PSDMatrix{S,<:BlocksOfDiagonalsLike},
 ) where {T,S} = begin
     R_blocks = map(blocks(Σ.R), blocks(A), blocks(Q.R)) do Σ_R_i, A_i, Q_R_i
         predict_cov(PSDMatrix(Σ_R_i), A_i, PSDMatrix(Q_R_i)).R
@@ -119,8 +119,8 @@ end
 function predict_cov!(
     Σ_out::BlocksOfDiagonalsPSD{T},
     Σ_curr::BlocksOfDiagonalsPSD{T},
-    Ah::BlocksOfDiagonals,
-    Qh::BlocksOfDiagonalsPSD{S},
+    Ah::BlocksOfDiagonalsLike,
+    Qh::PSDMatrix{S,<:BlocksOfDiagonalsLike},
     C_DxD::BlocksOfDiagonals,
     C_2DxD::BlocksOfDiagonals,
     diffusion::Union{Number,Diagonal},

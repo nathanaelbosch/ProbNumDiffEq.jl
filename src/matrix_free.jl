@@ -188,7 +188,7 @@ function mul!(y::AbstractVector, H::MatrixFreeObservationOperator, x::AbstractVe
 end
 
 """
-    MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, buffers)
+    MatrixFreeCrossCovariance(H, R::BlocksOfDiagonalsLike, buffers)
 
 The cross-covariance ``Σ H^T`` between the state and the observation, as an operator.
 
@@ -201,7 +201,7 @@ struct MatrixFreeCrossCovariance{HT,V} <: AbstractMatrixFreeOperator
     H::HT
     ΣE0t::V
     ΣE1t::V
-    function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonals, (ΣE0t, ΣE1t))
+    function MatrixFreeCrossCovariance(H, R::BlocksOfDiagonalsLike, (ΣE0t, ΣE1t))
         d = nblocks(R)
         for (i, Ri) in enumerate(blocks(R)), k in axes(Ri, 2)
             ΣE0t[(k-1)*d+i] = dot(view(Ri, :, k), view(Ri, :, 1))
@@ -223,7 +223,7 @@ function mul!(x::AbstractVector, ΣHt::MatrixFreeCrossCovariance, w::AbstractVec
 end
 
 """
-    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonals, buffers; needs_diagonal, noise=nothing)
+    MatrixFreeObservedCovariance(H, R::BlocksOfDiagonalsLike, buffers; needs_diagonal, noise=nothing)
 
 The covariance ``H Σ H^T + R_v`` of the observation, as an operator.
 
@@ -251,7 +251,7 @@ struct MatrixFreeObservedCovariance{CT,RT,V,NT} <: AbstractMatrixFreeOperator
     noise::NT
     has_diagonal::Bool
     function MatrixFreeObservedCovariance(
-        H, R::BlocksOfDiagonals, buffers; needs_diagonal::Bool, noise=nothing,
+        H, R::BlocksOfDiagonalsLike, buffers; needs_diagonal::Bool, noise=nothing,
     )
         ΣHt = MatrixFreeCrossCovariance(H, R, buffers.ΣEt)
         (; preconditioner, diagonal) = buffers
