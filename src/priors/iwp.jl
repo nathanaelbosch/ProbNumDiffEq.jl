@@ -167,8 +167,6 @@ function discretize(p::IWP, dt::Real)
     return A, Q
 end
 
-# The `IWP` is the same in every dimension, so with block-diagonal covariances its
-# matrices are Kronecker products too, and each block of a covariance uses the same factor
 function initialize_transition_matrices(
     FAC::Union{IsometricKroneckerCovariance,BlockDiagonalCovariance}, p::IWP, dt)
     A, Q = preconditioned_discretize(p)
