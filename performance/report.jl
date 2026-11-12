@@ -1,10 +1,10 @@
-# Builds benchmark/results/report.html from the results in benchmark/results/julia-*/.
+# Builds performance/results/report.html from the results in performance/results/julia-*/.
 #
-#     julia benchmark/report.jl             # everything, for local use
-#     julia benchmark/report.jl --publish   # docs/src/performance_report.html, without the working tree
+#     julia performance/report.jl             # everything, for local use
+#     julia performance/report.jl --publish   # docs/src/performance_report.html, without the working tree
 #
 # The page embeds the raw AirspeedVelocity results and the time-to-first-solve results, and
-# renders them with the script in benchmark/report_template.html.
+# renders them with the script in performance/report_template.html.
 
 using Dates: Dates
 using TOML: TOML
@@ -12,7 +12,7 @@ using TOML: TOML
 const RESULTS = joinpath(@__DIR__, "results")
 const TEMPLATE = joinpath(@__DIR__, "report_template.html")
 
-# What each benchmark of benchmark/benchmarks.jl runs, for the labels of the report and for its
+# What each benchmark of performance/benchmarks.jl runs, for the labels of the report and for its
 # summary by factor. Keep in sync with benchmarks.jl.
 #   size: problems are "small" (d ≤ 3) or "large" (d ≥ 14)
 #   structure: the covariance structure the solver uses, see `choose_covariance_structure`
@@ -94,7 +94,7 @@ end
 
 # The date of the revision itself, with the commit hash for branches.
 function revision_date(rev)
-    rev == "dirty" && return "working tree"
+    rev == "dirty" && return ""
     out = try
         readchomp(`git -C $(dirname(@__DIR__)) log -1 --format=%cs\ %h $rev --`)
     catch
@@ -104,25 +104,30 @@ function revision_date(rev)
     return tryparse(VersionNumber, rev) === nothing ? "$date $hash" : date
 end
 
-function last_runs(dir)
-    runs, machine = Dict{String,String}(), Dict{String,String}()
+# The CPU and the thread count of the last run logged in `dir`. The host name is not published.
+function last_machine(dir)
+    machine = Dict{String,String}()
     file = joinpath(dir, "runs.log")
-    isfile(file) || return runs, machine
+    isfile(file) || return machine
     for line in eachline(file)
-        m = match(
-            r"^(\S+) revs=(.*?) host=(\S+) cpu=(.*) julia version (\S+) threads=(\S+)$",
-            line,
-        )
+        m = match(r" cpu=(.*) julia version \S+ threads=(\S+)$", line)
         m === nothing && continue
-        startswith(m[2], "ttfs") ||
-            foreach(r -> runs[r] = first(m[1], 10), split(m[2], ','))
-        machine["cpu"], machine["threads"] = m[4], m[6]
+        machine["cpu"], machine["threads"] = m[1], m[2]
     end
-    return runs, machine
+    return machine
+end
+
+# The files `<prefix>_ProbNumDiffEq@<rev>.<ext>` in `dir`, as pairs `rev => path`.
+# AirspeedVelocity and ttfs.jl both write a "/" in a revision as "_", so a revision has
+# the same name in both.
+function revision_files(dir, prefix, ext)
+    matches = match.(Regex("^$(prefix)_ProbNumDiffEq@(.*)\\.$ext\$"), readdir(dir))
+    return [m[1] => joinpath(dir, m.match) for m in matches if m !== nothing]
 end
 
 # The report shows at most MAX_SAMPLES solves per benchmark and revision, so only those are embedded,
 # together with the statistics of all of them. This shrinks the page by a factor of ten.
+# `time_to_load` is left as it is: its first sample is not a fresh process, and the report drops it.
 const MAX_SAMPLES = 100
 function quantile_sorted(v, q)
     pos = (length(v) - 1) * q
@@ -133,7 +138,7 @@ function shrink(results::AbstractString)
     results = replace(results, r"\"gctimes\":\[[^\]]*\]" => "\"gctimes\":[]")
     return replace(
         results,
-        r"\"times\":\[[^\]]*\]" => function (m)
+        r"(?<!\"time_to_load\":\{)\"times\":\[[^\]]*\]" => function (m)
             times = parse.(Float64, split(m[10:(end-1)], ','))
             n = length(times)
             n <= MAX_SAMPLES && return m
@@ -154,45 +159,30 @@ function main(; publish=false)
         d -> startswith(d, "julia-") && isdir(joinpath(RESULTS, d)),
         readdir(RESULTS),
     )
-    sort!(dirs; by=d -> VersionNumber(chop(d; head=6, tail=0)))
+    julia_version(d) = chop(d; head=length("julia-"), tail=0)
+    sort!(dirs; by=VersionNumber ∘ julia_version)
     revisions, results, ttfs, machine =
         Dict{String,Any}[], String[], Dict{String,Any}(), Dict{String,String}()
     for d in dirs
-        julia, dir = chop(d; head=6, tail=0), joinpath(RESULTS, d)
-        runs, m = last_runs(dir)
-        merge!(machine, m)
-        files = filter(
-            f -> startswith(f, "results_ProbNumDiffEq@") && endswith(f, ".json"),
-            readdir(dir),
-        )
-        revs = sort(
-            [
-                chop(f; head=length("results_ProbNumDiffEq@"), tail=length(".json")) for
-                f in files
-            ];
-            by=revision_order)
-        for r in revs
+        julia, dir = julia_version(d), joinpath(RESULTS, d)
+        merge!(machine, last_machine(dir))
+        results_files = revision_files(dir, "results", "json")
+        for (r, file) in sort(results_files; by=revision_order ∘ first)
             publish && r == "dirty" && continue
             id = "$r@$julia"
             push!(
                 revisions,
-                Dict("id" => id, "name" => r, "julia" => julia, "date" => revision_date(r),
-                    "ran" => get(runs, r, "")),
+                Dict("id" => id, "name" => r, "julia" => julia, "date" => revision_date(r)),
             )
-            push!(
-                results,
-                json(id) * ":" *
-                shrink(read(joinpath(dir, "results_ProbNumDiffEq@$r.json"), String)),
-            )
+            push!(results, json(id) * ":" * shrink(read(file, String)))
         end
-        for f in readdir(dir)
-            m = match(r"^ttfs_ProbNumDiffEq@(.*)\.toml$", f)
-            (m === nothing || (publish && m[1] == "dirty")) && continue
-            ttfs["$(m[1])@$julia"] = TOML.parsefile(joinpath(dir, f))
+        for (r, file) in revision_files(dir, "ttfs", "toml")
+            publish && r == "dirty" && continue
+            ttfs["$r@$julia"] = TOML.parsefile(file)
         end
     end
     isempty(revisions) &&
-        error("No results in $RESULTS; run `just bench` or `just bench-history` first.")
+        error("No results in $RESULTS; run `just perf` or `just perf-history` first.")
     releases = filter(
         r ->
             tryparse(VersionNumber, r["name"]) !== nothing &&
@@ -217,6 +207,9 @@ function main(; publish=false)
     back = publish ? "<a class=\"back\" href=\"performance/\">← Documentation</a>" : ""
     page =
         replace(read(TEMPLATE, String), "__BENCH_DATA__" => data, "__BACK_LINK__" => back)
+    # The template starts with what belongs into the head: title, meta, link and style
+    head_end = last(findfirst("</style>", page))
+    head, body = page[1:head_end], lstrip(page[(head_end+1):end])
     out =
         publish ? joinpath(dirname(@__DIR__), "docs", "src", "performance_report.html") :
         joinpath(RESULTS, "report.html")
@@ -225,9 +218,13 @@ function main(; publish=false)
         """
  <!doctype html>
  <html lang="en">
- <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head>
+ <head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+ $head
+ </head>
  <body>
- $page
+ $body
  </body>
  </html>
  """,

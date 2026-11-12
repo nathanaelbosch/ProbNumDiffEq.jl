@@ -1,4 +1,4 @@
-# Benchmark suite for AirspeedVelocity.jl; see benchmark/README.md.
+# Benchmark suite for AirspeedVelocity.jl; see performance/README.md.
 #
 # The same script runs on old releases, so it uses only the public API, in the spelling
 # that has been stable the longest. An entry whose trial solve fails, for example because

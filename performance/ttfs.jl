@@ -1,16 +1,21 @@
 # Time to first solve: `using ProbNumDiffEq` and the first solves in a fresh process.
 #
-#     julia benchmark/ttfs.jl [--samples N] [--exeflags FLAGS] REV...
+#     julia performance/ttfs.jl [--samples N] [--exeflags FLAGS] REV...
 #
 # REV is a git revision of the repository or `dirty` for the working tree. For each one
 # this installs the package into a temporary environment, precompiles it, and then times
-# N fresh Julia processes. Results go to benchmark/results/ttfs_ProbNumDiffEq@<rev>.toml.
+# N fresh Julia processes. Results go to
+# performance/results/julia-<version>/ttfs_ProbNumDiffEq@<rev>.toml.
 
 using Pkg: Pkg
 using TOML: TOML
 
 const REPO = dirname(@__DIR__)
 const RESULTS = joinpath(@__DIR__, "results", "julia-$VERSION")
+const NAMES = ("using", "first_solve_EK0", "first_solve_EK1")
+# A "/" in a revision becomes "_", as in the result files of AirspeedVelocity, so that
+# performance/report.jl finds both under the same name.
+result_file(rev) = joinpath(RESULTS, "ttfs_ProbNumDiffEq@$(replace(rev, "/" => "_")).toml")
 
 const MEASURE = raw"""
 t_load = @elapsed using ProbNumDiffEq
@@ -72,16 +77,11 @@ function main(args)
                 "median" => median(getindex.(times, k)),
                 "samples" => getindex.(times, k),
             )
-            for (k, name) in enumerate(("using", "first_solve_EK0", "first_solve_EK1"))
+            for (k, name) in enumerate(NAMES)
         )
         result["julia"] = string(VERSION)
         result["exeflags"] = join(exeflags, " ")
-        open(
-            joinpath(RESULTS, "ttfs_ProbNumDiffEq@$(replace(rev, "/" => "_")).toml"),
-            "w",
-        ) do io
-            TOML.print(io, result)
-        end
+        open(io -> TOML.print(io, result), result_file(rev), "w")
     end
     println()
     println(
@@ -91,10 +91,8 @@ function main(args)
         lpad("1st EK1", 10),
     )
     for rev in revs
-        r = TOML.parsefile(
-            joinpath(RESULTS, "ttfs_ProbNumDiffEq@$(replace(rev, "/" => "_")).toml"),
-        )
-        cols = (r[k]["median"] for k in ("using", "first_solve_EK0", "first_solve_EK1"))
+        r = TOML.parsefile(result_file(rev))
+        cols = (r[k]["median"] for k in NAMES)
         println(rpad(rev, 16), join(lpad.(string.(round.(cols, digits=2), " s"), 10)))
     end
     return nothing

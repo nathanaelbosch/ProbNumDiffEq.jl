@@ -18,4 +18,4 @@ All versions are measured on the same machine, with one Julia thread and one BLA
 The report is updated by hand, usually after a release, so the development version in it can be older than the current `main` branch.
 Releases that no longer install on the current Julia version are measured on Julia 1.10.
 
-The suite is `benchmark/benchmarks.jl` in the repository, and `benchmark/README.md` describes how to run it.
+The suite is `performance/benchmarks.jl` in the repository, and `performance/README.md` describes how to run it.

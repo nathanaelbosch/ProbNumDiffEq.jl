@@ -32,11 +32,11 @@ just format      # JuliaFormatter with .JuliaFormatter.toml; CI (FormatCheck) fa
 just docs        # build docs: julia --project=docs docs/make.jl
 just vale        # prose lint of Markdown/.jmd files (styles in .github/vale-styles)
 just benchmark   # weave benchmarks/*.jmd into docs/src/benchmarks (slow)
-just bench       # performance suite benchmark/benchmarks.jl: working tree against main (AirspeedVelocity.jl)
-just bench-history          # the same suite on all releases since v0.11.2 (older ones on Julia 1.10), results kept in benchmark/results/
-just bench-table REV1,REV2  # table of revisions that already have results
-just bench-report           # benchmark/results/report.html, a page for browsing all results
-just bench-publish          # docs/src/performance_report.html, the committed copy shown in the docs
+just perf       # performance suite performance/benchmarks.jl: working tree against main (AirspeedVelocity.jl)
+just perf-history          # the same suite on all releases since v0.11.2 (older ones on Julia 1.10), results kept in performance/results/
+just perf-table REV1,REV2  # table of revisions that already have results
+just perf-report           # performance/results/report.html, a page for browsing all results
+just perf-publish          # docs/src/performance_report.html, the committed copy shown in the docs
 ```
 
 CI also runs doctests: `julia --project=docs -e 'using Documenter: doctest; using ProbNumDiffEq; doctest(ProbNumDiffEq)'`.
@@ -103,7 +103,7 @@ Dense output and sampling must also keep the structure.
 - Avoid allocations in `perform_step!`: temporaries are preallocated in `EKCache` and named by shape (`C_d`, `C_dxd`, `C_Dxd`, `C_DxD`, `C_2DxD`, `C_3DxD`).
 - Use `_matmul!` (`src/fast_linalg.jl`) instead of `mul!`.
   It dispatches to Octavian.jl for BLAS-type dense matrices and to FastBroadcast (`@..`) for diagonal and scalar factors.
-- To check a change for performance regressions, use `just bench` (`benchmark/README.md`).
+- To check a change for performance regressions, use `just perf` (`performance/README.md`).
 - `test/complexity.jl` asserts that the Kronecker `EK0` scales linearly in `d`; `test/core/fast_linalg.jl` covers `_matmul!`.
 
 ## Conventions enforced by tests
