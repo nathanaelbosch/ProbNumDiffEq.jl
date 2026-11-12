@@ -1,0 +1,1214 @@
+<title>ProbNumDiffEq Performance</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: two views. "Compare" leads with a verdict (headline, a strip with every benchmark,
+   the change by factor) above a benchmark × revision table whose rows expand into charts.
+   "History" is a log with one row per release, each compared with the release before. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #14171c;
+  --muted: #5b6270;
+  --faint: #8a909b;
+  --border: #dde1e7;
+  --neutral: #ebedf0;
+  --faster: #2a78d6;
+  --slower: #e34948;
+  --focus: #2a78d6;
+  --dot-opacity: 0.3;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121418; --surface: #1a1d22; --fg: #e8eaee; --muted: #a0a7b3; --faint: #737a86;
+    --border: #2c313a; --neutral: #2a2e36; --faster: #3987e5; --slower: #e66767; --focus: #3987e5;
+    --dot-opacity: 0.5;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121418; --surface: #1a1d22; --fg: #e8eaee; --muted: #a0a7b3; --faint: #737a86;
+  --border: #2c313a; --neutral: #2a2e36; --faster: #3987e5; --slower: #e66767; --focus: #3987e5;
+  --dot-opacity: 0.5;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.45; }
+.wrap {
+  max-width: 1100px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+  display: grid; gap: 18px;
+}
+.wrap > *, .view > * { min-width: 0; }
+[hidden] { display: none !important; }
+.view { display: grid; gap: 18px; }
+h1 { font-size: 15px; font-weight: 600; margin: 0; }
+h2 { font-size: 16px; font-weight: 600; margin: 0; }
+h3 { font-size: 13px; font-weight: 600; margin: 0; }
+code, .data { font-family: var(--font-data); font-variant-numeric: tabular-nums; font-size: 0.95em; }
+header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; justify-content: space-between; }
+.title { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.title .back { font-size: 13px; color: var(--muted); text-decoration: none; }
+.title .back:hover { color: var(--fg); text-decoration: underline; }
+.meta { color: var(--faint); margin: 12px 0 0; font-size: 12px; }
+.what { color: var(--muted); margin: 0; font-size: 13px; max-width: 110ch; }
+.what b { color: var(--fg); font-weight: 500; }
+
+.headline { font-size: 22px; line-height: 1.3; margin: 0; max-width: 60ch; letter-spacing: -0.01em; text-wrap: balance; }
+.subline { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.ranks { columns: 2; column-gap: 32px; }
+.ranks .rank { break-inside: avoid; }
+.ranks .more { column-span: all; }
+@media (max-width: 900px) { .ranks { columns: 1; } }
+details.fold > .card { margin-top: 8px; }
+details.fold .factors { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 18px; }
+@media (max-width: 900px) { details.fold .factors { grid-template-columns: 1fr; } }
+#tablebox { max-height: none; }
+#matrix td.cell .abs { display: inline; margin-left: 10px; }
+#matrix td.cell .rel { display: inline; }
+.sect .legend { margin-left: auto; font-size: 12px; }
+#selected .selhead button { border: 1px solid var(--border); border-radius: 6px; padding: 2px 10px; text-decoration: none; color: var(--fg); background: var(--surface); }
+svg .halo { fill: none; stroke: var(--fg); stroke-width: 1.5; }
+.headline .num { font-weight: 600; }
+.faster-text { color: var(--faster); }
+.slower-text { color: var(--slower); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.chips .hint { font-size: 12px; color: var(--faint); }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); font: inherit; font-size: 13px; color: var(--fg); cursor: pointer; }
+.chip:hover { border-color: var(--faint); }
+.chip[aria-pressed="true"] { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+.swatch { width: 10px; height: 10px; border-radius: 2px; flex: none; display: inline-block; }
+.sw-faster { background: var(--faster); }
+.sw-slower { background: var(--slower); }
+.sw-unclear { background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 4px); }
+
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+.card > .cap { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 6px;
+  display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.card > .cap .plain { text-transform: none; letter-spacing: 0; color: var(--faint); font-size: 12px; }
+.cap .mark { display: inline-flex; align-items: center; gap: 5px; text-transform: none; letter-spacing: 0; font-size: 12px; }
+.cap .ring { width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--muted); box-sizing: border-box; display: inline-block; }
+.cap .disc { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.factors { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 18px; }
+@media (max-width: 900px) { .factors { grid-template-columns: 1fr; } }
+.statements { display: grid; gap: 0; align-content: start; }
+.stmt { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 2px 12px; padding: 8px 6px; border: 0; background: none;
+  font: inherit; color: inherit; text-align: left; cursor: pointer; border-top: 1px solid var(--border); border-radius: 0; }
+.stmt:first-child { border-top: 0; }
+.stmt:hover { background: var(--bg); }
+.stmt[aria-pressed="true"] { background: var(--neutral); }
+.stmt .big { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; grid-row: span 2; align-self: center; }
+.stmt .t { font-weight: 500; }
+.stmt .d { font-size: 12px; color: var(--muted); }
+.single { font-size: 13px; padding: 8px 6px 2px; border-top: 1px solid var(--border); color: var(--muted); }
+.single b { color: var(--fg); font-weight: 500; }
+table.ftab { width: 100%; border-collapse: separate; border-spacing: 0 2px; font-size: 13px; }
+table.ftab th { font-weight: 500; text-align: left; color: var(--muted); font-size: 12px; padding: 2px 8px; white-space: nowrap; }
+table.ftab td { padding: 0; }
+table.ftab .fcell { display: flex; gap: 10px; align-items: baseline; width: 100%; box-sizing: border-box; padding: 5px 8px; border: 0;
+  font: inherit; color: var(--fg); background: none; cursor: pointer; text-align: left; border-radius: 3px; }
+table.ftab .fcell:hover { outline: 1px solid var(--faint); }
+table.ftab .fcell[aria-pressed="true"] { outline: 2px solid var(--fg); }
+table.ftab .fcell .g { font-family: var(--font-data); font-weight: 500; min-width: 3.6em; }
+table.ftab .fcell .n { font-size: 11px; opacity: 0.8; white-space: nowrap; }
+table.ftab .fcell .r { font-family: var(--font-data); font-size: 11px; opacity: 0.8; margin-left: auto; white-space: nowrap; }
+table.ftab td.none { color: var(--faint); padding: 5px 8px; }
+
+.controls { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: end; }
+.control { display: grid; gap: 4px; min-width: 0; }
+.control > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); line-height: 14px; }
+select, input[type="search"] {
+  font: inherit; color: var(--fg); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; padding: 0 8px; height: 32px; box-sizing: border-box; max-width: 100%;
+}
+input[type="search"] { width: 12em; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--surface);
+  height: 32px; box-sizing: border-box; }
+.seg button { font: inherit; color: var(--muted); background: none; border: 0; padding: 0 12px; cursor: pointer; white-space: nowrap; }
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { color: var(--fg); background: var(--neutral); font-weight: 500; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.showing { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.showing button { font: inherit; font-size: 12px; color: var(--fg); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--muted); font-size: 12px; align-items: center; }
+.legend b { color: var(--fg); font-weight: 500; }
+.legend .ramp { display: inline-flex; gap: 1px; vertical-align: -1px; margin-right: 5px; }
+.legend .ramp i { width: 12px; height: 11px; display: block; }
+.legend .key { font-family: var(--font-data); color: var(--fg); margin-right: 4px; }
+.legend a { color: var(--focus); }
+
+.tablebox { overflow: auto; max-height: calc(100vh - 24px); background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; container-type: inline-size; }
+.tablebox.plain { max-height: none; }
+table.grid { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+table.grid th, table.grid td { padding: 4px 8px; text-align: right; white-space: nowrap; }
+table.grid thead th { position: sticky; top: 0; background: var(--surface); font-weight: 500; vertical-align: top; z-index: 2;
+  box-shadow: inset 0 -1px 0 var(--border); padding-block: 6px; }
+table.grid thead.two tr.julia th { height: 24px; box-sizing: border-box; padding-block: 0; font-size: 11px; color: var(--muted); text-align: left;
+  text-transform: uppercase; letter-spacing: 0.06em; vertical-align: middle; }
+table.grid thead.two tr.cols th { top: 24px; }
+table.grid th.jstart, table.grid td.jstart { border-left: 2px solid var(--border); }
+thead th .rev { font-family: var(--font-data); font-size: 13px; color: var(--fg); display: block; }
+thead th .sub { display: block; font-size: 11px; color: var(--faint); font-weight: 400; }
+thead th .counts { display: block; font-size: 11px; font-weight: 400; color: var(--muted); min-height: 16px; }
+thead th .counts .swatch { width: 7px; height: 7px; margin: 0 2px 0 5px; }
+thead th .tag { display: inline-block; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; line-height: 14px;
+  padding: 0 5px; border-radius: 3px; border: 1px solid var(--muted); color: var(--muted); }
+thead th.target .tag { background: var(--fg); border-color: var(--fg); color: var(--surface); }
+table.grid th.name, table.grid td.name { text-align: left; position: sticky; left: 0; background: var(--surface); box-shadow: inset -1px 0 0 var(--border); }
+table.grid thead th.name { z-index: 4; box-shadow: inset -1px 0 0 var(--border), inset 0 -1px 0 var(--border); vertical-align: bottom; }
+td.name { z-index: 1; min-width: 17em; }
+#matrix { table-layout: fixed; min-width: 780px; }
+#matrix th.name { width: 31%; }
+#matrix td.name { min-width: 0; }
+td.name .solver { font-weight: 600; }
+td.name .variant { color: var(--fg); margin-left: 5px; }
+td.name .kind { color: var(--muted); margin-left: 8px; font-size: 12px; }
+td.name .caret { display: inline-block; width: 1em; text-align: center; color: var(--faint); transition: transform 0.15s;
+  transform-origin: 50% 55%; margin-right: 2px; }
+tr.open td.name .caret { transform: rotate(90deg); }
+tbody tr.row { cursor: pointer; }
+tbody tr.row > td { border-top: 1px solid var(--border); }
+tbody tr.row:hover > td.name { background: var(--neutral); }
+tbody tr.flash > td { animation: flash 1.6s ease-out; }
+@keyframes flash { from { box-shadow: inset 0 0 0 999px color-mix(in oklab, var(--focus) 22%, transparent); } to { box-shadow: inset 0 0 0 999px transparent; } }
+tr.group td { text-align: left; padding: 14px 0 4px; font-weight: 600; font-size: 13px; border-top: 1px solid var(--border); }
+tr.group td .label { position: sticky; left: 10px; display: inline-block; }
+tr.group td .dim { color: var(--muted); font-weight: 400; margin-left: 8px; }
+td.cell { font-family: var(--font-data); font-variant-numeric: tabular-nums; min-width: 5.6em; }
+td.cell .rel { display: block; font-weight: 500; }
+td.cell .abs { display: block; font-size: 11px; color: var(--muted); }
+td.cell.tinted { box-shadow: inset 1px 0 0 var(--surface), inset -1px 0 0 var(--surface); }
+td.cell.tinted .abs { color: var(--fg); opacity: 0.78; }
+td.cell.same .rel, td.cell.quiet .rel { color: var(--muted); font-weight: 400; }
+td.cell.missing { color: var(--faint); }
+td.cell.base, th.base { background: var(--bg); }
+td.cell.base .rel { color: var(--fg); }
+
+tr.detail > td { text-align: left; padding: 0; white-space: normal; background: var(--bg); border-top: 1px solid var(--border); }
+.detail-grid { position: sticky; left: 0; box-sizing: border-box; width: 100cqw; padding: 10px 10px 14px;
+  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+.detail-grid .wide { grid-column: 1 / -1; }
+@container (max-width: 900px) { .detail-grid { grid-template-columns: 1fr; } }
+.detail-grid .call { font-size: 13px; color: var(--muted); margin: 0; }
+.detail-grid .call code { color: var(--fg); overflow-wrap: anywhere; }
+@container (max-width: 700px) { .detail-grid { grid-template-columns: 1fr; } }
+.panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.panel p { margin: 2px 0 6px; font-size: 12px; color: var(--muted); }
+svg { display: block; width: 100%; height: auto; max-width: 100%; }
+svg text { font-family: var(--font-data); font-size: 10.5px; fill: var(--muted); }
+svg text.isbase { fill: var(--fg); font-weight: 500; }
+svg text.lbl { font-family: var(--font-body); font-size: 11px; }
+svg .grid { stroke: var(--border); stroke-width: 1; }
+svg .dot { fill: var(--muted); fill-opacity: var(--dot-opacity); }
+svg .iqr { stroke: var(--fg); stroke-width: 2; stroke-linecap: round; }
+svg .medhalo { stroke: var(--surface); stroke-width: 6; stroke-linecap: round; }
+svg .med { stroke: var(--fg); stroke-width: 2.5; stroke-linecap: round; }
+svg .bar, svg .pt { fill: var(--faint); }
+svg .pt { stroke: var(--surface); stroke-width: 2; }
+svg .ref { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 5 4; opacity: 0.55; }
+svg text.na { fill: var(--faint); }
+svg .hit { fill: transparent; pointer-events: all; }
+svg .hit:hover { stroke: var(--faint); stroke-width: 1; }
+svg .noise { fill: var(--neutral); }
+svg .axis { stroke: var(--border); }
+svg .one { stroke: var(--faint); stroke-dasharray: 3 3; }
+svg .b { stroke-width: 2; cursor: pointer; }
+svg .b.faster { stroke: var(--faster); fill: var(--faster); }
+svg .b.slower { stroke: var(--slower); fill: var(--slower); }
+svg .b.same, svg .b.unclear { stroke: var(--faint); fill: var(--faint); }
+svg .b.hollow { fill: var(--surface); }
+svg .b:hover { stroke: var(--fg); }
+svg .idx { fill: none; stroke: var(--fg); stroke-width: 2; }
+svg .idx.alloc { stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 4 3; }
+svg .idx.jump { stroke-dasharray: 2 3; }
+svg .node { fill: var(--fg); stroke: var(--surface); stroke-width: 2; }
+svg .node.alloc { fill: var(--muted); }
+svg .jband { fill: var(--bg); }
+
+.tip { position: fixed; pointer-events: none; z-index: 20; background: var(--surface); color: var(--fg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px 9px; font-size: 12px; max-width: 300px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.12); font-family: var(--font-data); font-variant-numeric: tabular-nums; }
+.tip b { font-family: var(--font-body); font-weight: 600; }
+.tip .note { font-family: var(--font-body); color: var(--muted); }
+
+.job { margin: 0; color: var(--muted); font-size: 14px; }
+.sect { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; margin-top: 10px; }
+.sect h2 { font-size: 17px; }
+.sect span { color: var(--muted); font-size: 13px; }
+.lists { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+@media (max-width: 900px) { .lists { grid-template-columns: 1fr; } }
+.rank { display: grid; grid-template-columns: minmax(0, 1fr) 4.6em 9.5em; gap: 10px; align-items: baseline; width: 100%; padding: 5px 6px;
+  border: 0; border-top: 1px solid var(--border); background: none; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.rank { border-top: 0; border-bottom: 1px solid var(--border); }
+.rank:last-of-type { border-bottom: 0; }
+.rank:hover { background: var(--bg); }
+.rank[aria-pressed="true"] { background: var(--neutral); }
+.rank .nm { overflow-wrap: anywhere; }
+.rank .nm b { font-weight: 600; }
+.rank .nm i { font-style: normal; color: var(--muted); font-size: 12px; }
+.rank .chg { font-family: var(--font-data); font-weight: 500; text-align: right; }
+.rank .ab { font-family: var(--font-data); font-size: 12px; color: var(--muted); text-align: right; white-space: nowrap; }
+.card .more { font-size: 12px; color: var(--muted); padding: 6px 6px 0; border-top: 1px solid var(--border); margin: 0; }
+.card .none { color: var(--muted); padding: 0; margin: 0; column-span: all; }
+@media (max-width: 600px) { .rank { grid-template-columns: minmax(0, 1fr) 4.2em; } .rank .ab { display: none; } }
+#selected { container-type: inline-size; padding: 0; border-color: var(--faint); }
+#selected .selhead { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; padding: 10px 10px 0; }
+#selected .selhead .nm { font-size: 15px; font-weight: 600; }
+#selected .selhead .sum { font-family: var(--font-data); font-size: 13px; }
+#selected .selhead button { margin-left: auto; font: inherit; font-size: 12px; color: var(--focus); background: none; border: 0; cursor: pointer; text-decoration: underline; }
+#selected .detail-grid { position: static; }
+details.fold > summary { cursor: pointer; color: var(--muted); font-size: 13px; padding: 6px 0 0; }
+details.fold > summary:hover { color: var(--fg); }
+details.fold[open] > summary { margin-bottom: 8px; }
+
+svg .lead { stroke: var(--faint); stroke-width: 1; }
+svg text.ann { font-family: var(--font-body); font-size: 12px; fill: var(--fg); }
+td.cell .step { display: block; font-size: 11px; }
+td.spark { min-width: 120px; padding-block: 2px; }
+#alltable th.hbase, #alltable td.hbase { background: var(--neutral); box-shadow: inset 2px 0 0 var(--fg), inset -2px 0 0 var(--fg); }
+#alltable thead th.hbase { box-shadow: inset 2px 0 0 var(--fg), inset -2px 0 0 var(--fg), inset 0 2px 0 var(--fg), inset 0 -1px 0 var(--border); }
+#alltable td.hbase .rel { font-weight: 600; color: var(--fg); }
+#alltable td.hbase .step { color: var(--muted); }
+#alltable th.hbase .tag { background: var(--fg); border-color: var(--fg); color: var(--surface); }
+#alltable td.name { min-width: 12em; }
+#alltable td.name .kind { display: block; margin-left: 1.3em; }
+#alltable { font-size: 12px; }
+#alltable thead th .rev { font-size: 12px; }
+#alltable td.cell { min-width: 4.1em; }
+#alltable th, #alltable td { padding-inline: 6px; }
+svg .sp { fill: none; stroke: var(--fg); stroke-width: 1.5; }
+svg .spd { fill: var(--fg); }
+
+/* History */
+table.log { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 13px; }
+table.log th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 500;
+  padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+table.log td { padding: 8px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+table.log tr:first-child td { border-top: 0; }
+table.log .ver { font-family: var(--font-data); font-weight: 500; white-space: nowrap; }
+table.log .when { display: block; font-size: 11px; color: var(--faint); font-family: var(--font-body); font-weight: 400; }
+table.log .geo { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.log .vs { font-size: 11px; color: var(--faint); font-weight: 400; margin-left: 6px; white-space: nowrap; }
+table.log .cnt { white-space: nowrap; font-variant-numeric: tabular-nums; }
+table.log .cnt small { display: block; color: var(--muted); font-size: 11px; }
+table.log .movers { color: var(--muted); font-size: 12px; min-width: 16em; }
+table.log .movers b { color: var(--fg); font-weight: 500; }
+table.log .movers span.m { white-space: nowrap; margin-right: 12px; display: inline-block; }
+table.log tr.julia td { background: repeating-linear-gradient(135deg, var(--bg) 0 6px, var(--surface) 6px 12px); }
+table.log .stripcell { min-width: 300px; width: 320px; }
+table.log a { color: var(--focus); font-size: 11px; cursor: pointer; text-decoration: underline; }
+
+section { display: grid; gap: 10px; }
+.notes { color: var(--muted); font-size: 13px; max-width: 75ch; display: grid; gap: 6px; }
+.notes p { margin: 0; }
+table.grid td.empty { padding: 24px; color: var(--muted); text-align: center; }
+@media (max-width: 600px) {
+  .controls { display: grid; grid-template-columns: 1fr 1fr; }
+  .controls .full { grid-column: 1 / -1; }
+  select, input[type="search"] { width: 100%; }
+  table.grid td.name { min-width: 0; max-width: 9.5em; white-space: normal; }
+  td.name .kind { display: block; margin-left: 1.3em; }
+  td.cell { min-width: 4.8em; }
+  table.grid th, table.grid td { padding: 4px 6px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="title">__BACK_LINK__<h1>ProbNumDiffEq performance</h1></div>
+    <div class="seg" id="view" role="group" aria-label="View">
+      <button type="button" data-v="compare" aria-pressed="true">Check a change</button>
+      <button type="button" data-v="history" aria-pressed="false">History</button>
+    </div>
+  </header>
+
+  <div class="view" id="view-compare">
+    <div class="controls">
+      <label class="control"><span>Revision</span><select id="target"></select></label>
+      <label class="control"><span>Baseline</span><select id="baseline"></select></label>
+      <div class="control full"><span>Metric</span>
+        <div class="seg" id="metric" role="group" aria-label="Metric">
+          <button type="button" data-v="time" aria-pressed="true">Time</button>
+          <button type="button" data-v="allocs" aria-pressed="false">Allocations</button>
+          <button type="button" data-v="memory" aria-pressed="false">Memory</button>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <p class="headline" id="headline"></p>
+      <p class="subline" id="meanline"></p>
+      <p class="subline" id="loadline"></p>
+    </div>
+
+    <div class="card" id="strip-card">
+      <p class="cap"><span class="mark"><span class="ring"></span>filter only (<code>smooth=false</code>)</span><span class="mark"><span class="disc"></span>filter + smoother (<code>smooth=true</code>)</span>
+        <span class="plain" id="strip-note"></span></p>
+      <div id="strip"></div>
+    </div>
+
+    <div class="card" id="lists">
+      <p class="cap" id="slower-cap"></p>
+      <div class="ranks" id="slower-list"></div>
+    </div>
+    <div class="card" id="selected" hidden></div>
+
+    <details class="fold" id="kind">
+      <summary>Is there a pattern? Changes by kind of benchmark</summary>
+      <div class="card factors">
+        <div class="statements" id="statements"></div>
+        <div style="overflow-x: auto"><table class="ftab" id="ftab"></table></div>
+      </div>
+    </details>
+
+    <div class="sect" id="table-sect"><h2>All benchmarks</h2><span>Each one is a full fixed-step <code>solve</code>. Click a row for its charts.</span><div class="legend" id="legend"></div></div>
+    <div class="controls">
+      <div class="control full"><span>Show</span>
+        <div class="seg" id="show" role="group" aria-label="Rows shown">
+          <button type="button" data-v="all" aria-pressed="true">All</button>
+          <button type="button" data-v="slower" aria-pressed="false">Slower</button>
+          <button type="button" data-v="faster" aria-pressed="false">Faster</button>
+          <button type="button" data-v="same" aria-pressed="false">Unchanged</button>
+        </div>
+      </div>
+      <div class="control full"><span>Smoothing</span>
+        <div class="seg" id="kind-seg" role="group" aria-label="Smoothing">
+          <button type="button" data-v="all" aria-pressed="true">Both</button>
+          <button type="button" data-v="filter" aria-pressed="false">Filter only</button>
+          <button type="button" data-v="smoother" aria-pressed="false">Filter + smoother</button>
+        </div>
+      </div>
+      <label class="control"><span>Problem</span><select id="problem"></select></label>
+      <label class="control"><span>Search</span><input type="search" id="search" placeholder="e.g. lorenz EK1 filter"></label>
+    </div>
+    <div class="showing" id="showing" hidden></div>
+    <div class="tablebox" id="tablebox"><table class="grid" id="matrix"></table></div>
+  </div>
+
+  <div class="view" id="view-history" hidden>
+    <p class="headline" id="hist-headline"></p>
+    <div class="sect"><h2>Every benchmark across versions</h2><span id="hist-caption"></span></div>
+    <div class="controls">
+      <div class="control full"><span>Metric</span>
+        <div class="seg" id="hmetric" role="group" aria-label="Metric">
+          <button type="button" data-v="time" aria-pressed="true">Time</button>
+          <button type="button" data-v="allocs" aria-pressed="false">Allocations</button>
+          <button type="button" data-v="memory" aria-pressed="false">Memory</button>
+        </div>
+      </div>
+      <label class="control"><span>Baseline</span><select id="hbase"></select></label>
+      <label class="control"><span>Problem</span><select id="hproblem"></select></label>
+      <div class="legend" id="hlegend"></div>
+    </div>
+    <div class="tablebox" id="allbox"><table class="grid" id="alltable"></table></div>
+  </div>
+
+  <details class="fold" id="how">
+    <summary>How to read this</summary>
+    <div class="notes">
+      <p>Each benchmark is one full fixed-step <code>solve</code> of a test problem, with the same steps in every version, so a change is a change in cost per step. “Filter only” is the solve with <code>smooth=false</code>; “filter + smoother” is the same solve with <code>smooth=true</code>, so it includes the filter pass.</p>
+      <p><b>−40%</b> means 40% less time (or allocations, or memory), <b>×3</b> three times as much, <b>÷3</b> a third. In “Check a change” every number compares the revision with the baseline. In “History” every cell compares a version with the baseline you choose there, the latest release by default.</p>
+      <p>Time is the fastest of all solves of a benchmark. Slower solves are those hit by garbage collection or by other load on the machine, so the fastest one is the most repeatable: between two nearly identical releases it differed by at most 8%, while the median jumped by up to 13%. A time difference under 10% therefore counts as within noise. A larger one is marked <b>?</b> and hatched when the lower quartile of the solves does not show it too, so it may be a fluke. Allocations are a count and memory is the bytes allocated per solve; both are deterministic, so any difference above 1% counts.</p>
+      <p>Releases that no longer install on the current Julia run on an older one. In “History”, their numbers are as measured on that older Julia, so against a baseline on the current Julia they include the effect of Julia itself. The release that runs on both appears twice, side by side, which shows that effect alone. The headline there multiplies the overall changes of the package's own steps, and reports the Julia step separately. An overall change is a geometric mean over the benchmarks two versions share.</p>
+      <p>The changes by kind of benchmark group the benchmarks by the covariance structure of the solver (Kronecker: <code>EK0</code>; block-diagonal: <code>DiagonalEK1</code>, <code>MatfreeEK1</code>, <code>EK0</code> with a multivariate diffusion; dense: <code>EK1</code>, <code>ExpEK</code>, <code>RosenbrockExpEK</code>), by problem size (d ≤ 3 or d ≥ 14), and by smoothing. A line appears when at least two thirds of a group changed in the same direction.</p>
+      <p>— means the benchmark could not run in that version, usually because the solver or feature did not exist yet. <code>benchmark/README.md</code> lists the reasons.</p>
+    </div>
+  </details>
+  <p class="meta" id="meta"></p>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script id="bench-data" type="application/json">__BENCH_DATA__</script>
+<script>
+(function () {
+  "use strict";
+  const DATA = JSON.parse(document.getElementById("bench-data").textContent);
+  // A column is one revision on one Julia version, with the id "<revision>@<julia version>".
+  const REVS = DATA.revisions.map(r => r.id);
+  const INFO = Object.fromEntries(DATA.revisions.map(r => [r.id, r]));
+  const JULIAS = [...new Set(DATA.revisions.map(r => r.julia))];
+  const CURRENT_JULIA = JULIAS[JULIAS.length - 1];
+  const COLS = REVS.filter(id => INFO[id].julia === CURRENT_JULIA), COLS_CURRENT = COLS;
+  const TIME_THRESHOLD = 0.10, DET_THRESHOLD = 0.01;
+  const rawName = id => INFO[id] ? INFO[id].name : id.split("@")[0];
+  const nameOf = id => rawName(id) === "dirty" ? "working tree" : rawName(id);
+  const juliaOf = id => INFO[id] ? INFO[id].julia : id.split("@")[1] || "";
+  const dateOf = id => INFO[id] && rawName(id) !== "dirty" ? (INFO[id].date || "") : "";
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+  const $ = id => document.getElementById(id);
+
+  // Flatten AirspeedVelocity results into {path: {times, allocs, memory}} per revision.
+  function flatten(group, prefix, out) {
+    for (const [k, v] of Object.entries(group.data || {})) {
+      const path = prefix ? prefix + "/" + k : k;
+      if (v && v.times) out[path] = v; else if (v && v.data) flatten(v, path, out);
+    }
+    return out;
+  }
+  function quantile(sorted, q) {
+    const pos = (sorted.length - 1) * q, lo = Math.floor(pos), hi = Math.ceil(pos);
+    return sorted[lo] + (sorted[hi] - sorted[lo]) * (pos - lo);
+  }
+  const STATS = {}, LOAD = {};
+  for (const rev of REVS) {
+    const flat = flatten(DATA.results[rev], "", {});
+    STATS[rev] = {};
+    for (const [path, v] of Object.entries(flat)) {
+      // time_to_load: the first sample is the in-process load, the rest are fresh processes.
+      // Long runs come with their statistics and a sample of at most 100 solves (see report.jl).
+      const times = (path === "time_to_load" ? v.times.slice(1) : v.times).map(Number);
+      const s = times.slice().sort((a, b) => a - b);
+      const st = v.stats ? Object.assign({ times, allocs: v.allocs, memory: v.memory }, v.stats)
+        : { times, n: s.length, min: s[0], max: s[s.length - 1], q1: quantile(s, 0.25), median: quantile(s, 0.5),
+          q3: quantile(s, 0.75), p98: quantile(s, 0.98), allocs: v.allocs, memory: v.memory };
+      if (path === "time_to_load") LOAD[rev] = st; else STATS[rev][path] = st;
+    }
+  }
+  const PROBLEM = Object.fromEntries(DATA.problems.map(p => [p.key, p]));
+  const PROBLEM_ORDER = DATA.problems.map(p => p.key);
+  const SOLVER = name => DATA.solvers[name] || { base: name, variant: "", structure: "other", call: name + "(smooth=S)" };
+  function parse(path) { const [problem, solver, kind] = path.split("/"); return { problem, solver, kind }; }
+  const PATHS = [...new Set(REVS.flatMap(r => Object.keys(STATS[r])))].filter(p => p.split("/").length === 3);
+  const KIND = { filter: "filter only", smoother: "filter + smoother" };
+  const rowName = path => {
+    const q = parse(path), s = SOLVER(q.solver);
+    return `${q.problem} · ${s.base}${s.variant ? " " + s.variant : ""} · ${KIND[q.kind] || q.kind}`;
+  };
+
+  // Units and formatting
+  const UNITS = {
+    time: [[1e9, "s"], [1e6, "ms"], [1e3, "µs"], [1, "ns"]],
+    allocs: [[1e6, "M"], [1e3, "k"], [1, ""]],
+    memory: [[2 ** 30, "GiB"], [2 ** 20, "MiB"], [2 ** 10, "KiB"], [1, "B"]],
+  };
+  function unitFor(metric, v) { return UNITS[metric].find(u => v >= u[0]) || UNITS[metric][UNITS[metric].length - 1]; }
+  function fmt(metric, v, unit) {
+    if (v == null || !isFinite(v)) return "";
+    const [div, suffix] = unit || unitFor(metric, v);
+    const x = v / div;
+    const num = div === 1 && metric !== "time" ? String(Math.round(x))
+      : x >= 1000 ? Math.round(Number(x.toPrecision(3))).toLocaleString("en-US") : x.toPrecision(3);
+    return suffix ? `${num} ${suffix}` : num;
+  }
+  const trimNum = x => String(parseFloat(x.toPrecision(3)));
+  const METRICS = {
+    // Time is judged by the fastest solve: it is the most repeatable statistic, because the
+    // slower solves are those hit by garbage collection or by other load on the machine.
+    time: { label: "time", value: s => s.min, noise: "within noise", words: ["faster", "slower"] },
+    allocs: { label: "allocations", value: s => s.allocs, noise: "unchanged", words: ["fewer", "more"] },
+    memory: { label: "memory", value: s => s.memory, noise: "unchanged", words: ["less", "more"] },
+  };
+  let FINE = false;  // one decimal up to 20% in "Check a change", so that +10.4% and +9.1% read alike
+  function fmtChange(r) {
+    const f = x => x >= 10 ? x.toFixed(0) : String(parseFloat(x.toFixed(1)));
+    if (r >= 2) return "×" + f(r);
+    if (r <= 0.5) return "÷" + f(1 / r);
+    const p = Math.round((r - 1) * 1000) / 10;
+    if (Math.abs(p) < 0.5) return "±0%";
+    return (p > 0 ? "+" : "−") + Math.abs(p).toFixed(Math.abs(p) < (FINE ? 20 : 10) ? 1 : 0) + "%";
+  }
+  const geomean = rs => Math.exp(rs.reduce((a, r) => a + Math.log(r), 0) / rs.length);
+
+  // Comparison of one benchmark between two revisions.
+  // dir: "faster" | "slower" | "unclear" (the fastest solve changed, the lower quartile did not) | "same"
+  function compare(path, base, rev, metric) {
+    const a = STATS[base] && STATS[base][path], b = STATS[rev] && STATS[rev][path];
+    if (!a || !b) return null;
+    const m = METRICS[metric], va = m.value(a), vb = m.value(b);
+    if (!(va > 0)) return null;
+    const ratio = vb / va, thr = metric === "time" ? TIME_THRESHOLD : DET_THRESHOLD;
+    let dir = Math.abs(ratio - 1) <= thr ? "same" : ratio < 1 ? "faster" : "slower";
+    if (dir !== "same" && metric === "time") {
+      const rq = b.q1 / a.q1;
+      if ((rq - 1) * (ratio - 1) <= 0 || Math.abs(rq - 1) < 0.03) dir = "unclear";
+    }
+    return { ratio, dir, a: va, b: vb };
+  }
+  function tintColor(ratio, metric, sat) {
+    const s = Math.pow(Math.min(1, Math.abs(Math.log2(ratio)) / (sat || 3)), 0.6);
+    const pct = Math.round(metric === "time" ? 12 + 50 * s : 62 * s);
+    return `color-mix(in oklab, ${ratio < 1 ? "var(--faster)" : "var(--slower)"} ${pct}%, var(--surface))`;
+  }
+  function tint(c, metric, sat) {
+    if (!c || c.dir === "same") return "";
+    const col = tintColor(c.ratio, metric, sat);
+    if (c.dir === "unclear") return `background: repeating-linear-gradient(135deg, ${col} 0 3px, transparent 3px 7px);`;
+    return `background: ${col};`;
+  }
+  function stateNote(c, metric) {
+    if (!c) return "";
+    if (c.dir === "same") return METRICS[metric].noise;
+    if (c.dir === "unclear") return "unclear: the fastest solve changed, but the lower quartile did not";
+    return "";
+  }
+  const signClass = r => r < 0.995 ? "faster-text" : r > 1.005 ? "slower-text" : "";
+
+  // State
+  const defaultBase = DATA.default_baseline && COLS.includes(DATA.default_baseline) ? DATA.default_baseline : COLS[0];
+  let state = {
+    view: "compare", metric: "time", hmetric: "time", hproblem: "all", hbase: defaultBase, hopen: new Set(), selected: null, kind: "all", problem: "all", search: "", order: "problem", show: "all", group: null,
+    baseline: defaultBase, target: COLS[COLS.length - 1], open: new Set(),
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem("pnde-bench-view") || "{}");
+    if (saved.metric) state.metric = saved.metric;
+  } catch (e) { /* storage unavailable */ }
+  function save() {
+    try { localStorage.setItem("pnde-bench-view", JSON.stringify({ metric: state.metric })); }
+    catch (e) { /* storage unavailable */ }
+  }
+  try { if (location.hash === "#history") state.view = "history"; } catch (e) { /* no hash */ }
+
+  // Controls
+  function fillSelect(sel, items, value) {
+    sel.innerHTML = items.map(([v, label]) => `<option value="${esc(v)}">${esc(label)}</option>`).join("");
+    sel.value = value;
+  }
+  const revLabel = id => nameOf(id) + (dateOf(id) ? ` (${dateOf(id)})` : "");
+  const newestFirst = COLS.slice().reverse();
+  fillSelect($("baseline"), newestFirst.map(r => [r, revLabel(r)]), state.baseline);
+  fillSelect($("target"), newestFirst.map(r => [r, revLabel(r)]), state.target);
+  fillSelect($("problem"), [["all", "All problems"], ...PROBLEM_ORDER.map(p => [p, p])], state.problem);
+  function syncSeg(id, key) {
+    $(id).querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === state[key])));
+  }
+  function bindSeg(id, key, after) {
+    $(id).addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      state[key] = b.dataset.v; if (after) after(); save(); render();
+    });
+  }
+  bindSeg("metric", "metric", () => { state.group = null; state.show = "all"; });
+  bindSeg("kind-seg", "kind");
+  bindSeg("show", "show");
+  bindSeg("hmetric", "hmetric");
+  fillSelect($("hproblem"), [["all", "All problems"], ...PROBLEM_ORDER.map(p => [p, p])], "all");
+  $("hproblem").addEventListener("change", e => { state.hproblem = e.target.value; render(); });
+  fillSelect($("hbase"), REVS.slice().reverse().map(r => [r, nameOf(r) + (JULIAS.length > 1 ? `, Julia ${juliaOf(r)}` : "")]), state.hbase);
+  $("hbase").addEventListener("change", e => { state.hbase = e.target.value; render(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && state.selected) { state.selected = null; render(); } });
+  document.addEventListener("click", () => { tip.hidden = true; });
+  bindSeg("view", "view", () => { try { history.replaceState(null, "", state.view === "history" ? "#history" : "#"); } catch (e) { /* sandboxed */ } });
+  $("baseline").addEventListener("change", e => { state.baseline = e.target.value; state.group = null; state.show = "all"; state.selected = null; render(); });
+  $("target").addEventListener("change", e => { state.target = e.target.value; state.group = null; state.show = "all"; state.selected = null; render(); });
+  document.addEventListener("keydown", () => { tip.hidden = true; });
+  $("problem").addEventListener("change", e => { state.problem = e.target.value; render(); });
+  $("search").addEventListener("input", e => { state.search = e.target.value.trim().toLowerCase(); render(); });
+  function select(path) {
+    state.selected = state.selected === path ? null : path;
+    render();
+    if (state.selected) $("selected").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  $("lists").addEventListener("click", e => { const b = e.target.closest("[data-select]"); if (b) select(b.dataset.select); });
+  $("selected").addEventListener("click", e => { if (e.target.closest("button[data-close]")) { state.selected = null; render(); } });
+  $("showing").addEventListener("click", e => { if (e.target.closest("button")) { state.group = null; render(); } });
+  function pickGroup(e) {
+    const b = e.target.closest("[data-group]"); if (!b) return;
+    state.group = state.group && state.group.key === b.dataset.group ? null : JSON.parse(b.dataset.groupdef);
+    state.show = "all";
+    render();
+    if (state.group) $("table-sect").scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+  $("statements").addEventListener("click", pickGroup);
+  $("ftab").addEventListener("click", pickGroup);
+
+  $("meta").innerHTML = [
+    DATA.machine.cpu && `Measured on ${esc(DATA.machine.cpu)}`,
+    `Julia <span id="meta-julia"></span>`,
+    DATA.machine.threads && `${esc(DATA.machine.threads)} Julia thread${DATA.machine.threads === "1" ? "" : "s"}, 1 BLAS thread`,
+    `generated ${esc(DATA.generated)}`,
+  ].filter(Boolean).join(" · ");
+
+  // Factors of a benchmark, for the summary by kind
+  const SIZE_LABEL = { small: "small problems (d ≤ 3)", large: "larger problems (d ≥ 14)" };
+  const STRUCTURES = ["Kronecker", "block-diagonal", "dense"];
+  function factorsOf(path) {
+    const q = parse(path);
+    return { run: q.kind, structure: SOLVER(q.solver).structure, size: PROBLEM[q.problem] ? PROBLEM[q.problem].size : "other" };
+  }
+  const inGroup = (path, g) => { const f = factorsOf(path); return ["run", "structure", "size"].every(k => g[k] == null || f[k] === g[k]); };
+  function groupLabel(g) {
+    const parts = [];
+    if (g.structure) parts.push(g.structure + " covariances");
+    if (g.size) parts.push(SIZE_LABEL[g.size]);
+    if (g.run) parts.push(KIND[g.run]);
+    const s = parts.join(", ");
+    return g.run && parts.length === 1 ? "All " + s + " runs" : s.charAt(0).toUpperCase() + s.slice(1);
+  }
+  const groupKey = g => [g.run || "*", g.structure || "*", g.size || "*"].join("|");
+
+  // All benchmarks of the two revisions (for the summary), or only those passing the Smoothing,
+  // Problem and Search controls (for the table). The controls never change the summary.
+  function basePaths(filtered) {
+    const terms = state.search.split(/\s+/).filter(Boolean);
+    const paths = PATHS.filter(p => {
+      const q = parse(p), s = SOLVER(q.solver);
+      if (filtered) {
+        if (state.problem !== "all" && q.problem !== state.problem) return false;
+        if (state.kind !== "all" && q.kind !== state.kind) return false;
+        const hay = `${q.problem} ${s.base} ${s.variant} ${q.solver} ${KIND[q.kind]}`.toLowerCase();
+        if (!terms.every(t => hay.includes(t))) return false;
+      }
+      return STATS[state.baseline][p] || STATS[state.target][p];
+    });
+    const key = p => { const q = parse(p); return [PROBLEM_ORDER.indexOf(q.problem), SOLVER(q.solver).base, q.solver, q.kind]; };
+    return paths.sort((a, b) => {
+      const ka = key(a), kb = key(b);
+      return ka[0] - kb[0] || ka[1].localeCompare(kb[1]) || ka[2].localeCompare(kb[2]) || ka[3].localeCompare(kb[3]);
+    });
+  }
+  function tablePaths(paths) {
+    const cmp = p => compare(p, state.baseline, state.target, state.metric);
+    let out = paths;
+    if (state.group) out = out.filter(p => inGroup(p, state.group));
+    if (state.show !== "all") out = out.filter(p => { const c = cmp(p); return !!c && (state.show === "same" ? c.dir === "same" || c.dir === "unclear" : c.dir === state.show); });
+    state.order = state.show === "slower" || state.show === "faster" ? state.show : "problem";
+    if (state.order !== "problem") {
+      const sign = state.order === "slower" ? -1 : 1;
+      const score = p => { const c = cmp(p); return c ? sign * Math.log(c.ratio) : Infinity; };
+      out = out.slice().sort((a, b) => score(a) - score(b));
+    }
+    return out;
+  }
+  function counts(rev, paths) {
+    const c = { faster: 0, slower: 0, unclear: 0, same: 0, new: 0, gone: 0 };
+    for (const p of paths) {
+      const r = compare(p, state.baseline, rev, state.metric);
+      if (r) c[r.dir]++; else if (STATS[rev][p] && !STATS[state.baseline][p]) c.new++; else if (!STATS[rev][p] && STATS[state.baseline][p]) c.gone++;
+    }
+    return c;
+  }
+
+  // One dot per benchmark on a log ratio axis
+  function strip(items, W, opts) {
+    const o = Object.assign({ r: 4.5, lo: null, hi: null, clamp: 8, thr: TIME_THRESHOLD, labels: true, padL: 16, padR: 16, maxStack: 9, annotate: [], selected: null }, opts);
+    const rs = items.map(d => d.ratio);
+    const TICKS = [1 / 8, 1 / 4, 1 / 3, 0.4, 1 / 2, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2, 1.3, 1.5, 2, 3, 4, 8];
+    const tickLabel = t => t === 1 ? "same" : t < 1 ? `−${Math.round((1 - t) * 100)}%` : t <= 1.5 ? `+${Math.round((t - 1) * 100)}%` : `×${t}`;
+    let lo = o.lo || Math.max(1 / o.clamp, Math.min(1 / 1.25, ...rs) / 1.06), hi = o.hi || Math.min(o.clamp, Math.max(1.25, ...rs) * 1.06);
+    const x = r => o.padL + (W - o.padL - o.padR) * Math.log(Math.min(hi, Math.max(lo, r)) / lo) / Math.log(hi / lo);
+    const step = 2 * o.r + 1.5, bins = {};
+    let maxStack = 1, under = 0, over = 0;
+    const placed = items.slice().sort((a, b) => a.ratio - b.ratio).map(d => {
+      if (d.ratio < lo) under++; if (d.ratio > hi) over++;
+      // A full column spills into the nearest free one, so that many equal values form a block.
+      const px = x(d.ratio), home = Math.round(px / step);
+      // Next to the edge of the noise band a dot keeps its exact place, so that it is on the right side of it
+      if (o.labels && Math.abs(Math.abs(d.ratio - 1) - o.thr) < 0.02) {
+        const key = "e" + Math.round(px / 3), k = bins[key] = (bins[key] || 0) + 1;
+        maxStack = Math.max(maxStack, k);
+        return { d, px, k };
+      }
+      let bin = home;
+      for (let j = 1; (bins[bin] || 0) >= o.maxStack && j < 40; j++) bin = home + Math.ceil(j / 2) * (j % 2 ? 1 : -1);
+      const k = bins[bin] = (bins[bin] || 0) + 1;
+      maxStack = Math.max(maxStack, k);
+      return { d, px: bin * step, k };
+    });
+    const half = Math.max(Math.ceil(maxStack / 2) * step, o.labels ? 0 : 14), top = (o.labels || under || over ? 16 : 6) + 15 * o.annotate.length, mid = top + half, axisY = mid + half + 4, H = axisY + (o.labels ? 18 : 4);
+    let g = `<rect class="noise" x="${x(1 - o.thr)}" y="${top - 2}" width="${Math.max(1, x(1 + o.thr) - x(1 - o.thr))}" height="${axisY - top + 2}"></rect>` +
+      `<line class="one" x1="${x(1)}" x2="${x(1)}" y1="${top - 2}" y2="${axisY}"></line>` +
+      `<line class="axis" x1="${o.padL}" x2="${W - o.padR}" y1="${axisY}" y2="${axisY}"></line>`;
+    if (o.labels) {
+      let last = -1e9;
+      for (const t of TICKS) {
+        if (t < lo * 0.999 || t > hi * 1.001) continue;
+        const px = x(t); if (px - last < 46) continue; last = px;
+        g += `<line class="axis" x1="${px}" x2="${px}" y1="${axisY}" y2="${axisY + 4}"></line>` +
+          `<text x="${px}" y="${axisY + 15}" text-anchor="middle">${tickLabel(t)}</text>`;
+      }
+    }
+    let marks = "";
+    for (const { d, px, k } of placed) {
+      const off = Math.ceil((k - 1) / 2) * step * (k % 2 ? 1 : -1), cy = mid + off;
+      const ai = o.annotate.indexOf(d.path);
+      if (ai >= 0) {
+        const ly = 12 + 15 * ai, end = px > 320;
+        g += `<line class="lead" x1="${px.toFixed(1)}" x2="${px.toFixed(1)}" y1="${ly + 3}" y2="${(cy - o.r - 1).toFixed(1)}"></line>` +
+          `<text class="ann" x="${(px + (end ? 4 : -4)).toFixed(1)}" y="${ly}" text-anchor="${end ? "end" : "start"}">${esc(d.label)}</text>`;
+      }
+      if (d.path && d.path === o.selected) marks += `<circle class="halo" cx="${px.toFixed(1)}" cy="${cy.toFixed(1)}" r="${o.r + 4}"></circle>`;
+      marks += `<circle class="b ${d.dir}${d.hollow ? " hollow" : ""}" cx="${px.toFixed(1)}" cy="${cy.toFixed(1)}" r="${o.r}"` +
+        (d.path ? ` data-path="${esc(d.path)}" data-tip="strip||${esc(d.path)}" aria-label="${esc(d.label)}"></circle>` : `><title>${esc(d.title)}</title></circle>`);
+    }
+    g += marks;
+    const edgeY = 10 + 15 * o.annotate.length;
+    if (under) g += `<text x="${o.padL}" y="${edgeY}" text-anchor="start">◀ ${under} beyond ${fmtChange(lo)}</text>`;
+    if (over) g += `<text x="${W - o.padR}" y="${edgeY}" text-anchor="end">${over} beyond ${fmtChange(hi)} ▶</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Every benchmark as a dot by its change">${g}</svg>`;
+  }
+
+  function renderSummary(paths, boxW) {
+    const metric = state.metric, m = METRICS[metric];
+    const same = state.target === state.baseline;
+    for (const id of ["strip-card", "kind", "lists"]) $(id).hidden = same;
+    if (same) { $("headline").textContent = `Choose a revision to compare with ${nameOf(state.baseline)}.`; $("loadline").textContent = $("meanline").textContent = ""; $("selected").hidden = true; return; }
+    const items = paths.map(p => ({ path: p, c: compare(p, state.baseline, state.target, metric) })).filter(d => d.c);
+    const c = counts(state.target, paths);
+    const thr = metric === "time" ? TIME_THRESHOLD : DET_THRESHOLD, noiseText = metric === "time" ? "under 10%" : "under 1%";
+    const cnt = (n, word, cls) => `<span class="${n ? cls : ""}">${n} ${word}</span>`;
+    $("headline").innerHTML = `<b>${esc(nameOf(state.target))}</b> against <b>${esc(nameOf(state.baseline))}</b>, ${m.label}: ` +
+      cnt(c.slower, m.words[1], "slower-text") + ", " + cnt(c.faster, m.words[0], "faster-text") +
+      (c.unclear ? `, ${c.unclear} unclear` : "") + `, ${c.same} ${m.noise}` + (c.new ? `, ${c.new} new` : "") + `.`;
+    const mean = (label, ds) => { if (!ds.length) return ""; const g = geomean(ds.map(d => d.c.ratio)); return `${label} <span class="${Math.abs(g - 1) > thr ? signClass(g) : ""}" style="font-family: var(--font-data)">${fmtChange(g)}</span>`; };
+    $("meanline").innerHTML = items.length ? `Geometric mean of the ${items.length} benchmarks in both: ` + mean("", items) + " (" +
+      [mean("filter only", items.filter(d => parse(d.path).kind === "filter")), mean("filter + smoother", items.filter(d => parse(d.path).kind === "smoother"))].filter(Boolean).join(", ") + ")." : "";
+    $("strip-note").textContent = `One dot per benchmark; click one for its charts. Grey band: ${m.noise} (${noiseText}).`;
+    // Loading and first solves are not solves of the suite: one plain line
+    const la = LOAD[state.baseline], lb = LOAD[state.target], bits = [];
+    const moved = (label, a, b) => `${label} ${fmt("time", a)} → ${fmt("time", b)} (${fmtChange(b / a)})`;
+    if (la && lb) bits.push(moved("<code>using ProbNumDiffEq</code>", la.min, lb.min) + `, fastest of ${Math.min(la.n, lb.n)} fresh processes`);
+    const ta = DATA.ttfs[state.baseline], tb = DATA.ttfs[state.target];
+    if (ta && tb) for (const [k, label] of [["first_solve_EK0", "first <code>EK0</code> solve"], ["first_solve_EK1", "first <code>EK1</code> solve"]])
+      if (ta[k] && tb[k]) bits.push(moved(label, ta[k].median * 1e9, tb[k].median * 1e9));
+    $("loadline").innerHTML = bits.length ? "Loading the package (not one of the benchmarks): " + bits.join(" · ") + "." : "";
+    const byChange = dir => items.filter(d => d.c.dir === dir).sort((a, b) => Math.abs(Math.log(b.c.ratio)) - Math.abs(Math.log(a.c.ratio)));
+    const slower = byChange("slower"), faster = byChange("faster");
+    $("strip").innerHTML = strip(items.map(d => ({
+      path: d.path, ratio: d.c.ratio, dir: d.c.dir, hollow: parse(d.path).kind === "filter",
+      label: `${rowName(d.path)}  ${fmtChange(d.c.ratio)}`,
+    })), Math.max(300, boxW - 30), { thr: metric === "time" ? TIME_THRESHOLD : DET_THRESHOLD,
+      annotate: slower.slice(0, 3).map(d => d.path), selected: state.selected });
+
+    // The lists under the strip: everything that got worse, and the largest improvements
+    const rank = d => {
+      const q = parse(d.path), sv = SOLVER(q.solver);
+      return `<button type="button" class="rank" data-select="${esc(d.path)}" aria-pressed="${state.selected === d.path}">` +
+        `<span class="nm">${esc(q.problem)} · <b>${esc(sv.base)}</b>${sv.variant ? " " + esc(sv.variant) : ""} <i>${esc(KIND[q.kind])}</i></span>` +
+        `<span class="chg ${signClass(d.c.ratio)}">${fmtChange(d.c.ratio)}</span><span class="ab">${fmt(metric, d.c.a)} → ${fmt(metric, d.c.b)}</span></button>`;
+    };
+    const cap = (sw, n, word) => `<span class="mark" style="font-size: 13px; color: var(--fg); font-weight: 600"><span class="swatch ${sw}"></span>${n} ${word}</span>`;
+    $("slower-cap").innerHTML = slower.length ? cap("sw-slower", slower.length, m.words[1]) + `<span class="plain">worst first</span>` : "";
+    $("slower-cap").hidden = !slower.length;
+    $("slower-list").innerHTML = slower.length ? slower.slice(0, 8).map(rank).join("") +
+      (slower.length > 8 ? `<p class="more">and ${slower.length - 8} more: choose “${m.words[1].charAt(0).toUpperCase() + m.words[1].slice(1)}” above the table.</p>` : "")
+      : `<p class="none">Nothing got ${m.words[1] === "slower" ? "slower" : "worse"} beyond ${metric === "time" ? "noise" : "1%"}.</p>`;
+    // The benchmark picked from the strip or a list, shown in place
+    const sel = state.selected && items.find(d => d.path === state.selected);
+    $("selected").hidden = !sel;
+    if (sel) {
+      const other = ["time", "allocs", "memory"].filter(k => k !== metric).map(k => { const c2 = compare(sel.path, state.baseline, state.target, k); return c2 ? `${METRICS[k].label} ${fmtChange(c2.ratio)}` : ""; }).filter(Boolean);
+      $("selected").innerHTML = `<div class="selhead"><span class="nm">${esc(rowName(sel.path))}</span>` +
+        `<span class="sum"><span class="${sel.c.dir === "faster" || sel.c.dir === "slower" ? signClass(sel.c.ratio) : ""}">${m.label} ${fmtChange(sel.c.ratio)}${sel.c.dir === "unclear" ? " ?" : ""}</span> (${fmt(metric, sel.c.a)} → ${fmt(metric, sel.c.b)}${stateNote(sel.c, metric) ? ", " + esc(stateNote(sel.c, metric)) : ""}) · ${other.join(" · ")}</span>` +
+        `<button type="button" data-close="1" aria-label="Close">Close ✕</button></div>` + detail(sel.path, boxW);
+    }
+
+    // Statements: greedily pick the groups in which most benchmarks changed in the same direction.
+    const changed = d => d.c.dir === "faster" || d.c.dir === "slower";
+    const groups = [];
+    for (const run of [null, "filter", "smoother"]) for (const structure of [null, ...STRUCTURES]) for (const size of [null, "small", "large"]) {
+      if (!run && !structure && !size) continue;
+      const g = { run, structure, size }, mem = items.filter(d => inGroup(d.path, g));
+      if (mem.length < 3) continue;
+      const nf = mem.filter(d => d.c.dir === "faster").length, ns = mem.filter(d => d.c.dir === "slower").length;
+      const dir = nf >= ns ? "faster" : "slower", agree = Math.max(nf, ns);
+      if (agree < 0.65 * mem.length) continue;
+      groups.push({ g, key: groupKey(g), mem, dir, agree, fixed: [run, structure, size].filter(Boolean).length });
+    }
+    const uncovered = new Set(items.filter(changed).map(d => d.path)), picked = [];
+    while (picked.length < 4) {
+      let best = null, bestScore = 0;
+      for (const gr of groups) {
+        const cover = gr.mem.filter(d => d.c.dir === gr.dir && uncovered.has(d.path)).length;
+        const score = cover * gr.agree / gr.mem.length - gr.fixed * 0.01;
+        if (cover >= 3 && score > bestScore) { best = gr; bestScore = score; }
+      }
+      if (!best) break;
+      picked.push(best);
+      best.mem.forEach(d => { if (d.c.dir === best.dir) uncovered.delete(d.path); });
+    }
+    let html = picked.map(gr => {
+      const rs = gr.mem.map(d => d.c.ratio), gmean = geomean(rs), other = gr.mem.length - gr.agree;
+      return `<button type="button" class="stmt" data-group="${esc(gr.key)}" data-groupdef="${esc(JSON.stringify(Object.assign({ key: gr.key }, gr.g)))}" aria-pressed="${!!state.group && state.group.key === gr.key}">` +
+        `<span class="big ${signClass(gmean)}">${fmtChange(gmean)}</span><span class="t">${esc(groupLabel(gr.g))}</span>` +
+        `<span class="d">${gr.agree} of ${gr.mem.length} ${gr.dir === "faster" ? m.words[0] : m.words[1]}` +
+        (() => { const opp = gr.mem.filter(d => d.c.dir === (gr.dir === "faster" ? "slower" : "faster")).length, un = other - opp;
+          return (un ? `, ${un} ${m.noise}` : "") + (opp ? `, ${opp} ${gr.dir === "faster" ? m.words[1] : m.words[0]}` : ""); })() +
+        ` · range ${fmtChange(Math.min(...rs))} to ${fmtChange(Math.max(...rs))}</span></button>`;
+    }).join("");
+    const rest = items.filter(d => uncovered.has(d.path)).sort((a, b) => Math.abs(Math.log(b.c.ratio)) - Math.abs(Math.log(a.c.ratio)));
+    if (rest.length) {
+      html += `<div class="single">${picked.length ? "Changed, but in none of these groups: " : "Changed: "}` + rest.slice(0, 6).map(d =>
+        `<b>${esc(rowName(d.path))}</b> <span class="${signClass(d.c.ratio)}">${fmtChange(d.c.ratio)}</span>`).join(", ") +
+        (rest.length > 6 ? `, and ${rest.length - 6} more` : "") + `.</div>`;
+    }
+    if (!picked.length && !rest.length) html = `<div class="single">No benchmark changed beyond ${metric === "time" ? "noise" : "1%"}.</div>`;
+    $("statements").innerHTML = html;
+
+    // Factor table: covariance structure × problem size, filter | smoother
+    const cell = g => {
+      const mem = items.filter(d => inGroup(d.path, g));
+      if (!mem.length) return `<td class="none">—</td>`;
+      const rs = mem.map(d => d.c.ratio), gmean = geomean(rs), key = groupKey(g);
+      const shade = mem.length >= 3 && Math.abs(gmean - 1) > (metric === "time" ? TIME_THRESHOLD : DET_THRESHOLD) ? `background: ${tintColor(gmean, metric, 1)};` : "";
+      return `<td><button type="button" class="fcell" style="${shade}" data-group="${esc(key)}" data-groupdef="${esc(JSON.stringify(Object.assign({ key }, g)))}" aria-pressed="${!!state.group && state.group.key === key}">` +
+        `<span class="g">${fmtChange(gmean)}</span><span class="n">n = ${mem.length}</span><span class="r">${fmtChange(Math.min(...rs))} … ${fmtChange(Math.max(...rs))}</span></button></td>`;
+    };
+    let ft = `<thead><tr><th>Covariance</th><th>Problem size</th><th>${KIND.filter}</th><th>${KIND.smoother}</th></tr></thead><tbody>`;
+    for (const structure of STRUCTURES) for (const size of ["small", "large"]) {
+      ft += `<tr><th>${size === "small" ? esc(structure) : ""}</th><th>${size === "small" ? "d ≤ 3" : "d ≥ 14"}</th>` +
+        cell({ run: "filter", structure, size }) + cell({ run: "smoother", structure, size }) + `</tr>`;
+    }
+    ft += `<tr><th>all</th><th></th>${cell({ run: "filter", structure: null, size: null })}${cell({ run: "smoother", structure: null, size: null })}</tr>`;
+    $("ftab").innerHTML = ft + "</tbody>";
+  }
+
+  function renderLegend() {
+    const base = `<b>${esc(nameOf(state.baseline))}</b>`, time = state.metric === "time", w = METRICS[state.metric].words;
+    const ramp = rs => `<span class="ramp">${rs.map(r => `<i style="background: ${tintColor(r, state.metric, 1)}"></i>`).join("")}</span>`;
+    const hatched = !!$("matrix").querySelector("td.unclear");
+    $("legend").innerHTML =
+      `<span>${ramp([1 / 2, 1 / 1.4, 1 / 1.15])}${w[0]}, darkest at half</span>` +
+      `<span>${ramp([1.15, 1.4, 2])}${w[1]}, darkest at double</span>` +
+      (hatched ? `<span><span class="ramp"><i style="background: repeating-linear-gradient(135deg, var(--muted) 0 2px, transparent 2px 4px); width: 16px"></i></span>hatched, with ?: the fastest solve changed, most solves did not</span>` : "") +
+      "";
+    const w2 = METRICS[state.metric].words;
+    $("show").querySelector('[data-v="slower"]').textContent = w2[1].charAt(0).toUpperCase() + w2[1].slice(1);
+    $("show").querySelector('[data-v="faster"]').textContent = w2[0].charAt(0).toUpperCase() + w2[0].slice(1);
+    const nz = METRICS[state.metric].noise; $("show").querySelector('[data-v="same"]').textContent = nz.charAt(0).toUpperCase() + nz.slice(1);
+  }
+
+  function renderMatrix(paths, boxW) {
+    const metric = state.metric, m = METRICS[metric], keys = ["time", "allocs", "memory"];
+    const head = { time: "Time", allocs: "Allocations", memory: "Memory" };
+    let html = `<thead><tr><th class="name" scope="col">Benchmark</th>` + keys.map(k =>
+      `<th scope="col" class="${k === metric ? "base" : ""}"><span class="rev" style="font-family: var(--font-body); font-weight: ${k === metric ? 600 : 500}">${head[k]}</span>` +
+      `<span class="sub">${esc(nameOf(state.baseline))} → ${esc(nameOf(state.target))}</span></th>`).join("") + `</tr></thead><tbody>`;
+    if (!paths.length) html += `<tr><td class="empty" colspan="4">No benchmark matches these filters.</td></tr>`;
+    let lastProblem = null;
+    for (const path of paths) {
+      const q = parse(path), s = SOLVER(q.solver), pr = PROBLEM[q.problem];
+      if (state.order === "problem" && q.problem !== lastProblem) {
+        const cap = pr ? `d = ${pr.d}, ${pr.steps} steps · ${pr.note}` : "";
+        html += `<tr class="group"><td colspan="4"><span class="label">${esc(q.problem)}<span class="dim">${esc(cap)}</span></span></td></tr>`;
+        lastProblem = q.problem;
+      }
+      const open = state.open.has(path);
+      html += `<tr class="row${open ? " open" : ""}" data-path="${esc(path)}" tabindex="0" aria-expanded="${open}">` +
+        `<td class="name"><span class="caret">▸</span>${state.order === "problem" ? "" : `<span class="variant" style="margin: 0 6px 0 0">${esc(q.problem)}</span>`}` +
+        `<span class="solver">${esc(s.base)}</span>${s.variant ? `<span class="variant">${esc(s.variant)}</span>` : ""}<span class="kind">${esc(KIND[q.kind] || q.kind)}</span></td>`;
+      for (const k of keys) {
+        const sa = STATS[state.baseline][path], sb = STATS[state.target][path], c = compare(path, state.baseline, state.target, k);
+        if (!sa && !sb) { html += `<td class="cell missing" title="Did not run in either revision"><span class="rel">—</span></td>`; continue; }
+        if (!c) {
+          const only = sb || sa;
+          html += `<td class="cell quiet"><span class="rel">${fmt(k, METRICS[k].value(only))}</span><span class="abs">${sb ? `new, not in ${esc(nameOf(state.baseline))}` : `not in ${esc(nameOf(state.target))}`}</span></td>`;
+          continue;
+        }
+        const note = stateNote(c, k);
+        html += `<td class="cell ${c.dir}${c.dir === "same" ? "" : " tinted"}" style="${tint(c, k, 1)}"${note ? ` title="${esc(note)}"` : ""}>` +
+          `<span class="rel">${fmtChange(c.ratio)}${c.dir === "unclear" ? " ?" : ""}</span><span class="abs">${fmt(k, c.a)} → ${fmt(k, c.b)}</span></td>`;
+      }
+      html += "</tr>";
+      if (open) html += `<tr class="detail"><td colspan="4">${detail(path, boxW)}</td></tr>`;
+    }
+    $("matrix").innerHTML = html + "</tbody>";
+    const parts = [];
+    if (state.group) parts.push(groupLabel(state.group).toLowerCase());
+    $("showing").hidden = !parts.length;
+    const nNew = paths.filter(p => !compare(p, state.baseline, state.target, "time")).length;
+    $("showing").innerHTML = parts.length ? `Showing only: ${esc(parts.join(", "))} (${paths.length - nNew} rows${nNew ? ` + ${nNew} without a counterpart` : ""}). <button type="button">Show all</button>` : "";
+  }
+
+  // Detail charts
+  function niceStep(x) {
+    const e = Math.pow(10, Math.floor(Math.log10(x))), f = x / e;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e;
+  }
+  function linearScale(max, metric) {
+    const [div, suffix] = unitFor(metric, max);
+    const step = niceStep(max / div / 4), top = Math.ceil(max / div / step - 1e-9) * step;
+    const ticks = [];
+    for (let v = 0; v <= top + step * 1e-6; v += step) ticks.push(v * div);
+    return { log: false, lo: 0, hi: top * div, ticks, pos: v => v / (top * div),
+      label: v => v === 0 ? "0" : (trimNum(v / div) + " " + suffix).trim() };
+  }
+  function logScale(min, max, metric) {
+    const lo = min / 1.3, hi = max * 1.3;
+    let ticks = [];
+    if (metric === "memory") {
+      const k0 = Math.ceil(Math.log2(lo)), k1 = Math.floor(Math.log2(hi)), step = Math.max(1, Math.ceil((k1 - k0 + 1) / 6));
+      for (let k = k1; k >= k0; k -= step) ticks.push(2 ** k);
+    } else {
+      for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) for (const f of [1, 2, 5]) {
+        const v = f * 10 ** e; if (v >= lo && v <= hi) ticks.push(v);
+      }
+      if (ticks.length > 7) ticks = ticks.filter(v => Math.abs(Math.log10(v) - Math.round(Math.log10(v))) < 1e-9);
+    }
+    const span = Math.log(hi / lo);
+    return { log: true, lo, hi, ticks, pos: v => Math.log(v / lo) / span,
+      label: v => { const [div, suffix] = unitFor(metric, v * 1.0001); return (trimNum(v / div) + " " + suffix).trim(); } };
+  }
+  function chart(path, metric, W, H, cols, hist) {
+    const COLS = cols || COLS_CURRENT, ref = hist ? state.hbase : state.baseline;
+    const m = METRICS[metric], n = COLS.length;
+    const stats = COLS.map(id => STATS[id][path] || null);
+    const vals = stats.map(s => s ? m.value(s) : null), present = vals.filter(v => v != null);
+    const narrow = (W - 80) / n < 54;
+    const PAD = { l: 68, r: 10, t: hist ? 26 : 14, b: narrow ? 44 : 24 };
+    const bw = (W - PAD.l - PAD.r) / n, ph = H - PAD.t - PAD.b;
+    const x0 = i => PAD.l + bw * i, cx = i => x0(i) + bw / 2;
+    let useLog = Math.max(...present) / Math.min(...present) > 8;
+    let scale;
+    if (metric === "time") {
+      const top = hist ? Math.max(...stats.filter(Boolean).map(s => s.p98)) : Math.max(...stats.filter(Boolean).map(s => Math.min(s.p98, 2.5 * s.min)));
+      if (hist) useLog = useLog || top / Math.min(...present) > 10;
+      scale = useLog ? logScale(Math.min(...stats.filter(Boolean).map(s => s.min)), top, metric) : linearScale(top, metric);
+    } else {
+      scale = useLog ? logScale(Math.min(...present), Math.max(...present), metric) : linearScale(Math.max(...present), metric);
+    }
+    const y = v => PAD.t + ph * (1 - scale.pos(v));
+    let g = "";
+    for (const t of scale.ticks) {
+      g += `<line class="grid" x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}"></line>` +
+        `<text x="${PAD.l - 6}" y="${(y(t) + 3.5).toFixed(1)}" text-anchor="end">${scale.label(t)}</text>`;
+    }
+    // Where Julia changes between two columns: a separator, and the versions named above the plot
+    COLS.forEach((id, i) => {
+      if (!hist || (i > 0 && juliaOf(COLS[i - 1]) === juliaOf(id))) return;
+      if (i > 0) g += `<line class="grid" stroke-dasharray="3 3" x1="${x0(i)}" x2="${x0(i)}" y1="${PAD.t - 12}" y2="${H - PAD.b}"></line>`;
+      g += `<text class="lbl" x="${x0(i) + 5}" y="${PAD.t - 3}">Julia ${esc(juliaOf(id))}</text>`;
+    });
+    const bi = COLS.indexOf(ref);
+    if (bi >= 0 && vals[bi] != null && vals[bi] >= scale.lo && vals[bi] <= scale.hi) {
+      g += `<line class="ref" x1="${PAD.l}" x2="${W - PAD.r}" y1="${y(vals[bi]).toFixed(1)}" y2="${y(vals[bi]).toFixed(1)}"></line>`;
+    }
+    COLS.forEach((id, i) => {
+      const s = stats[i], c = cx(i);
+      if (!s) { g += `<text class="na" x="${c}" y="${H - PAD.b - 6}" text-anchor="middle">n/a</text>`; return; }
+      if (metric === "time") {
+        const stride = Math.max(1, Math.ceil(s.times.length / 100)), per = s.n / s.times.length;
+        let clipped = 0;
+        s.times.forEach((t, j) => {
+          if (t > scale.hi) { clipped++; return; }
+          if (j % stride) return;
+          const jitter = ((j * 0.618034) % 1 - 0.5) * Math.min(bw * 0.6, 40);
+          g += `<circle class="dot" cx="${(c + jitter).toFixed(1)}" cy="${y(t).toFixed(1)}" r="2"></circle>`;
+        });
+        const hw = Math.min(9, bw * 0.3);
+        g += `<line class="iqr" x1="${c}" x2="${c}" y1="${y(s.q1).toFixed(1)}" y2="${y(s.q3).toFixed(1)}"></line>` +
+          `<line class="medhalo" x1="${c - hw}" x2="${c + hw}" y1="${y(s.min).toFixed(1)}" y2="${y(s.min).toFixed(1)}"></line>` +
+          `<line class="med" x1="${c - hw}" x2="${c + hw}" y1="${y(s.min).toFixed(1)}" y2="${y(s.min).toFixed(1)}"></line>`;
+        if (clipped && bw > 36 && !hist) g += `<text x="${c}" y="${PAD.t - 3}" text-anchor="middle">▲ ${Math.round(clipped * per)}<title>About ${Math.round(clipped * per)} of ${s.n} solves are above the axis</title></text>`;
+      } else if (scale.log) {
+        g += `<circle class="pt" cx="${c}" cy="${y(vals[i]).toFixed(1)}" r="5"></circle>`;
+      } else {
+        const w = Math.min(34, bw * 0.55), yy = y(vals[i]), yb = y(0), rr = Math.min(4, Math.max(0, yb - yy));
+        g += `<path class="bar" d="M${c - w / 2},${yb} V${yy + rr} q0,-${rr} ${rr},-${rr} H${c + w / 2 - rr} q${rr},0 ${rr},${rr} V${yb} Z"></path>`;
+      }
+    });
+    COLS.forEach((id, i) => {
+      const label = rawName(id) === "dirty" ? "tree" : rawName(id).replace(/^v/, ""), cls = id === (hist ? ref : state.target) ? ' class="isbase"' : "";
+      g += narrow
+        ? `<text${cls} transform="translate(${cx(i) + 3},${H - PAD.b + 12}) rotate(-40)" text-anchor="end">${esc(label)}</text>`
+        : `<text${cls} x="${cx(i)}" y="${H - 8}" text-anchor="middle">${esc(label)}</text>`;
+      g += `<rect class="hit" data-tip="${esc(metric)}|${esc(id)}|${esc(path)}|${hist ? "h" : ""}" x="${x0(i)}" y="${PAD.t}" width="${bw}" height="${ph}"></rect>`;
+    });
+    return { svg: `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${m.label} per revision">${g}</svg>`, log: scale.log };
+  }
+  function detail(path, boxW) {
+    const q = parse(path), s = SOLVER(q.solver), pr = PROBLEM[q.problem], smooth = q.kind === "smoother";
+    const three = boxW > 900, wide = three ? Math.max(280, (boxW - 40) / 2 - 26) : Math.max(280, boxW - 46), small = three ? Math.max(200, (boxW - 40) / 4 - 26) : wide;
+    const t = chart(path, "time", wide, 200), a = chart(path, "allocs", small, 200), mem = chart(path, "memory", small, 200);
+    const log = c => c.log ? " (log scale)" : "";
+    const ns = COLS.map(id => STATS[id][path] ? STATS[id][path].n : null).filter(v => v != null);
+    const call = pr ? `solve(${q.problem}, ${s.call.replace("S", String(smooth))}; adaptive=false, dt=${pr.dt}, dense=${smooth}${pr.extra ? ", " + pr.extra : ""})` : path;
+    return `<div class="detail-grid">
+      <p class="call wide"><code>${esc(call)}</code>${pr ? ` · d = ${pr.d}, ${pr.steps} steps` : ""} · ${Math.min(...ns)} to ${Math.max(...ns)} solves per revision</p>
+      <div class="panel"><h3>Time${log(t)}</h3><p>Dots: single solves, at most 100. Tick: the fastest, which is what is compared. Bar: the middle 50%. ▲: solves above the axis. Dashed: ${esc(nameOf(state.baseline))}.</p>${t.svg}</div>
+      <div class="panel"><h3>Allocations${log(a)}</h3><p>per solve</p>${a.svg}</div>
+      <div class="panel"><h3>Memory${log(mem)}</h3><p>bytes allocated per solve</p>${mem.svg}</div>
+    </div>`;
+  }
+
+  // Tooltip of the detail charts, on hover and on tap
+  const tip = $("tip");
+  function showTip(e) {
+    const t = e.target.closest && e.target.closest("[data-tip]");
+    if (!t) { tip.hidden = true; return; }
+    const [which, rev, path, hist] = t.dataset.tip.split("|");
+    if (which === "strip") {
+      const c = compare(path, state.baseline, state.target, state.metric), ca = compare(path, state.baseline, state.target, state.metric === "allocs" ? "time" : "allocs");
+      tip.innerHTML = `<b>${esc(rowName(path))}</b><br>${METRICS[state.metric].label} ${fmtChange(c.ratio)}: ${fmt(state.metric, c.a)} → ${fmt(state.metric, c.b)}` +
+        (ca ? `<br>${state.metric === "allocs" ? "time" : "allocations"} ${fmtChange(ca.ratio)}` : "") +
+        (stateNote(c, state.metric) ? `<br><span class="note">${esc(stateNote(c, state.metric))}</span>` : "") + `<br><span class="note">Click for its charts.</span>`;
+      placeTip(e); return;
+    }
+    const s = STATS[rev][path];
+    let html = `<b>${esc(nameOf(rev))}</b>` + (dateOf(rev) ? ` · ${esc(dateOf(rev))}` : "");
+    if (!s) html += `<br><span class="note">did not run in this version</span>`;
+    else {
+      if (which === "time") {
+        html += `<br>fastest ${fmt("time", s.min)}<br>median ${fmt("time", s.median)}<br>middle 50% ${fmt("time", s.q1)} – ${fmt("time", s.q3)}` +
+          `<br>slowest ${fmt("time", s.max)}<br>${s.n} solves`;
+      } else html += `<br>${fmt(which, METRICS[which].value(s))} ${which === "allocs" ? "allocations" : ""}`;
+      if (hist) html += `<br><span class="note">Julia ${esc(juliaOf(rev))}</span>`;
+      else if (rev === state.baseline) html += `<br><span class="note">baseline</span>`;
+      else {
+        const c = compare(path, state.baseline, rev, which);
+        if (c) html += `<br>${fmtChange(c.ratio)} against ${esc(nameOf(state.baseline))}`;
+        const note = stateNote(c, which);
+        if (note) html += `<br><span class="note">${esc(note)}</span>`;
+      }
+    }
+    tip.innerHTML = html;
+    placeTip(e);
+  }
+  function placeTip(e) {
+    tip.hidden = false;
+    const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 8);
+    const y = Math.min(e.clientY + 14, window.innerHeight - tip.offsetHeight - 8);
+    tip.style.left = Math.max(8, x) + "px"; tip.style.top = Math.max(8, y) + "px";
+  }
+  document.addEventListener("pointermove", showTip);
+  document.addEventListener("pointerdown", showTip);
+
+  // Row expansion, and opening a row from a dot of the strip
+  function toggle(row) {
+    const p = row.dataset.path;
+    if (state.open.has(p)) state.open.delete(p); else state.open.add(p);
+    render();
+  }
+  $("matrix").addEventListener("click", e => {
+    if (e.target.closest("tr.detail")) return;
+    const row = e.target.closest("tr.row"); if (row) toggle(row);
+  });
+  $("matrix").addEventListener("keydown", e => {
+    const row = e.target.closest("tr.row");
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggle(row); }
+  });
+  $("strip").addEventListener("click", e => { const d = e.target.closest("[data-path]"); if (d) select(d.dataset.path); });
+
+  // History: a chain of steps, each revision against the one before it. Within a Julia version
+  // the steps follow the releases; between two Julia versions there is one step that changes only
+  // Julia, measured on the latest release benchmarked on both.
+  function buildChain() {
+    const nodes = [], steps = [];
+    let start = null;
+    JULIAS.forEach((j, bi) => {
+      const ids = REVS.filter(id => INFO[id].julia === j);
+      const next = JULIAS[bi + 1], common = next ? ids.filter(id => STATS[`${rawName(id)}@${next}`]) : [];
+      const bridge = common.length ? common[common.length - 1] : null;
+      const from = start ? ids.indexOf(start) : 0, to = bridge ? ids.indexOf(bridge) : ids.length - 1;
+      for (let i = from; i <= to; i++) {
+        if (nodes.length) steps.push({ a: nodes[nodes.length - 1], b: ids[i], julia: i === from && !!start });
+        nodes.push(ids[i]);
+      }
+      start = bridge ? `${rawName(bridge)}@${next}` : null;
+    });
+    return { nodes, steps };
+  }
+  function stepStats(a, b, metric) {
+    const items = [], fresh = [], gone = [];
+    for (const p of PATHS) {
+      const c = compare(p, a, b, metric);
+      if (c) items.push({ path: p, c });
+      else if (STATS[b][p] && !STATS[a][p]) fresh.push(p); else if (STATS[a][p] && !STATS[b][p]) gone.push(p);
+    }
+    const n = d => items.filter(x => x.c.dir === d).length;
+    return { items, fresh, gone, geo: items.length ? geomean(items.map(d => d.c.ratio)) : 1,
+      faster: n("faster"), slower: n("slower"), same: n("same") + n("unclear") };
+  }
+  const times = r => r < 1 ? (1 / r >= 1.5 ? `${(1 / r).toFixed(1)}× ` : `${Math.round((1 - r) * 100)}% `) : (r >= 1.5 ? `${r.toFixed(1)}× ` : `${Math.round((r - 1) * 100)}% `);
+  function renderHistory(boxW) {
+    const { nodes, steps } = buildChain();
+    const st = steps.map(s => Object.assign({}, s, { m: stepStats(s.a, s.b, state.hmetric) }));
+    const metric = state.hmetric, m = METRICS[metric];
+    const pkg = Math.exp(st.filter(s => !s.julia).reduce((a, s) => a + Math.log(s.m.geo), 0));
+    const jl = st.filter(s => s.julia), first = nodes[0], last = nodes[nodes.length - 1];
+    const word = r => metric === "time" ? (r < 1 ? "faster" : "slower") : (r < 1 ? m.words[0] : m.words[1]);
+    const phrase = r => Math.abs(r - 1) < 0.005 ? "no change" : `<span class="num ${signClass(r)}">${times(r)}${word(r)}</span>`;
+    const what = metric === "time" ? "the suite" : metric === "allocs" ? "allocations" : "memory";
+    $("hist-headline").innerHTML = `From <b>${esc(nameOf(first))}</b> (${esc(dateOf(first).slice(0, 7))}) to <b>${esc(nameOf(last))}</b>, the package's own changes ` +
+      (metric === "time" ? `made the suite ${phrase(pkg)}` : `brought ${phrase(pkg)} ${what}`) + `. ` +
+      jl.map(s => `Upgrading Julia from ${esc(juliaOf(s.a))} to ${esc(juliaOf(s.b))} ` + (metric === "time" ? `made the same code ${phrase(s.m.geo)}` : `brought ${phrase(s.m.geo)} ${what} for the same code`) + `.`).join(" ");
+    renderAll(nodes, st, boxW);
+  }
+  // Every benchmark across all versions of the chain: the value, and the change against the column to its left
+  function renderAll(nodes, st, boxW) {
+    const metric = state.hmetric, m = METRICS[metric];
+    const bands = [...new Set(nodes.map(juliaOf))], first = id => { const i = nodes.indexOf(id); return i > 0 && juliaOf(nodes[i - 1]) !== juliaOf(id); };
+    let html = `<thead class="two"><tr class="julia"><th class="name"></th>` + bands.map((j, bi) =>
+      `<th colspan="${nodes.filter(id => juliaOf(id) === j).length}" scope="colgroup" class="${bi ? "jstart" : ""}">Julia ${esc(j)}</th>`).join("") + `</tr>` +
+      `<tr class="cols"><th class="name" scope="col">Benchmark</th>`;
+    nodes.forEach((id, i) => {
+      const isBase = id === state.hbase, s = isBase ? null : stepStats(state.hbase, id, metric);
+      const beyond = s && Math.abs(s.geo - 1) > (metric === "time" ? TIME_THRESHOLD : DET_THRESHOLD);
+      html += `<th scope="col" class="${first(id) ? "jstart" : ""}${isBase ? " hbase" : ""}"><span class="rev">${esc(nameOf(id))}</span><span class="sub">${first(id) ? "same release, new Julia" : esc(dateOf(id).slice(0, 10))}</span>` +
+        `<span class="counts" title="${s ? `Geometric mean over the ${s.items.length} benchmarks it shares with ${esc(nameOf(state.hbase))}` : ""}">` +
+        (s ? `overall <b class="${beyond ? signClass(s.geo) : ""}" style="font-family: var(--font-data); font-weight: ${beyond ? 600 : 400}">${fmtChange(s.geo)}</b>` : `<span class="tag">baseline</span>`) + `</span></th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    const paths = PATHS.filter(p => state.hproblem === "all" || parse(p).problem === state.hproblem).sort((a, b) => {
+      const qa = parse(a), qb = parse(b);
+      return PROBLEM_ORDER.indexOf(qa.problem) - PROBLEM_ORDER.indexOf(qb.problem) || SOLVER(qa.solver).base.localeCompare(SOLVER(qb.solver).base) ||
+        qa.solver.localeCompare(qb.solver) || qa.kind.localeCompare(qb.kind);
+    });
+    let last = null;
+    for (const path of paths) {
+      const q = parse(path), sv = SOLVER(q.solver), pr = PROBLEM[q.problem];
+      if (q.problem !== last) {
+        html += `<tr class="group"><td colspan="${nodes.length + 1}"><span class="label">${esc(q.problem)}<span class="dim">${pr ? esc(`d = ${pr.d}, ${pr.steps} steps · ${pr.note}`) : ""}</span></span></td></tr>`;
+        last = q.problem;
+      }
+      const vals = nodes.map(id => STATS[id][path] ? m.value(STATS[id][path]) : null), present = vals.filter(v => v != null);
+      const open = state.hopen.has(path);
+      html += `<tr class="row${open ? " open" : ""}" data-path="${esc(path)}" tabindex="0" aria-expanded="${open}"><td class="name"><span class="caret">▸</span><span class="solver">${esc(sv.base)}</span>${sv.variant ? `<span class="variant">${esc(sv.variant)}</span>` : ""}<span class="kind">${esc(KIND[q.kind])}</span></td>`;
+      nodes.forEach((id, i) => {
+        const js = first(id) ? " jstart" : "";
+        if (vals[i] == null) { html += `<td class="cell missing${js}"><span class="rel">—</span></td>`; return; }
+        const abs = fmt(metric, vals[i]);
+        if (id === state.hbase) { html += `<td class="cell hbase${js}"><span class="rel">${abs}</span><span class="step">&nbsp;</span></td>`; return; }
+        const c = compare(path, state.hbase, id, metric);
+        if (!c) { html += `<td class="cell quiet${js}" title="Did not run in ${esc(nameOf(state.hbase))}, so there is nothing to compare with"><span class="rel">${abs}</span><span class="step">&nbsp;</span></td>`; return; }
+        html += `<td class="cell ${c.dir}${c.dir === "same" ? "" : " tinted"}${js}" style="${tint(c, metric)}" title="${esc(nameOf(id))} on Julia ${esc(juliaOf(id))}: ${abs}, ${fmtChange(c.ratio)} against ${esc(nameOf(state.hbase))}${stateNote(c, metric) ? " (" + esc(stateNote(c, metric)) + ")" : ""}">` +
+          `<span class="rel" style="font-weight: 400">${abs}</span><span class="step"${c.dir === "same" ? ' style="color: var(--faint)"' : ' style="font-weight: 500"'}>${fmtChange(c.ratio)}${c.dir === "unclear" ? " ?" : ""}</span></td>`;
+      });
+      html += `</tr>`;
+      if (open) {
+        const ch = chart(path, metric, Math.max(320, boxW - 46), 230, nodes, true);
+        const call = pr ? `solve(${q.problem}, ${sv.call.replace("S", String(q.kind === "smoother"))}; adaptive=false, dt=${pr.dt}, dense=${q.kind === "smoother"}${pr.extra ? ", " + pr.extra : ""})` : path;
+        html += `<tr class="detail"><td colspan="${nodes.length + 1}"><div class="detail-grid" style="grid-template-columns: 1fr"><p class="call"><code>${esc(call)}</code></p>` +
+          `<div class="panel"><h3>${metric === "time" ? "Time" : metric === "allocs" ? "Allocations" : "Memory"} over all versions${ch.log ? " (log scale)" : ""}</h3>` +
+          `<p>${metric === "time" ? "Dots are single solves; the tick is the fastest one. " : ""}Dashed: the baseline ${esc(nameOf(state.hbase))}. The same release appears twice where Julia changes.</p>${ch.svg}</div></div></td></tr>`;
+      }
+    }
+    $("alltable").innerHTML = html + `</tbody>`;
+    const w = m.words, bn = `<b>${esc(nameOf(state.hbase))}</b>`, ramp = rs => `<span class="ramp">${rs.map(r => `<i style="background: ${tintColor(r, metric)}"></i>`).join("")}</span>`;
+    $("hist-caption").innerHTML = `Each cell shows the value and, below it, the change against the baseline ${bn} (outlined). Click a row for its chart.`;
+    $("hlegend").innerHTML = `<span>${ramp([1 / 8, 1 / 2, 1 / 1.2])}${w[0]} than ${bn}</span><span>${ramp([1.2, 2, 8])}${w[1]} than ${bn}</span>` +
+      `<span>grey: ${metric === "time" ? "within 10%, noise" : "within 1%"}</span>`;
+    if (state.hscroll !== false) { $("allbox").scrollLeft = $("allbox").scrollWidth; state.hscroll = false; }
+  }
+  function toggleHist(row) { const p = row.dataset.path; if (state.hopen.has(p)) state.hopen.delete(p); else state.hopen.add(p); render(); }
+  $("alltable").addEventListener("click", e => { if (e.target.closest("tr.detail")) return; const row = e.target.closest("tr.row"); if (row) toggleHist(row); });
+  $("alltable").addEventListener("keydown", e => { const row = e.target.closest("tr.row"); if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); toggleHist(row); } });
+
+  function render() {
+    FINE = state.view === "compare";
+    $("meta-julia").textContent = state.view === "compare" ? CURRENT_JULIA : JULIAS.join(" and ");
+    for (const [id, k] of [["metric", "metric"], ["kind-seg", "kind"], ["view", "view"], ["show", "show"], ["hmetric", "hmetric"]]) syncSeg(id, k);
+    $("view-compare").hidden = state.view !== "compare";
+    $("view-history").hidden = state.view !== "history";
+    if (state.view === "history") { renderHistory($("allbox").clientWidth || 1200); return; }
+    const boxW = $("tablebox").clientWidth || 1000, pageW = $("view-compare").clientWidth || 1200;
+    renderSummary(basePaths(false), pageW);
+    renderMatrix(tablePaths(basePaths(true)), boxW);
+    renderLegend();
+  }
+  let resizeTimer = null, lastW = 0;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { const w = document.documentElement.clientWidth; if (w !== lastW) { lastW = w; render(); } }, 150);
+  });
+  render();
+})();
+</script>
