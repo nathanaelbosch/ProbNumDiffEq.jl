@@ -10,7 +10,7 @@ The report shows the time, the allocations and the memory of each solve.
 - **Check a change** compares two revisions on the current Julia version, by default the development version against the latest release.
 - **History** shows every benchmark across all versions since v0.11.2.
 
-**[Open the performance report](../performance_report.html)**
+**[Open the performance report](performance_report.html)**
 
 ## How the numbers are made
 

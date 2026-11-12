@@ -39,7 +39,7 @@ The docs build does not run the benchmarks: timings from CI machines are noisy a
 The report embeds at most 100 solves per benchmark and revision, together with the statistics of all solves, which keeps it at about 0.5 MB.
 
 Times are compared by the fastest solve of each benchmark, not the median.
-The timings come in clusters, since some solves are hit by garbage collection, and the median jumps between clusters from run to run: between v0.16.6 and v0.17.1 the median changed by up to 12% and the minimum by at most 5% (2026-11).
+The timings come in clusters, since some solves are hit by garbage collection, and the median jumps between clusters from run to run: between releases with nearly identical code (v0.16.5, v0.16.6 and v0.17.1) the median changed by up to 13% and the minimum by at most 8% (2026-11).
 
 The summary by kind of benchmark groups the benchmarks by three factors: the covariance structure of the solver, the size of the problem (d ≤ 3 or d ≥ 14), and filter only against filter + smoother.
 These factors, the step counts and the `solve` call shown for each benchmark are declared in `PROBLEMS` and `SOLVERS` in `performance/report.jl`; update them when `benchmarks.jl` changes.
@@ -48,10 +48,15 @@ Julia versions are given as juliaup channels: `perf_julia` (`release`) for `main
 Results are written to `performance/results/julia-<exact Julia version>/` (gitignored), one `results_ProbNumDiffEq@<rev>.json` per revision.
 `benchpkgtable` only reads these files, so results from separate runs can be combined.
 `just perf-history` reuses the results of releases and only reruns `main`.
+Next to each result, `meta_ProbNumDiffEq@<rev>.toml` records what was measured: the commit and its date, the version of `benchmarks.jl`, the CPU and the thread count.
+The report shows that commit for `main`, not the one `main` points to when the report is built.
+When `benchmarks.jl` changes, results from the old version are no longer comparable: `just perf-history` measures those releases again, and the report warns while results of different versions are mixed.
 When a channel moves to a new Julia version, its results start in a new folder, and `just perf-history` reruns the releases there.
-`runs.log` in each folder records the host, CPU, Julia version and thread count of each run.
 
 Results are only comparable when they come from the same machine, Julia version and thread settings.
+Even then, the session matters: two runs of the same `main` commit a day apart differed by up to 11% in time, with 30 of 48 benchmarks more than 5% apart and all in the same direction, while the allocations were identical (2026-11).
+`just perf` therefore measures `main` and the working tree in one session.
+A time difference of 10% between `main` and a release that was measured on another day can be such a session effect; measure both again in one session before acting on it, e.g. `just _perf-run release v0.18.0 && just _perf-run release main`.
 Delete `performance/results/` when the machine or the thread settings change.
 
 ## What is measured
@@ -77,7 +82,7 @@ One version takes about 4 minutes: 1.5 for installing and precompiling, 2.5 for 
 ## Time to first solve
 
 `performance/ttfs.jl` measures what the suite cannot: BenchmarkTools runs every benchmark once before measuring, so the suite never sees compilation.
-For each revision, it installs and precompiles the package, then starts 5 fresh Julia processes and times `using ProbNumDiffEq` and the first `solve` with `EK0` and with `EK1` on a small problem.
+For each revision, it installs and precompiles the package, then times `using ProbNumDiffEq` and the first `solve` on a small problem, 5 times, in one fresh Julia process for `EK0` and one for `EK1`, so that each first solve includes all of its compilation.
 It prints the medians and writes `performance/results/julia-<version>/ttfs_ProbNumDiffEq@<rev>.toml`.
 
 ## Running the suite on old versions

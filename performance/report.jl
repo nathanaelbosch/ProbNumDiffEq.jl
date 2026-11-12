@@ -92,29 +92,18 @@ function revision_order(rev)
     return (2, v"0", rev)
 end
 
-# The date of the revision itself, with the commit hash for branches.
-function revision_date(rev)
-    rev == "dirty" && return ""
-    out = try
-        readchomp(`git -C $(dirname(@__DIR__)) log -1 --format=%cs\ %h $rev --`)
-    catch
-        return ""
-    end
-    date, hash = split(out)
-    return tryparse(VersionNumber, rev) === nothing ? "$date $hash" : date
+# What `just _perf-run` recorded next to the results of a revision: the commit and its date, the
+# version of the suite, the CPU and the thread count. Results from before this existed have none.
+function read_meta(dir, rev)
+    file = joinpath(dir, "meta_ProbNumDiffEq@$rev.toml")
+    return isfile(file) ? TOML.parsefile(file) : Dict{String,Any}()
 end
 
-# The CPU and the thread count of the last run logged in `dir`. The host name is not published.
-function last_machine(dir)
-    machine = Dict{String,String}()
-    file = joinpath(dir, "runs.log")
-    isfile(file) || return machine
-    for line in eachline(file)
-        m = match(r" cpu=(.*) julia version \S+ threads=(\S+)$", line)
-        m === nothing && continue
-        machine["cpu"], machine["threads"] = m[1], m[2]
-    end
-    return machine
+# The date shown for a revision. A branch also gets the commit that was measured, since it moves.
+function revision_date(rev, meta)
+    haskey(meta, "date") || return ""
+    return tryparse(VersionNumber, rev) === nothing ? "$(meta["date"]) $(meta["commit"])" :
+           meta["date"]
 end
 
 # The files `<prefix>_ProbNumDiffEq@<rev>.<ext>` in `dir`, as pairs `rev => path`.
@@ -155,6 +144,8 @@ function shrink(results::AbstractString)
 end
 
 function main(; publish=false)
+    isdir(RESULTS) ||
+        error("No results in $RESULTS; run `just perf` or `just perf-history` first.")
     dirs = filter(
         d -> startswith(d, "julia-") && isdir(joinpath(RESULTS, d)),
         readdir(RESULTS),
@@ -163,16 +154,20 @@ function main(; publish=false)
     sort!(dirs; by=VersionNumber ∘ julia_version)
     revisions, results, ttfs, machine =
         Dict{String,Any}[], String[], Dict{String,Any}(), Dict{String,String}()
+    suites = Set{String}()
     for d in dirs
         julia, dir = julia_version(d), joinpath(RESULTS, d)
-        merge!(machine, last_machine(dir))
         results_files = revision_files(dir, "results", "json")
         for (r, file) in sort(results_files; by=revision_order ∘ first)
             publish && r == "dirty" && continue
-            id = "$r@$julia"
+            id, meta = "$r@$julia", read_meta(dir, r)
+            push!(suites, get(meta, "suite", "unknown"))
+            haskey(meta, "cpu") &&
+                merge!(machine, Dict("cpu" => meta["cpu"], "threads" => meta["threads"]))
             push!(
                 revisions,
-                Dict("id" => id, "name" => r, "julia" => julia, "date" => revision_date(r)),
+                Dict("id" => id, "name" => r, "julia" => julia,
+                    "date" => revision_date(r, meta)),
             )
             push!(results, json(id) * ":" * shrink(read(file, String)))
         end
@@ -183,11 +178,15 @@ function main(; publish=false)
     end
     isempty(revisions) &&
         error("No results in $RESULTS; run `just perf` or `just perf-history` first.")
-    releases = filter(
-        r ->
-            tryparse(VersionNumber, r["name"]) !== nothing &&
-            r["julia"] == last(revisions)["julia"],
-        revisions)
+    length(suites) > 1 && @warn "The results come from different versions of \
+        performance/benchmarks.jl, so they may not be comparable. `just perf-history` \
+        measures again what is out of date." suites
+    # The default baseline: the latest release on the current Julia, else `main`
+    current = filter(r -> r["julia"] == last(revisions)["julia"], revisions)
+    releases = filter(r -> tryparse(VersionNumber, r["name"]) !== nothing, current)
+    baseline =
+        !isempty(releases) ? last(releases) :
+        something(findlast(r -> r["name"] == "main", current), 1) |> i -> current[i]
     data =
         "{" *
         join(
@@ -195,8 +194,7 @@ function main(; publish=false)
                 "\"generated\":" * json(Dates.format(Dates.now(), "yyyy-mm-dd HH:MM")),
                 "\"machine\":" * json(machine),
                 "\"revisions\":" * json(revisions),
-                "\"default_baseline\":" *
-                json(isempty(releases) ? last(revisions)["id"] : last(releases)["id"]),
+                "\"default_baseline\":" * json(baseline["id"]),
                 "\"problems\":" * json(PROBLEMS),
                 "\"solvers\":" * json(SOLVERS),
                 "\"ttfs\":" * json(ttfs),

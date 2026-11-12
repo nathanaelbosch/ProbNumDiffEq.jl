@@ -360,7 +360,7 @@ table.grid td.empty { padding: 24px; color: var(--muted); text-align: center; }
     <div class="notes">
       <p>Each benchmark is one full fixed-step <code>solve</code> of a test problem, with the same steps in every version, so a change is a change in cost per step. “Filter only” is the solve with <code>smooth=false</code>; “filter + smoother” is the same solve with <code>smooth=true</code>, so it includes the filter pass.</p>
       <p><b>−40%</b> means 40% less time (or allocations, or memory), <b>×3</b> three times as much, <b>÷3</b> a third. In “Check a change” every number compares the revision with the baseline. In “History” every cell compares a version with the baseline you choose there, the latest release by default.</p>
-      <p>Time is the fastest of all solves of a benchmark. Slower solves are those hit by garbage collection or by other load on the machine, so the fastest one is the most repeatable: between two nearly identical releases it differed by at most 8%, while the median jumped by up to 13%. A time difference under 10% therefore counts as within noise. A larger one is marked <b>?</b> and hatched when the lower quartile of the solves does not show it too, so it may be a fluke. Allocations are a count and memory is the bytes allocated per solve; both are deterministic, so any difference above 1% counts.</p>
+      <p>Time is the fastest of all solves of a benchmark. Slower solves are those hit by garbage collection or by other load on the machine, so the fastest one is the most repeatable: between releases with nearly identical code (v0.16.5, v0.16.6 and v0.17.1) it differed by at most 8%, while the median jumped by up to 13%. A time difference under 10% therefore counts as within noise. Two runs of the same commit on different days differed by up to 11%, mostly in the same direction, so a comparison is most reliable when both revisions were measured in one session, as <code>just perf</code> does. A larger one is marked <b>?</b> and hatched when the lower quartile of the solves does not show it too, so it may be a fluke. Allocations are a count and memory is the bytes allocated per solve; both are deterministic, so any difference above 1% counts.</p>
       <p>Releases that no longer install on the current Julia run on an older one. In “History”, their numbers are as measured on that older Julia, so against a baseline on the current Julia they include the effect of Julia itself. The release that runs on both appears twice, side by side, which shows that effect alone. The headline there multiplies the overall changes of the package's own steps, and reports the Julia step separately. An overall change is a geometric mean over the benchmarks two versions share.</p>
       <p>The changes by kind of benchmark group the benchmarks by the covariance structure of the solver (Kronecker: <code>EK0</code>; block-diagonal: <code>DiagonalEK1</code>, <code>MatfreeEK1</code>, <code>EK0</code> with a multivariate diffusion; dense: <code>EK1</code>, <code>ExpEK</code>, <code>RosenbrockExpEK</code>), by problem size (d ≤ 3 or d ≥ 14), and by smoothing. A line appears when at least two thirds of a group changed in the same direction.</p>
       <p>— means the benchmark could not run in that version, usually because the solver or feature did not exist yet. <code>performance/README.md</code> lists the reasons.</p>
@@ -513,6 +513,10 @@ table.grid td.empty { padding: 24px; color: var(--muted); text-align: center; }
     selected: null, kind: "all", problem: "all", search: "", show: "all", group: null,
     baseline: defaultBase, target: COLS[COLS.length - 1], open: new Set(),
   };
+  // With results of the working tree, the page opens on what `just perf` measured: it against `main`
+  const mainId = COLS.find(id => rawName(id) === "main");
+  if (rawName(state.target) === "dirty" && mainId) state.baseline = mainId;
+  if (state.baseline === state.target && COLS.length > 1) state.baseline = COLS[COLS.length - 2];
   try {
     const saved = JSON.parse(localStorage.getItem("pnde-bench-view") || "{}");
     if (saved.metric) state.metric = saved.metric;
@@ -643,10 +647,10 @@ table.grid td.empty { padding: 24px; color: var(--muted); text-align: center; }
     return out;
   }
   function counts(paths) {
-    const c = { faster: 0, slower: 0, unclear: 0, same: 0, new: 0 };
+    const c = { faster: 0, slower: 0, unclear: 0, same: 0, new: 0, gone: 0 };
     for (const p of paths) {
       const r = compare(p, state.baseline, state.target, state.metric);
-      if (r) c[r.dir]++; else if (STATS[state.target][p] && !STATS[state.baseline][p]) c.new++;
+      if (r) c[r.dir]++; else if (!STATS[state.baseline][p]) c.new++; else if (!STATS[state.target][p]) c.gone++;
     }
     return c;
   }
@@ -719,7 +723,8 @@ table.grid td.empty { padding: 24px; color: var(--muted); text-align: center; }
     const cnt = (n, word, cls) => `<span class="${n ? cls : ""}">${n} ${word}</span>`;
     $("headline").innerHTML = `<b>${esc(nameOf(state.target))}</b> against <b>${esc(nameOf(state.baseline))}</b>, ${m.label}: ` +
       cnt(c.slower, m.words[1], "slower-text") + ", " + cnt(c.faster, m.words[0], "faster-text") +
-      (c.unclear ? `, ${c.unclear} unclear` : "") + `, ${c.same} ${m.noise}` + (c.new ? `, ${c.new} new` : "") + `.`;
+      (c.unclear ? `, ${c.unclear} unclear` : "") + `, ${c.same} ${m.noise}` + (c.new ? `, ${c.new} new` : "") +
+      (c.gone ? `, <span class="slower-text">${c.gone} no longer run${c.gone === 1 ? "s" : ""}</span>` : "") + `.`;
     const mean = (label, ds) => { if (!ds.length) return ""; const g = geomean(ds.map(d => d.c.ratio)); return `${label} <span class="${Math.abs(g - 1) > thr ? signClass(g) : ""}" style="font-family: var(--font-data)">${fmtChange(g)}</span>`; };
     $("meanline").innerHTML = items.length ? `Geometric mean of the ${items.length} benchmarks in both: ` + mean("", items) + " (" +
       [mean("filter only", items.filter(d => parse(d.path).kind === "filter")), mean("filter + smoother", items.filter(d => parse(d.path).kind === "smoother"))].filter(Boolean).join(", ") + ")." : "";
@@ -1055,7 +1060,7 @@ table.grid td.empty { padding: 24px; color: var(--muted); text-align: center; }
     let start = null;
     JULIAS.forEach((j, bi) => {
       const ids = REVS.filter(id => INFO[id].julia === j);
-      const next = JULIAS[bi + 1], common = next ? ids.filter(id => STATS[`${rawName(id)}@${next}`]) : [];
+      const next = JULIAS[bi + 1], common = next ? ids.filter(id => /^v\d/.test(rawName(id)) && STATS[`${rawName(id)}@${next}`]) : [];
       const bridge = common.length ? common[common.length - 1] : null;
       const from = start ? ids.indexOf(start) : 0, to = bridge ? ids.indexOf(bridge) : ids.length - 1;
       for (let i = from; i <= to; i++) {

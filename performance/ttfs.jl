@@ -4,7 +4,7 @@
 #
 # REV is a git revision of the repository or `dirty` for the working tree. For each one
 # this installs the package into a temporary environment, precompiles it, and then times
-# N fresh Julia processes. Results go to
+# N fresh Julia processes per solver. Results go to
 # performance/results/julia-<version>/ttfs_ProbNumDiffEq@<rev>.toml.
 
 using Pkg: Pkg
@@ -17,13 +17,15 @@ const NAMES = ("using", "first_solve_EK0", "first_solve_EK1")
 # performance/report.jl finds both under the same name.
 result_file(rev) = joinpath(RESULTS, "ttfs_ProbNumDiffEq@$(replace(rev, "/" => "_")).toml")
 
+# One process loads the package and does one solve, with the solver named in ARGS, so that
+# each first solve pays for all of its own compilation.
 const MEASURE = raw"""
 t_load = @elapsed using ProbNumDiffEq
 f(du, u, p, t) = (du[1] = 1.5u[1] - u[1] * u[2]; du[2] = -3u[2] + u[1] * u[2]; nothing)
 prob = ODEProblem(f, [1.0, 1.0], (0.0, 1.0))
-t_ek0 = @elapsed solve(prob, EK0())
-t_ek1 = @elapsed solve(prob, EK1())
-println("TTFS ", t_load, " ", t_ek0, " ", t_ek1)
+alg = ARGS[1] == "EK0" ? EK0() : EK1()
+t_solve = @elapsed solve(prob, alg)
+println("TTFS ", t_load, " ", t_solve)
 """
 
 median(x) = (y=sort(x); n=length(y); (y[(n+1)÷2] + y[n÷2+1]) / 2)
@@ -57,11 +59,16 @@ function install(rev)
     return env
 end
 
+# The times of `using` and of the first solve with `EK0` and with `EK1`, from two fresh processes
 function measure(env, exeflags)
     julia = Base.julia_cmd()
-    out = read(`$julia --startup-file=no $exeflags --project=$env -e $MEASURE`, String)
-    line = only(filter(startswith("TTFS "), split(out, '\n')))
-    return parse.(Float64, split(line)[2:end])
+    fresh(solver) = begin
+        cmd = `$julia --startup-file=no $exeflags --project=$env -e $MEASURE $solver`
+        line = only(filter(startswith("TTFS "), split(read(cmd, String), '\n')))
+        parse.(Float64, split(line)[2:end])
+    end
+    (t_load, t_ek0), (_, t_ek1) = fresh("EK0"), fresh("EK1")
+    return (t_load, t_ek0, t_ek1)
 end
 
 function main(args)
