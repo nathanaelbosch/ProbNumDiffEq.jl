@@ -92,7 +92,7 @@ function revision_order(rev)
     return (2, v"0", rev)
 end
 
-# What `just _perf-run` recorded next to the results of a revision: the commit and its date, the
+# What performance/run.jl recorded next to the results of a revision: the commit and its date, the
 # version of the suite, the CPU and the thread count. Results from before this existed have none.
 function read_meta(dir, rev)
     file = joinpath(dir, "meta_ProbNumDiffEq@$rev.toml")
@@ -145,7 +145,7 @@ end
 
 function main(; publish=false)
     isdir(RESULTS) ||
-        error("No results in $RESULTS; run `just perf` or `just perf-history` first.")
+        error("No results in $RESULTS; run `just perf` or `just perf history` first.")
     dirs = filter(
         d -> startswith(d, "julia-") && isdir(joinpath(RESULTS, d)),
         readdir(RESULTS),
@@ -177,9 +177,9 @@ function main(; publish=false)
         end
     end
     isempty(revisions) &&
-        error("No results in $RESULTS; run `just perf` or `just perf-history` first.")
+        error("No results in $RESULTS; run `just perf` or `just perf history` first.")
     length(suites) > 1 && @warn "The results come from different versions of \
-        performance/benchmarks.jl, so they may not be comparable. `just perf-history` \
+        performance/benchmarks.jl, so they may not be comparable. `just perf history` \
         measures again what is out of date." suites
     # The default baseline: the latest release on the current Julia, else `main`
     current = filter(r -> r["julia"] == last(revisions)["julia"], revisions)

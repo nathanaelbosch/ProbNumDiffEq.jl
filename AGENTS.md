@@ -33,10 +33,8 @@ just docs        # build docs: julia --project=docs docs/make.jl
 just vale        # prose lint of Markdown/.jmd files (styles in .github/vale-styles)
 just benchmark   # weave benchmarks/*.jmd into docs/src/benchmarks (slow)
 just perf       # performance suite performance/benchmarks.jl: working tree against main (AirspeedVelocity.jl)
-just perf-history          # the same suite on all releases since v0.11.2 (older ones on Julia 1.10), results kept in performance/results/
-just perf-table REV1,REV2  # table of revisions that already have results
-just perf-report           # performance/results/report.html, a page for browsing all results
-just perf-publish          # docs/src/performance_report.html, the committed copy shown in the docs
+just perf history           # the same suite on all releases since v0.11.2 (older ones on Julia 1.10), results kept in performance/results/
+just perf report [--publish] # performance/results/report.html, or with --publish docs/src/performance_report.html
 ```
 
 CI also runs doctests: `julia --project=docs -e 'using Documenter: doctest; using ProbNumDiffEq; doctest(ProbNumDiffEq)'`.
