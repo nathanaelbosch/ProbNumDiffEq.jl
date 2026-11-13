@@ -31,7 +31,7 @@ It is rebuilt after every run by `performance/report.jl`, from the template `per
   Older releases are shown as measured on the older Julia they run on.
   The release that runs on both Julia versions appears twice, side by side, which shows the effect of Julia alone.
 
-The docs page "Performance across versions" (`docs/src/performance.md`) links to `docs/src/performance_report.html`, which opens as its own page and links back.
+The docs menu entry "Performance across versions" (`docs/src/performance.md`) redirects to `docs/src/performance_report.html`, which opens as its own page and links back to the docs home page.
 That file is committed, and is only updated by `just perf-publish`, typically after a release and a `just perf-history`.
 It leaves out the working tree, and does not contain the host name of the machine, only its CPU model.
 The docs build does not run the benchmarks: timings from CI machines are noisy and not comparable with stored results.

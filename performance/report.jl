@@ -201,10 +201,15 @@ function main(; publish=false)
                 "\"results\":{" * join(results, ",") * "}",
             ], ",") * "}"
 
-    # The copy in the docs links back to its docs page, docs/src/performance.md
-    back = publish ? "<a class=\"back\" href=\"performance/\">← Documentation</a>" : ""
-    page =
-        replace(read(TEMPLATE, String), "__BENCH_DATA__" => data, "__BACK_LINK__" => back)
+    # The copy in the docs links to their home page (the docs page "Performance across versions"
+    # only redirects here), and says how it is kept up to date
+    back = publish ? "<a class=\"back\" href=\"index.html\">← Documentation</a>" : ""
+    note =
+        publish ?
+        "<p>This report is updated by hand, usually after a release, so the development version in it can be older than the current <code>main</code> branch. The suite is <code>performance/benchmarks.jl</code> in the ProbNumDiffEq.jl repository.</p>" :
+        ""
+    page = replace(read(TEMPLATE, String), "__BENCH_DATA__" => data,
+        "__BACK_LINK__" => back, "__PUBLISH_NOTE__" => note)
     # The template starts with what belongs into the head: title, meta, link and style
     head_end = last(findfirst("</style>", page))
     head, body = page[1:head_end], lstrip(page[(head_end+1):end])
