@@ -18,3 +18,7 @@ benchmark:
 
 vale:
     git ls-files | xargs vale
+
+# Performance benchmarks: `just perf`, `just perf history`, `just perf report --publish`; see performance/README.md
+perf *ARGS:
+    julia --startup-file=no performance/run.jl {{ ARGS }}

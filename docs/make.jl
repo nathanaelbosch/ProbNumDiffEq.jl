@@ -82,6 +82,7 @@ makedocs(
                 "ROBER" => "benchmarks/rober.md",
             ],
         ],
+        "Performance across versions" => "performance.md",
         "Internals" => [
             "Filtering and Smoothing" => "filtering.md",
             "Implementation via OrdinaryDiffEq.jl" => "implementation.md",
