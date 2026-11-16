@@ -102,6 +102,7 @@ Dense output and sampling must also keep the structure.
 - Use `_matmul!` (`src/fast_linalg.jl`) instead of `mul!`.
   It dispatches to Octavian.jl for BLAS-type dense matrices and to FastBroadcast (`@..`) for diagonal and scalar factors.
 - To check a change for performance regressions, use `just perf` (`performance/README.md`).
+  Agents may run it and report its headline in the PR, but do not publish the report; that is done after a release.
 - `test/complexity.jl` asserts that the Kronecker `EK0` scales linearly in `d`; `test/core/fast_linalg.jl` covers `_matmul!`.
 
 ## Conventions enforced by tests

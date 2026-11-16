@@ -19,12 +19,18 @@ const SUITE = joinpath(@__DIR__, "benchmarks.jl")
 # Julia versions as juliaup channels, and the releases benchmarked on each.
 # Old releases only install on an older Julia; v0.16.5 and v0.16.6 run on both and link the two.
 const JULIA = "release"
-const RELEASES = ["v0.16.5", "v0.16.6", "v0.17.1", "v0.18.0"]
 const OLD_JULIA = "1.10"
 const OLD_RELEASES =
     ["v0.11.2", "v0.12.1", "v0.13.1", "v0.14.0", "v0.15.0", "v0.16.5", "v0.16.6"]
 
 git(args...) = readchomp(Cmd(`git -C $REPO $args`))
+# The releases on the current Julia: every tag from v0.16.5 on, except v0.17.0, which no longer loads
+function releases()
+    return filter(split(git("tag", "--list", "v*"))) do tag
+        v = tryparse(VersionNumber, tag)
+        v !== nothing && v >= v"0.16.5" && v != v"0.17.0"
+    end
+end
 results_dir(channel) = joinpath(
     @__DIR__, "results",
     "julia-" * readchomp(`julia +$channel --startup-file=no -e 'print(VERSION)'`))
@@ -70,7 +76,7 @@ report(args...) =
 
 function history(; threads)
     failed = String[]
-    for (channel, releases) in ((JULIA, RELEASES), (OLD_JULIA, OLD_RELEASES)),
+    for (channel, releases) in ((JULIA, releases()), (OLD_JULIA, OLD_RELEASES)),
         rev in releases
 
         is_current(rev, channel) && continue

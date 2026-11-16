@@ -41,6 +41,9 @@ The docs menu entry "Performance across versions" opens `docs/src/performance_re
 It leaves out the working tree and the host name.
 The docs build does not run the suite, since timings on CI machines are not comparable.
 
+After each release, run `just perf history`, which measures the new release and `main` in one session, then `just perf report --publish`, and commit `docs/src/performance_report.html`.
+When juliaup's `release` channel moves to a new Julia version, the next `just perf history` measures all releases again, which takes about 25 minutes.
+
 ## Old releases
 
 The suite in the working tree runs on every revision, so it may only use public API.
@@ -58,7 +61,7 @@ Old releases only install with old SciML dependencies, which not all Julia versi
 | v0.17.0 | not tried | fails to load |
 | v0.17.1, v0.18.0 | not needed | run |
 
-`RELEASES` and `OLD_RELEASES` in `performance/run.jl` list the releases for each Julia; add a new release to `RELEASES`.
+On the current Julia, `performance/run.jl` benchmarks every release tag from v0.16.5 on, except v0.17.0; `OLD_RELEASES` lists the releases for Julia 1.10.
 Julia itself changes the timings: v0.16.6 is about 30% faster on Julia 1.13 than on 1.10 (2026-11).
 The report shows this as a separate step, measured on v0.16.6 on both.
 
