@@ -13,7 +13,12 @@ _matmul!(C, A, B)
 _matmul!(C, A, B) = mul!(C, A, B)
 _matmul!(C, A, B, a, b) = mul!(C, A, B, a, b)
 # Use Octavian.jl's matrix-matrix products whenever applicable
-const MSR{T} = Union{Matrix{T},SubArray{T},Base.ReshapedArray{T},Adjoint{T,<:Matrix}}
+const MSR{T} = Union{
+    Matrix{T},
+    SubArray{T},
+    Base.ReshapedArray{T},
+    Adjoint{T,<:Union{Matrix,SubArray}},
+}
 _matmul!(
     C::MSR{T},
     A::MSR{T},

@@ -41,7 +41,9 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
     return nothing
 end
 
-function update_mean_or_rankerror!(x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d, u)
+function update_mean_or_rankerror!(
+    x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d, u,
+)
     upd = try
         update_mean!(x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d)
     catch e
