@@ -25,12 +25,13 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
         u_i = mul!(tmp, SolProj, m_i)
         ForwardDiff.jacobian!(result, residualf, u_i)
         mul!(H, DiffResults.jacobian(result), SolProj)
+        # A view, like `measurement.μ`, so that `update_mean!` returns a `z` of one type
         obs = LinearizedObservation(m_i, view(DiffResults.value(result), 1:d), H)
 
         (; K, B) = update_mean_or_rankerror!(
             x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d, u_i)
 
-        if distance(x_out.μ, m_i) <= steptol * norm(x_out.μ) || i == maxiters
+        if _distance(x_out.μ, m_i) <= steptol * norm(x_out.μ) || i == maxiters
             update_cov!(x_out, x_pred, obs, K, B, C_DxD, K1)
             break
         end
@@ -53,7 +54,7 @@ function update_mean_or_rankerror!(
     return upd
 end
 
-distance(a, b) = sqrt(sum(abs2(x - y) for (x, y) in zip(a, b)))
+_distance(a, b) = sqrt(sum(abs2(x - y) for (x, y) in zip(a, b)))
 
 manifold_rankerror(u) = throw(
     ArgumentError(
