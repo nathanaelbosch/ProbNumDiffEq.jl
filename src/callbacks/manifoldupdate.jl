@@ -25,8 +25,8 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
         u_i = mul!(tmp, SolProj, m_i)
         ForwardDiff.jacobian!(result, residualf, u_i)
         mul!(H, DiffResults.jacobian(result), SolProj)
-        # A view, like `measurement.μ`, so that `update_mean!` returns a `z` of one type
-        obs = LinearizedObservation(m_i, view(DiffResults.value(result), 1:d), H)
+        r = copy!(measurement.μ, DiffResults.value(result))
+        obs = LinearizedObservation(m_i, r, H)
 
         (; K, B) = update_mean_or_rankerror!(
             x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d, u_i)

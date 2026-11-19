@@ -199,7 +199,8 @@ update_cache(FAC, D, o) = (;
         end
 
         @testset "In place" begin
-            cache_ip = merge(cache, (; d=o, x_tmp=copy(x_pred)))
+            cache_ip =
+                merge(cache, (; d=o, x_tmp=copy(x_pred), covariance_factorization=FAC))
             x_ip = copy(x_pred)
             @test PNDE.update!(x_ip, obs; cache=cache_ip).loglikelihood ≈ LL
             @test x_ip.μ ≈ m
