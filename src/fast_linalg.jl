@@ -17,7 +17,7 @@ const MSR{T} = Union{
     Matrix{T},
     SubArray{T},
     Base.ReshapedArray{T},
-    Adjoint{T,<:Union{Matrix,SubArray}},
+    Adjoint{T,<:StridedMatrix},
 }
 _matmul!(
     C::MSR{T},

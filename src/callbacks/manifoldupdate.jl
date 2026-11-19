@@ -15,7 +15,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
             "`length(residual(u)) <= length(u)`."))
 
     H = view(cache.C_dxD, 1:d, :)
-    (; K1, C_Dxd, measurement, C_dxd, C_d, C_DxD) = make_obssized_cache(cache; o=d)
+    obs_cache = make_obssized_cache(cache; o=d)
 
     steptol = isnothing(steptol) ? sqrt(eps(eltype(x_pred.μ))) : steptol
 
@@ -25,14 +25,13 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
         u_i = mul!(tmp, SolProj, m_i)
         ForwardDiff.jacobian!(result, residualf, u_i)
         mul!(H, DiffResults.jacobian(result), SolProj)
-        r = copy!(measurement.μ, DiffResults.value(result))
+        r = copy!(obs_cache.measurement.μ, DiffResults.value(result))
         obs = LinearizedObservation(m_i, r, H)
 
-        (; K, B) = update_mean_or_rankerror!(
-            x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d, u_i)
+        (; K, B) = update_mean_or_rankerror!(x_out, x_pred, obs, obs_cache, u_i)
 
         if _distance(x_out.μ, m_i) <= steptol * norm(x_out.μ) || i == maxiters
-            update_cov!(x_out, x_pred, obs, K, B, C_DxD, K1)
+            update_cov!(x_out, x_pred, obs, K, B; cache=obs_cache)
             break
         end
         m_i = copy!(x_tmp2.μ, x_out.μ)
@@ -42,11 +41,9 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
     return nothing
 end
 
-function update_mean_or_rankerror!(
-    x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d, u,
-)
+function update_mean_or_rankerror!(x_out, x_pred, obs, cache, u)
     upd = try
-        update_mean!(x_out, x_pred, obs, K1, C_Dxd, measurement, C_dxd, C_d)
+        update_mean!(x_out, x_pred, obs; cache)
     catch e
         e isa PosDefException ? manifold_rankerror(u) : rethrow()
     end
@@ -54,7 +51,7 @@ function update_mean_or_rankerror!(
     return upd
 end
 
-_distance(a, b) = sqrt(sum(abs2(x - y) for (x, y) in zip(a, b)))
+_distance(a, b) = norm(x - y for (x, y) in zip(a, b))
 
 manifold_rankerror(u) = throw(
     ArgumentError(
