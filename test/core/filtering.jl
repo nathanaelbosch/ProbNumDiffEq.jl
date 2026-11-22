@@ -199,7 +199,8 @@ update_cache(FAC, D, o) = (;
         end
 
         @testset "In place" begin
-            cache_ip = merge(cache, (; d=o, x_tmp=copy(x_pred)))
+            cache_ip =
+                merge(cache, (; d=o, x_tmp=copy(x_pred), covariance_factorization=FAC))
             x_ip = copy(x_pred)
             @test PNDE.update!(x_ip, obs; cache=cache_ip).loglikelihood ≈ LL
             @test x_ip.μ ≈ m
@@ -606,6 +607,20 @@ end
         @test typeof(sol(t_between)) == typeof(sol(sol.t[2])) == typeof(sol(t_after))
         @test sol(t_between).Σ.R isa M
     end
+end
+
+@testset "The observation-sized cache has one type for every observation size" begin
+    f!(du, u, p, t) = (du .= -u)
+    prob = ODEProblem(f!, [1.0, 2.0, 3.0], (0.0, 1.0))
+    obssized(cache, o) = PNDE.make_obssized_cache(cache; o)
+    @testset "$alg" for alg in (EK1(), DiagonalEK1(), EK0())
+        cache = init(prob, alg).cache
+        os =
+            cache.covariance_factorization isa PNDE.IsometricKroneckerCovariance ? (3,) :
+            (1, 2, 3)
+        @test allequal(typeof(@inferred obssized(cache, o)) for o in os)
+    end
+    @test_throws ArgumentError obssized(init(prob, EK0()).cache, 2)
 end
 
 @testset "Backward kernel from a QR decomposition ($T)" for T in (Float64, BigFloat)

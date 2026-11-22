@@ -115,16 +115,20 @@ end
     make_obssized_cache(cache; o)
 
 The buffers of `cache` that [`update!`](@ref) uses, sized for an `o`-dimensional
-observation: `cache` itself if `o` is the dimension `d` of the ODE, otherwise
-views (dense covariance) or the first `o` blocks (block-diagonal covariance). The Kronecker
-covariance only supports `o = d`.
+observation: views (dense covariance), the first `o` blocks (block-diagonal covariance), or
+`cache` itself (Kronecker covariance, which only supports `o = d`). The type of the result
+does not depend on `o`.
 """
-function make_obssized_cache(cache; o)
-    if o == cache.d
-        return cache
-    else
-        return make_obssized_cache(cache.covariance_factorization, cache; o)
+make_obssized_cache(cache; o) =
+    make_obssized_cache(cache.covariance_factorization, cache; o)
+function make_obssized_cache(::IsometricKroneckerCovariance, cache; o)
+    if o != cache.d
+        throw(
+            ArgumentError(
+                "With `IsometricKroneckerCovariance`, an observation must have the " *
+                "dimension of the ODE, $(cache.d), but it has $o."))
     end
+    return cache
 end
 function make_obssized_cache(::DenseCovariance, cache; o)
     @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement = cache
@@ -139,7 +143,7 @@ function make_obssized_cache(::DenseCovariance, cache; o)
 end
 function make_obssized_cache(::BlockDiagonalCovariance, cache; o)
     @unpack K1, C_DxD, C_dxd, C_Dxd, C_d, measurement = cache
-    first_blocks(M) = BlocksOfDiagonals(blocks(M)[1:o])
+    first_blocks(M) = o == cache.d ? M : BlocksOfDiagonals(blocks(M)[1:o])
     return (
         K1=first_blocks(K1),
         C_dxd=first_blocks(C_dxd),
@@ -159,7 +163,7 @@ The mean part of [`update!`](@ref): write ``μ^F`` into `x_out.μ` and return
 `(; loglikelihood, ztSinvz, S, K, B, z)`, with the gain `K` and `B = x_pred.Σ.R * H'` for
 [`update_cov!`](@ref), and `z` ``= \\hat{z}``. An iterated update calls it for every
 linearization, and [`update_cov!`](@ref) only for the last one. `obs.r` must not be stored
-in `x_out.μ` or `cache.C_d`, which serve as workspace.
+in `x_out.μ` or `cache.C_d`, which serve as workspace, but may be `cache.measurement.μ`.
 """
 function update_mean!(
     x_out,

@@ -47,6 +47,21 @@ using Test
     BT = Matrix(B')'
     @test _matmul!(C, A, BT) == mul!(C, A, BT)
 
+    # Adjoints of views: offset, strided, and with an index vector (not strided)
+    P = rand(T, 5, 7)
+    @testset "Adjoint of $name" for (name, V) in (
+        ("offset view", view(P, 2:3, 3:6)),
+        ("strided view", view(P, 1:2:3, 1:2:7)),
+        ("indexed view", view(P, [3, 1], 2:5)),
+    )
+        VM = Matrix(V)
+        C1, C2 = rand(T, 4, 4), rand(T, 2, 2)
+        @test _matmul!(copy(C1), V', B[1:2, :]) ≈ VM' * B[1:2, :]
+        @test _matmul!(copy(C1), V', B[1:2, :], alpha, beta) ≈
+              alpha * VM' * B[1:2, :] + beta * C1
+        @test _matmul!(copy(C2), A[:, 1:2] * VM, V') ≈ A[:, 1:2] * VM * VM'
+    end
+
     # Vectors
     CV, BV = rand(T, 2), rand(T, 3)
     @test _matmul!(CV, A, BV) == mul!(CV, A, BV)

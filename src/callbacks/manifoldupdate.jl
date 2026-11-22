@@ -25,7 +25,8 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
         u_i = mul!(tmp, SolProj, m_i)
         ForwardDiff.jacobian!(result, residualf, u_i)
         mul!(H, DiffResults.jacobian(result), SolProj)
-        obs = LinearizedObservation(m_i, DiffResults.value(result), H)
+        r = copy!(obs_cache.measurement.μ, DiffResults.value(result))
+        obs = LinearizedObservation(m_i, r, H)
 
         (; S, K, B) = try
             update_mean!(x_out, x_pred, obs; cache=obs_cache)
@@ -34,7 +35,7 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
         end
         length(S) == 1 && iszero(S[1]) && manifold_rankerror(u_i)
 
-        if norm(x_out.μ .- m_i) <= steptol * norm(x_out.μ) || i == maxiters
+        if _distance(x_out.μ, m_i) <= steptol * norm(x_out.μ) || i == maxiters
             update_cov!(x_out, x_pred, obs, K, B; cache=obs_cache)
             break
         end
@@ -44,6 +45,8 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
     copy!(cache.x, x_out)
     return nothing
 end
+
+_distance(a, b) = norm(x - y for (x, y) in zip(a, b))
 
 manifold_rankerror(u) = throw(
     ArgumentError(
