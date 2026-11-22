@@ -609,6 +609,19 @@ end
     end
 end
 
+@testset "The observation-sized cache has one type for every observation size" begin
+    f!(du, u, p, t) = (du .= -u)
+    prob = ODEProblem(f!, [1.0, 2.0, 3.0], (0.0, 1.0))
+    obssized(cache, o) = PNDE.make_obssized_cache(cache; o)
+    @testset "$alg" for alg in (EK1(), DiagonalEK1(), EK0())
+        cache = init(prob, alg).cache
+        os = cache.covariance_factorization isa PNDE.IsometricKroneckerCovariance ? (3,) :
+             (1, 2, 3)
+        @test allequal(typeof(@inferred obssized(cache, o)) for o in os)
+    end
+    @test_throws ArgumentError obssized(init(prob, EK0()).cache, 2)
+end
+
 @testset "Backward kernel from a QR decomposition ($T)" for T in (Float64, BigFloat)
     D = 8
     uppertri(n) = Matrix(UpperTriangular(rand(T, n, n)) + I)

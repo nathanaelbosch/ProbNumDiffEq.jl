@@ -122,10 +122,12 @@ does not depend on `o`.
 make_obssized_cache(cache; o) =
     make_obssized_cache(cache.covariance_factorization, cache; o)
 function make_obssized_cache(::IsometricKroneckerCovariance, cache; o)
-    o == cache.d || throw(
-        ArgumentError(
-            "With `IsometricKroneckerCovariance`, an observation must have the dimension " *
-            "of the ODE, $(cache.d), but it has $o."))
+    if o != cache.d
+        throw(
+            ArgumentError(
+                "With `IsometricKroneckerCovariance`, an observation must have the " *
+                "dimension of the ODE, $(cache.d), but it has $o."))
+    end
     return cache
 end
 function make_obssized_cache(::DenseCovariance, cache; o)

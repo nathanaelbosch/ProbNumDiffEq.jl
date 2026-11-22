@@ -28,7 +28,12 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
         r = copy!(obs_cache.measurement.μ, DiffResults.value(result))
         obs = LinearizedObservation(m_i, r, H)
 
-        (; K, B) = update_mean_or_rankerror!(x_out, x_pred, obs, obs_cache, u_i)
+        (; S, K, B) = try
+            update_mean!(x_out, x_pred, obs; cache=obs_cache)
+        catch e
+            e isa PosDefException ? manifold_rankerror(u_i) : rethrow()
+        end
+        length(S) == 1 && iszero(S[1]) && manifold_rankerror(u_i)
 
         if _distance(x_out.μ, m_i) <= steptol * norm(x_out.μ) || i == maxiters
             update_cov!(x_out, x_pred, obs, K, B; cache=obs_cache)
@@ -39,16 +44,6 @@ function manifoldupdate!(cache, residualf; maxiters=100, steptol=nothing)
 
     copy!(cache.x, x_out)
     return nothing
-end
-
-function update_mean_or_rankerror!(x_out, x_pred, obs, cache, u)
-    upd = try
-        update_mean!(x_out, x_pred, obs; cache)
-    catch e
-        e isa PosDefException ? manifold_rankerror(u) : rethrow()
-    end
-    length(upd.S) == 1 && iszero(upd.S[1]) && manifold_rankerror(u)
-    return upd
 end
 
 _distance(a, b) = norm(x - y for (x, y) in zip(a, b))
