@@ -615,8 +615,9 @@ end
     obssized(cache, o) = PNDE.make_obssized_cache(cache; o)
     @testset "$alg" for alg in (EK1(), DiagonalEK1(), EK0())
         cache = init(prob, alg).cache
-        os = cache.covariance_factorization isa PNDE.IsometricKroneckerCovariance ? (3,) :
-             (1, 2, 3)
+        os =
+            cache.covariance_factorization isa PNDE.IsometricKroneckerCovariance ? (3,) :
+            (1, 2, 3)
         @test allequal(typeof(@inferred obssized(cache, o)) for o in os)
     end
     @test_throws ArgumentError obssized(init(prob, EK0()).cache, 2)
